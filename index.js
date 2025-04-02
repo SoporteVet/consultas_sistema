@@ -1,6 +1,7 @@
 // Sistema de Tickets para Veterinaria
-let tickets = JSON.parse(localStorage.getItem('tickets')) || [];
-let currentTicketId = parseInt(localStorage.getItem('currentTicketId')) || 1;
+let tickets = [];
+let currentTicketId = 1;
+let isDataLoaded = false;
 
 // Referencias a elementos DOM
 const crearTicketBtn = document.getElementById('crearTicketBtn');
@@ -24,24 +25,42 @@ const cleanDataBtn = document.getElementById('cleanDataBtn');
 
 // Inicialización
 document.addEventListener('DOMContentLoaded', () => {
-    // Mostrar por defecto la sección de crear ticket
-    showSection(crearTicketSection);
-    crearTicketBtn.classList.add('active');
+    // Mostrar indicador de carga
+    showLoading();
     
-    // Establecer fecha actual en el formulario
-    if (document.getElementById('fecha')) {
-        document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-    }
-    
-    // Establecer fecha actual en el campo de fecha del horario
-    const today = new Date().toISOString().split('T')[0];
-    if (fechaHorario) {
-        fechaHorario.value = today;
-    }
-    
-    // Cargar tickets existentes
-    renderTickets();
-    updateStats();
+    // Inicializar Firebase Auth y cargar datos
+    initAuth().then(() => {
+        loadTickets().then(() => {
+            hideLoading();
+            isDataLoaded = true;
+            
+            // Mostrar por defecto la sección de crear ticket
+            showSection(crearTicketSection);
+            crearTicketBtn.classList.add('active');
+            
+            // Establecer fecha actual en el formulario
+            if (document.getElementById('fecha')) {
+                document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+            }
+            
+            // Establecer fecha actual en el campo de fecha del horario
+            const today = new Date().toISOString().split('T')[0];
+            if (fechaHorario) {
+                fechaHorario.value = today;
+            }
+            
+            renderTickets();
+            updateStats();
+        }).catch(err => {
+            console.error("Error cargando tickets:", err);
+            hideLoading();
+            showNotification('Error al cargar los datos', 'error');
+        });
+    }).catch(err => {
+        console.error("Error en autenticación:", err);
+        hideLoading();
+        showNotification('Error al conectar con el servidor', 'error');
+    });
 });
 
 // Event listeners
@@ -141,6 +160,90 @@ function setActiveButton(button) {
     button.classList.add('active');
 }
 
+// Función para cargar tickets desde Firebase
+function loadTickets() {
+    return new Promise((resolve, reject) => {
+        // Cargar tickets desde Firebase
+        ticketsRef.once('value')
+            .then(snapshot => {
+                tickets = [];
+                currentTicketId = 1;
+                
+                // Convertir objeto de Firebase en array
+                const data = snapshot.val() || {};
+                
+                Object.keys(data).forEach(key => {
+                    tickets.push({
+                        ...data[key],
+                        firebaseKey: key // Guardar clave Firebase para operaciones futuras
+                    });
+                    
+                    // Actualizar currentTicketId
+                    if (data[key].id >= currentTicketId) {
+                        currentTicketId = data[key].id + 1;
+                    }
+                });
+                
+                // Cargar configuración
+                return settingsRef.once('value');
+            })
+            .then(snapshot => {
+                const settings = snapshot.val() || {};
+                if (settings.currentTicketId && settings.currentTicketId > currentTicketId) {
+                    currentTicketId = settings.currentTicketId;
+                } else {
+                    // Guardar el valor actual en Firebase si no existe o es menor
+                    settingsRef.update({ currentTicketId });
+                }
+                resolve();
+            })
+            .catch(error => {
+                console.error("Error cargando datos:", error);
+                reject(error);
+            });
+            
+        // Configurar escucha en tiempo real para actualizaciones
+        ticketsRef.on('child_added', snapshot => {
+            if (!isDataLoaded) return; // Evitar duplicados durante carga inicial
+            
+            const newTicket = {
+                ...snapshot.val(),
+                firebaseKey: snapshot.key
+            };
+            
+            // Verificar si el ticket ya existe (evitar duplicados)
+            if (!tickets.some(t => t.id === newTicket.id)) {
+                tickets.push(newTicket);
+                renderTickets();
+                updateStats();
+            }
+        });
+        
+        ticketsRef.on('child_changed', snapshot => {
+            const updatedTicket = {
+                ...snapshot.val(),
+                firebaseKey: snapshot.key
+            };
+            
+            const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
+            if (index !== -1) {
+                tickets[index] = updatedTicket;
+                renderTickets();
+                updateStats();
+            }
+        });
+        
+        ticketsRef.on('child_removed', snapshot => {
+            const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
+            if (index !== -1) {
+                tickets.splice(index, 1);
+                renderTickets();
+                updateStats();
+            }
+        });
+    });
+}
+
 function addTicket() {
     const nombre = document.getElementById('nombre').value;
     const mascota = document.getElementById('mascota').value;
@@ -162,20 +265,9 @@ function addTicket() {
     
     const fecha = new Date();
     
-    // Buscar el primer ID disponible
-    let nuevoId = 1; // Empezamos desde 1
-    const idsExistentes = tickets.map(t => t.id);
-    
-    // Buscar el primer número que no está en uso
-    while (idsExistentes.includes(nuevoId)) {
-        nuevoId++;
-    }
-    
-    // Actualizar currentTicketId solo si es necesario
-    currentTicketId = Math.max(currentTicketId, nuevoId + 1);
-    
+    // Crear nuevo ticket
     const nuevoTicket = {
-        id: nuevoId,
+        id: currentTicketId,
         nombre,
         mascota,
         cedula,
@@ -195,29 +287,41 @@ function addTicket() {
     if (fechaConsulta) nuevoTicket.fechaConsulta = fechaConsulta;
     if (horaConsulta) nuevoTicket.horaConsulta = horaConsulta;
     
-    tickets.push(nuevoTicket);
-    saveTickets();
+    // Mostrar indicador de carga
+    showLoadingButton(document.querySelector('.btn-submit'));
     
-    // Limpiar formulario
-    ticketForm.reset();
-    
-    // Restaurar fecha actual en el formulario si existe el campo
-    if (document.getElementById('fecha')) {
-        document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-    }
-    
-    // Mostrar mensaje de éxito
-    showNotification('Ticket creado correctamente', 'success');
-    
-    // Actualizar estadísticas
-    updateStats();
-    
-    // Opcional: cambiar a la vista de tickets
-    setTimeout(() => {
-        showSection(verTicketsSection);
-        setActiveButton(verTicketsBtn);
-        renderTickets();
-    }, 1500);
+    // Guardar en Firebase
+    ticketsRef.push(nuevoTicket)
+        .then(() => {
+            // Incrementar el ID para el siguiente ticket
+            currentTicketId++;
+            settingsRef.update({ currentTicketId });
+            
+            // Limpiar formulario
+            ticketForm.reset();
+            
+            // Restaurar fecha actual en el formulario si existe el campo
+            if (document.getElementById('fecha')) {
+                document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+            }
+            
+            // Quitar indicador de carga
+            hideLoadingButton(document.querySelector('.btn-submit'));
+            
+            // Mostrar mensaje de éxito
+            showNotification('Consulta creada correctamente', 'success');
+            
+            // Opcional: cambiar a la vista de tickets
+            setTimeout(() => {
+                showSection(verTicketsSection);
+                setActiveButton(verTicketsBtn);
+            }, 1500);
+        })
+        .catch(error => {
+            console.error("Error guardando ticket:", error);
+            hideLoadingButton(document.querySelector('.btn-submit'));
+            showNotification('Error al guardar la consulta', 'error');
+        });
 }
 
 function renderTickets(filter = 'todos') {
@@ -371,7 +475,6 @@ function formatDate(dateString) {
     // Devolver fecha formateada sin crear un objeto Date (evita problemas de zona horaria)
     return `${day}/${month}/${year}`;
 }
-
 
 function mostrarHorario() {
     const fecha = fechaHorario.value;
@@ -606,18 +709,43 @@ function editTicket(id) {
         ticket.tipoMascota = document.getElementById('editTipoMascota').value;
         ticket.urgencia = document.getElementById('editUrgencia').value;
         
-        saveTickets();
-        renderTickets();
-        updateStats();
-        
-        // Si estamos en la vista de horario, actualizarla también
-        if (document.getElementById('horarioSection').classList.contains('active')) {
-            mostrarHorario();
-        }
-        
-        closeModal();
-        showNotification('Ticket actualizado correctamente', 'success');
+        saveEditedTicket(ticket);
     });
+}
+
+function saveEditedTicket(ticket) {
+    if (!ticket.firebaseKey) {
+        showNotification('Error al guardar los cambios', 'error');
+        return;
+    }
+    
+    // Mostrar indicador de carga
+    const saveButton = document.querySelector('.btn-save');
+    if (saveButton) {
+        showLoadingButton(saveButton);
+    }
+    
+    // Eliminar la propiedad firebaseKey antes de guardar
+    const ticketToSave = {...ticket};
+    delete ticketToSave.firebaseKey;
+    
+    ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+        .then(() => {
+            closeModal();
+            showNotification('Consulta actualizada correctamente', 'success');
+            
+            // Si estamos en la vista de horario, actualizarla también
+            if (document.getElementById('horarioSection').classList.contains('active')) {
+                mostrarHorario();
+            }
+        })
+        .catch(error => {
+            console.error("Error actualizando ticket:", error);
+            if (saveButton) {
+                hideLoadingButton(saveButton);
+            }
+            showNotification('Error al guardar los cambios', 'error');
+        });
 }
 
 function changeStatus(id) {
@@ -657,17 +785,33 @@ function changeStatus(id) {
         // Actualizar estado del ticket
         ticket.estado = document.getElementById('changeEstado').value;
         
-        saveTickets();
-        renderTickets();
-        updateStats();
-        
-        // Si estamos en la vista de horario, actualizarla también
-        if (document.getElementById('horarioSection').classList.contains('active')) {
-            mostrarHorario();
+        // Mostrar indicador de carga
+        const saveButton = document.querySelector('.btn-save');
+        if (saveButton) {
+            showLoadingButton(saveButton);
         }
         
-        closeModal();
-        showNotification('Estado actualizado correctamente', 'success');
+        // Actualizar en Firebase
+        const ticketToSave = {...ticket};
+        delete ticketToSave.firebaseKey;
+        
+        ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+            .then(() => {
+                closeModal();
+                showNotification('Estado actualizado correctamente', 'success');
+                
+                // Si estamos en la vista de horario, actualizarla también
+                if (document.getElementById('horarioSection').classList.contains('active')) {
+                    mostrarHorario();
+                }
+            })
+            .catch(error => {
+                console.error("Error actualizando estado:", error);
+                if (saveButton) {
+                    hideLoadingButton(saveButton);
+                }
+                showNotification('Error al cambiar el estado', 'error');
+            });
     });
 }
 
@@ -718,30 +862,92 @@ function deleteTicket(id) {
 }
 
 function confirmDelete(id) {
-    tickets = tickets.filter(t => t.id !== id);
-    saveTickets();
-    renderTickets();
-    updateStats();
-    
-    // Si estamos en la vista de horario, actualizarla también
-    if (document.getElementById('horarioSection').classList.contains('active')) {
-        mostrarHorario();
+    const ticket = tickets.find(t => t.id === id);
+    if (!ticket || !ticket.firebaseKey) {
+        showNotification('Error al eliminar la consulta', 'error');
+        return;
     }
     
-    closeModal();
-    showNotification('Ticket eliminado correctamente', 'success');
+    // Mostrar indicador de carga
+    const deleteButton = document.querySelector('.btn-delete');
+    if (deleteButton) {
+        showLoadingButton(deleteButton);
+    }
+    
+    ticketsRef.child(ticket.firebaseKey).remove()
+        .then(() => {
+            showNotification('Consulta eliminada correctamente', 'success');
+            closeModal();
+            
+            // Si estamos en la vista de horario, actualizarla también
+            if (document.getElementById('horarioSection').classList.contains('active')) {
+                mostrarHorario();
+            }
+        })
+        .catch(error => {
+            console.error("Error eliminando ticket:", error);
+            if (deleteButton) {
+                hideLoadingButton(deleteButton);
+            }
+            showNotification('Error al eliminar la consulta', 'error');
+        });
 }
 
 function closeModal() {
     const modal = document.querySelector('.edit-modal');
     if (modal) {
-        modal.remove();
+        modal.classList.add('modal-closing');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
     }
 }
 
-function saveTickets() {
-    localStorage.setItem('tickets', JSON.stringify(tickets));
-    localStorage.setItem('currentTicketId', currentTicketId.toString());
+// Configuración de Firebase
+const firebaseConfig = {
+    apiKey: "AIzaSyA0MKbA6xU2OlaCRFGNV_Ac22KmWU3Y2PI",
+    authDomain: "consulta-7ece8.firebaseapp.com",
+    projectId: "consulta-7ece8",
+    storageBucket: "consulta-7ece8.firebasestorage.app",
+    messagingSenderId: "960058925183",
+    appId: "1:960058925183:web:9cec6000f0788d61b31f4a",
+    measurementId: "G-6JVD4VRDBJ"
+  };
+
+// Inicializar Firebase
+firebase.initializeApp(firebaseConfig);
+
+// Referencia a la base de datos
+const db = firebase.database();
+const ticketsRef = db.ref('tickets');
+const settingsRef = db.ref('settings');
+
+// Sistema de autenticación básico
+let userCredential = null;
+
+// Iniciar sesión o crear cuenta anónima
+function initAuth() {
+    return new Promise((resolve, reject) => {
+        // Comprobar si el usuario ya está autenticado
+        firebase.auth().onAuthStateChanged((user) => {
+            if (user) {
+                userCredential = user;
+                resolve(user);
+            } else {
+                // Iniciar sesión anónima
+                firebase.auth().signInAnonymously()
+                    .then((credential) => {
+                        userCredential = credential.user;
+                        resolve(credential.user);
+                    })
+                    .catch((error) => {
+                        console.error("Error de autenticación:", error);
+                        showNotification('Error al conectar con la base de datos', 'error');
+                        reject(error);
+                    });
+            }
+        });
+    });
 }
 
 function showNotification(message, type = 'info') {
@@ -997,8 +1203,14 @@ function exportarGoogle() {
 }
 
 function backupData() {
+    // Crear una copia sin las claves de Firebase para el backup
+    const ticketsBackup = tickets.map(ticket => {
+        const { firebaseKey, ...ticketData } = ticket;
+        return ticketData;
+    });
+    
     const backup = {
-        tickets: tickets,
+        tickets: ticketsBackup,
         currentTicketId: currentTicketId,
         timestamp: new Date().toISOString(),
         version: '1.0'
@@ -1018,35 +1230,64 @@ function backupData() {
 }
 
 function cleanOldData() {
-    if (!confirm('¿Estás seguro de limpiar las consultas terminadas con más de 3 meses de antigüedad?')) {
+    if (!confirm('¿Estás seguro de limpiar las consultas terminadas con más de 3 meses de antigüedad? Esta acción no se puede deshacer.')) {
         return;
     }
     
     const tresMesesAtras = new Date();
     tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
     
-    const cantidadOriginal = tickets.length;
+    // Mostrar indicador de carga
+    showLoading();
     
-    tickets = tickets.filter(ticket => {
-        // Mantener tickets que no estén terminados
+    // Obtener tickets a eliminar (terminados con más de 3 meses)
+    const ticketsToDelete = tickets.filter(ticket => {
         if (ticket.estado !== 'terminado') {
-            return true;
+            return false; // Mantener tickets que no estén terminados
         }
         
         // Para tickets terminados, verificar la fecha
         const fechaTicket = new Date(ticket.fecha);
-        return fechaTicket >= tresMesesAtras;
+        return fechaTicket < tresMesesAtras;
     });
     
-    saveTickets();
+    // Contador para operaciones pendientes
+    let pendingOperations = ticketsToDelete.length;
     
-    const eliminados = cantidadOriginal - tickets.length;
-    showNotification(`Se eliminaron ${eliminados} consultas antiguas`, 'success');
-    
-    // Actualizar vista
-    if (document.getElementById('horarioSection').classList.contains('active')) {
-        mostrarHorario();
+    if (pendingOperations === 0) {
+        hideLoading();
+        showNotification('No hay consultas antiguas para eliminar', 'info');
+        return;
     }
+    
+    // Eliminar cada ticket en Firebase
+    ticketsToDelete.forEach(ticket => {
+        if (!ticket.firebaseKey) {
+            pendingOperations--;
+            if (pendingOperations === 0) {
+                hideLoading();
+                showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
+            }
+            return;
+        }
+        
+        ticketsRef.child(ticket.firebaseKey).remove()
+            .then(() => {
+                pendingOperations--;
+                if (pendingOperations === 0) {
+                    hideLoading();
+                    showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
+                }
+            })
+            .catch(error => {
+                console.error("Error eliminando ticket antiguo:", error);
+                pendingOperations--;
+                if (pendingOperations === 0) {
+                    hideLoading();
+                    showNotification('Hubo errores al eliminar algunas consultas antiguas', 'error');
+                }
+            });
+    });
 }
 
 // Funciones auxiliares
@@ -1069,4 +1310,91 @@ function getEstadoLabel(estado) {
         'terminado': 'Terminado'
     };
     return estados[estado] || estado;
+}
+
+// Funciones para indicadores de carga
+function showLoading() {
+    // Crear overlay de carga
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.id = 'loadingOverlay';
+    loadingOverlay.innerHTML = `
+        <div class="loading-spinner">
+            <i class="fas fa-paw fa-spin"></i>
+            <p>Conectando...</p>
+        </div>
+    `;
+    document.body.appendChild(loadingOverlay);
+    
+    // Añadir estilo si no existe
+    if (!document.getElementById('loading-styles')) {
+        const style = document.createElement('style');
+        style.id = 'loading-styles';
+        style.textContent = `
+            #loadingOverlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(255, 255, 255, 0.9);
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                z-index: 9999;
+            }
+            .loading-spinner {
+                text-align: center;
+            }
+            .loading-spinner i {
+                font-size: 3rem;
+                color: var(--primary-color);
+                margin-bottom: 15px;
+            }
+            .loading-spinner p {
+                color: var(--dark-color);
+                font-size: 1.2rem;
+            }
+            .button-loading {
+                position: relative;
+                pointer-events: none;
+                opacity: 0.7;
+            }
+            .button-loading::after {
+                content: '';
+                display: inline-block;
+                width: 1em;
+                height: 1em;
+                border: 2px solid currentColor;
+                border-radius: 50%;
+                border-right-color: transparent;
+                animation: button-spinner 0.75s linear infinite;
+                margin-left: 8px;
+                vertical-align: text-bottom;
+            }
+            @keyframes button-spinner {
+                to {transform: rotate(360deg);}
+            }
+        `;
+        document.head.appendChild(style);
+    }
+}
+
+function hideLoading() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+    if (loadingOverlay) {
+        loadingOverlay.remove();
+    }
+}
+
+function showLoadingButton(button) {
+    if (!button) return;
+    button.classList.add('button-loading');
+    button.innerHTML = button.innerHTML.replace(/<i.*<\/i>/, '');
+    button.disabled = true;
+}
+
+function hideLoadingButton(button) {
+    if (!button) return;
+    button.classList.remove('button-loading');
+    button.disabled = false;
 }
