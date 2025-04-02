@@ -1,0 +1,250 @@
+<!-- filepath: e:\Sistema tickets\index.html -->
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sistema de Consultas - Veterinaria</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="main-container">
+    <!-- Sidebar con navegación -->
+    <aside class="sidebar">
+      <div class="logo">
+        <img src="empresa.jpg" alt="Logo Veterinaria">
+        <h1>Veterinaria San Martin de Porres</h1>
+      </div>
+      <nav>
+        <button id="crearTicketBtn"><i class="fas fa-plus-circle"></i> Crear Consulta</button>
+        <button id="verTicketsBtn"><i class="fas fa-list-alt"></i> Ver Consultas</button>
+        <button id="horarioBtn"><i class="fas fa-calendar-alt"></i> Horario</button>
+        <button id="estadisticasBtn"><i class="fas fa-chart-pie"></i> Estadísticas</button>
+      </nav>
+      <div class="sidebar-footer">
+        <p>© 2025 Veterinaria SMP</p>
+      </div>
+    </aside>
+
+    <!-- Contenido principal -->
+    <div class="content">
+      <!-- Sección para crear tickets -->
+      <section id="crearTicketSection" class="hidden">
+        <h2><i class="fas fa-paw"></i> Crear Consulta</h2>
+        <div class="form-container">
+          <form id="ticketForm">
+            <div class="form-group">
+              <label for="nombre">Nombre del Cliente</label>
+              <input type="text" id="nombre" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="mascota">Nombre de la Mascota</label>
+              <input type="text" id="mascota" required>
+            </div>
+
+            <div class="form-group">
+              <label for="idPaciente">Número ID del paciente</label>
+              <input type="text" id="idPaciente" placeholder="ID del paciente" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="cedula">Cédula</label>
+              <input type="text" id="cedula" required>
+            </div>
+
+            <div class="form-group">
+              <label for="fecha">Fecha de Consulta</label>
+              <input type="date" id="fecha" required>
+            </div>
+
+            <div class="form-group">
+              <label for="hora">Hora de Consulta</label>
+              <input type="time" id="hora" required>
+            </div>
+
+            <div class="form-group">
+              <label for="medicoAtiende">Médico que atiende</label>
+              <input type="text" id="medicoAtiende" placeholder="Nombre del médico">
+            </div>
+
+            <div class="form-group">
+              <label for="motivo">Motivo de Consulta y Motivo de Llegada</label>
+              <textarea id="motivo" placeholder="Describa el motivo de la consulta o de llegada" required></textarea>
+            </div>
+            
+            <div class="form-group">
+              <label for="estado">Estado</label>
+              <select id="estado" required>
+                <option value="espera">En Sala de Espera</option>
+                <option value="consultorio1">Consultorio 1</option>
+                <option value="consultorio2">Consultorio 2</option>
+                <option value="consultorio3">Consultorio 3</option>
+                <option value="terminado">Consulta Terminada</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="tipoMascota">Tipo de Mascota</label>
+              <select id="tipoMascota" required>
+                <option value="perro">Perro</option>
+                <option value="gato">Gato</option>
+                <option value="ave">Ave</option>
+                <option value="otro">Otro</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="urgencia">Nivel de Urgencia</label>
+              <select id="urgencia" required>
+                <option value="normal">Normal</option>
+                <option value="media">Media</option>
+                <option value="alta">Alta</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="numFactura">Número de factura</label>
+              <input type="text" id="numFactura" placeholder="Número de factura">
+            </div>
+            
+            <div class="form-group">
+              <label for="porCobrar">Por Cobrar</label>
+              <input type="text" id="porCobrar" placeholder="Introduzca lo que hay que cobrar al cliente">
+            </div>
+            
+            <button type="submit" class="btn-submit"><i class="fas fa-ticket-alt"></i> Agregar Consulta</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Sección para visualizar tickets -->
+      <section id="verTicketsSection" class="hidden">
+        <h2><i class="fas fa-list"></i> Sala de Espera</h2>
+        
+        <div class="filter-container">
+          <button class="filter-btn active" data-filter="todos">Todos</button>
+          <button class="filter-btn" data-filter="espera">En Espera</button>
+          <button class="filter-btn" data-filter="consultorio">En Consultorio</button>
+          <button class="filter-btn" data-filter="terminado">Terminados</button>
+          <button class="filter-btn" data-filter="porCobrar">Por Cobrar</button>
+        </div>
+        
+        <div id="ticketContainer" class="ticket-container"></div>
+      </section>
+      
+      <!-- Sección de estadísticas -->
+      <section id="estadisticasSection" class="hidden">
+        <h2><i class="fas fa-chart-bar"></i> Estadísticas</h2>
+        <div class="stats-container">
+          <div class="stat-card">
+            <i class="fas fa-users"></i>
+            <h3>Total Pacientes</h3>
+            <p id="totalPacientes">0</p>
+          </div>
+          <div class="stat-card">
+            <i class="fas fa-hourglass-half"></i>
+            <h3>En Espera</h3>
+            <p id="pacientesEspera">0</p>
+          </div>
+          <div class="stat-card">
+            <i class="fas fa-stethoscope"></i>
+            <h3>En Consulta</h3>
+            <p id="pacientesConsulta">0</p>
+          </div>
+          <div class="stat-card">
+            <i class="fas fa-check-circle"></i>
+            <h3>Atendidos</h3>
+            <p id="pacientesAtendidos">0</p>
+          </div>
+          <div class="stat-card card-por-cobrar">
+            <i class="fas fa-money-bill-wave"></i>
+            <h3>Por Cobrar</h3>
+            <p id="pacientesPorCobrar">0</p>
+          </div>
+        </div>
+        <div class="chart-container">
+          <canvas id="ticketsChart"></canvas>
+        </div>
+      </section>
+
+      <!-- Sección de horario -->
+      <section id="horarioSection" class="hidden">
+        <h2><i class="fas fa-calendar-alt"></i> Horario de Consultas</h2>
+        
+        <div class="date-controls">
+          <input type="date" id="fechaHorario" value="">
+          <button id="verHorarioBtn"><i class="fas fa-search"></i> Ver horario</button>
+        </div>
+        
+        <div class="export-controls">
+          <button id="exportarDiaBtn"><i class="fas fa-file-export"></i> Exportar día</button>
+          <button id="exportarMesBtn"><i class="fas fa-file-export"></i> Exportar mes</button>
+          <button id="exportarGoogleBtn"><i class="fab fa-google"></i> Exportar a Google Sheets</button>
+        </div>
+        
+        <div class="horario-container">
+          <table id="tablaHorario" class="horario-table">
+            <thead>
+              <tr>
+                <th>Hora</th>
+                <th>Cliente</th>
+                <th>Mascota</th>
+                <th>Tipo</th>
+                <th>Estado</th>
+                <th>Urgencia</th>
+                <th>Médico</th>
+                <th>ID Paciente</th>
+                <th>Factura</th>
+                <th>Por Cobrar</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="horarioBody">
+              <!-- Aquí se generarán las filas dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+        
+        <div class="backup-controls">
+          <button id="backupBtn"><i class="fas fa-download"></i> Generar respaldo</button>
+          <button id="cleanDataBtn"><i class="fas fa-broom"></i> Limpiar datos antiguos</button>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Plantillas para notificaciones y modales -->
+  <div id="notificationContainer"></div>
+  
+  <!-- Modales -->
+  <div id="editModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h3>Editar Consulta</h3>
+      <form id="editForm">
+        <!-- El contenido del formulario se generará dinámicamente -->
+      </form>
+    </div>
+  </div>
+  
+  <div id="statusModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h3>Cambiar Estado</h3>
+      <div id="statusOptions">
+        <!-- Opciones de estado generadas dinámicamente -->
+      </div>
+      <div class="modal-actions">
+        <button id="cancelStatusBtn">Cancelar</button>
+        <button id="saveStatusBtn">Guardar</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="index.js"></script>
+</body>
+</html>
