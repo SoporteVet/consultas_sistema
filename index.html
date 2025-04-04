@@ -65,8 +65,9 @@
             </div>
 
             <div class="form-group">
-              <label for="medicoAtiende">Médico que atiende</label>
-              <input type="text" id="medicoAtiende" placeholder="Nombre del médico">
+              <label for="medicoAtiende">Personal que atiende</label>
+              <input type="text" id="medicoAtiende" placeholder="Nombre del personal que atiende">
+              <small>Separe múltiples nombres con comas (ejemplo: Dr. López, Asist. Gómez)</small>
             </div>
 
             <div class="form-group">
@@ -103,6 +104,18 @@
                 <option value="alta">Alta</option>
               </select>
             </div>
+
+            <!-- Agregar después del campo de urgencia y antes del número de factura -->
+            <div class="form-group">
+              <label for="tipoServicio">Tipo de Servicio</label>
+              <select id="tipoServicio" required>
+                <option value="consulta">Consulta general</option>
+                <option value="revaloracion">Revaloración</option>
+                <!-- más opciones... -->
+              </select>
+            </div>
+
+
 
             <div class="form-group">
               <label for="numFactura">Número de factura</label>
@@ -167,6 +180,98 @@
         <div class="chart-container">
           <canvas id="ticketsChart"></canvas>
         </div>
+
+        <!-- Agregar dentro de la sección de estadísticas, después del gráfico existente -->
+<div class="estadisticas-personal-section">
+  <h3><i class="fas fa-user-md"></i> Estadísticas por Personal y Servicio</h3>
+  
+  <div class="filtros-estadisticas">
+    <div class="filtro-grupo">
+      <label for="filtroPersonal">Filtrar por personal:</label>
+      <select id="filtroPersonal">
+        <option value="todos">Todos</option>
+        <!-- Se llenará dinámicamente con los nombres del personal -->
+      </select>
+    </div>
+    
+    <div class="filtro-grupo">
+      <label for="filtroServicio">Filtrar por servicio:</label>
+      <select id="filtroServicio">
+        <option value="todos">Todos</option>
+        <option value="consulta">Consulta general</option>
+        <option value="revaloracion">Revaloración</option>
+        <option value="retiroHilos">Retiro de hilos</option>
+        <option value="rayosX">Rayos X</option>
+        <option value="desparasitacion">Desparasitación</option>
+        <option value="inyectable">Inyectables</option>
+        <option value="corteUnas">Corte de uñas</option>
+        <option value="emergencia">Emergencia</option>
+        <option value="tomaMuestras">Toma de muestras</option>
+        <option value="tests">Tests</option>
+        <option value="hemograma">Hemograma</option>
+        <option value="eutanasia">Eutanasia</option>
+        <option value="quitarPuntos">Quitar puntos</option>
+        <option value="otro">Otro</option>
+      </select>
+    </div>
+    
+    <div class="filtro-grupo">
+      <label for="filtroPeriodo">Período:</label>
+      <select id="filtroPeriodo">
+        <option value="hoy">Hoy</option>
+        <option value="semana">Esta semana</option>
+        <option value="mes">Este mes</option>
+        <option value="ano">Este año</option>
+        <option value="personalizado">Personalizado</option>
+      </select>
+    </div>
+    
+    <div id="periodPersonalizado" class="filtro-periodo-personalizado" style="display: none;">
+      <div class="filtro-fecha">
+        <label for="fechaInicioEstadisticas">Desde:</label>
+        <input type="date" id="fechaInicioEstadisticas">
+      </div>
+      <div class="filtro-fecha">
+        <label for="fechaFinEstadisticas">Hasta:</label>
+        <input type="date" id="fechaFinEstadisticas">
+      </div>
+    </div>
+    
+    <button id="aplicarFiltrosBtn" class="btn-filtrar">
+      <i class="fas fa-filter"></i> Aplicar filtros
+    </button>
+  </div>
+  
+  <div class="estadisticas-resultados">
+    <div class="charts-container">
+      <div class="chart-wrapper">
+        <h4>Servicios por Personal</h4>
+        <canvas id="chartServiciosPersonal"></canvas>
+      </div>
+      <div class="chart-wrapper">
+        <h4>Distribución de Servicios</h4>
+        <canvas id="chartDistribucionServicios"></canvas>
+      </div>
+    </div>
+    
+    <div class="tabla-estadisticas">
+      <h4>Detalles por Personal</h4>
+      <table id="tablaEstadisticasPersonal" class="stats-table">
+        <thead>
+          <tr>
+            <th>Personal</th>
+            <th>Tipo de Servicio</th>
+            <th>Cantidad</th>
+            <th>% del Total</th>
+          </tr>
+        </thead>
+        <tbody id="tablaEstadisticasBody">
+          <!-- Se llenará dinámicamente -->
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
       </section>
 
       <!-- Sección de horario -->

@@ -379,6 +379,48 @@ section h2 i {
   color: var(--primary-color);
 }
 
+/* Añadir después de las clases existentes, cerca de otros estilos de urgencia */
+
+.ticket-info .urgencia-alta {
+  color: #e53935;
+  font-weight: bold;
+  background-color: rgba(229, 57, 53, 0.1);
+  padding: 5px 10px;
+  border-radius: 4px;
+  margin: 5px 0;
+  display: inline-block;
+}
+
+.ticket-info .urgencia-media {
+  color: #fb8c00;
+  font-weight: bold;
+  background-color: rgba(251, 140, 0, 0.1);
+  padding: 5px 10px;
+  border-radius: 4px;
+  margin: 5px 0;
+  display: inline-block;
+}
+
+.ticket-info .urgencia-normal {
+  color: #43a047;
+  background-color: rgba(67, 160, 71, 0.1);
+  padding: 5px 10px;
+  border-radius: 4px;
+  margin: 5px 0;
+  display: inline-block;
+}
+
+/* Hacer que el nivel de urgencia sea más visible en tickets de urgencia alta */
+.ticket-urgencia-alta .urgencia-alta {
+  animation: pulseUrgent 2s infinite;
+  box-shadow: 0 0 5px rgba(229, 57, 53, 0.5);
+}
+
+@keyframes pulseUrgent {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+  100% { transform: scale(1); }
+}
 .estado-badge {
   display: inline-flex;
   align-items: center;
@@ -1096,4 +1138,257 @@ section h2 i {
 
 .animate-scale {
   animation: scaleIn 0.5s forwards;
+}
+
+/* Estilos para la sección de estadísticas por personal y servicio */
+
+.estadisticas-personal-section {
+  margin-top: 30px;
+  padding: 25px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+}
+
+.estadisticas-personal-section h3 {
+  color: var(--primary-color);
+  margin-bottom: 20px;
+  font-size: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border-bottom: 2px solid var(--light-bg);
+  padding-bottom: 15px;
+}
+
+.estadisticas-personal-section h3 i {
+  color: var(--primary-color);
+  opacity: 0.8;
+}
+
+/* Estilos para los filtros */
+.filtros-estadisticas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 25px;
+  background: var(--light-bg);
+  padding: 18px;
+  border-radius: 10px;
+}
+
+.filtro-grupo {
+  display: flex;
+  flex-direction: column;
+  min-width: 200px;
+  flex: 1;
+}
+
+.filtro-grupo label {
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: var(--dark-color);
+  font-size: 0.9rem;
+}
+
+.filtro-grupo select {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: #fff;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
+  transition: all 0.2s ease;
+}
+
+.filtro-grupo select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.15);
+}
+
+.filtro-periodo-personalizado {
+  display: flex;
+  gap: 15px;
+  flex-wrap: wrap;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border-left: 3px solid var(--primary-color);
+  margin-top: 5px;
+}
+
+.filtro-fecha {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 180px;
+}
+
+.filtro-fecha label {
+  margin-bottom: 8px;
+  font-weight: 500;
+  font-size: 0.9rem;
+  color: var(--dark-color);
+}
+
+.filtro-fecha input[type="date"] {
+  padding: 10px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: #fff;
+}
+
+.btn-filtrar {
+  align-self: flex-end;
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+.btn-filtrar:hover {
+  background-color: var(--primary-dark, #3367d6);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.btn-filtrar i {
+  font-size: 0.9rem;
+}
+
+/* Estilos para los resultados */
+.estadisticas-resultados {
+  margin-top: 20px;
+}
+
+/* Gráficos */
+.charts-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 25px;
+  margin-bottom: 35px;
+}
+
+.chart-wrapper {
+  flex: 1;
+  min-width: 300px;
+  height: 400px;
+  background: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  padding: 20px;
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.chart-wrapper:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.08);
+}
+
+.chart-wrapper h4 {
+  text-align: center;
+  margin-bottom: 20px;
+  color: var(--primary-color);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+/* Tabla de estadísticas */
+.tabla-estadisticas {
+  overflow-x: auto;
+  margin-top: 30px;
+}
+
+.tabla-estadisticas h4 {
+  margin-bottom: 15px;
+  color: var(--primary-color);
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.stats-table {
+  width: 100%;
+  border-collapse: collapse;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+
+.stats-table th,
+.stats-table td {
+  padding: 14px 15px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.stats-table th {
+  background-color: var(--primary-color);
+  color: white;
+  font-weight: 500;
+  text-transform: uppercase;
+  font-size: 0.85rem;
+  letter-spacing: 0.5px;
+}
+
+.stats-table tr:nth-child(even) {
+  background-color: var(--light-bg, #f8f9fc);
+}
+
+.stats-table tr:hover {
+  background-color: rgba(78, 115, 223, 0.08);
+}
+
+.stats-table td:first-child {
+  font-weight: 600;
+  color: var(--dark-color);
+}
+
+.no-data {
+  text-align: center;
+  color: #888;
+  padding: 30px !important;
+  font-style: italic;
+}
+
+/* Responsividad para móviles */
+@media (max-width: 768px) {
+  .estadisticas-personal-section {
+    padding: 15px;
+  }
+  
+  .filtros-estadisticas {
+    padding: 15px;
+    flex-direction: column;
+  }
+  
+  .filtro-grupo {
+    width: 100%;
+  }
+  
+  .btn-filtrar {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .chart-wrapper {
+    min-width: 100%;
+    height: 350px;
+  }
+  
+  .tabla-estadisticas {
+    margin-top: 20px;
+  }
+  
+  .stats-table th,
+  .stats-table td {
+    padding: 10px;
+    font-size: 0.9rem;
+  }
 }

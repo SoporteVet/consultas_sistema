@@ -1,9 +1,6 @@
-// Sistema de Tickets para Veterinaria
-let tickets = [];
 let currentTicketId = 1;
 let isDataLoaded = false;
 
-// Referencias a elementos DOM
 const crearTicketBtn = document.getElementById('crearTicketBtn');
 const verTicketsBtn = document.getElementById('verTicketsBtn');
 const estadisticasBtn = document.getElementById('estadisticasBtn');
@@ -244,84 +241,115 @@ function loadTickets() {
     });
 }
 
+// Reemplaza la función addTicket() actual con esta versión corregida
 function addTicket() {
-    const nombre = document.getElementById('nombre').value;
-    const mascota = document.getElementById('mascota').value;
-    const cedula = document.getElementById('cedula').value;
-    const motivo = document.getElementById('motivo').value;
-    const estado = document.getElementById('estado').value;
-    const tipoMascota = document.getElementById('tipoMascota').value;
-    const urgencia = document.getElementById('urgencia').value;
-    
-    // Campos adicionales
-    const idPaciente = document.getElementById('idPaciente')?.value || '';
-    const medicoAtiende = document.getElementById('medicoAtiende')?.value || '';
-    const numFactura = document.getElementById('numFactura')?.value || '';
-    const porCobrar = document.getElementById('porCobrar')?.value || '';
-    
-    // Obtener fecha y hora seleccionadas
-    const fechaConsulta = document.getElementById('fecha')?.value;
-    const horaConsulta = document.getElementById('hora')?.value;
-    
-    const fecha = new Date();
-    
-    // Crear nuevo ticket
-    const nuevoTicket = {
-        id: currentTicketId,
-        nombre,
-        mascota,
-        cedula,
-        motivo,
-        estado,
-        tipoMascota,
-        urgencia,
-        idPaciente,
-        medicoAtiende,
-        numFactura,
-        porCobrar,
-        fecha: fecha.toISOString(),
-        horaCreacion: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-    };
-    
-    // Añadir campos de fecha y hora de consulta si están disponibles
-    if (fechaConsulta) nuevoTicket.fechaConsulta = fechaConsulta;
-    if (horaConsulta) nuevoTicket.horaConsulta = horaConsulta;
-    
-    // Mostrar indicador de carga
-    showLoadingButton(document.querySelector('.btn-submit'));
-    
-    // Guardar en Firebase
-    ticketsRef.push(nuevoTicket)
-        .then(() => {
-            // Incrementar el ID para el siguiente ticket
-            currentTicketId++;
-            settingsRef.update({ currentTicketId });
-            
-            // Limpiar formulario
-            ticketForm.reset();
-            
-            // Restaurar fecha actual en el formulario si existe el campo
-            if (document.getElementById('fecha')) {
-                document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-            }
-            
-            // Quitar indicador de carga
-            hideLoadingButton(document.querySelector('.btn-submit'));
-            
-            // Mostrar mensaje de éxito
-            showNotification('Consulta creada correctamente', 'success');
-            
-            // Opcional: cambiar a la vista de tickets
-            setTimeout(() => {
-                showSection(verTicketsSection);
-                setActiveButton(verTicketsBtn);
-            }, 1500);
-        })
-        .catch(error => {
-            console.error("Error guardando ticket:", error);
-            hideLoadingButton(document.querySelector('.btn-submit'));
-            showNotification('Error al guardar la consulta', 'error');
+    try {
+        // 1. Obtener valores del formulario
+        const nombre = document.getElementById('nombre').value;
+        const mascota = document.getElementById('mascota').value;
+        const cedula = document.getElementById('cedula').value;
+        const motivo = document.getElementById('motivo').value;
+        const estado = document.getElementById('estado').value;
+        const tipoMascota = document.getElementById('tipoMascota').value;
+        const urgencia = document.getElementById('urgencia').value;
+        
+        // Campos adicionales
+        const idPaciente = document.getElementById('idPaciente')?.value || '';
+        const medicoAtiende = document.getElementById('medicoAtiende')?.value || '';
+        const numFactura = document.getElementById('numFactura')?.value || '';
+        const porCobrar = document.getElementById('porCobrar')?.value || '';
+        const tipoServicio = document.getElementById('tipoServicio')?.value || 'consulta';
+        
+        // Obtener fecha y hora seleccionadas
+        const fechaConsulta = document.getElementById('fecha')?.value;
+        const horaConsulta = document.getElementById('hora')?.value;
+        
+        console.log("Datos recopilados:", { 
+            nombre, mascota, fechaConsulta, horaConsulta, tipoServicio 
         });
+        
+        const fecha = new Date();
+        
+        // 2. Crear nuevo ticket
+        const nuevoTicket = {
+            id: currentTicketId,
+            nombre,
+            mascota,
+            cedula,
+            motivo,
+            estado,
+            tipoMascota,
+            urgencia,
+            idPaciente,
+            medicoAtiende,
+            numFactura,
+            porCobrar,
+            tipoServicio,
+            fecha: fecha.toISOString(),
+            horaCreacion: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+        };
+        
+        // Añadir campos de fecha y hora de consulta si están disponibles
+        if (fechaConsulta) nuevoTicket.fechaConsulta = fechaConsulta;
+        if (horaConsulta) nuevoTicket.horaConsulta = horaConsulta;
+        
+        console.log("Ticket a guardar:", nuevoTicket);
+        
+        // 3. Mostrar indicador de carga
+        showLoadingButton(document.querySelector('.btn-submit'));
+        
+        // 4. Verificar la referencia a Firebase
+        if (!ticketsRef) {
+            console.error("Error: ticketsRef no está definido");
+            showNotification('Error con la base de datos. Por favor recarga la página.', 'error');
+            hideLoadingButton(document.querySelector('.btn-submit'));
+            return;
+        }
+        
+        // 5. Guardar en Firebase con manejo de errores mejorado
+        ticketsRef.push(nuevoTicket)
+            .then(() => {
+                console.log("Ticket guardado exitosamente");
+                
+                // Incrementar el ID para el siguiente ticket
+                currentTicketId++;
+                
+                // Actualizar currentTicketId en Firebase si settingsRef existe
+                if (settingsRef) {
+                    settingsRef.update({ currentTicketId })
+                        .catch(error => console.error("Error actualizando currentTicketId:", error));
+                }
+                
+                // Limpiar formulario
+                ticketForm.reset();
+                
+                // Restaurar fecha actual en el formulario
+                if (document.getElementById('fecha')) {
+                    document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+                }
+                
+                // Quitar indicador de carga
+                hideLoadingButton(document.querySelector('.btn-submit'));
+                
+                // Mostrar mensaje de éxito
+                showNotification('Consulta creada correctamente', 'success');
+                
+                // Cambiar a la vista de tickets
+                setTimeout(() => {
+                    showSection(verTicketsSection);
+                    setActiveButton(verTicketsBtn);
+                }, 1500);
+            })
+            .catch(error => {
+                console.error("Error guardando ticket:", error);
+                hideLoadingButton(document.querySelector('.btn-submit'));
+                showNotification('Error al guardar la consulta: ' + error.message, 'error');
+            });
+    } catch (error) {
+        console.error("Error en la función addTicket:", error);
+        hideLoadingButton(document.querySelector('.btn-submit'));
+        showNotification('Error en el proceso de creación: ' + error.message, 'error');
+    }
 }
 
 function renderTickets(filter = 'todos') {
@@ -343,6 +371,9 @@ function renderTickets(filter = 'todos') {
     } else if (filter === 'porCobrar') {
         // Filtrar tickets que tengan algo por cobrar
         filteredTickets = tickets.filter(ticket => ticket.porCobrar && ticket.porCobrar.trim() !== '');
+    } else if (filter === 'urgentes') {
+        // Filtrar tickets con urgencia alta
+        filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta');
     }
     
     // Ordenar por urgencia y luego por fecha
@@ -423,6 +454,23 @@ function renderTickets(filter = 'todos') {
             ? `<p class="por-cobrar-info"><i class="fas fa-exclamation-circle"></i> Por cobrar: ${ticket.porCobrar}</p>` 
             : '';
         
+        // Crear clase y texto para el nivel de urgencia
+        let urgenciaClass = '';
+        let urgenciaIcon = '';
+        switch(ticket.urgencia) {
+            case 'alta':
+                urgenciaClass = 'urgencia-alta';
+                urgenciaIcon = 'fa-exclamation-triangle';
+                break;
+            case 'media':
+                urgenciaClass = 'urgencia-media';
+                urgenciaIcon = 'fa-exclamation';
+                break;
+            default: // normal
+                urgenciaClass = 'urgencia-normal';
+                urgenciaIcon = 'fa-info-circle';
+        }
+        
         ticketElement.innerHTML = `
             <div class="ticket-header">
                 <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
@@ -438,6 +486,7 @@ function renderTickets(filter = 'todos') {
                 <p><i class="fas fa-clock"></i> ${ticket.horaCreacion}</p>
                 ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-day"></i> Fecha: ${formatDate(ticket.fechaConsulta)}</p>` : ''}
                 ${ticket.horaConsulta ? `<p><i class="fas fa-hourglass-start"></i> Hora: ${ticket.horaConsulta}</p>` : ''}
+                <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${ticket.urgencia.toUpperCase()}</p>
                 <div class="estado-badge ${estadoClass}">
                     <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
                                  ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
@@ -463,6 +512,55 @@ function renderTickets(filter = 'todos') {
         
         ticketContainer.appendChild(ticketElement);
     });
+    
+    // Agregar estilos para los niveles de urgencia si no existen
+    if (!document.getElementById('urgencia-styles')) {
+        const style = document.createElement('style');
+        style.id = 'urgencia-styles';
+        style.textContent = `
+            .ticket-info .urgencia-alta {
+                color: #e53935;
+                font-weight: bold;
+                background-color: rgba(229, 57, 53, 0.1);
+                padding: 5px 10px;
+                border-radius: 4px;
+                margin: 5px 0;
+                display: inline-block;
+            }
+            
+            .ticket-info .urgencia-media {
+                color: #fb8c00;
+                font-weight: bold;
+                background-color: rgba(251, 140, 0, 0.1);
+                padding: 5px 10px;
+                border-radius: 4px;
+                margin: 5px 0;
+                display: inline-block;
+            }
+            
+            .ticket-info .urgencia-normal {
+                color: #43a047;
+                background-color: rgba(67, 160, 71, 0.1);
+                padding: 5px 10px;
+                border-radius: 4px;
+                margin: 5px 0;
+                display: inline-block;
+            }
+            
+            /* Hacer que el nivel de urgencia sea más visible en tickets de urgencia alta */
+            .ticket-urgencia-alta .urgencia-alta {
+                animation: pulseUrgent 2s infinite;
+                box-shadow: 0 0 5px rgba(229, 57, 53, 0.5);
+            }
+            
+            @keyframes pulseUrgent {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    }
 }
 
 // Reemplazar la función formatDate actual con esta versión mejorada
@@ -597,9 +695,20 @@ function mostrarHorario() {
 
 function editTicket(id) {
     const ticket = tickets.find(t => t.id === id);
-    if (!ticket) return;
     
-    // Mostrar un formulario modal para editar
+    if (!ticket) {
+        console.error("Ticket no encontrado con ID:", id);
+        showNotification('Error: Ticket no encontrado', 'error');
+        return;
+    }
+    
+    console.log("Ticket encontrado:", ticket);
+    console.log("Firebase Key:", ticket.firebaseKey);
+    
+    // Cerrar cualquier modal existente primero
+    closeModal();
+    
+    // Crear un modal para editar
     const modal = document.createElement('div');
     modal.className = 'edit-modal';
     
@@ -619,68 +728,117 @@ function editTicket(id) {
             animalIcon = '<i class="fas fa-paw"></i>';
     }
     
+    // Asegurar que todos los valores estén definidos para evitar errores en el formulario
+    const safeTicket = {
+        id: ticket.id,
+        nombre: ticket.nombre || '',
+        mascota: ticket.mascota || '',
+        cedula: ticket.cedula || '',
+        idPaciente: ticket.idPaciente || '',
+        fechaConsulta: ticket.fechaConsulta || '',
+        horaConsulta: ticket.horaConsulta || '',
+        medicoAtiende: ticket.medicoAtiende || '',
+        motivo: ticket.motivo || '',
+        numFactura: ticket.numFactura || '',
+        porCobrar: ticket.porCobrar || '',
+        tipoMascota: ticket.tipoMascota || 'otro',
+        urgencia: ticket.urgencia || 'normal',
+        estado: ticket.estado || 'espera',
+        firebaseKey: ticket.firebaseKey
+    };
+    
+    // Crear el contenido del modal con el formulario
     modal.innerHTML = `
         <div class="modal-content animate-scale">
-            <h3>${animalIcon} Editar Ticket #${ticket.id}</h3>
-            <form id="editForm">
-                <div class="form-group">
-                    <label for="editNombre">Nombre del Cliente</label>
-                    <input type="text" id="editNombre" value="${ticket.nombre}" required>
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3>${animalIcon} Editar Consulta #${safeTicket.id}</h3>
+            <form id="editTicketForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editNombre">Nombre del Cliente</label>
+                        <input type="text" id="editNombre" value="${safeTicket.nombre}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editMascota">Nombre de la Mascota</label>
+                        <input type="text" id="editMascota" value="${safeTicket.mascota}" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="editMascota">Nombre de la Mascota</label>
-                    <input type="text" id="editMascota" value="${ticket.mascota}" required>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editIdPaciente">Número ID del paciente</label>
+                        <input type="text" id="editIdPaciente" value="${safeTicket.idPaciente}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCedula">Cédula</label>
+                        <input type="text" id="editCedula" value="${safeTicket.cedula}" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="editCedula">Cédula</label>
-                    <input type="text" id="editCedula" value="${ticket.cedula}" required>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editFecha">Fecha de Consulta</label>
+                        <input type="date" id="editFecha" value="${safeTicket.fechaConsulta}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editHora">Hora de Consulta</label>
+                        <input type="time" id="editHora" value="${safeTicket.horaConsulta}" required>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="editIdPaciente">ID Paciente</label>
-                    <input type="text" id="editIdPaciente" value="${ticket.idPaciente || ''}">
-                </div>
-                <!-- Añadir campos de fecha y hora -->
-                <div class="form-group">
-                    <label for="editFechaConsulta">Fecha de Consulta</label>
-                    <input type="date" id="editFechaConsulta" value="${ticket.fechaConsulta || ''}" required>
-                </div>
-                <div class="form-group">
-                    <label for="editHoraConsulta">Hora de Consulta</label>
-                    <input type="time" id="editHoraConsulta" value="${ticket.horaConsulta || ''}" required>
-                </div>
+                
                 <div class="form-group">
                     <label for="editMedicoAtiende">Médico que atiende</label>
-                    <input type="text" id="editMedicoAtiende" value="${ticket.medicoAtiende || ''}">
+                    <input type="text" id="editMedicoAtiende" value="${safeTicket.medicoAtiende}">
                 </div>
+                
                 <div class="form-group">
-                    <label for="editMotivo">Motivo</label>
-                    <textarea id="editMotivo" required>${ticket.motivo}</textarea>
+                    <label for="editMotivo">Motivo de Consulta</label>
+                    <textarea id="editMotivo" required>${safeTicket.motivo}</textarea>
                 </div>
-                <div class="form-group">
-                    <label for="editNumFactura">Número de factura</label>
-                    <input type="text" id="editNumFactura" value="${ticket.numFactura || ''}">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editEstado">Estado</label>
+                        <select id="editEstado" required>
+                            <option value="espera" ${safeTicket.estado === 'espera' ? 'selected' : ''}>En Sala de Espera</option>
+                            <option value="consultorio1" ${safeTicket.estado === 'consultorio1' ? 'selected' : ''}>Consultorio 1</option>
+                            <option value="consultorio2" ${safeTicket.estado === 'consultorio2' ? 'selected' : ''}>Consultorio 2</option>
+                            <option value="consultorio3" ${safeTicket.estado === 'consultorio3' ? 'selected' : ''}>Consultorio 3</option>
+                            <option value="terminado" ${safeTicket.estado === 'terminado' ? 'selected' : ''}>Consulta Terminada</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editTipoMascota">Tipo de Mascota</label>
+                        <select id="editTipoMascota" required>
+                            <option value="perro" ${safeTicket.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
+                            <option value="gato" ${safeTicket.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
+                            <option value="ave" ${safeTicket.tipoMascota === 'ave' ? 'selected' : ''}>Ave</option>
+                            <option value="otro" ${safeTicket.tipoMascota === 'otro' ? 'selected' : ''}>Otro</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="editUrgencia">Nivel de Urgencia</label>
+                        <select id="editUrgencia" required>
+                            <option value="normal" ${safeTicket.urgencia === 'normal' ? 'selected' : ''}>Normal</option>
+                            <option value="media" ${safeTicket.urgencia === 'media' ? 'selected' : ''}>Media</option>
+                            <option value="alta" ${safeTicket.urgencia === 'alta' ? 'selected' : ''}>Alta</option>
+                        </select>
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="editPorCobrar">Por Cobrar</label>
-                    <input type="text" id="editPorCobrar" value="${ticket.porCobrar || ''}">
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editNumFactura">Número de factura</label>
+                        <input type="text" id="editNumFactura" value="${safeTicket.numFactura}">
+                    </div>
+                    <div class="form-group">
+                        <label for="editPorCobrar">Por Cobrar</label>
+                        <input type="text" id="editPorCobrar" value="${safeTicket.porCobrar}">
+                    </div>
                 </div>
-                <div class="form-group">
-                    <label for="editTipoMascota">Tipo de Mascota</label>
-                    <select id="editTipoMascota" required>
-                        <option value="perro" ${ticket.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
-                        <option value="gato" ${ticket.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
-                        <option value="ave" ${ticket.tipoMascota === 'ave' ? 'selected' : ''}>Ave</option>
-                        <option value="otro" ${ticket.tipoMascota === 'otro' ? 'selected' : ''}>Otro</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editUrgencia">Urgencia</label>
-                    <select id="editUrgencia" required>
-                        <option value="normal" ${ticket.urgencia === 'normal' ? 'selected' : ''}>Normal</option>
-                        <option value="media" ${ticket.urgencia === 'media' ? 'selected' : ''}>Media</option>
-                        <option value="alta" ${ticket.urgencia === 'alta' ? 'selected' : ''}>Alta</option>
-                    </select>
-                </div>
+                
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
                     <button type="submit" class="btn-save">Guardar Cambios</button>
@@ -691,33 +849,47 @@ function editTicket(id) {
     
     document.body.appendChild(modal);
     
-    document.getElementById('editForm').addEventListener('submit', function(e) {
+    // Añadir event listener al formulario para guardar los cambios
+    document.getElementById('editTicketForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
-        // Actualizar ticket
-        ticket.nombre = document.getElementById('editNombre').value;
-        ticket.mascota = document.getElementById('editMascota').value;
-        ticket.cedula = document.getElementById('editCedula').value;
-        ticket.idPaciente = document.getElementById('editIdPaciente').value;
-        // Actualizar fecha y hora
-        ticket.fechaConsulta = document.getElementById('editFechaConsulta').value;
-        ticket.horaConsulta = document.getElementById('editHoraConsulta').value;
-        ticket.medicoAtiende = document.getElementById('editMedicoAtiende').value;
-        ticket.motivo = document.getElementById('editMotivo').value;
-        ticket.numFactura = document.getElementById('editNumFactura').value;
-        ticket.porCobrar = document.getElementById('editPorCobrar').value;
-        ticket.tipoMascota = document.getElementById('editTipoMascota').value;
-        ticket.urgencia = document.getElementById('editUrgencia').value;
+        // Recoger todos los datos del formulario
+        const updatedTicket = {
+            id: safeTicket.id,
+            nombre: document.getElementById('editNombre').value,
+            mascota: document.getElementById('editMascota').value,
+            cedula: document.getElementById('editCedula').value,
+            idPaciente: document.getElementById('editIdPaciente').value,
+            fechaConsulta: document.getElementById('editFecha').value,
+            horaConsulta: document.getElementById('editHora').value,
+            medicoAtiende: document.getElementById('editMedicoAtiende').value,
+            motivo: document.getElementById('editMotivo').value,
+            estado: document.getElementById('editEstado').value,
+            tipoMascota: document.getElementById('editTipoMascota').value,
+            urgencia: document.getElementById('editUrgencia').value,
+            numFactura: document.getElementById('editNumFactura').value,
+            porCobrar: document.getElementById('editPorCobrar').value,
+            firebaseKey: safeTicket.firebaseKey
+        };
         
-        saveEditedTicket(ticket);
+        // Guardar el ticket actualizado
+        saveEditedTicket(updatedTicket);
     });
 }
 
 function saveEditedTicket(ticket) {
+    console.log("Guardando ticket actualizado:", ticket);
+    
     if (!ticket.firebaseKey) {
-        showNotification('Error al guardar los cambios', 'error');
+        console.error("Error: No hay clave de Firebase para el ticket", ticket);
+        showNotification('Error al guardar los cambios: falta identificador', 'error');
         return;
     }
+    
+    // Guardar la sección y filtro activos antes de actualizar
+    const currentSection = document.querySelector('.content section.active');
+    const currentFilterBtn = document.querySelector('.filter-btn.active');
+    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
     
     // Mostrar indicador de carga
     const saveButton = document.querySelector('.btn-save');
@@ -729,25 +901,46 @@ function saveEditedTicket(ticket) {
     const ticketToSave = {...ticket};
     delete ticketToSave.firebaseKey;
     
+    // Asegurarse de que ningún campo sea undefined
+    Object.keys(ticketToSave).forEach(key => {
+        if (ticketToSave[key] === undefined) {
+            ticketToSave[key] = '';
+        }
+    });
+    
+    // Usar update en lugar de eliminar y recrear el ticket
     ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
         .then(() => {
             closeModal();
             showNotification('Consulta actualizada correctamente', 'success');
             
-            // Si estamos en la vista de horario, actualizarla también
-            if (document.getElementById('horarioSection').classList.contains('active')) {
+            // Actualizar la página actual
+            if (currentSection && currentSection.id === 'verTicketsSection') {
+                renderTickets(currentFilter);
+                
+                // Mantener el filtro activo
+                document.querySelectorAll('.filter-btn').forEach(btn => {
+                    btn.classList.remove('active');
+                    if (btn.getAttribute('data-filter') === currentFilter) {
+                        btn.classList.add('active');
+                    }
+                });
+            } else if (currentSection && currentSection.id === 'horarioSection') {
                 mostrarHorario();
+            } else {
+                renderTickets();
             }
+            
+            updateStats();
         })
         .catch(error => {
             console.error("Error actualizando ticket:", error);
             if (saveButton) {
                 hideLoadingButton(saveButton);
             }
-            showNotification('Error al guardar los cambios', 'error');
+            showNotification('Error al guardar los cambios: ' + error.message, 'error');
         });
 }
-
 function changeStatus(id) {
     const ticket = tickets.find(t => t.id === id);
     if (!ticket) return;
@@ -868,6 +1061,11 @@ function confirmDelete(id) {
         return;
     }
     
+    // Store current active section and filter before deleting
+    const currentSection = document.querySelector('.content section.active');
+    const currentFilterBtn = document.querySelector('.filter-btn.active');
+    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+    
     // Mostrar indicador de carga
     const deleteButton = document.querySelector('.btn-delete');
     if (deleteButton) {
@@ -879,10 +1077,32 @@ function confirmDelete(id) {
             showNotification('Consulta eliminada correctamente', 'success');
             closeModal();
             
-            // Si estamos en la vista de horario, actualizarla también
-            if (document.getElementById('horarioSection').classList.contains('active')) {
-                mostrarHorario();
+            // Mantener la vista actual
+            if (currentSection) {
+                // Si estamos en la vista de tickets, aplicar el filtro actual
+                if (currentSection.id === 'verTicketsSection') {
+                    renderTickets(currentFilter);
+                    
+                    // También actualizar el botón activo de filtro
+                    if (currentFilterBtn) {
+                        document.querySelectorAll('.filter-btn').forEach(btn => {
+                            btn.classList.remove('active');
+                        });
+                        currentFilterBtn.classList.add('active');
+                    }
+                    
+                    // Asegurar que el botón de navegación también está activo
+                    setActiveButton(verTicketsBtn);
+                } 
+                // Si estamos en la vista de horario, actualizarla
+                else if (currentSection.id === 'horarioSection') {
+                    mostrarHorario();
+                    setActiveButton(horarioBtn);
+                }
             }
+            
+            // Actualizar estadísticas
+            updateStats();
         })
         .catch(error => {
             console.error("Error eliminando ticket:", error);
@@ -907,20 +1127,23 @@ function closeModal() {
 const firebaseConfig = {
     apiKey: "AIzaSyA0MKbA6xU2OlaCRFGNV_Ac22KmWU3Y2PI",
     authDomain: "consulta-7ece8.firebaseapp.com",
+    databaseURL: "https://consulta-7ece8-default-rtdb.firebaseio.com",
     projectId: "consulta-7ece8",
     storageBucket: "consulta-7ece8.firebasestorage.app",
     messagingSenderId: "960058925183",
     appId: "1:960058925183:web:9cec6000f0788d61b31f4a",
     measurementId: "G-6JVD4VRDBJ"
   };
-
-// Inicializar Firebase
-firebase.initializeApp(firebaseConfig);
-
-// Referencia a la base de datos
-const db = firebase.database();
-const ticketsRef = db.ref('tickets');
-const settingsRef = db.ref('settings');
+  
+  // Inicializar Firebase
+  firebase.initializeApp(firebaseConfig);
+  
+  // Referencias a la base de datos
+  const db = firebase.database();
+  const ticketsRef = db.ref('tickets');
+  const settingsRef = db.ref('settings');
+  
+  console.log("Firebase configurado correctamente");
 
 // Sistema de autenticación básico
 let userCredential = null;
@@ -1397,4 +1620,466 @@ function hideLoadingButton(button) {
     if (!button) return;
     button.classList.remove('button-loading');
     button.disabled = false;
+}
+
+// Agregar después de su función renderChart() actual
+
+// Variables para los nuevos charts
+let chartServiciosPersonal = null;
+let chartDistribucionServicios = null;
+
+// Función para obtener todos los nombres de personal único
+function obtenerPersonalUnico() {
+    const personal = new Set();
+    
+    tickets.forEach(ticket => {
+        if (ticket.medicoAtiende) {
+            // Dividir en caso de que haya múltiples personas separadas por comas
+            const personas = ticket.medicoAtiende.split(',').map(p => p.trim());
+            personas.forEach(persona => {
+                if (persona) personal.add(persona);
+            });
+        }
+    });
+    
+    return Array.from(personal).sort();
+}
+
+// Función para llenar el selector de personal
+function llenarSelectorPersonal() {
+    const personalUnico = obtenerPersonalUnico();
+    const select = document.getElementById('filtroPersonal');
+    
+    if (!select) return;
+    
+    // Limpiar opciones existentes excepto "Todos"
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+    
+    // Agregar personal único
+    personalUnico.forEach(persona => {
+        const option = document.createElement('option');
+        option.value = persona;
+        option.textContent = persona;
+        select.appendChild(option);
+    });
+}
+
+// Función para obtener el nombre legible de un tipo de servicio
+function getNombreServicio(tipoServicio) {
+    const servicios = {
+        'consulta': 'Consulta general',
+        'revaloracion': 'Revaloración',
+        'retiroHilos': 'Retiro de hilos',
+        'rayosX': 'Rayos X',
+        'desparasitacion': 'Desparasitación',
+        'inyectable': 'Inyectables',
+        'corteUnas': 'Corte de uñas',
+        'emergencia': 'Emergencia',
+        'tomaMuestras': 'Toma de muestras',
+        'tests': 'Tests',
+        'hemograma': 'Hemograma',
+        'eutanasia': 'Eutanasia',
+        'quitarPuntos': 'Quitar puntos',
+        'otro': 'Otro'
+    };
+    
+    return servicios[tipoServicio] || tipoServicio;
+}
+
+// Función para filtrar tickets por período
+function filtrarPorPeriodo(tickets, periodo) {
+    const hoy = new Date();
+    const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    
+    let fechaInicio, fechaFin;
+    
+    switch(periodo) {
+        case 'hoy':
+            fechaInicio = inicioHoy;
+            fechaFin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+            break;
+        case 'semana':
+            const diaSemana = hoy.getDay(); // 0 = domingo, 1 = lunes, etc.
+            const inicioSemana = new Date(hoy);
+            inicioSemana.setDate(hoy.getDate() - diaSemana);
+            fechaInicio = new Date(inicioSemana.getFullYear(), inicioSemana.getMonth(), inicioSemana.getDate());
+            fechaFin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+            break;
+        case 'mes':
+            fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
+            break;
+        case 'ano':
+            fechaInicio = new Date(hoy.getFullYear(), 0, 1);
+            fechaFin = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59);
+            break;
+        case 'personalizado':
+            const fechaInicioInput = document.getElementById('fechaInicioEstadisticas');
+            const fechaFinInput = document.getElementById('fechaFinEstadisticas');
+            
+            if (fechaInicioInput && fechaInicioInput.value) {
+                fechaInicio = new Date(fechaInicioInput.value);
+            } else {
+                fechaInicio = new Date(0); // Fecha más antigua posible
+            }
+            
+            if (fechaFinInput && fechaFinInput.value) {
+                fechaFin = new Date(fechaFinInput.value);
+                fechaFin.setHours(23, 59, 59);
+            } else {
+                fechaFin = new Date(); // Fecha actual
+            }
+            break;
+        default:
+            fechaInicio = new Date(0); // Fecha más antigua posible
+            fechaFin = new Date(); // Fecha actual
+    }
+    
+    return tickets.filter(ticket => {
+        const fechaTicket = ticket.fechaConsulta 
+            ? new Date(ticket.fechaConsulta) 
+            : new Date(ticket.fecha);
+            
+        return fechaTicket >= fechaInicio && fechaTicket <= fechaFin;
+    });
+}
+
+// Función para generar las estadísticas de personal y servicios
+function generarEstadisticasPersonalServicios() {
+    // Obtener valores de los filtros
+    const filtroPersonal = document.getElementById('filtroPersonal').value;
+    const filtroServicio = document.getElementById('filtroServicio').value;
+    const filtroPeriodo = document.getElementById('filtroPeriodo').value;
+    
+    // Filtrar tickets por período
+    let ticketsFiltrados = filtrarPorPeriodo(tickets, filtroPeriodo);
+    
+    // Filtrar por servicio si no es "todos"
+    if (filtroServicio !== 'todos') {
+        ticketsFiltrados = ticketsFiltrados.filter(ticket => 
+            ticket.tipoServicio === filtroServicio);
+    }
+    
+    // Preparar estructura para contar servicios por personal
+    const conteoPersonalServicio = {};
+    const conteoServicios = {};
+    let totalServicios = 0;
+    
+    // Contar servicios por personal
+    ticketsFiltrados.forEach(ticket => {
+        // Si no tiene tipoServicio, asumir consulta
+        const servicio = ticket.tipoServicio || 'consulta';
+        
+        // Si no tiene médico, ignorar para esta estadística
+        if (!ticket.medicoAtiende) return;
+        
+        // Dividir en caso de múltiples personas
+        const personas = ticket.medicoAtiende.split(',').map(p => p.trim());
+        
+        personas.forEach(persona => {
+            if (!persona) return;
+            
+            // Filtrar por personal específico si no es "todos"
+            if (filtroPersonal !== 'todos' && persona !== filtroPersonal) return;
+            
+            // Inicializar estructura si no existe
+            if (!conteoPersonalServicio[persona]) {
+                conteoPersonalServicio[persona] = {};
+            }
+            
+            // Incrementar conteo
+            conteoPersonalServicio[persona][servicio] = 
+                (conteoPersonalServicio[persona][servicio] || 0) + 1;
+                
+            // Contar total de servicios
+            conteoServicios[servicio] = (conteoServicios[servicio] || 0) + 1;
+            totalServicios++;
+        });
+    });
+    
+    // Generar datos para la tabla
+    const tablaBody = document.getElementById('tablaEstadisticasBody');
+    if (tablaBody) {
+        tablaBody.innerHTML = '';
+        
+        // Para cada persona
+        Object.keys(conteoPersonalServicio).sort().forEach(persona => {
+            // Para cada servicio de esa persona
+            Object.keys(conteoPersonalServicio[persona]).sort().forEach((servicio, index) => {
+                const cantidad = conteoPersonalServicio[persona][servicio];
+                const porcentaje = ((cantidad / totalServicios) * 100).toFixed(1);
+                
+                const row = document.createElement('tr');
+                
+                // En la primera fila de esta persona, mostrar su nombre
+                if (index === 0) {
+                    row.innerHTML = `
+                        <td rowspan="${Object.keys(conteoPersonalServicio[persona]).length}">${persona}</td>
+                        <td>${getNombreServicio(servicio)}</td>
+                        <td>${cantidad}</td>
+                        <td>${porcentaje}%</td>
+                    `;
+                } else {
+                    row.innerHTML = `
+                        <td>${getNombreServicio(servicio)}</td>
+                        <td>${cantidad}</td>
+                        <td>${porcentaje}%</td>
+                    `;
+                }
+                
+                tablaBody.appendChild(row);
+            });
+        });
+        
+        // Si no hay datos, mostrar mensaje
+        if (tablaBody.children.length === 0) {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td colspan="4" class="no-data">No hay datos para los filtros seleccionados</td>
+            `;
+            tablaBody.appendChild(row);
+        }
+    }
+    
+    // Generar gráficos
+    generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicios);
+}
+
+// Función para generar gráficos de servicios
+function generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicios) {
+    // Gráfico 1: Servicios por Personal (gráfico de barras)
+    const ctxPersonal = document.getElementById('chartServiciosPersonal')?.getContext('2d');
+    if (ctxPersonal) {
+        // Preparar datos para el gráfico
+        const datasets = [];
+        const serviciosUnicos = new Set();
+        
+        // Recopilar todos los servicios únicos
+        Object.values(conteoPersonalServicio).forEach(servicios => {
+            Object.keys(servicios).forEach(servicio => serviciosUnicos.add(servicio));
+        });
+        
+        // Colores para servicios
+        const colores = [
+            '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+            '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
+            '#a3a4a5', '#d1d3e2', '#eaecf4'
+        ];
+        
+        // Crear un dataset por cada servicio
+        Array.from(serviciosUnicos).sort().forEach((servicio, index) => {
+            const data = [];
+            const labels = Object.keys(conteoPersonalServicio).sort();
+            
+            // Para cada persona, obtener la cantidad de este servicio
+            labels.forEach(persona => {
+                data.push(conteoPersonalServicio[persona][servicio] || 0);
+            });
+            
+            datasets.push({
+                label: getNombreServicio(servicio),
+                data: data,
+                backgroundColor: colores[index % colores.length],
+                borderColor: colores[index % colores.length],
+                borderWidth: 1
+            });
+        });
+        
+        // Destruir gráfico anterior si existe
+        if (chartServiciosPersonal) {
+            chartServiciosPersonal.destroy();
+        }
+        
+        // Crear nuevo gráfico
+        chartServiciosPersonal = new Chart(ctxPersonal, {
+            type: 'bar',
+            data: {
+                labels: Object.keys(conteoPersonalServicio).sort(),
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        stacked: true,
+                    },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    },
+                    tooltip: {
+                        mode: 'index',
+                        intersect: false
+                    }
+                }
+            }
+        });
+    }
+    
+    // Gráfico 2: Distribución de Servicios (gráfico circular)
+    const ctxServicios = document.getElementById('chartDistribucionServicios')?.getContext('2d');
+    if (ctxServicios) {
+        // Preparar datos para el gráfico
+        const labels = [];
+        const data = [];
+        const backgroundColor = [];
+        
+        // Colores para el gráfico
+        const colores = [
+            '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+            '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
+            '#a3a4a5', '#d1d3e2', '#eaecf4'
+        ];
+        
+        // Para cada servicio, obtener su total
+        Object.keys(conteoServicios).sort().forEach((servicio, index) => {
+            labels.push(getNombreServicio(servicio));
+            data.push(conteoServicios[servicio]);
+            backgroundColor.push(colores[index % colores.length]);
+        });
+        
+        // Destruir gráfico anterior si existe
+        if (chartDistribucionServicios) {
+            chartDistribucionServicios.destroy();
+        }
+        
+        // Crear nuevo gráfico
+        chartDistribucionServicios = new Chart(ctxServicios, {
+            type: 'pie',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: data,
+                    backgroundColor: backgroundColor,
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'right',
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.label || '';
+                                const value = context.raw || 0;
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = Math.round((value / total) * 100);
+                                return `${label}: ${value} (${percentage}%)`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+}
+
+// Event listeners para los filtros
+document.addEventListener('DOMContentLoaded', function() {
+    // Selector de período personalizado
+    const filtroPeriodo = document.getElementById('filtroPeriodo');
+    const periodPersonalizado = document.getElementById('periodPersonalizado');
+    
+    if (filtroPeriodo && periodPersonalizado) {
+        filtroPeriodo.addEventListener('change', function() {
+            if (this.value === 'personalizado') {
+                periodPersonalizado.style.display = 'flex';
+            } else {
+                periodPersonalizado.style.display = 'none';
+            }
+        });
+    }
+    
+    // Botón para aplicar filtros
+    const aplicarFiltrosBtn = document.getElementById('aplicarFiltrosBtn');
+    if (aplicarFiltrosBtn) {
+        aplicarFiltrosBtn.addEventListener('click', generarEstadisticasPersonalServicios);
+    }
+    
+    // Inicializar estadísticas al cargar la sección
+    const estadisticasBtn = document.getElementById('estadisticasBtn');
+    if (estadisticasBtn) {
+        estadisticasBtn.addEventListener('click', function() {
+            // Llenar selector de personal después de cargar tickets
+            setTimeout(() => {
+                llenarSelectorPersonal();
+                generarEstadisticasPersonalServicios();
+            }, 100);
+        });
+    }
+});
+
+// Modificar la función addTicket para incluir el tipo de servicio
+function addTicket() {
+    // ... código existente ...
+    
+    const tipoServicio = document.getElementById('tipoServicio').value;
+    
+    // Añadir tipoServicio al objeto nuevoTicket
+    const nuevoTicket = {
+        // ... propiedades existentes ...
+        tipoServicio: tipoServicio,
+        // ... resto de propiedades ...
+    };
+    
+    // ... resto del código existente ...
+}
+
+// También modificar la función editTicket para incluir el campo de tipo de servicio
+function editTicket(id) {
+    // ... código existente ...
+    
+    // Agregar el campo de tipo de servicio al formulario de edición
+    modal.innerHTML = `
+        <!-- ... HTML existente ... -->
+        
+        <div class="form-group">
+            <label for="editTipoServicio">Tipo de Servicio</label>
+            <select id="editTipoServicio" required>
+                <option value="consulta" ${safeTicket.tipoServicio === 'consulta' ? 'selected' : ''}>Consulta general</option>
+                <option value="revaloracion" ${safeTicket.tipoServicio === 'revaloracion' ? 'selected' : ''}>Revaloración</option>
+                <option value="retiroHilos" ${safeTicket.tipoServicio === 'retiroHilos' ? 'selected' : ''}>Retiro de hilos</option>
+                <option value="rayosX" ${safeTicket.tipoServicio === 'rayosX' ? 'selected' : ''}>Rayos X</option>
+                <option value="desparasitacion" ${safeTicket.tipoServicio === 'desparasitacion' ? 'selected' : ''}>Desparasitación</option>
+                <option value="inyectable" ${safeTicket.tipoServicio === 'inyectable' ? 'selected' : ''}>Inyectables</option>
+                <option value="corteUnas" ${safeTicket.tipoServicio === 'corteUnas' ? 'selected' : ''}>Corte de uñas</option>
+                <option value="emergencia" ${safeTicket.tipoServicio === 'emergencia' ? 'selected' : ''}>Emergencia</option>
+                <option value="tomaMuestras" ${safeTicket.tipoServicio === 'tomaMuestras' ? 'selected' : ''}>Toma de muestras</option>
+                <option value="tests" ${safeTicket.tipoServicio === 'tests' ? 'selected' : ''}>Tests</option>
+                <option value="hemograma" ${safeTicket.tipoServicio === 'hemograma' ? 'selected' : ''}>Hemograma</option>
+                <option value="eutanasia" ${safeTicket.tipoServicio === 'eutanasia' ? 'selected' : ''}>Eutanasia</option>
+                <option value="quitarPuntos" ${safeTicket.tipoServicio === 'quitarPuntos' ? 'selected' : ''}>Quitar puntos</option>
+                <option value="otro" ${safeTicket.tipoServicio === 'otro' ? 'selected' : ''}>Otro</option>
+            </select>
+        </div>
+        
+        <!-- ... resto del HTML existente ... -->
+    `;
+    
+    // ... código existente ...
+    
+    // Asegurarse de incluir el tipo de servicio en el ticket actualizado
+    document.getElementById('editTicketForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const updatedTicket = {
+            // ... propiedades existentes ...
+            tipoServicio: document.getElementById('editTipoServicio').value,
+            // ... resto de propiedades ...
+        };
+        
+        saveEditedTicket(updatedTicket);
+    });
 }
