@@ -1,5 +1,17 @@
 let currentTicketId = 1;
 let isDataLoaded = false;
+// Add this missing declaration
+let tickets = [];
+
+// Function to safely add event listeners
+function safeAddEventListener(elementId, eventType, handler) {
+  const element = document.getElementById(elementId);
+  if (element) {
+    element.addEventListener(eventType, handler);
+  } else {
+    console.warn(`Element with ID '${elementId}' not found for event listener`);
+  }
+}
 
 const crearTicketBtn = document.getElementById('crearTicketBtn');
 const verTicketsBtn = document.getElementById('verTicketsBtn');
@@ -20,79 +32,256 @@ const exportarGoogleBtn = document.getElementById('exportarGoogleBtn');
 const backupBtn = document.getElementById('backupBtn');
 const cleanDataBtn = document.getElementById('cleanDataBtn');
 
-// Inicialización
+// Inicialización with loop prevention
 document.addEventListener('DOMContentLoaded', () => {
-    // Mostrar indicador de carga
-    showLoading();
+    // Prevent auto-redirect while loading
+    window.noRedirectOnAuth = true;
     
-    // Inicializar Firebase Auth y cargar datos
-    initAuth().then(() => {
-        loadTickets().then(() => {
+    // Check authentication before doing anything else
+    checkAuth().then(userData => {
+        // Show the UI elements based on user role
+        applyRoleBasedUI(userData.role);
+        
+        console.log("Successfully authenticated as", userData.role);
+        
+        // Continue with loading data
+        showLoading();
+        
+        // Verify if the sections exist before trying to work with them
+        const crearTicketSection = document.getElementById('crearTicketSection');
+        const verTicketsSection = document.getElementById('verTicketsSection');
+        const horarioSection = document.getElementById('horarioSection');
+        const estadisticasSection = document.getElementById('estadisticasSection');
+        
+        if (!crearTicketSection || !verTicketsSection) {
+            console.error("Critical sections missing in the DOM. Check your HTML structure.");
             hideLoading();
-            isDataLoaded = true;
-            
-            // Mostrar por defecto la sección de crear ticket
-            showSection(crearTicketSection);
-            crearTicketBtn.classList.add('active');
-            
-            // Establecer fecha actual en el formulario
-            if (document.getElementById('fecha')) {
-                document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
-            }
-            
-            // Establecer fecha actual en el campo de fecha del horario
-            const today = new Date().toISOString().split('T')[0];
-            if (fechaHorario) {
-                fechaHorario.value = today;
-            }
-            
-            renderTickets();
-            updateStats();
+            showNotification('Error: Estructura HTML incompleta', 'error');
+            return;
+        }
+        
+        // Inicializar Firebase Auth y cargar datos
+        initAuth().then(() => {
+            loadTickets().then(() => {
+                hideLoading();
+                isDataLoaded = true;
+                
+                // Mostrar por defecto la sección de crear ticket si existe
+                if (crearTicketSection) {
+                    showSection(crearTicketSection);
+                    if (crearTicketBtn) crearTicketBtn.classList.add('active');
+                }
+                
+                // Establecer fecha actual en el formulario
+                const fechaInput = document.getElementById('fecha');
+                if (fechaInput) {
+                    fechaInput.value = new Date().toISOString().split('T')[0];
+                }
+                
+                // Establecer fecha actual en el campo de fecha del horario
+                const today = new Date().toISOString().split('T')[0];
+                if (fechaHorario) {
+                    fechaHorario.value = today;
+                }
+                
+                renderTickets();
+                updateStats();
+            }).catch(err => {
+                console.error("Error cargando tickets:", err);
+                hideLoading();
+                showNotification('Error al cargar los datos', 'error');
+            });
         }).catch(err => {
-            console.error("Error cargando tickets:", err);
+            console.error("Error en autenticación:", err);
             hideLoading();
-            showNotification('Error al cargar los datos', 'error');
+            showNotification('Error al conectar con el servidor', 'error');
         });
     }).catch(err => {
-        console.error("Error en autenticación:", err);
+        console.error("Authentication error:", err);
+        // Don't auto-redirect, just show an error
         hideLoading();
-        showNotification('Error al conectar con el servidor', 'error');
+        showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
+        
+        // Add a login button instead of auto-redirect
+        const mainContainer = document.querySelector('.main-container');
+        if (mainContainer) {
+            mainContainer.innerHTML = `
+                <div style="text-align: center; padding: 50px;">
+                    <h2>Sesión expirada</h2>
+                    <p>Su sesión ha expirado o no ha iniciado sesión correctamente.</p>
+                    <button onclick="window.location.href='home.html'" 
+                            style="padding: 10px 20px; background: var(--primary-color); 
+                            color: white; border: none; border-radius: 5px; cursor: pointer; 
+                            margin-top: 20px;">
+                        Iniciar sesión
+                    </button>
+                </div>
+            `;
+        }
     });
 });
 
+// Improved version of applyRoleBasedUI with better debugging and role detection
+function applyRoleBasedUI(role) {
+    console.log(`Applying UI for role: ${role}`);
+    
+    // Set user info in UI
+    const userNameElement = document.getElementById('userName');
+    const userRoleElement = document.getElementById('userRole');
+    
+    if (userNameElement) {
+        userNameElement.textContent = sessionStorage.getItem('userName') || 'Usuario';
+    }
+    if (userRoleElement) {
+        userRoleElement.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+    }
+    
+    // Debug info to console
+    console.log("User role from sessionStorage:", sessionStorage.getItem('userRole'));
+    console.log("User name from sessionStorage:", sessionStorage.getItem('userName'));
+    console.log("Admin permissions:", JSON.stringify(PERMISSIONS.admin));
+    
+    // Add role-specific class to body element for CSS targeting
+    document.body.classList.add(`${role}-role`);
+    console.log(`Added ${role}-role class to body`);
+    
+    // Check explicitly for admin role with string comparison
+    if (role === 'admin') {
+        console.log("ADMIN ROLE DETECTED - enabling all admin features");
+        
+        // Show all admin-specific buttons
+        const adminElements = document.querySelectorAll('.admin-only');
+        console.log(`Found ${adminElements.length} admin-only elements`);
+        adminElements.forEach(el => {
+            el.style.display = 'block';
+            console.log(`Showing admin element:`, el);
+        });
+
+        // Enable export buttons for admin
+        const exportButtons = document.querySelectorAll('.export-controls button');
+        if (exportButtons && exportButtons.length > 0) {
+            console.log(`Found ${exportButtons.length} export buttons`);
+            exportButtons.forEach(btn => {
+                btn.style.display = 'inline-flex';
+            });
+        } else {
+            console.log("No export buttons found");
+        }
+        
+        // Enable backup buttons for admin
+        const backupButtons = document.querySelectorAll('.backup-controls button');
+        if (backupButtons && backupButtons.length > 0) {
+            console.log(`Found ${backupButtons.length} backup buttons`);
+            backupButtons.forEach(btn => {
+                btn.style.display = 'inline-flex';
+            });
+        } else {
+            console.log("No backup buttons found");
+        }
+    } else {
+        console.log(`Non-admin role detected: ${role}`);
+        // For non-admin roles, hide features based on permissions
+        if (!hasPermission('canCreateTickets')) {
+            document.getElementById('crearTicketBtn').style.display = 'none';
+        }
+        
+        if (!hasPermission('canViewStats')) {
+            document.getElementById('estadisticasBtn').style.display = 'none';
+        }
+        
+        if (!hasPermission('canViewSchedule')) {
+            document.getElementById('horarioBtn').style.display = 'none';
+        }
+        
+        // Hide export buttons for non-admin users without export permission
+        const exportButtons = document.querySelectorAll('.export-controls button');
+        if (exportButtons && !hasPermission('canExportData')) {
+            exportButtons.forEach(btn => {
+                btn.style.display = 'none';
+            });
+        }
+        
+        // Hide admin-only elements
+        const adminElements = document.querySelectorAll('.admin-only');
+        adminElements.forEach(el => {
+            el.style.display = 'none';
+        });
+    }
+    
+    // Add logout button event listener
+    const logoutBtn = document.getElementById('logoutBtn');
+    if (logoutBtn) {
+        logoutBtn.addEventListener('click', signOut);
+    }
+    
+    console.log("UI permissions applied successfully for role:", role);
+}
+
 // Event listeners
-crearTicketBtn.addEventListener('click', () => {
-    showSection(crearTicketSection);
-    setActiveButton(crearTicketBtn);
+safeAddEventListener('crearTicketBtn', 'click', () => {
+    const section = document.getElementById('crearTicketSection');
+    if (section) {
+        showSection(section);
+        setActiveButton(document.getElementById('crearTicketBtn'));
+    } else {
+        console.error("Section 'crearTicketSection' not found");
+    }
 });
 
-verTicketsBtn.addEventListener('click', () => {
-    showSection(verTicketsSection);
-    setActiveButton(verTicketsBtn);
-    renderTickets();
+safeAddEventListener('verTicketsBtn', 'click', () => {
+    const section = document.getElementById('verTicketsSection');
+    if (section) {
+        showSection(section);
+        setActiveButton(document.getElementById('verTicketsBtn'));
+        renderTickets();
+    } else {
+        console.error("Section 'verTicketsSection' not found");
+    }
 });
 
-estadisticasBtn.addEventListener('click', () => {
-    showSection(estadisticasSection);
-    setActiveButton(estadisticasBtn);
-    updateStats();
-    renderChart();
-});
-
-ticketForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    addTicket();
-});
-
-// Event listeners para la sección de horario
-if (horarioBtn) {
-    horarioBtn.addEventListener('click', () => {
-        showSection(horarioSection);
-        setActiveButton(horarioBtn);
+// Add proper event listener for horarioBtn
+safeAddEventListener('horarioBtn', 'click', () => {
+    const section = document.getElementById('horarioSection');
+    if (section) {
+        showSection(section);
+        setActiveButton(document.getElementById('horarioBtn'));
+        // Set today's date in the date field
+        const fechaHorario = document.getElementById('fechaHorario');
+        if (fechaHorario) {
+            fechaHorario.value = new Date().toISOString().split('T')[0];
+        }
+        // Optionally load today's schedule automatically
         mostrarHorario();
+    } else {
+        console.error("Section 'horarioSection' not found");
+    }
+});
+
+safeAddEventListener('estadisticasBtn', 'click', () => {
+    const section = document.getElementById('estadisticasSection');
+    if (section) {
+        showSection(section);
+        setActiveButton(document.getElementById('estadisticasBtn'));
+        updateStats();
+        
+        // Initialize personnel statistics 
+        setTimeout(() => {
+            llenarSelectorPersonal();
+            generarEstadisticasPersonalServicios();
+        }, 200);
+    } else {
+        console.error("Section 'estadisticasSection' not found");
+    }
+});
+
+if (ticketForm) {
+    ticketForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        addTicket();
     });
 }
 
+// Event listeners para la sección de horario
 if (verHorarioBtn) {
     verHorarioBtn.addEventListener('click', mostrarHorario);
 }
@@ -130,8 +319,14 @@ filterBtns.forEach(btn => {
     });
 });
 
-// Funciones
+// Update the showSection function to make it more robust with null checking
 function showSection(section) {
+    // Check if section exists
+    if (!section) {
+        console.error("Error: Attempted to show a section that doesn't exist");
+        return; // Exit the function early
+    }
+    
     // Ocultar todas las secciones
     const sections = document.querySelectorAll('.content section');
     sections.forEach(s => {
@@ -146,6 +341,16 @@ function showSection(section) {
     setTimeout(() => {
         section.classList.add('active');
     }, 50);
+}
+
+// Add a safer way to show sections using IDs
+function showSectionById(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        showSection(section);
+    } else {
+        console.error(`Section with ID '${sectionId}' not found`);
+    }
 }
 
 function setActiveButton(button) {
@@ -244,6 +449,7 @@ function loadTickets() {
 // Reemplaza la función addTicket() actual con esta versión corregida
 function addTicket() {
     try {
+        console.log("addTicket function called");
         // 1. Obtener valores del formulario
         const nombre = document.getElementById('nombre').value;
         const mascota = document.getElementById('mascota').value;
@@ -255,17 +461,31 @@ function addTicket() {
         
         // Campos adicionales
         const idPaciente = document.getElementById('idPaciente')?.value || '';
-        const medicoAtiende = document.getElementById('medicoAtiende')?.value || '';
+        
+        // Nuevo código para combinar doctor y asistente
+        const doctorAtiende = document.getElementById('doctorAtiende')?.value || '';
+        const asistenteAtiende = document.getElementById('asistenteAtiende')?.value || '';
+        let medicoAtiende = '';
+        
+        if (doctorAtiende && asistenteAtiende) {
+            medicoAtiende = `${doctorAtiende}, ${asistenteAtiende}`;
+        } else if (doctorAtiende) {
+            medicoAtiende = doctorAtiende;
+        } else if (asistenteAtiende) {
+            medicoAtiende = asistenteAtiende;
+        }
+        
         const numFactura = document.getElementById('numFactura')?.value || '';
-        const porCobrar = document.getElementById('porCobrar')?.value || '';
         const tipoServicio = document.getElementById('tipoServicio')?.value || 'consulta';
         
-        // Obtener fecha y hora seleccionadas
+        // Obtener fecha y tiempos seleccionados
         const fechaConsulta = document.getElementById('fecha')?.value;
-        const horaConsulta = document.getElementById('hora')?.value;
+        const horaCita = document.getElementById('hora')?.value;
+        const horaLlegada = document.getElementById('horaLlegada')?.value;
+        const horaAtencion = document.getElementById('horaAtencion')?.value;
         
         console.log("Datos recopilados:", { 
-            nombre, mascota, fechaConsulta, horaConsulta, tipoServicio 
+            nombre, mascota, fechaConsulta, horaCita, horaLlegada, horaAtencion, tipoServicio 
         });
         
         const fecha = new Date();
@@ -283,22 +503,21 @@ function addTicket() {
             idPaciente,
             medicoAtiende,
             numFactura,
-            porCobrar,
             tipoServicio,
             fecha: fecha.toISOString(),
             horaCreacion: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
         };
         
-        // Añadir campos de fecha y hora de consulta si están disponibles
+        // Añadir campos de fecha y tiempos de consulta si están disponibles
         if (fechaConsulta) nuevoTicket.fechaConsulta = fechaConsulta;
-        if (horaConsulta) nuevoTicket.horaConsulta = horaConsulta;
+        if (horaCita) nuevoTicket.horaConsulta = horaCita;
+        if (horaLlegada) nuevoTicket.horaLlegada = horaLlegada;
+        if (horaAtencion) nuevoTicket.horaAtencion = horaAtencion;
         
-        console.log("Ticket a guardar:", nuevoTicket);
-        
-        // 3. Mostrar indicador de carga
+        // Mostrar indicador de carga
         showLoadingButton(document.querySelector('.btn-submit'));
         
-        // 4. Verificar la referencia a Firebase
+        // Verificar la referencia a Firebase
         if (!ticketsRef) {
             console.error("Error: ticketsRef no está definido");
             showNotification('Error con la base de datos. Por favor recarga la página.', 'error');
@@ -306,7 +525,7 @@ function addTicket() {
             return;
         }
         
-        // 5. Guardar en Firebase con manejo de errores mejorado
+        // Guardar en Firebase con manejo de errores mejorado
         ticketsRef.push(nuevoTicket)
             .then(() => {
                 console.log("Ticket guardado exitosamente");
@@ -368,9 +587,6 @@ function renderTickets(filter = 'todos') {
         );
     } else if (filter === 'terminado') {
         filteredTickets = tickets.filter(ticket => ticket.estado === 'terminado');
-    } else if (filter === 'porCobrar') {
-        // Filtrar tickets que tengan algo por cobrar
-        filteredTickets = tickets.filter(ticket => ticket.porCobrar && ticket.porCobrar.trim() !== '');
     } else if (filter === 'urgentes') {
         // Filtrar tickets con urgencia alta
         filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta');
@@ -400,112 +616,204 @@ function renderTickets(filter = 'todos') {
     
     filteredTickets.forEach((ticket, index) => {
         const ticketElement = document.createElement('div');
-        ticketElement.className = `ticket ticket-${ticket.estado} ${ticket.urgencia === 'alta' ? 'ticket-urgencia-alta' : ''}`;
         
-        // Añadir clase especial si tiene algo por cobrar
-        if (ticket.porCobrar && ticket.porCobrar.trim() !== '') {
-            ticketElement.classList.add('ticket-por-cobrar');
+        // Set base class
+        ticketElement.className = `ticket ticket-${ticket.estado}`;
+        
+        // Add urgency class based on ticket urgency level
+        ticketElement.classList.add(`ticket-urgencia-${ticket.urgencia}`);
+        
+        // Add injectable class if service type is injectable
+        if (ticket.tipoServicio === 'inyectable') {
+            ticketElement.classList.add('ticket-inyectable');
         }
         
         ticketElement.dataset.id = ticket.id;
         
-        let animalIcon = '';
-        switch(ticket.tipoMascota) {
-            case 'perro':
-                animalIcon = '<i class="fas fa-dog animal-icon"></i>';
-                break;
-            case 'gato':
-                animalIcon = '<i class="fas fa-cat animal-icon"></i>';
-                break;
-            case 'ave':
-                animalIcon = '<i class="fas fa-dove animal-icon"></i>';
-                break;
-            default:
-                animalIcon = '<i class="fas fa-paw animal-icon"></i>';
-        }
+        let ticketContent = '';
         
-        let estadoText = '';
-        let estadoClass = '';
-        switch(ticket.estado) {
-            case 'espera':
-                estadoText = 'En sala de espera';
-                estadoClass = 'estado-espera';
-                break;
-            case 'consultorio1':
-                estadoText = 'Consultorio 1';
-                estadoClass = 'estado-consultorio';
-                break;
-            case 'consultorio2':
-                estadoText = 'Consultorio 2';
-                estadoClass = 'estado-consultorio';
-                break;
-            case 'consultorio3':
-                estadoText = 'Consultorio 3';
-                estadoClass = 'estado-consultorio';
-                break;
-            case 'terminado':
-                estadoText = 'Consulta terminada';
-                estadoClass = 'estado-terminado';
-                break;
-        }
-        
-        // Añadir indicador visual si hay algo por cobrar
-        const porCobrarIndicator = ticket.porCobrar 
-            ? `<p class="por-cobrar-info"><i class="fas fa-exclamation-circle"></i> Por cobrar: ${ticket.porCobrar}</p>` 
-            : '';
-        
-        // Crear clase y texto para el nivel de urgencia
-        let urgenciaClass = '';
-        let urgenciaIcon = '';
-        switch(ticket.urgencia) {
-            case 'alta':
-                urgenciaClass = 'urgencia-alta';
-                urgenciaIcon = 'fa-exclamation-triangle';
-                break;
-            case 'media':
-                urgenciaClass = 'urgencia-media';
-                urgenciaIcon = 'fa-exclamation';
-                break;
-            default: // normal
-                urgenciaClass = 'urgencia-normal';
-                urgenciaIcon = 'fa-info-circle';
-        }
-        
-        ticketElement.innerHTML = `
-            <div class="ticket-header">
-                <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
-                <div class="ticket-number">#${ticket.id}</div>
-            </div>
-            <div class="ticket-info">
-                <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
-                <p><i class="fas fa-id-card"></i> ${ticket.cedula}</p>
-                ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
-                ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
-                ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
-                <p><i class="fas fa-stethoscope"></i> ${ticket.motivo}</p>
-                <p><i class="fas fa-clock"></i> ${ticket.horaCreacion}</p>
-                ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-day"></i> Fecha: ${formatDate(ticket.fechaConsulta)}</p>` : ''}
-                ${ticket.horaConsulta ? `<p><i class="fas fa-hourglass-start"></i> Hora: ${ticket.horaConsulta}</p>` : ''}
-                <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${ticket.urgencia.toUpperCase()}</p>
-                <div class="estado-badge ${estadoClass}">
-                    <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
-                                 ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
-                    ${estadoText}
+        // Check if user is in 'visitas' role with limited view
+        if (!hasPermission('canViewFullTicket')) {
+            // Get urgency class and icon
+            let urgenciaClass = '';
+            let urgenciaIcon = '';
+            switch(ticket.urgencia) {
+                case 'alta':
+                    urgenciaClass = 'urgencia-alta';
+                    urgenciaIcon = 'fa-exclamation-triangle';
+                    break;
+                case 'media':
+                    urgenciaClass = 'urgencia-media';
+                    urgenciaIcon = 'fa-exclamation';
+                    break;
+                default: // normal
+                    urgenciaClass = 'urgencia-normal';
+                    urgenciaIcon = 'fa-info-circle';
+            }
+            
+            // Get status text and class
+            let estadoText = '';
+            let estadoClass = '';
+            switch(ticket.estado) {
+                case 'espera':
+                    estadoText = 'En sala de espera';
+                    estadoClass = 'estado-espera';
+                    break;
+                case 'consultorio1':
+                    estadoText = 'Consultorio 1';
+                    estadoClass = 'estado-consultorio';
+                    break;
+                case 'consultorio2':
+                    estadoText = 'Consultorio 2';
+                    estadoClass = 'estado-consultorio';
+                    break;
+                case 'consultorio3':
+                    estadoText = 'Consultorio 3';
+                    estadoClass = 'estado-consultorio';
+                    break;
+                case 'terminado':
+                    estadoText = 'Consulta terminada';
+                    estadoClass = 'estado-terminado';
+                    break;
+            }
+            
+            // Simplified view for 'visitas' role with added urgency and status
+            ticketContent = `
+                <div class="ticket-header">
+                    <div class="ticket-title">${ticket.mascota}</div>
+                    <div class="ticket-number">#${ticket.id}</div>
                 </div>
-                ${porCobrarIndicator}
-            </div>
-            <div class="ticket-actions">
+                <div class="ticket-info">
+                    <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
+                    ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> ${ticket.medicoAtiende}</p>` : ''}
+                    ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
+                    <p><i class="fas fa-stethoscope"></i> ${ticket.motivo}</p>
+                    ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
+                    ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
+                    ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
+                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${ticket.urgencia.toUpperCase()}</p>
+                    <div class="estado-badge ${estadoClass}">
+                        <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
+                                     ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
+                        ${estadoText}
+                    </div>
+                </div>
+            `;
+        } else {
+            // Full view for other roles
+            // ...existing code for full ticket display...
+            
+            let animalIcon = '';
+            switch(ticket.tipoMascota) {
+                case 'perro':
+                    animalIcon = '<i class="fas fa-dog animal-icon"></i>';
+                    break;
+                case 'gato':
+                    animalIcon = '<i class="fas fa-cat animal-icon"></i>';
+                    break;
+                case 'ave':
+                    animalIcon = '<i class="fas fa-dove animal-icon"></i>';
+                    break;
+                default:
+                    animalIcon = '<i class="fas fa-paw animal-icon"></i>';
+            }
+            
+            let estadoText = '';
+            let estadoClass = '';
+            switch(ticket.estado) {
+                case 'espera':
+                    estadoText = 'En sala de espera';
+                    estadoClass = 'estado-espera';
+                    break;
+                case 'consultorio1':
+                    estadoText = 'Consultorio 1';
+                    estadoClass = 'estado-consultorio';
+                    break;
+                case 'consultorio2':
+                    estadoText = 'Consultorio 2';
+                    estadoClass = 'estado-consultorio';
+                    break;
+                case 'consultorio3':
+                    estadoText = 'Consultorio 3';
+                    estadoClass = 'estado-consultorio';
+                    break;
+                case 'terminado':
+                    estadoText = 'Consulta terminada';
+                    estadoClass = 'estado-terminado';
+                    break;
+            }
+            
+            // Crear clase y texto para el nivel de urgencia
+            let urgenciaClass = '';
+            let urgenciaIcon = '';
+            switch(ticket.urgencia) {
+                case 'alta':
+                    urgenciaClass = 'urgencia-alta';
+                    urgenciaIcon = 'fa-exclamation-triangle';
+                    break;
+                case 'media':
+                    urgenciaClass = 'urgencia-media';
+                    urgenciaIcon = 'fa-exclamation';
+                    break;
+                default: // normal
+                    urgenciaClass = 'urgencia-normal';
+                    urgenciaIcon = 'fa-info-circle';
+            }
+            
+            ticketContent = `
+                <div class="ticket-header">
+                    <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
+                    <div class="ticket-number">#${ticket.id}</div>
+                </div>
+                <div class="ticket-info">
+                    <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
+                    <p><i class="fas fa-id-card"></i> ${ticket.cedula}</p>
+                    ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
+                    ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
+                    ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
+                    <p><i class="fas fa-stethoscope"></i> ${ticket.motivo}</p>
+                    ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-day"></i> Fecha: ${formatDate(ticket.fechaConsulta)}</p>` : ''}
+                    ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
+                    ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
+                    ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
+                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${ticket.urgencia.toUpperCase()}</p>
+                    <div class="estado-badge ${estadoClass}">
+                        <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
+                                     ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
+                        ${estadoText}
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Add action buttons based on permissions
+        let actionButtons = '';
+        
+        if (hasPermission('canEditTickets')) {
+            actionButtons += `
                 <button class="action-btn btn-editar" onclick="editTicket(${ticket.id})">
                     <i class="fas fa-edit"></i> Editar
                 </button>
                 <button class="action-btn btn-cambiar" onclick="changeStatus(${ticket.id})">
                     <i class="fas fa-exchange-alt"></i> Cambiar Estado
                 </button>
+            `;
+        }
+        
+        if (hasPermission('canDeleteTickets')) {
+            actionButtons += `
                 <button class="action-btn btn-eliminar" onclick="deleteTicket(${ticket.id})">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
-            </div>
-        `;
+            `;
+        }
+        
+        // Only add action buttons container if there are buttons
+        if (actionButtons) {
+            ticketContent += `<div class="ticket-actions">${actionButtons}</div>`;
+        }
+        
+        ticketElement.innerHTML = ticketContent;
         
         // Agregar animación basada en el índice para escalonamiento
         ticketElement.style.animationDelay = `${index * 0.1}s`;
@@ -616,11 +924,6 @@ function mostrarHorario() {
     ticketsDelDia.forEach((ticket, index) => {
         const row = document.createElement('tr');
         
-        // Aplicar clase por cobrar si corresponde
-        if (ticket.porCobrar && ticket.porCobrar.trim() !== '') {
-            row.classList.add('fila-por-cobrar');
-        }
-        
         // Determinar la hora a mostrar
         const hora = ticket.horaConsulta || ticket.horaCreacion || '-';
         
@@ -678,7 +981,6 @@ function mostrarHorario() {
             <td>${ticket.medicoAtiende || '-'}</td>
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
-            <td>${ticket.porCobrar || '-'}</td>
             <td>
                 <button class="btn-edit" onclick="editTicket(${ticket.id})">
                     <i class="fas fa-edit"></i>
@@ -740,12 +1042,30 @@ function editTicket(id) {
         medicoAtiende: ticket.medicoAtiende || '',
         motivo: ticket.motivo || '',
         numFactura: ticket.numFactura || '',
-        porCobrar: ticket.porCobrar || '',
         tipoMascota: ticket.tipoMascota || 'otro',
         urgencia: ticket.urgencia || 'normal',
         estado: ticket.estado || 'espera',
-        firebaseKey: ticket.firebaseKey
+        firebaseKey: ticket.firebaseKey,
+        horaLlegada: ticket.horaLlegada || '',
+        horaAtencion: ticket.horaAtencion || ''
     };
+    
+    // Separar el médico y asistente si existe
+    let doctorSeleccionado = "";
+    let asistenteSeleccionado = "";
+    
+    if (ticket.medicoAtiende) {
+        const personal = ticket.medicoAtiende.split(',').map(p => p.trim());
+        
+        // Intentar identificar el doctor y el asistente
+        for (const persona of personal) {
+            if (persona.startsWith("Dr.") || persona.startsWith("Dra.")) {
+                doctorSeleccionado = persona;
+            } else if (persona.startsWith("Tec.")) {
+                asistenteSeleccionado = persona;
+            }
+        }
+    }
     
     // Crear el contenido del modal con el formulario
     modal.innerHTML = `
@@ -780,9 +1100,20 @@ function editTicket(id) {
                         <label for="editFecha">Fecha de Consulta</label>
                         <input type="date" id="editFecha" value="${safeTicket.fechaConsulta}" required>
                     </div>
+                </div>
+                
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="editHora">Hora de Consulta</label>
-                        <input type="time" id="editHora" value="${safeTicket.horaConsulta}" required>
+                        <label for="editHoraLlegada">Hora de Llegada</label>
+                        <input type="time" id="editHoraLlegada" value="${safeTicket.horaLlegada || ''}">
+                    </div>
+                    <div class="form-group">
+                        <label for="editHora">Hora de Cita</label>
+                        <input type="time" id="editHora" value="${safeTicket.horaConsulta || ''}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editHoraAtencion">Hora de Atención</label>
+                        <input type="time" id="editHoraAtencion" value="${safeTicket.horaAtencion || ''}">
                     </div>
                 </div>
                 
@@ -833,9 +1164,56 @@ function editTicket(id) {
                         <label for="editNumFactura">Número de factura</label>
                         <input type="text" id="editNumFactura" value="${safeTicket.numFactura}">
                     </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="editTipoServicio">Tipo de Servicio</label>
+                    <select id="editTipoServicio" required>
+                        <option value="consulta" ${safeTicket.tipoServicio === 'consulta' ? 'selected' : ''}>Consulta general</option>
+                        <option value="revaloracion" ${safeTicket.tipoServicio === 'revaloracion' ? 'selected' : ''}>Revaloración</option>
+                        <option value="retiroHilos" ${safeTicket.tipoServicio === 'retiroHilos' ? 'selected' : ''}>Retiro de hilos</option>
+                        <option value="rayosX" ${safeTicket.tipoServicio === 'rayosX' ? 'selected' : ''}>Rayos X</option>
+                        <option value="desparasitacion" ${safeTicket.tipoServicio === 'desparasitacion' ? 'selected' : ''}>Desparasitación</option>
+                        <option value="inyectable" ${safeTicket.tipoServicio === 'inyectable' ? 'selected' : ''}>Inyectables</option>
+                        <option value="corteUnas" ${safeTicket.tipoServicio === 'corteUnas' ? 'selected' : ''}>Corte de uñas</option>
+                        <option value="emergencia" ${safeTicket.tipoServicio === 'emergencia' ? 'selected' : ''}>Emergencia</option>
+                        <option value="tomaMuestras" ${safeTicket.tipoServicio === 'tomaMuestras' ? 'selected' : ''}>Toma de muestras</option>
+                        <option value="tests" ${safeTicket.tipoServicio === 'tests' ? 'selected' : ''}>Tests</option>
+                        <option value="hemograma" ${safeTicket.tipoServicio === 'hemograma' ? 'selected' : ''}>Hemograma</option>
+                        <option value="eutanasia" ${safeTicket.tipoServicio === 'eutanasia' ? 'selected' : ''}>Eutanasia</option>
+                        <option value="quitarPuntos" ${safeTicket.tipoServicio === 'quitarPuntos' ? 'selected' : ''}>Quitar puntos</option>
+                        <option value="otro" ${safeTicket.tipoServicio === 'otro' ? 'selected' : ''}>Otro</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
                     <div class="form-group">
-                        <label for="editPorCobrar">Por Cobrar</label>
-                        <input type="text" id="editPorCobrar" value="${safeTicket.porCobrar}">
+                        <label for="editDoctorAtiende">Doctor que atiende</label>
+                        <select id="editDoctorAtiende">
+                            <option value="">Seleccione un doctor</option>
+                            <option value="Dr. Luis Coto" ${doctorSeleccionado === "Dr. Luis Coto" ? 'selected' : ''}>Dr. Luis Coto</option>
+                            <option value="Dr. Randall Azofeifa" ${doctorSeleccionado === "Dr. Randall Azofeifa" ? 'selected' : ''}>Dr. Randall Azofeifa</option>
+                            <option value="Dra. Daniela Sancho" ${doctorSeleccionado === "Dra. Daniela Sancho" ? 'selected' : ''}>Dra. Daniela Sancho</option>
+                            <option value="Dra. Kharen Moreno" ${doctorSeleccionado === "Dra. Kharen Moreno" ? 'selected' : ''}>Dra. Kharen Moreno</option>
+                            <option value="Dra. Karina Madrigal" ${doctorSeleccionado === "Dra. Karina Madrigal" ? 'selected' : ''}>Dra. Karina Madrigal</option>
+                            <option value="Dra. Lourdes Chacón" ${doctorSeleccionado === "Dra. Lourdes Chacón" ? 'selected' : ''}>Dra. Lourdes Chacón</option>
+                            <option value="Dra. Sofia Carrillo" ${doctorSeleccionado === "Dra. Sofia Carrillo" ? 'selected' : ''}>Dra. Sofia Carrillo</option>
+                            <option value="Dra. Francinny Nuñez" ${doctorSeleccionado === "Dra. Francinny Nuñez" ? 'selected' : ''}>Dra. Francinny Nuñez</option>
+                            <option value="Dra. Karla Quesada" ${doctorSeleccionado === "Dra. Karla Quesada" ? 'selected' : ''}>Dra. Karla Quesada</option>
+                            <option value="Dra. Natalia Alvarado" ${doctorSeleccionado === "Dra. Natalia Alvarado" ? 'selected' : ''}>Dra. Natalia Alvarado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAsistenteAtiende">Asistente que atiende</label>
+                        <select id="editAsistenteAtiende">
+                            <option value="">Seleccione un asistente</option>
+                            <option value="Tec. Maribel Guzmán" ${asistenteSeleccionado === "Tec. Maribel Guzmán" ? 'selected' : ''}>Tec. Maribel Guzmán</option>
+                            <option value="Tec. Juliana Perez" ${asistenteSeleccionado === "Tec. Juliana Perez" ? 'selected' : ''}>Tec. Juliana Perez</option>
+                            <option value="Tec. Jafeth Bermudez" ${asistenteSeleccionado === "Tec. Jafeth Bermudez" ? 'selected' : ''}>Tec. Jafeth Bermudez</option>
+                            <option value="Tec. Johnny Chacón" ${asistenteSeleccionado === "Tec. Johnny Chacón" ? 'selected' : ''}>Tec. Johnny Chacón</option>
+                            <option value="Tec. Gabriela Zuñiga" ${asistenteSeleccionado === "Tec. Gabriela Zuñiga" ? 'selected' : ''}>Tec. Gabriela Zuñiga</option>
+                            <option value="Tec. Indra Perez" ${asistenteSeleccionado === "Tec. Indra Perez" ? 'selected' : ''}>Tec. Indra Perez</option>
+                        </select>
                     </div>
                 </div>
                 
@@ -853,6 +1231,19 @@ function editTicket(id) {
     document.getElementById('editTicketForm').addEventListener('submit', function(e) {
         e.preventDefault();
         
+        // Combinar doctor y asistente
+        const editDoctorAtiende = document.getElementById('editDoctorAtiende').value;
+        const editAsistenteAtiende = document.getElementById('editAsistenteAtiende').value;
+        let medicoAtiende = '';
+        
+        if (editDoctorAtiende && editAsistenteAtiende) {
+            medicoAtiende = `${editDoctorAtiende}, ${editAsistenteAtiende}`;
+        } else if (editDoctorAtiende) {
+            medicoAtiende = editDoctorAtiende;
+        } else if (editAsistenteAtiende) {
+            medicoAtiende = editAsistenteAtiende;
+        }
+        
         // Recoger todos los datos del formulario
         const updatedTicket = {
             id: safeTicket.id,
@@ -862,13 +1253,15 @@ function editTicket(id) {
             idPaciente: document.getElementById('editIdPaciente').value,
             fechaConsulta: document.getElementById('editFecha').value,
             horaConsulta: document.getElementById('editHora').value,
-            medicoAtiende: document.getElementById('editMedicoAtiende').value,
+            horaLlegada: document.getElementById('editHoraLlegada').value,
+            horaAtencion: document.getElementById('editHoraAtencion').value,
+            medicoAtiende: medicoAtiende,
             motivo: document.getElementById('editMotivo').value,
             estado: document.getElementById('editEstado').value,
             tipoMascota: document.getElementById('editTipoMascota').value,
             urgencia: document.getElementById('editUrgencia').value,
             numFactura: document.getElementById('editNumFactura').value,
-            porCobrar: document.getElementById('editPorCobrar').value,
+            tipoServicio: document.getElementById('editTipoServicio').value,
             firebaseKey: safeTicket.firebaseKey
         };
         
@@ -976,7 +1369,14 @@ function changeStatus(id) {
         e.preventDefault();
         
         // Actualizar estado del ticket
-        ticket.estado = document.getElementById('changeEstado').value;
+        const nuevoEstado = document.getElementById('changeEstado').value;
+        ticket.estado = nuevoEstado;
+        
+        // Si el ticket pasa a consultorio y no tiene hora de atención, registrarla automáticamente
+        if (nuevoEstado.includes('consultorio') && !ticket.horaAtencion) {
+            const ahora = new Date();
+            ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
         
         // Mostrar indicador de carga
         const saveButton = document.querySelector('.btn-save');
@@ -1008,7 +1408,14 @@ function changeStatus(id) {
     });
 }
 
+// Modify the deleteTicket function to check permissions
 function deleteTicket(id) {
+    // Check if user has permission to delete
+    if (!hasPermission('canDeleteTickets')) {
+        showNotification('No tienes permiso para eliminar consultas', 'error');
+        return;
+    }
+    
     // Confirmar antes de eliminar
     const ticket = tickets.find(t => t.id === id);
     if (!ticket) return;
@@ -1123,54 +1530,37 @@ function closeModal() {
     }
 }
 
-// Configuración de Firebase
-const firebaseConfig = {
-    apiKey: "AIzaSyA0MKbA6xU2OlaCRFGNV_Ac22KmWU3Y2PI",
-    authDomain: "consulta-7ece8.firebaseapp.com",
-    databaseURL: "https://consulta-7ece8-default-rtdb.firebaseio.com",
-    projectId: "consulta-7ece8",
-    storageBucket: "consulta-7ece8.firebasestorage.app",
-    messagingSenderId: "960058925183",
-    appId: "1:960058925183:web:9cec6000f0788d61b31f4a",
-    measurementId: "G-6JVD4VRDBJ"
-  };
-  
-  // Inicializar Firebase
-  firebase.initializeApp(firebaseConfig);
-  
-  // Referencias a la base de datos
-  const db = firebase.database();
-  const ticketsRef = db.ref('tickets');
-  const settingsRef = db.ref('settings');
-  
-  console.log("Firebase configurado correctamente");
-
 // Sistema de autenticación básico
 let userCredential = null;
 
 // Iniciar sesión o crear cuenta anónima
 function initAuth() {
-    return new Promise((resolve, reject) => {
-        // Comprobar si el usuario ya está autenticado
-        firebase.auth().onAuthStateChanged((user) => {
-            if (user) {
-                userCredential = user;
-                resolve(user);
-            } else {
-                // Iniciar sesión anónima
-                firebase.auth().signInAnonymously()
-                    .then((credential) => {
-                        userCredential = credential.user;
-                        resolve(credential.user);
-                    })
-                    .catch((error) => {
-                        console.error("Error de autenticación:", error);
-                        showNotification('Error al conectar con la base de datos', 'error');
-                        reject(error);
-                    });
-            }
-        });
+  return new Promise((resolve, reject) => {
+    console.log("Initializing auth...");
+    
+    // Check if the user is already authenticated first
+    firebase.auth().onAuthStateChanged((user) => {
+      if (user) {
+        console.log("User already authenticated:", user.uid);
+        resolve(user);
+      } else {
+        console.log("No active user, signing in anonymously...");
+        // Sign in anonymously with proper variable scoping
+        firebase.auth().signInAnonymously()
+          .then((credential) => {
+            // Properly scope userCredential within this block
+            const userCredential = credential.user;
+            console.log("Anonymous auth successful:", userCredential.uid);
+            resolve(userCredential);
+          })
+          .catch((error) => {
+            console.error("Authentication error:", error);
+            showNotification('Error al conectar con la base de datos', 'error');
+            reject(error);
+          });
+      }
     });
+  });
 }
 
 function showNotification(message, type = 'info') {
@@ -1241,17 +1631,14 @@ function updateStats() {
         t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3'
     ).length;
     const pacientesAtendidos = tickets.filter(t => t.estado === 'terminado').length;
-    const pacientesPorCobrar = tickets.filter(t => t.porCobrar && t.porCobrar.trim() !== '').length;
     
     document.getElementById('totalPacientes').textContent = totalPacientes;
     document.getElementById('pacientesEspera').textContent = pacientesEspera;
     document.getElementById('pacientesConsulta').textContent = pacientesConsulta;
     document.getElementById('pacientesAtendidos').textContent = pacientesAtendidos;
     
-    // Verificar si existe el elemento antes de intentar actualizarlo
-    if (document.getElementById('pacientesPorCobrar')) {
-        document.getElementById('pacientesPorCobrar').textContent = pacientesPorCobrar;
-    }
+    // Only calculate wait time stats now that we've removed the chart
+    calculateWaitTimeStats();
 }
 
 function renderChart() {
@@ -1316,6 +1703,12 @@ function renderChart() {
 
 // Funciones de exportación y respaldo
 function exportarDia() {
+    // Check permissions
+    if (!hasPermission('canExportData')) {
+        showNotification('No tienes permiso para exportar datos', 'error');
+        return;
+    }
+    
     const fecha = fechaHorario.value;
     
     // Filtrar tickets por fecha
@@ -1376,7 +1769,6 @@ function exportToCSV(data, filename) {
         'Estado', 
         'Urgencia',
         'Factura',
-        'Por Cobrar', 
         'Motivo'
     ];
     
@@ -1394,7 +1786,6 @@ function exportToCSV(data, filename) {
         getEstadoLabel(ticket.estado),
         ticket.urgencia.toUpperCase(),
         ticket.numFactura || '',
-        ticket.porCobrar || '',
         ticket.motivo
     ]);
     
@@ -1748,242 +2139,615 @@ function filtrarPorPeriodo(tickets, periodo) {
 
 // Función para generar las estadísticas de personal y servicios
 function generarEstadisticasPersonalServicios() {
-    // Obtener valores de los filtros
+    console.log("Generating personnel and service statistics");
+    
+    // Get filter values
     const filtroPersonal = document.getElementById('filtroPersonal').value;
     const filtroServicio = document.getElementById('filtroServicio').value;
     const filtroPeriodo = document.getElementById('filtroPeriodo').value;
     
-    // Filtrar tickets por período
-    let ticketsFiltrados = filtrarPorPeriodo(tickets, filtroPeriodo);
+    console.log("Filters:", { personal: filtroPersonal, servicio: filtroServicio, periodo: filtroPeriodo });
+    console.log("Total tickets:", tickets.length);
     
-    // Filtrar por servicio si no es "todos"
+    // Filter tickets by period
+    let ticketsFiltrados = filtrarPorPeriodo(tickets, filtroPeriodo);
+    console.log("Filtered by period:", ticketsFiltrados.length);
+    
+    // Filter by service if not "todos"
     if (filtroServicio !== 'todos') {
         ticketsFiltrados = ticketsFiltrados.filter(ticket => 
             ticket.tipoServicio === filtroServicio);
+        console.log("Filtered by service:", ticketsFiltrados.length);
     }
     
-    // Preparar estructura para contar servicios por personal
+    // Prepare structure to count services by personnel
     const conteoPersonalServicio = {};
     const conteoServicios = {};
     let totalServicios = 0;
     
-    // Contar servicios por personal
+    // Count services by personnel
     ticketsFiltrados.forEach(ticket => {
-        // Si no tiene tipoServicio, asumir consulta
+        // If no service type, assume "consulta"
         const servicio = ticket.tipoServicio || 'consulta';
         
-        // Si no tiene médico, ignorar para esta estadística
-        if (!ticket.medicoAtiende) return;
+        // Add to general service count - ONLY ONCE PER TICKET
+        conteoServicios[servicio] = (conteoServicios[servicio] || 0) + 1;
+        totalServicios++;
         
-        // Dividir en caso de múltiples personas
+        // If no médico/personnel, add to "Sin asignar" category
+        if (!ticket.medicoAtiende || ticket.medicoAtiende.trim() === '') {
+            const persona = "Sin asignar";
+            
+            // Initialize structure if it doesn't exist
+            if (!conteoPersonalServicio[persona]) {
+                conteoPersonalServicio[persona] = {};
+            }
+            
+            // Increment count
+            conteoPersonalServicio[persona][servicio] = 
+                (conteoPersonalServicio[persona][servicio] || 0) + 1;
+            
+            return;
+        }
+        
+        // Split in case of multiple people
         const personas = ticket.medicoAtiende.split(',').map(p => p.trim());
         
         personas.forEach(persona => {
             if (!persona) return;
             
-            // Filtrar por personal específico si no es "todos"
+            // Filter by specific personnel if not "todos"
             if (filtroPersonal !== 'todos' && persona !== filtroPersonal) return;
             
-            // Inicializar estructura si no existe
+            // Initialize structure if it doesn't exist
             if (!conteoPersonalServicio[persona]) {
                 conteoPersonalServicio[persona] = {};
             }
             
-            // Incrementar conteo
+            // Increment count for each person (the service is credited to each person)
             conteoPersonalServicio[persona][servicio] = 
                 (conteoPersonalServicio[persona][servicio] || 0) + 1;
-                
-            // Contar total de servicios
-            conteoServicios[servicio] = (conteoServicios[servicio] || 0) + 1;
-            totalServicios++;
         });
     });
     
-    // Generar datos para la tabla
+    console.log("Personnel count:", Object.keys(conteoPersonalServicio).length);
+    console.log("Service count:", Object.keys(conteoServicios).length);
+    console.log("Total services:", totalServicios);
+    
+    // Generate table data
     const tablaBody = document.getElementById('tablaEstadisticasBody');
     if (tablaBody) {
         tablaBody.innerHTML = '';
         
-        // Para cada persona
-        Object.keys(conteoPersonalServicio).sort().forEach(persona => {
-            // Para cada servicio de esa persona
-            Object.keys(conteoPersonalServicio[persona]).sort().forEach((servicio, index) => {
-                const cantidad = conteoPersonalServicio[persona][servicio];
-                const porcentaje = ((cantidad / totalServicios) * 100).toFixed(1);
-                
-                const row = document.createElement('tr');
-                
-                // En la primera fila de esta persona, mostrar su nombre
-                if (index === 0) {
-                    row.innerHTML = `
-                        <td rowspan="${Object.keys(conteoPersonalServicio[persona]).length}">${persona}</td>
-                        <td>${getNombreServicio(servicio)}</td>
-                        <td>${cantidad}</td>
-                        <td>${porcentaje}%</td>
-                    `;
-                } else {
-                    row.innerHTML = `
-                        <td>${getNombreServicio(servicio)}</td>
-                        <td>${cantidad}</td>
-                        <td>${porcentaje}%</td>
-                    `;
-                }
-                
-                tablaBody.appendChild(row);
-            });
-        });
-        
-        // Si no hay datos, mostrar mensaje
-        if (tablaBody.children.length === 0) {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td colspan="4" class="no-data">No hay datos para los filtros seleccionados</td>
+        if (totalServicios === 0) {
+            tablaBody.innerHTML = `
+                <tr>
+                    <td colspan="4" class="no-data">No hay datos para los filtros seleccionados</td>
+                </tr>
             `;
-            tablaBody.appendChild(row);
+        } else {
+            // For each person
+            Object.keys(conteoPersonalServicio).sort().forEach(persona => {
+                // For each service of that person
+                Object.keys(conteoPersonalServicio[persona]).sort().forEach((servicio, index) => {
+                    const cantidad = conteoPersonalServicio[persona][servicio];
+                    const porcentaje = ((cantidad / totalServicios) * 100).toFixed(1);
+                    
+                    const row = document.createElement('tr');
+                    
+                    // In the first row of this person, show their name
+                    if (index === 0) {
+                        row.innerHTML = `
+                            <td rowspan="${Object.keys(conteoPersonalServicio[persona]).length}">${persona}</td>
+                            <td>${getNombreServicio(servicio)}</td>
+                            <td>${cantidad}</td>
+                            <td>${porcentaje}%</td>
+                        `;
+                    } else {
+                        row.innerHTML = `
+                            <td>${getNombreServicio(servicio)}</td>
+                            <td>${cantidad}</td>
+                            <td>${porcentaje}%</td>
+                        `;
+                    }
+                    
+                    tablaBody.appendChild(row);
+                });
+            });
         }
     }
     
-    // Generar gráficos
+    // Generate charts
     generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicios);
 }
 
-// Función para generar gráficos de servicios
+// Modify the function to handle empty data gracefully
 function generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicios) {
-    // Gráfico 1: Servicios por Personal (gráfico de barras)
+    console.log("Generating charts for personnel and services");
+    
+    // Chart 1: Services by Personnel (bar chart)
     const ctxPersonal = document.getElementById('chartServiciosPersonal')?.getContext('2d');
     if (ctxPersonal) {
-        // Preparar datos para el gráfico
-        const datasets = [];
-        const serviciosUnicos = new Set();
-        
-        // Recopilar todos los servicios únicos
-        Object.values(conteoPersonalServicio).forEach(servicios => {
-            Object.keys(servicios).forEach(servicio => serviciosUnicos.add(servicio));
-        });
-        
-        // Colores para servicios
-        const colores = [
-            '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-            '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
-            '#a3a4a5', '#d1d3e2', '#eaecf4'
-        ];
-        
-        // Crear un dataset por cada servicio
-        Array.from(serviciosUnicos).sort().forEach((servicio, index) => {
-            const data = [];
-            const labels = Object.keys(conteoPersonalServicio).sort();
+        // Check if there's data to display
+        if (Object.keys(conteoPersonalServicio).length === 0) {
+            // No data, display a message
+            if (chartServiciosPersonal) {
+                chartServiciosPersonal.destroy();
+                chartServiciosPersonal = null;
+            }
             
-            // Para cada persona, obtener la cantidad de este servicio
-            labels.forEach(persona => {
-                data.push(conteoPersonalServicio[persona][servicio] || 0);
+            // Draw "No data" text
+            ctxPersonal.font = '16px Arial';
+            ctxPersonal.fillStyle = '#888';
+            ctxPersonal.textAlign = 'center';
+            ctxPersonal.fillText('No hay datos para mostrar', ctxPersonal.canvas.width / 2, ctxPersonal.canvas.height / 2);
+        } else {
+            // Prepare data for the chart
+            const datasets = [];
+            const serviciosUnicos = new Set();
+            
+            // Collect all unique services
+            Object.values(conteoPersonalServicio).forEach(servicios => {
+                Object.keys(servicios).forEach(servicio => serviciosUnicos.add(servicio));
             });
             
-            datasets.push({
-                label: getNombreServicio(servicio),
-                data: data,
-                backgroundColor: colores[index % colores.length],
-                borderColor: colores[index % colores.length],
-                borderWidth: 1
+            // Colors for services
+            const colores = [
+                '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+                '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
+                '#a3a4a5', '#d1d3e2', '#eaecf4'
+            ];
+            
+            // Create a dataset for each service
+            Array.from(serviciosUnicos).sort().forEach((servicio, index) => {
+                const data = [];
+                const labels = Object.keys(conteoPersonalServicio).sort();
+                
+                // For each person, get the amount of this service
+                labels.forEach(persona => {
+                    data.push(conteoPersonalServicio[persona][servicio] || 0);
+                });
+                
+                datasets.push({
+                    label: getNombreServicio(servicio),
+                    data: data,
+                    backgroundColor: colores[index % colores.length],
+                    borderColor: colores[index % colores.length],
+                    borderWidth: 1
+                });
             });
-        });
-        
-        // Destruir gráfico anterior si existe
-        if (chartServiciosPersonal) {
-            chartServiciosPersonal.destroy();
-        }
-        
-        // Crear nuevo gráfico
-        chartServiciosPersonal = new Chart(ctxPersonal, {
-            type: 'bar',
-            data: {
-                labels: Object.keys(conteoPersonalServicio).sort(),
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        stacked: true,
-                    },
-                    y: {
-                        stacked: true,
-                        beginAtZero: true
-                    }
+            
+            // Destroy previous chart if it exists
+            if (chartServiciosPersonal) {
+                chartServiciosPersonal.destroy();
+            }
+            
+            // Create new chart
+            chartServiciosPersonal = new Chart(ctxPersonal, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(conteoPersonalServicio).sort(),
+                    datasets: datasets
                 },
-                plugins: {
-                    legend: {
-                        position: 'top',
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        x: {
+                            stacked: true,
+                        },
+                        y: {
+                            stacked: true,
+                            beginAtZero: true
+                        }
                     },
-                    tooltip: {
-                        mode: 'index',
-                        intersect: false
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                        },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false
+                        }
                     }
                 }
-            }
-        });
+            });
+        }
     }
     
-    // Gráfico 2: Distribución de Servicios (gráfico circular)
+    // Chart 2: Service Distribution (pie chart)
     const ctxServicios = document.getElementById('chartDistribucionServicios')?.getContext('2d');
     if (ctxServicios) {
-        // Preparar datos para el gráfico
-        const labels = [];
-        const data = [];
-        const backgroundColor = [];
-        
-        // Colores para el gráfico
-        const colores = [
-            '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-            '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
-            '#a3a4a5', '#d1d3e2', '#eaecf4'
-        ];
-        
-        // Para cada servicio, obtener su total
-        Object.keys(conteoServicios).sort().forEach((servicio, index) => {
-            labels.push(getNombreServicio(servicio));
-            data.push(conteoServicios[servicio]);
-            backgroundColor.push(colores[index % colores.length]);
-        });
-        
-        // Destruir gráfico anterior si existe
-        if (chartDistribucionServicios) {
-            chartDistribucionServicios.destroy();
+        // Check if there's data to display
+        if (Object.keys(conteoServicios).length === 0) {
+            // No data, display a message
+            if (chartDistribucionServicios) {
+                chartDistribucionServicios.destroy();
+                chartDistribucionServicios = null;
+            }
+            
+            // Draw "No data" text
+            ctxServicios.font = '16px Arial';
+            ctxServicios.fillStyle = '#888';
+            ctxServicios.textAlign = 'center';
+            ctxServicios.fillText('No hay datos para mostrar', ctxServicios.canvas.width / 2, ctxServicios.canvas.height / 2);
+        } else {
+            // Prepare data for the chart
+            const labels = [];
+            const data = [];
+            const backgroundColor = [];
+            
+            // Colors for the chart
+            const colores = [
+                '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+                '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
+                '#a3a4a5', '#d1d3e2', '#eaecf4'
+            ];
+            
+            // For each service, get its total
+            Object.keys(conteoServicios).sort().forEach((servicio, index) => {
+                labels.push(getNombreServicio(servicio));
+                data.push(conteoServicios[servicio]);
+                backgroundColor.push(colores[index % colores.length]);
+            });
+            
+            // Destroy previous chart if it exists
+            if (chartDistribucionServicios) {
+                chartDistribucionServicios.destroy();
+            }
+            
+            // Create new chart
+            chartDistribucionServicios = new Chart(ctxServicios, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: backgroundColor,
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const label = context.label || '';
+                                    const value = context.raw || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = Math.round((value / total) * 100);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
         }
+    }
+}
+
+// Agregar esta función para calcular estadísticas de tiempo de espera
+function calculateWaitTimeStats() {
+    const tiemposEspera = {};
+    let ticketsConTiempos = 0;
+    
+    // Filtrar tickets que tienen tanto hora de llegada como de atención
+    tickets.forEach(ticket => {
+        if (ticket.horaLlegada && ticket.horaAtencion) {
+            const servicio = ticket.tipoServicio || 'consulta';
+            
+            // Convertir tiempos a minutos para calcular la diferencia
+            const llegada = convertTimeToMinutes(ticket.horaLlegada);
+            const atencion = convertTimeToMinutes(ticket.horaAtencion);
+            
+            // Calcular la diferencia en minutos
+            const tiempoEspera = atencion - llegada;
+            
+            // Solo considerar diferencias válidas (positivas)
+            if (tiempoEspera >= 0) {
+                // Inicializar el objeto si no existe
+                if (!tiemposEspera[servicio]) {
+                    tiemposEspera[servicio] = {
+                        total: 0,
+                        count: 0,
+                        tiempos: []
+                    };
+                }
+                
+                // Sumar el tiempo de espera y contar este ticket
+                tiemposEspera[servicio].total += tiempoEspera;
+                tiemposEspera[servicio].count++;
+                tiemposEspera[servicio].tiempos.push(tiempoEspera);
+                ticketsConTiempos++;
+            }
+        }
+    });
+    
+    // Generar tabla de resultados
+    const waitTimeStatsBody = document.getElementById('waitTimeStatsBody');
+    if (waitTimeStatsBody) {
+        waitTimeStatsBody.innerHTML = '';
         
-        // Crear nuevo gráfico
-        chartDistribucionServicios = new Chart(ctxServicios, {
-            type: 'pie',
+        if (ticketsConTiempos === 0) {
+            waitTimeStatsBody.innerHTML = `
+                <tr>
+                    <td colspan="3" class="no-data">No hay datos suficientes para calcular tiempos de espera</td>
+                </tr>
+            `;
+        } else {
+            // Ordenar servicios por tiempo promedio (mayor a menor)
+            const serviciosOrdenados = Object.keys(tiemposEspera).sort((a, b) => {
+                const avgA = tiemposEspera[a].total / tiemposEspera[a].count;
+                const avgB = tiemposEspera[b].total / tiemposEspera[b].count;
+                return avgB - avgA; // Orden descendente
+            });
+            
+            serviciosOrdenados.forEach(servicio => {
+                const { total, count } = tiemposEspera[servicio];
+                const promedio = total / count;
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${getNombreServicio(servicio)}</td>
+                    <td>${formatMinutesToTime(promedio)}</td>
+                    <td>${count}</td>
+                `;
+                waitTimeStatsBody.appendChild(row);
+            });
+        }
+    }
+    
+    // Generar gráfico de tiempos de espera
+    renderWaitTimeChart(tiemposEspera);
+}
+
+// Función para convertir hora (HH:MM) a minutos desde medianoche
+function convertTimeToMinutes(timeString) {
+    const [hours, minutes] = timeString.split(':').map(Number);
+    return hours * 60 + minutes;
+}
+
+// Función para formatear minutos a tiempo HH:MM
+function formatMinutesToTime(minutes) {
+    const hrs = Math.floor(minutes / 60);
+    const mins = Math.round(minutes % 60);
+    return `${hrs}h ${mins}m`;
+}
+
+// Función para renderizar gráfico de tiempos de espera
+function renderWaitTimeChart(tiemposEspera) {
+    const ctx = document.getElementById('waitTimeChart');
+    if (!ctx) return;
+    
+    // Destruir gráfico anterior si existe y es un objeto Chart válido
+    if (window.waitTimeChart && typeof window.waitTimeChart.destroy === 'function') {
+        try {
+            window.waitTimeChart.destroy();
+        } catch (error) {
+            console.error("Error al destruir el gráfico anterior:", error);
+        }
+    }
+    
+    // Si no hay datos para mostrar, no intentamos crear un gráfico
+    const serviciosValidos = Object.keys(tiemposEspera)
+        .filter(servicio => tiemposEspera[servicio] && tiemposEspera[servicio].count > 0);
+    
+    if (serviciosValidos.length === 0) {
+        // No hay datos, dibujar un mensaje
+        const ctxCanvas = ctx.getContext('2d');
+        if (ctxCanvas) {
+            ctxCanvas.clearRect(0, 0, ctx.width, ctx.height);
+            ctxCanvas.font = '16px Arial';
+            ctxCanvas.fillStyle = '#888';
+            ctxCanvas.textAlign = 'center';
+            ctxCanvas.fillText('No hay datos suficientes para calcular tiempos de espera', 
+                ctx.width / 2 || 150, ctx.height / 2 || 150);
+        }
+        // Importante: no asignar el objeto window.waitTimeChart en este caso
+        window.waitTimeChart = null;
+        return;
+    }
+    
+    // Preparar datos para el gráfico
+    const labels = [];
+    const data = [];
+    const backgroundColors = [
+        '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+        '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
+    ];
+    
+    // Ordenar por tiempo promedio
+    serviciosValidos.sort((a, b) => {
+        const avgA = tiemposEspera[a].total / tiemposEspera[a].count;
+        const avgB = tiemposEspera[b].total / tiemposEspera[b].count;
+        return avgB - avgA; // Orden descendente
+    });
+    
+    // Limitar a los 10 servicios con mayor tiempo de espera
+    const serviciosMostrados = serviciosValidos.slice(0, 10);
+    
+    serviciosMostrados.forEach((servicio, index) => {
+        const { total, count } = tiemposEspera[servicio];
+        const promedio = total / count;
+        
+        labels.push(getNombreServicio(servicio));
+        data.push(promedio);
+    });
+    
+    try {
+        // Crear gráfico con manejo de errores
+        window.waitTimeChart = new Chart(ctx, {
+            type: 'bar',
             data: {
                 labels: labels,
                 datasets: [{
+                    label: 'Tiempo promedio de espera (minutos)',
                     data: data,
-                    backgroundColor: backgroundColor,
+                    backgroundColor: backgroundColors,
+                    borderColor: backgroundColors,
                     borderWidth: 1
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Minutos'
+                        }
+                    }
+                },
                 plugins: {
                     legend: {
-                        position: 'right',
+                        display: false
                     },
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                const label = context.label || '';
-                                const value = context.raw || 0;
-                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = Math.round((value / total) * 100);
-                                return `${label}: ${value} (${percentage}%)`;
+                                const value = context.raw;
+                                return `Tiempo de espera: ${formatMinutesToTime(value)}`;
                             }
                         }
                     }
                 }
             }
         });
+    } catch (error) {
+        console.error("Error al crear el gráfico de tiempos de espera:", error);
+        window.waitTimeChart = null;
     }
+}
+
+// Hacer más resistente a errores la función calculateWaitTimeStats
+function calculateWaitTimeStats() {
+    try {
+        const tiemposEspera = {};
+        let ticketsConTiempos = 0;
+        
+        // Filtrar tickets que tienen tanto hora de llegada como de atención
+        tickets.forEach(ticket => {
+            if (ticket && ticket.horaLlegada && ticket.horaAtencion) {
+                const servicio = ticket.tipoServicio || 'consulta';
+                
+                try {
+                    // Convertir tiempos a minutos para calcular la diferencia
+                    const llegada = convertTimeToMinutes(ticket.horaLlegada);
+                    const atencion = convertTimeToMinutes(ticket.horaAtencion);
+                    
+                    // Calcular la diferencia en minutos
+                    const tiempoEspera = atencion - llegada;
+                    
+                    // Solo considerar diferencias válidas (positivas)
+                    if (tiempoEspera >= 0) {
+                        // Inicializar el objeto si no existe
+                        if (!tiemposEspera[servicio]) {
+                            tiemposEspera[servicio] = {
+                                total: 0,
+                                count: 0,
+                                tiempos: []
+                            };
+                        }
+                        
+                        // Sumar el tiempo de espera y contar este ticket
+                        tiemposEspera[servicio].total += tiempoEspera;
+                        tiemposEspera[servicio].count++;
+                        tiemposEspera[servicio].tiempos.push(tiempoEspera);
+                        ticketsConTiempos++;
+                    }
+                } catch (err) {
+                    console.warn("Error procesando tiempos para ticket:", ticket.id, err);
+                }
+            }
+        });
+        
+        // Generar tabla de resultados
+        const waitTimeStatsBody = document.getElementById('waitTimeStatsBody');
+        if (waitTimeStatsBody) {
+            waitTimeStatsBody.innerHTML = '';
+            
+            if (ticketsConTiempos === 0) {
+                waitTimeStatsBody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="no-data">No hay datos suficientes para calcular tiempos de espera</td>
+                    </tr>
+                `;
+            } else {
+                // Ordenar servicios por tiempo promedio (mayor a menor)
+                const serviciosOrdenados = Object.keys(tiemposEspera).sort((a, b) => {
+                    const avgA = tiemposEspera[a].total / tiemposEspera[a].count;
+                    const avgB = tiemposEspera[b].total / tiemposEspera[b].count;
+                    return avgB - avgA; // Orden descendente
+                });
+                
+                serviciosOrdenados.forEach(servicio => {
+                    const { total, count } = tiemposEspera[servicio];
+                    const promedio = total / count;
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td>${getNombreServicio(servicio)}</td>
+                        <td>${formatMinutesToTime(promedio)}</td>
+                        <td>${count}</td>
+                    `;
+                    waitTimeStatsBody.appendChild(row);
+                });
+            }
+        }
+        
+        // Generar gráfico de tiempos de espera
+        renderWaitTimeChart(tiemposEspera);
+    } catch (error) {
+        console.error("Error calculando estadísticas de tiempo de espera:", error);
+    }
+}
+
+// Función para convertir hora (HH:MM) a minutos desde medianoche con manejo de errores
+function convertTimeToMinutes(timeString) {
+    try {
+        if (!timeString || typeof timeString !== 'string') {
+            return 0;
+        }
+        
+        const parts = timeString.split(':');
+        if (parts.length < 2) {
+            return 0;
+        }
+        
+        const hours = parseInt(parts[0], 10) || 0;
+        const minutes = parseInt(parts[1], 10) || 0;
+        
+        return hours * 60 + minutes;
+    } catch (error) {
+        console.error("Error convirtiendo tiempo a minutos:", error);
+        return 0;
+    }
+}
+
+// Integrar con estadísticas existentes
+function updateStats() {
+    const totalPacientes = tickets.length;
+    const pacientesEspera = tickets.filter(t => t.estado === 'espera').length;
+    const pacientesConsulta = tickets.filter(t => 
+        t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3'
+    ).length;
+    const pacientesAtendidos = tickets.filter(t => t.estado === 'terminado').length;
+    
+    document.getElementById('totalPacientes').textContent = totalPacientes;
+    document.getElementById('pacientesEspera').textContent = pacientesEspera;
+    document.getElementById('pacientesConsulta').textContent = pacientesConsulta;
+    document.getElementById('pacientesAtendidos').textContent = pacientesAtendidos;
+    
+    // Calcular estadísticas de tiempo de espera
+    calculateWaitTimeStats();
 }
 
 // Event listeners para los filtros
@@ -2020,66 +2784,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
-// Modificar la función addTicket para incluir el tipo de servicio
-function addTicket() {
-    // ... código existente ...
-    
-    const tipoServicio = document.getElementById('tipoServicio').value;
-    
-    // Añadir tipoServicio al objeto nuevoTicket
-    const nuevoTicket = {
-        // ... propiedades existentes ...
-        tipoServicio: tipoServicio,
-        // ... resto de propiedades ...
-    };
-    
-    // ... resto del código existente ...
-}
-
-// También modificar la función editTicket para incluir el campo de tipo de servicio
-function editTicket(id) {
-    // ... código existente ...
-    
-    // Agregar el campo de tipo de servicio al formulario de edición
-    modal.innerHTML = `
-        <!-- ... HTML existente ... -->
-        
-        <div class="form-group">
-            <label for="editTipoServicio">Tipo de Servicio</label>
-            <select id="editTipoServicio" required>
-                <option value="consulta" ${safeTicket.tipoServicio === 'consulta' ? 'selected' : ''}>Consulta general</option>
-                <option value="revaloracion" ${safeTicket.tipoServicio === 'revaloracion' ? 'selected' : ''}>Revaloración</option>
-                <option value="retiroHilos" ${safeTicket.tipoServicio === 'retiroHilos' ? 'selected' : ''}>Retiro de hilos</option>
-                <option value="rayosX" ${safeTicket.tipoServicio === 'rayosX' ? 'selected' : ''}>Rayos X</option>
-                <option value="desparasitacion" ${safeTicket.tipoServicio === 'desparasitacion' ? 'selected' : ''}>Desparasitación</option>
-                <option value="inyectable" ${safeTicket.tipoServicio === 'inyectable' ? 'selected' : ''}>Inyectables</option>
-                <option value="corteUnas" ${safeTicket.tipoServicio === 'corteUnas' ? 'selected' : ''}>Corte de uñas</option>
-                <option value="emergencia" ${safeTicket.tipoServicio === 'emergencia' ? 'selected' : ''}>Emergencia</option>
-                <option value="tomaMuestras" ${safeTicket.tipoServicio === 'tomaMuestras' ? 'selected' : ''}>Toma de muestras</option>
-                <option value="tests" ${safeTicket.tipoServicio === 'tests' ? 'selected' : ''}>Tests</option>
-                <option value="hemograma" ${safeTicket.tipoServicio === 'hemograma' ? 'selected' : ''}>Hemograma</option>
-                <option value="eutanasia" ${safeTicket.tipoServicio === 'eutanasia' ? 'selected' : ''}>Eutanasia</option>
-                <option value="quitarPuntos" ${safeTicket.tipoServicio === 'quitarPuntos' ? 'selected' : ''}>Quitar puntos</option>
-                <option value="otro" ${safeTicket.tipoServicio === 'otro' ? 'selected' : ''}>Otro</option>
-            </select>
-        </div>
-        
-        <!-- ... resto del HTML existente ... -->
-    `;
-    
-    // ... código existente ...
-    
-    // Asegurarse de incluir el tipo de servicio en el ticket actualizado
-    document.getElementById('editTicketForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const updatedTicket = {
-            // ... propiedades existentes ...
-            tipoServicio: document.getElementById('editTipoServicio').value,
-            // ... resto de propiedades ...
-        };
-        
-        saveEditedTicket(updatedTicket);
-    });
-}

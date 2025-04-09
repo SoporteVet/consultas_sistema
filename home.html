@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login - Veterinaria San Martin</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+  <link rel="stylesheet" href="login.css">
+  <!-- Firebase App SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <!-- Firebase Auth SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+  <!-- Firebase Database SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <style>
+    /* Add loading indicator styles */
+    .btn-login.loading {
+      position: relative;
+      pointer-events: none;
+      opacity: 0.8;
+    }
+    
+    .btn-login.loading::after {
+      content: '';
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      top: 50%;
+      right: 15px;
+      margin-top: -10px;
+      border: 2px solid white;
+      border-top-color: transparent;
+      border-radius: 50%;
+      animation: loading-spinner 0.8s linear infinite;
+    }
+    
+    @keyframes loading-spinner {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Make error message more visible */
+    .error-message {
+      color: #e74c3c;
+      background-color: rgba(231, 76, 60, 0.1);
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+      text-align: center;
+      font-weight: 500;
+      display: none;
+    }
+    
+    .error-message:not(:empty) {
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container">
+    <div class="login-card">
+      <div class="login-header">
+        <img src="empresa.jpg" alt="Logo Veterinaria" class="login-logo">
+        <h1>Veterinaria San Martin de Porres</h1>
+      </div>
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="email"><i class="fas fa-user"></i> Usuario (Email)</label>
+          <input type="email" id="email" placeholder="Ingrese su correo electrónico" required>
+        </div>
+        <div class="form-group">
+          <label for="password"><i class="fas fa-lock"></i> Contraseña</label>
+          <input type="password" id="password" placeholder="Ingrese su contraseña" required>
+        </div>
+        <div id="error-message" class="error-message"></div>
+        <button type="submit" class="btn-login"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</button>
+      </form>
+      <div class="test-accounts-info">
+        <p style="margin-top: 20px; font-size: 0.9rem; color: #666; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
+          <strong>Cuentas de prueba:</strong><br>
+          Admin: admin@veterinaria.com / password123<br>
+          Recepción: recepcion@veterinaria.com / password123<br>
+          Visitas: visitas@veterinaria.com / password123
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <!-- All JavaScript integrated into this HTML file -->
+  <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyA0MKbA6xU2OlaCRFGNV_Ac22KmWU3Y2PI",
+      authDomain: "consulta-7ece8.firebaseapp.com",
+      databaseURL: "https://consulta-7ece8-default-rtdb.firebaseio.com",
+      projectId: "consulta-7ece8",
+      storageBucket: "consulta-7ece8.firebasestorage.app",
+      messagingSenderId: "960058925183",
+      appId: "1:960058925183:web:9cec6000f0788d61b31f4a",
+      measurementId: "G-6JVD4VRDBJ"
+    };
+
+    // Initialize Firebase
+    try {
+      if (!firebase.apps.length) {
+        firebase.initializeApp(firebaseConfig);
+        console.log("Firebase initialized successfully");
+      } else {
+        console.log("Firebase already initialized");
+      }
+
+      // Initialize references
+      const database = firebase.database();
+      window.database = database;
+      
+    } catch (error) {
+      console.error("Error initializing Firebase:", error);
+      showError("Error al conectar con Firebase. Recargue la página e intente nuevamente.");
+    }
+
+    // Force sign out when the login page loads to prevent automatic redirects
+    document.addEventListener('DOMContentLoaded', function() {
+      console.log("Login page loaded");
+      
+      // Clear any existing session
+      sessionStorage.clear();
+      
+      // Sign out of Firebase to prevent automatic redirects
+      firebase.auth().signOut().then(() => {
+        console.log("User signed out successfully on page load");
+      }).catch(error => {
+        console.error("Error signing out:", error);
+      });
+
+      // Create test users for development (remove in production)
+      createTestUsers();
+      
+      // Login form submission handler
+      setupLoginForm();
+    });
+
+    // Function to set up login form
+    function setupLoginForm() {
+      let loginTimeout = null;
+      let isRedirecting = false;
+      
+      const loginForm = document.getElementById('loginForm');
+      
+      if (loginForm) {
+        loginForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const email = document.getElementById('email').value;
+          const password = document.getElementById('password').value;
+          const errorMessage = document.getElementById('error-message');
+          const loginButton = document.querySelector('.btn-login');
+          
+          // Validate input
+          if (!email || !password) {
+            showError("Por favor ingrese correo y contraseña");
+            return;
+          }
+          
+          // Add loading state to button
+          loginButton.classList.add('loading');
+          loginButton.disabled = true;
+          loginButton.innerHTML = 'Iniciando sesión...';
+          
+          // Set login timeout - in case Firebase hangs
+          if (loginTimeout) clearTimeout(loginTimeout);
+          loginTimeout = setTimeout(() => {
+            console.warn("Login timed out after 15 seconds");
+            resetLoginButton();
+            showError("La conexión ha tardado demasiado. Por favor, intente de nuevo.");
+          }, 15000);
+          
+          // Clear previous error messages
+          errorMessage.textContent = '';
+          
+          // Sign in with Firebase Auth
+          firebase.auth().signInWithEmailAndPassword(email, password)
+            .then((userCredential) => {
+              clearTimeout(loginTimeout); // Clear timeout
+              
+              if (isRedirecting) return; // Prevent duplicate processing
+              isRedirecting = true;
+              
+              // Get user role from database
+              const user = userCredential.user;
+              
+              firebase.database().ref(`users/${user.uid}`).once('value')
+                .then((snapshot) => {
+                  const userData = snapshot.val();
+                  
+                  if (userData && userData.role) {
+                    // Store user role in session storage
+                    sessionStorage.setItem('userRole', userData.role);
+                    sessionStorage.setItem('userName', userData.name || email.split('@')[0]);
+                    sessionStorage.setItem('userEmail', email);
+                    sessionStorage.setItem('userId', user.uid);
+                    
+                    // Redirect to main app
+                    redirectToApp();
+                  } else {
+                    // User exists but has no role, assign default
+                    firebase.database().ref(`users/${user.uid}`).set({
+                      email: email,
+                      role: 'recepcion', // Default role
+                      name: email.split('@')[0]
+                    }).then(() => {
+                      sessionStorage.setItem('userRole', 'recepcion');
+                      sessionStorage.setItem('userName', email.split('@')[0]);
+                      sessionStorage.setItem('userEmail', email);
+                      sessionStorage.setItem('userId', user.uid);
+                      redirectToApp();
+                    }).catch(error => {
+                      console.error("Error setting default role:", error);
+                      isRedirecting = false;
+                      resetLoginButton();
+                      showError("Error al configurar usuario: " + error.message);
+                    });
+                  }
+                })
+                .catch((error) => {
+                  console.error("Error getting user data:", error);
+                  isRedirecting = false;
+                  resetLoginButton();
+                  showError("Error al obtener datos del usuario: " + error.message);
+                });
+            })
+            .catch((error) => {
+              clearTimeout(loginTimeout); // Clear timeout
+              console.error("Authentication failed:", error);
+              
+              // Display user-friendly error message
+              if (error.code === 'auth/user-not-found' || 
+                  error.code === 'auth/wrong-password' || 
+                  error.code === 'auth/invalid-login-credentials') {
+                showError("Credenciales incorrectas. Verifique su correo y contraseña.");
+              } else if (error.code === 'auth/too-many-requests') {
+                showError("Demasiados intentos fallidos. Intente más tarde.");
+              } else {
+                showError("Error al iniciar sesión: " + error.message);
+              }
+              
+              // Remove loading state
+              resetLoginButton();
+            });
+        });
+      }
+    }
+      
+    // Function to create test users for development purposes
+    function createTestUsers() {
+      const testUsers = [
+        { email: 'admin@veterinaria.com', password: 'password123', role: 'admin', name: 'Administrador' },
+        { email: 'recepcion@veterinaria.com', password: 'password123', role: 'recepcion', name: 'Recepción' },
+        { email: 'visitas@veterinaria.com', password: 'password123', role: 'visitas', name: 'Visitas' }
+      ];
+
+      // Only attempt this if Firebase is properly initialized
+      if (!firebase || !firebase.apps || !firebase.apps.length) {
+        console.error("Firebase not initialized, skipping test user creation");
+        return;
+      }
+    
+      testUsers.forEach(user => {
+        // Check if user exists first
+        firebase.auth().fetchSignInMethodsForEmail(user.email)
+          .then((signInMethods) => {
+            if (signInMethods.length === 0) {
+              // User doesn't exist, create them
+              console.log(`Creating test user: ${user.email}`);
+              
+              firebase.auth().createUserWithEmailAndPassword(user.email, user.password)
+                .then((userCredential) => {
+                  // Store user role in database
+                  return firebase.database().ref(`users/${userCredential.user.uid}`).set({
+                    email: user.email,
+                    role: user.role,
+                    name: user.name
+                  });
+                })
+                .then(() => {
+                  console.log(`Test user created: ${user.email} (${user.role})`);
+                })
+                .catch((error) => {
+                  // Handle specific error cases
+                  if (error.code === 'auth/email-already-in-use') {
+                    console.log(`Test user ${user.email} already exists - no action needed`);
+                  } else {
+                    console.error(`Error creating test user ${user.email}:`, error.message);
+                  }
+                });
+            } else {
+              console.log(`Test user ${user.email} already exists`);
+            }
+          })
+          .catch((error) => {
+            console.error(`Error checking user ${user.email}:`, error.message);
+          });
+      });
+    }
+
+    // Function to redirect to main app
+    function redirectToApp() {
+      console.log("Redirecting to app...");
+      
+      try {
+        // Add timestamp to prevent caching problems
+        const timestamp = new Date().getTime();
+        window.location.href = `index.html?t=${timestamp}`;
+      } catch (error) {
+        console.error("Error during redirect:", error);
+        alert("Hubo un problema al redirigir. Por favor intente de nuevo.");
+        isRedirecting = false;
+        resetLoginButton();
+      }
+    }
+
+    // Helper function to show error message
+    function showError(message) {
+      const errorMessage = document.getElementById('error-message');
+      if (errorMessage) {
+        errorMessage.textContent = message;
+        // Make error more visible by scrolling to it
+        errorMessage.scrollIntoView({behavior: 'smooth', block: 'center'});
+      }
+    }
+    
+    // Helper function to reset login button
+    function resetLoginButton() {
+      const loginButton = document.querySelector('.btn-login');
+      if (loginButton) {
+        loginButton.classList.remove('loading');
+        loginButton.disabled = false;
+        loginButton.innerHTML = '<i class="fas fa-sign-in-alt"></i> Iniciar sesión';
+      }
+    }
+  </script>
+</body>
+</html>

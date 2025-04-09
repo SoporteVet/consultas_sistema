@@ -1,4 +1,3 @@
-<!-- filepath: e:\Sistema tickets\index.html -->
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -16,14 +15,43 @@
         <img src="empresa.jpg" alt="Logo Veterinaria">
         <h1>Veterinaria San Martin de Porres</h1>
       </div>
+      
+      <!-- Añadir información del usuario -->
+      <div class="user-info">
+        <div class="user-avatar">
+          <i class="fas fa-user-circle"></i>
+        </div>
+        <div class="user-details">
+          <p id="userName">Usuario</p>
+          <span id="userRole">Rol</span>
+        </div>
+      </div>
+      
       <nav>
         <button id="crearTicketBtn"><i class="fas fa-plus-circle"></i> Crear Consulta</button>
         <button id="verTicketsBtn"><i class="fas fa-list-alt"></i> Ver Consultas</button>
         <button id="horarioBtn"><i class="fas fa-calendar-alt"></i> Horario</button>
         <button id="estadisticasBtn"><i class="fas fa-chart-pie"></i> Estadísticas</button>
       </nav>
+      
+      <!-- Añadir botón de cerrar sesión -->
+      <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
+      
       <div class="sidebar-footer">
         <p>© 2025 Veterinaria SMP</p>
+      </div>
+
+      <div class="admin-section admin-only">
+        <h3><i class="fas fa-shield-alt"></i> Admin Panel</h3>
+        <button id="manageUsersBtn" class="admin-btn">
+          <i class="fas fa-users-cog"></i> Gestionar Usuarios
+        </button>
+        <button id="systemConfigBtn" class="admin-btn">
+          <i class="fas fa-cogs"></i> Configuración
+        </button>
+        <button id="viewLogsBtn" class="admin-btn">
+          <i class="fas fa-history"></i> Ver Logs
+        </button>
       </div>
     </aside>
 
@@ -64,11 +92,6 @@
               <input type="time" id="hora" required>
             </div>
 
-            <div class="form-group">
-              <label for="medicoAtiende">Personal que atiende</label>
-              <input type="text" id="medicoAtiende" placeholder="Nombre del personal que atiende">
-              <small>Separe múltiples nombres con comas (ejemplo: Dr. López, Asist. Gómez)</small>
-            </div>
 
             <div class="form-group">
               <label for="motivo">Motivo de Consulta y Motivo de Llegada</label>
@@ -115,7 +138,37 @@
               </select>
             </div>
 
-
+            <!-- Add these form groups for doctor and assistant selection after the fields for patient information -->
+            <div class="form-row">
+              <div class="form-group">
+                <label for="doctorAtiende"><i class="fas fa-user-md"></i> Doctor que atiende</label>
+                <select id="doctorAtiende" name="doctorAtiende">
+                  <option value="">Seleccione un doctor</option>
+                  <option value="Dr. Luis Coto">Dr. Luis Coto</option>
+                  <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
+                  <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
+                  <option value="Dra. Kharen Moreno">Dra. Kharen Moreno</option>
+                  <option value="Dra. Karina Madrigal">Dra. Karina Madrigal</option>
+                  <option value="Dra. Lourdes Chacón">Dra. Lourdes Chacón</option>
+                  <option value="Dra. Sofia Carrillo">Dra. Sofia Carrillo</option>
+                  <option value="Dra. Francinny Nuñez">Dra. Francinny Nuñez</option>
+                  <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
+                  <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="asistenteAtiende"><i class="fas fa-user-nurse"></i> Asistente que atiende</label>
+                <select id="asistenteAtiende" name="asistenteAtiende">
+                  <option value="">Seleccione un asistente</option>
+                  <option value="Tec. Maribel Guzmán">Tec. Maribel Guzmán</option>
+                  <option value="Tec. Juliana Perez">Tec. Juliana Perez</option>
+                  <option value="Tec. Jafeth Bermudez">Tec. Jafeth Bermudez</option>
+                  <option value="Tec. Johnny Chacón">Tec. Johnny Chacón</option>
+                  <option value="Tec. Gabriela Zuñiga">Tec. Gabriela Zuñiga</option>
+                  <option value="Tec. Indra Perez">Tec. Indra Perez</option>
+                </select>
+              </div>
+            </div>
 
             <div class="form-group">
               <label for="numFactura">Número de factura</label>
@@ -170,11 +223,6 @@
             <i class="fas fa-check-circle"></i>
             <h3>Atendidos</h3>
             <p id="pacientesAtendidos">0</p>
-          </div>
-          <div class="stat-card card-por-cobrar">
-            <i class="fas fa-money-bill-wave"></i>
-            <h3>Por Cobrar</h3>
-            <p id="pacientesPorCobrar">0</p>
           </div>
         </div>
         <div class="chart-container">
@@ -347,16 +395,25 @@
       </div>
     </div>
   </div>
+
+  <div id="adminModal" class="modal hidden">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h3><i class="fas fa-shield-alt"></i> Panel de Administración</h3>
+      <div id="adminContent">
+        <!-- Content will be loaded dynamically -->
+      </div>
+    </div>
+  </div>
   
-  <!-- Agregar antes de cerrar el body -->
-  
-  <!-- Firebase SDK -->
+  <!-- External scripts - keep these external references -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <script src="firebase-config.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="auth.js"></script>
   <script src="index.js"></script>
 </body>
 </html>
