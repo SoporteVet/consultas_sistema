@@ -1,3 +1,4 @@
+/* Login page styles */
 :root {
   --primary-color: #4285f4;
   --secondary-color: #34a853;
@@ -18,7 +19,7 @@
 body {
   background-color: #f9f9f9;
   background-size: 20px;
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -32,21 +33,16 @@ body {
 
 .login-card {
   background: white;
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: var(--shadow);
+  overflow: hidden;
   padding: 30px;
-  animation: fadeIn 0.6s ease;
+  animation: fadeIn 0.5s ease;
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .login-header {
@@ -55,19 +51,19 @@ body {
 }
 
 .login-logo {
-  width: 100px;
-  height: 100px;
+  width: 120px;
+  height: 120px;
   border-radius: 50%;
   object-fit: cover;
   border: 3px solid var(--primary-color);
-  padding: 3px;
+  margin-bottom: 15px;
   box-shadow: var(--shadow);
 }
 
 .login-header h1 {
-  margin-top: 15px;
   font-size: 1.5rem;
   color: var(--dark-color);
+  margin-bottom: 10px;
 }
 
 .form-group {
@@ -79,6 +75,13 @@ body {
   margin-bottom: 8px;
   font-weight: 500;
   color: var(--dark-color);
+  display: flex;
+  align-items: center;
+}
+
+.form-group label i {
+  margin-right: 8px;
+  color: var(--primary-color);
 }
 
 .form-group input {
@@ -96,20 +99,11 @@ body {
   outline: none;
 }
 
-.error-message {
-  color: var(--accent-color);
-  font-size: 0.9rem;
-  margin-bottom: 15px;
-  text-align: center;
-  min-height: 20px;
-}
-
 .btn-login {
   background: var(--primary-color);
   color: white;
   border: none;
-  width: 100%;
-  padding: 12px;
+  padding: 12px 25px;
   font-size: 1rem;
   border-radius: 8px;
   cursor: pointer;
@@ -117,6 +111,8 @@ body {
   align-items: center;
   justify-content: center;
   transition: var(--transition);
+  width: 100%;
+  font-weight: 500;
 }
 
 .btn-login i {
@@ -129,11 +125,38 @@ body {
   box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
 }
 
-/* Loading state */
+.error-message {
+  color: #e74c3c;
+  font-size: 0.9rem;
+  margin-top: 5px;
+  margin-bottom: 15px;
+}
+
+@media (max-width: 480px) {
+  .login-card {
+    padding: 20px;
+  }
+  
+  .login-logo {
+    width: 100px;
+    height: 100px;
+  }
+  
+  .login-header h1 {
+    font-size: 1.2rem;
+  }
+}
+
+/* Test accounts styling */
+.test-accounts-info {
+  margin-top: 20px;
+}
+
+/* Loading indicator styles */
 .btn-login.loading {
   position: relative;
   pointer-events: none;
-  opacity: 0.7;
+  opacity: 0.8;
 }
 
 .btn-login.loading::after {
@@ -141,15 +164,15 @@ body {
   position: absolute;
   width: 20px;
   height: 20px;
+  top: 50%;
+  right: 15px;
+  margin-top: -10px;
   border: 2px solid white;
-  border-radius: 50%;
   border-top-color: transparent;
-  animation: spin 1s linear infinite;
-  margin-left: 10px;
+  border-radius: 50%;
+  animation: loading-spinner 0.8s linear infinite;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+@keyframes loading-spinner {
+  to { transform: rotate(360deg); }
 }

@@ -11,6 +11,7 @@ const PERMISSIONS = {
     canManageBackup: true,
     canViewFullTicket: true,
     canViewSchedule: true,
+    canViewSidebarSchedule: true,
     canExportData: true
   },
   recepcion: {
@@ -21,7 +22,8 @@ const PERMISSIONS = {
     canViewStats: false,
     canManageBackup: false,
     canViewFullTicket: false,
-    canViewSchedule: false,  
+    canViewSchedule: true,  // enable calendar view
+    canViewSidebarSchedule: false, // hide sidebar horario tab
     canExportData: false
   },
   visitas: {
@@ -32,7 +34,8 @@ const PERMISSIONS = {
     canViewStats: false,
     canManageBackup: false,
     canViewFullTicket: false,
-    canViewSchedule: false,
+    canViewSchedule: false,  // disable calendar for visitas
+    canViewSidebarSchedule: false,
     canExportData: false
   }
 };

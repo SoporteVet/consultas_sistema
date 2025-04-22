@@ -98,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   } else {
-    console.warn("Not on login page, skipping auto-login check");
+    console.log("Not on login page, skipping auto-login check");
   }
 
   // Login form submission

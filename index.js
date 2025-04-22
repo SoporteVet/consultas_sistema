@@ -13,6 +13,14 @@ function safeAddEventListener(elementId, eventType, handler) {
   }
 }
 
+// Helper: get local date in YYYY-MM-DD for input[type=date]
+function getLocalISODate() {
+  const d = new Date();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${d.getFullYear()}-${month}-${day}`;
+}
+
 const crearTicketBtn = document.getElementById('crearTicketBtn');
 const verTicketsBtn = document.getElementById('verTicketsBtn');
 const estadisticasBtn = document.getElementById('estadisticasBtn');
@@ -31,6 +39,9 @@ const exportarMesBtn = document.getElementById('exportarMesBtn');
 const exportarGoogleBtn = document.getElementById('exportarGoogleBtn');
 const backupBtn = document.getElementById('backupBtn');
 const cleanDataBtn = document.getElementById('cleanDataBtn');
+const sidebarDate = document.getElementById('sidebarDate');
+const verTicketsDateContainer = document.getElementById('verTicketsDateContainer');
+const verTicketsDate = document.getElementById('verTicketsDate');
 
 // Inicialización with loop prevention
 document.addEventListener('DOMContentLoaded', () => {
@@ -75,11 +86,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Establecer fecha actual en el formulario
                 const fechaInput = document.getElementById('fecha');
                 if (fechaInput) {
-                    fechaInput.value = new Date().toISOString().split('T')[0];
+                    fechaInput.value = getLocalISODate();
                 }
                 
                 // Establecer fecha actual en el campo de fecha del horario
-                const today = new Date().toISOString().split('T')[0];
+                const today = getLocalISODate();
                 if (fechaHorario) {
                     fechaHorario.value = today;
                 }
@@ -119,6 +130,9 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }
     });
+
+    // Set default for sidebar calendar date filter
+    if (sidebarDate) sidebarDate.value = getLocalISODate();
 });
 
 // Improved version of applyRoleBasedUI with better debugging and role detection
@@ -196,9 +210,7 @@ function applyRoleBasedUI(role) {
         // Hide export buttons for non-admin users without export permission
         const exportButtons = document.querySelectorAll('.export-controls button');
         if (exportButtons && !hasPermission('canExportData')) {
-            exportButtons.forEach(btn => {
-                btn.style.display = 'none';
-            });
+            exportButtons.forEach(btn => btn.style.display = 'none');
         }
         
         // Hide admin-only elements
@@ -206,6 +218,17 @@ function applyRoleBasedUI(role) {
         adminElements.forEach(el => {
             el.style.display = 'none';
         });
+    }
+    
+    // Sidebar schedule tab visibility
+    const sidebarHorarioBtn = document.getElementById('horarioBtn');
+    const sidebarDateInput = document.getElementById('sidebarDate');
+    if (!hasPermission('canViewSidebarSchedule')) {
+        if (sidebarHorarioBtn) sidebarHorarioBtn.style.display = 'none';
+        if (sidebarDateInput) sidebarDateInput.style.display = 'none';
+    } else {
+        if (sidebarHorarioBtn) sidebarHorarioBtn.style.display = 'inline-flex';
+        if (sidebarDateInput) sidebarDateInput.style.display = 'inline-flex';
     }
     
     // Add logout button event listener
@@ -232,7 +255,15 @@ safeAddEventListener('verTicketsBtn', 'click', () => {
     const section = document.getElementById('verTicketsSection');
     if (section) {
         showSection(section);
-        setActiveButton(document.getElementById('verTicketsBtn'));
+        setActiveButton(verTicketsBtn);
+        // Toggle date filter inside verTickets
+        if (hasPermission('canViewSchedule')) {
+            verTicketsDateContainer.classList.remove('hidden');
+            // default to today
+            if (verTicketsDate) verTicketsDate.value = getLocalISODate();
+        } else {
+            verTicketsDateContainer.classList.add('hidden');
+        }
         renderTickets();
     } else {
         console.error("Section 'verTicketsSection' not found");
@@ -248,7 +279,7 @@ safeAddEventListener('horarioBtn', 'click', () => {
         // Set today's date in the date field
         const fechaHorario = document.getElementById('fechaHorario');
         if (fechaHorario) {
-            fechaHorario.value = new Date().toISOString().split('T')[0];
+            fechaHorario.value = getLocalISODate();
         }
         // Optionally load today's schedule automatically
         mostrarHorario();
@@ -319,6 +350,15 @@ filterBtns.forEach(btn => {
     });
 });
 
+// Date change inside verTickets
+if (verTicketsDate) {
+    verTicketsDate.addEventListener('change', () => {
+        setActiveButton(verTicketsBtn);
+        showSection(verTicketsSection);
+        renderTickets();
+    });
+}
+
 // Update the showSection function to make it more robust with null checking
 function showSection(section) {
     // Check if section exists
@@ -365,28 +405,25 @@ function setActiveButton(button) {
 // Función para cargar tickets desde Firebase
 function loadTickets() {
     return new Promise((resolve, reject) => {
-        // Cargar tickets desde Firebase
         ticketsRef.once('value')
             .then(snapshot => {
                 tickets = [];
                 currentTicketId = 1;
-                
-                // Convertir objeto de Firebase en array
                 const data = snapshot.val() || {};
-                
                 Object.keys(data).forEach(key => {
-                    tickets.push({
-                        ...data[key],
-                        firebaseKey: key // Guardar clave Firebase para operaciones futuras
-                    });
-                    
-                    // Actualizar currentTicketId
-                    if (data[key].id >= currentTicketId) {
-                        currentTicketId = data[key].id + 1;
+                    const entry = data[key];
+                    // Only keep valid tickets with id and mascota
+                    if (entry && entry.id != null && entry.mascota) {
+                        tickets.push({
+                            ...entry,
+                            firebaseKey: key
+                        });
+                        if (entry.id >= currentTicketId) currentTicketId = entry.id + 1;
+                    } else {
+                        // Remove invalid ticket from database
+                        ticketsRef.child(key).remove();
                     }
                 });
-                
-                // Cargar configuración
                 return settingsRef.once('value');
             })
             .then(snapshot => {
@@ -406,18 +443,23 @@ function loadTickets() {
             
         // Configurar escucha en tiempo real para actualizaciones
         ticketsRef.on('child_added', snapshot => {
-            if (!isDataLoaded) return; // Evitar duplicados durante carga inicial
-            
-            const newTicket = {
-                ...snapshot.val(),
-                firebaseKey: snapshot.key
-            };
-            
-            // Verificar si el ticket ya existe (evitar duplicados)
+            if (!isDataLoaded) return;
+            const entry = snapshot.val();
+            // Remove invalid tickets
+            if (!entry || entry.id == null || !entry.mascota) {
+                ticketsRef.child(snapshot.key).remove();
+                return;
+            }
+            const newTicket = { ...entry, firebaseKey: snapshot.key };
             if (!tickets.some(t => t.id === newTicket.id)) {
                 tickets.push(newTicket);
                 renderTickets();
                 updateStats();
+                // Real-time UI update for active section
+                // Update schedule view if active
+                if (horarioSection.classList.contains('active')) mostrarHorario();
+                // Update statistics section if active
+                if (estadisticasSection.classList.contains('active')) generarEstadisticasPersonalServicios();
             }
         });
         
@@ -432,6 +474,8 @@ function loadTickets() {
                 tickets[index] = updatedTicket;
                 renderTickets();
                 updateStats();
+                if (horarioSection.classList.contains('active')) mostrarHorario();
+                if (estadisticasSection.classList.contains('active')) generarEstadisticasPersonalServicios();
             }
         });
         
@@ -441,6 +485,8 @@ function loadTickets() {
                 tickets.splice(index, 1);
                 renderTickets();
                 updateStats();
+                if (horarioSection.classList.contains('active')) mostrarHorario();
+                if (estadisticasSection.classList.contains('active')) generarEstadisticasPersonalServicios();
             }
         });
     });
@@ -544,7 +590,7 @@ function addTicket() {
                 
                 // Restaurar fecha actual en el formulario
                 if (document.getElementById('fecha')) {
-                    document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('fecha').value = getLocalISODate();
                 }
                 
                 // Quitar indicador de carga
@@ -573,25 +619,30 @@ function addTicket() {
 
 function renderTickets(filter = 'todos') {
     ticketContainer.innerHTML = '';
-    
     let filteredTickets = [...tickets];
-    
-    // Aplicar filtros
-    if (filter === 'espera') {
-        filteredTickets = tickets.filter(ticket => ticket.estado === 'espera');
-    } else if (filter === 'consultorio') {
-        filteredTickets = tickets.filter(ticket => 
-            ticket.estado === 'consultorio1' || 
-            ticket.estado === 'consultorio2' || 
-            ticket.estado === 'consultorio3'
-        );
-    } else if (filter === 'terminado') {
-        filteredTickets = tickets.filter(ticket => ticket.estado === 'terminado');
-    } else if (filter === 'urgentes') {
-        // Filtrar tickets con urgencia alta
-        filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta');
+
+    // If a date is selected in calendar, override filter
+    if (sidebarDate && sidebarDate.value) {
+        filteredTickets = filteredTickets.filter(ticket => {
+            const d = ticket.fechaConsulta || (ticket.fecha ? new Date(ticket.fecha).toISOString().split('T')[0] : '');
+            return d === sidebarDate.value;
+        });
+    }
+    else if (filter === 'todos') {
+        filteredTickets = filteredTickets.filter(ticket => ticket.estado !== 'terminado');
+    } else {
+        // existing filter logic...
     }
     
+    // Apply internal date filter if visible
+    if (verTicketsDate && !verTicketsDateContainer.classList.contains('hidden') && verTicketsDate.value) {
+        filteredTickets = filteredTickets.filter(ticket => {
+            const dateVal = ticket.fechaConsulta || ticket.fecha;
+            if (!dateVal) return false;
+            return dateVal.split('T')[0] === verTicketsDate.value;
+        });
+    }
+
     // Ordenar por urgencia y luego por fecha
     filteredTickets.sort((a, b) => {
         // Primero por urgencia (alta > media > normal)
@@ -623,8 +674,8 @@ function renderTickets(filter = 'todos') {
         // Add urgency class based on ticket urgency level
         ticketElement.classList.add(`ticket-urgencia-${ticket.urgencia}`);
         
-        // Add injectable class if service type is injectable
-        if (ticket.tipoServicio === 'inyectable') {
+        // Add injectable class if service type is injectable - FIX ERROR
+        if (ticket.tipoServicio && typeof ticket.tipoServicio === 'string' && ticket.tipoServicio.includes('inyectable')) {
             ticketElement.classList.add('ticket-inyectable');
         }
         
@@ -634,6 +685,14 @@ function renderTickets(filter = 'todos') {
         
         // Check if user is in 'visitas' role with limited view
         if (!hasPermission('canViewFullTicket')) {
+            // Add icon based on pet type
+            let animalIcon = '';
+            switch(ticket.tipoMascota) {
+              case 'perro': animalIcon = '<i class="fas fa-dog animal-icon"></i>'; break;
+              case 'gato': animalIcon = '<i class="fas fa-cat animal-icon"></i>'; break;
+              case 'ave': animalIcon = '<i class="fas fa-dove animal-icon"></i>'; break;
+              default: animalIcon = '<i class="fas fa-paw animal-icon"></i>';
+            }
             // Get urgency class and icon
             let urgenciaClass = '';
             let urgenciaIcon = '';
@@ -680,7 +739,7 @@ function renderTickets(filter = 'todos') {
             // Simplified view for 'visitas' role with added urgency and status
             ticketContent = `
                 <div class="ticket-header">
-                    <div class="ticket-title">${ticket.mascota}</div>
+                    <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
                     <div class="ticket-number">#${ticket.id}</div>
                 </div>
                 <div class="ticket-info">
@@ -691,10 +750,9 @@ function renderTickets(filter = 'todos') {
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
-                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${ticket.urgencia.toUpperCase()}</p>
+                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${(ticket.urgencia||'').toUpperCase()}</p>
                     <div class="estado-badge ${estadoClass}">
-                        <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
-                                     ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
+                        <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : (typeof ticket.estado === 'string' && ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle')}"></i>
                         ${estadoText}
                     </div>
                 </div>
@@ -776,10 +834,10 @@ function renderTickets(filter = 'todos') {
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
-                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${ticket.urgencia.toUpperCase()}</p>
+                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${(ticket.urgencia || '').toUpperCase()}</p>
                     <div class="estado-badge ${estadoClass}">
                         <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
-                                     ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
+                                     typeof ticket.estado === 'string' && ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
                         ${estadoText}
                     </div>
                 </div>
@@ -891,8 +949,11 @@ function mostrarHorario() {
         if (ticket.fechaConsulta) {
             return ticket.fechaConsulta === fecha;
         }
-        // Compatibilidad con tickets antiguos
-        return new Date(ticket.fecha).toISOString().split('T')[0] === fecha;
+        // Compatibilidad con tickets antiguos: validar fecha
+        if (!ticket.fecha) return false;
+        const parsedDate = new Date(ticket.fecha);
+        if (isNaN(parsedDate.getTime())) return false;
+        return parsedDate.toISOString().split('T')[0] === fecha;
     });
     
     // Ordenar por hora
@@ -977,7 +1038,7 @@ function mostrarHorario() {
             <td>${ticket.mascota}</td>
             <td>${tipoLabel}</td>
             <td>${estadoLabel}</td>
-            <td class="${urgenciaClass}">${ticket.urgencia.toUpperCase()}</td>
+            <td class="${urgenciaClass}">${(ticket.urgencia || '').toUpperCase()}</td>
             <td>${ticket.medicoAtiende || '-'}</td>
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
@@ -1393,7 +1454,19 @@ function changeStatus(id) {
                 closeModal();
                 showNotification('Estado actualizado correctamente', 'success');
                 
-                // Si estamos en la vista de horario, actualizarla también
+                // If we're in the tickets view, show only finished tickets
+                const ticketsSectionActive = document.getElementById('verTicketsSection').classList.contains('active');
+                if (ticketsSectionActive) {
+                    // Render only 'terminado' tickets and set filter button
+                    renderTickets('terminado');
+                    filterBtns.forEach(btn => btn.classList.remove('active'));
+                    const terminadoBtn = document.querySelector('.filter-btn[data-filter="terminado"]');
+                    if (terminadoBtn) terminadoBtn.classList.add('active');
+                    // Ensure the navigation button remains active
+                    if (verTicketsBtn) setActiveButton(verTicketsBtn);
+                }
+                
+                // If in schedule view, update schedule
                 if (document.getElementById('horarioSection').classList.contains('active')) {
                     mostrarHorario();
                 }
@@ -1784,7 +1857,7 @@ function exportToCSV(data, filename) {
         ticket.fechaConsulta || new Date(ticket.fecha).toISOString().split('T')[0],
         ticket.horaConsulta || ticket.horaCreacion,
         getEstadoLabel(ticket.estado),
-        ticket.urgencia.toUpperCase(),
+        (ticket.urgencia || '').toUpperCase(),
         ticket.numFactura || '',
         ticket.motivo
     ]);
@@ -2156,7 +2229,7 @@ function generarEstadisticasPersonalServicios() {
     // Filter by service if not "todos"
     if (filtroServicio !== 'todos') {
         ticketsFiltrados = ticketsFiltrados.filter(ticket => 
-            ticket.tipoServicio === filtroServicio);
+            ticket && ticket.tipoServicio === filtroServicio);
         console.log("Filtered by service:", ticketsFiltrados.length);
     }
     
@@ -2167,6 +2240,8 @@ function generarEstadisticasPersonalServicios() {
     
     // Count services by personnel
     ticketsFiltrados.forEach(ticket => {
+        if (!ticket) return; // Skip undefined tickets
+        
         // If no service type, assume "consulta"
         const servicio = ticket.tipoServicio || 'consulta';
         
