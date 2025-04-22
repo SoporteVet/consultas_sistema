@@ -109,26 +109,8 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }).catch(err => {
         console.error("Authentication error:", err);
-        // Don't auto-redirect, just show an error
-        hideLoading();
-        showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
-        
-        // Add a login button instead of auto-redirect
-        const mainContainer = document.querySelector('.main-container');
-        if (mainContainer) {
-            mainContainer.innerHTML = `
-                <div style="text-align: center; padding: 50px;">
-                    <h2>Sesión expirada</h2>
-                    <p>Su sesión ha expirado o no ha iniciado sesión correctamente.</p>
-                    <button onclick="window.location.href='home.html'" 
-                            style="padding: 10px 20px; background: var(--primary-color); 
-                            color: white; border: none; border-radius: 5px; cursor: pointer; 
-                            margin-top: 20px;">
-                        Iniciar sesión
-                    </button>
-                </div>
-            `;
-        }
+        window.location.href = 'home.html';
+        return;
     });
 
     // Set default for sidebar calendar date filter

@@ -5,8 +5,8 @@ document.addEventListener('DOMContentLoaded', function() {
   // Flag to prevent multiple redirects
   let isRedirecting = false;
 
-  // Create test users for development (remove in production)
-  createTestUsers();
+  // Disable automatic test user creation to avoid signUp 400 errors
+  // createTestUsers();
   
   // Add loading timeout detection
   let loginTimeout = null;
@@ -253,7 +253,8 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Function to create test users for development purposes
+// Comment out test user creation function to avoid sign-up calls
+/*
 function createTestUsers() {
   const testUsers = [
     { email: 'admin@veterinaria.com', password: 'password123', role: 'admin', name: 'Administrador' },
@@ -347,6 +348,7 @@ function createTestUsers() {
     });
   }
 }
+*/
 
 // Function to redirect to main app with loop prevention
 function redirectToApp() {
