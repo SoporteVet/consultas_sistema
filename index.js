@@ -13,14 +13,6 @@ function safeAddEventListener(elementId, eventType, handler) {
   }
 }
 
-// Helper: get local date in YYYY-MM-DD for input[type=date]
-function getLocalISODate() {
-  const d = new Date();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${d.getFullYear()}-${month}-${day}`;
-}
-
 const crearTicketBtn = document.getElementById('crearTicketBtn');
 const verTicketsBtn = document.getElementById('verTicketsBtn');
 const estadisticasBtn = document.getElementById('estadisticasBtn');
@@ -39,9 +31,6 @@ const exportarMesBtn = document.getElementById('exportarMesBtn');
 const exportarGoogleBtn = document.getElementById('exportarGoogleBtn');
 const backupBtn = document.getElementById('backupBtn');
 const cleanDataBtn = document.getElementById('cleanDataBtn');
-const sidebarDate = document.getElementById('sidebarDate');
-const verTicketsDateContainer = document.getElementById('verTicketsDateContainer');
-const verTicketsDate = document.getElementById('verTicketsDate');
 
 // Inicialización with loop prevention
 document.addEventListener('DOMContentLoaded', () => {
@@ -86,16 +75,24 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Establecer fecha actual en el formulario
                 const fechaInput = document.getElementById('fecha');
                 if (fechaInput) {
-                    fechaInput.value = getLocalISODate();
+                    fechaInput.value = new Date().toISOString().split('T')[0];
                 }
                 
                 // Establecer fecha actual en el campo de fecha del horario
-                const today = getLocalISODate();
+                const today = new Date().toISOString().split('T')[0];
                 if (fechaHorario) {
                     fechaHorario.value = today;
                 }
-                
-                renderTickets();
+
+                // --- reset diario del contador de tickets ---
+                const todayDaily = new Date().toISOString().split('T')[0];
+                const todaysTickets = tickets.filter(t => t.fechaConsulta === todayDaily);
+                currentTicketId = todaysTickets.length
+                    ? Math.max(...todaysTickets.map(t => t.id)) + 1
+                    : 1;
+
+                // mostrar sólo tickets del día al cargar
+                renderTickets('fecha', todayDaily);
                 updateStats();
             }).catch(err => {
                 console.error("Error cargando tickets:", err);
@@ -108,13 +105,49 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification('Error al conectar con el servidor', 'error');
         });
     }).catch(err => {
+        // Si estamos en la página de login, no mostrar error ni notificación
+        if (window.location.pathname.toLowerCase().includes('home.html')) {
+            return;
+        }
         console.error("Authentication error:", err);
-        window.location.href = 'home.html';
-        return;
+        hideLoading();
+        showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
+        // Add a login button instead of auto-redirect
+        const mainContainer = document.querySelector('.main-container');
+        if (mainContainer) {
+            mainContainer.innerHTML = `
+                <div style="text-align: center; padding: 50px;">
+                    <h2>Sesión expirada</h2>
+                    <p>Su sesión ha expirado o no ha iniciado sesión correctamente.</p>
+                    <button onclick="window.location.href='home.html'" 
+                            style="padding: 10px 20px; background: var(--primary-color); 
+                            color: white; border: none; border-radius: 5px; cursor: pointer; 
+                            margin-top: 20px;">
+                        Iniciar sesión
+                    </button>
+                </div>
+            `;
+        }
     });
 
-    // Set default for sidebar calendar date filter
-    if (sidebarDate) sidebarDate.value = getLocalISODate();
+    // mostrar filtro de fecha para admin/recepción
+    const dateFilter = document.getElementById('dateFilterContainer');
+    if (dateFilter && hasPermission('canViewSchedule')) {
+        dateFilter.classList.remove('hidden');
+        // inicializar con fecha actual y filtrar al cargar
+        const filterDateInput = document.getElementById('filterDate');
+        if (filterDateInput) {
+            const today = new Date().toISOString().split('T')[0];
+            filterDateInput.value = today;
+            renderTickets('fecha', today);
+        }
+    }
+
+    // evento para filtrar por fecha
+    safeAddEventListener('filterDate', 'change', () => {
+        const d = document.getElementById('filterDate').value;
+        if (d) renderTickets('fecha', d);
+    });
 });
 
 // Improved version of applyRoleBasedUI with better debugging and role detection
@@ -192,7 +225,9 @@ function applyRoleBasedUI(role) {
         // Hide export buttons for non-admin users without export permission
         const exportButtons = document.querySelectorAll('.export-controls button');
         if (exportButtons && !hasPermission('canExportData')) {
-            exportButtons.forEach(btn => btn.style.display = 'none');
+            exportButtons.forEach(btn => {
+                btn.style.display = 'none';
+            });
         }
         
         // Hide admin-only elements
@@ -200,17 +235,6 @@ function applyRoleBasedUI(role) {
         adminElements.forEach(el => {
             el.style.display = 'none';
         });
-    }
-    
-    // Sidebar schedule tab visibility
-    const sidebarHorarioBtn = document.getElementById('horarioBtn');
-    const sidebarDateInput = document.getElementById('sidebarDate');
-    if (!hasPermission('canViewSidebarSchedule')) {
-        if (sidebarHorarioBtn) sidebarHorarioBtn.style.display = 'none';
-        if (sidebarDateInput) sidebarDateInput.style.display = 'none';
-    } else {
-        if (sidebarHorarioBtn) sidebarHorarioBtn.style.display = 'inline-flex';
-        if (sidebarDateInput) sidebarDateInput.style.display = 'inline-flex';
     }
     
     // Add logout button event listener
@@ -237,15 +261,7 @@ safeAddEventListener('verTicketsBtn', 'click', () => {
     const section = document.getElementById('verTicketsSection');
     if (section) {
         showSection(section);
-        setActiveButton(verTicketsBtn);
-        // Toggle date filter inside verTickets
-        if (hasPermission('canViewSchedule')) {
-            verTicketsDateContainer.classList.remove('hidden');
-            // default to today
-            if (verTicketsDate) verTicketsDate.value = getLocalISODate();
-        } else {
-            verTicketsDateContainer.classList.add('hidden');
-        }
+        setActiveButton(document.getElementById('verTicketsBtn'));
         renderTickets();
     } else {
         console.error("Section 'verTicketsSection' not found");
@@ -261,7 +277,7 @@ safeAddEventListener('horarioBtn', 'click', () => {
         // Set today's date in the date field
         const fechaHorario = document.getElementById('fechaHorario');
         if (fechaHorario) {
-            fechaHorario.value = getLocalISODate();
+            fechaHorario.value = new Date().toISOString().split('T')[0];
         }
         // Optionally load today's schedule automatically
         mostrarHorario();
@@ -277,10 +293,19 @@ safeAddEventListener('estadisticasBtn', 'click', () => {
         setActiveButton(document.getElementById('estadisticasBtn'));
         updateStats();
         
+        // Asegurarnos que se vea la sección de tiempo de espera
+        const waitTimeSection = document.querySelector('.wait-time-statistics');
+        if (waitTimeSection) {
+            waitTimeSection.style.display = 'block';
+        }
+        
         // Initialize personnel statistics 
         setTimeout(() => {
             llenarSelectorPersonal();
             generarEstadisticasPersonalServicios();
+            
+            // Regenerar el gráfico de tiempo de espera para asegurar que se muestre
+            calculateWaitTimeStats();
         }, 200);
     } else {
         console.error("Section 'estadisticasSection' not found");
@@ -331,15 +356,6 @@ filterBtns.forEach(btn => {
         renderTickets(filter);
     });
 });
-
-// Date change inside verTickets
-if (verTicketsDate) {
-    verTicketsDate.addEventListener('change', () => {
-        setActiveButton(verTicketsBtn);
-        showSection(verTicketsSection);
-        renderTickets();
-    });
-}
 
 // Update the showSection function to make it more robust with null checking
 function showSection(section) {
@@ -486,7 +502,8 @@ function addTicket() {
         const estado = document.getElementById('estado').value;
         const tipoMascota = document.getElementById('tipoMascota').value;
         const urgencia = document.getElementById('urgencia').value;
-        
+        const porCobrar = document.getElementById('porCobrar')?.value || '';
+
         // Campos adicionales
         const idPaciente = document.getElementById('idPaciente')?.value || '';
         
@@ -533,7 +550,8 @@ function addTicket() {
             numFactura,
             tipoServicio,
             fecha: fecha.toISOString(),
-            horaCreacion: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+            horaCreacion: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            porCobrar
         };
         
         // Añadir campos de fecha y tiempos de consulta si están disponibles
@@ -572,7 +590,7 @@ function addTicket() {
                 
                 // Restaurar fecha actual en el formulario
                 if (document.getElementById('fecha')) {
-                    document.getElementById('fecha').value = getLocalISODate();
+                    document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
                 }
                 
                 // Quitar indicador de carga
@@ -599,32 +617,44 @@ function addTicket() {
     }
 }
 
-function renderTickets(filter = 'todos') {
+function renderTickets(filter = 'todos', date = null) {
     ticketContainer.innerHTML = '';
-    let filteredTickets = [...tickets];
+    let filteredTickets;
 
-    // If a date is selected in calendar, override filter
-    if (sidebarDate && sidebarDate.value) {
-        filteredTickets = filteredTickets.filter(ticket => {
-            const d = ticket.fechaConsulta || (ticket.fecha ? new Date(ticket.fecha).toISOString().split('T')[0] : '');
-            return d === sidebarDate.value;
-        });
+    // 'todos' muestra sólo tickets activos, limitados a la fecha si hay datePicker
+    if (filter === 'todos') {
+        const filterDateInput = document.getElementById('filterDate');
+        if (filterDateInput && filterDateInput.value) {
+            filteredTickets = tickets.filter(t =>
+                t.estado !== 'terminado' &&
+                t.fechaConsulta === filterDateInput.value
+            );
+        } else {
+            filteredTickets = tickets.filter(t => t.estado !== 'terminado');
+        }
     }
-    else if (filter === 'todos') {
-        filteredTickets = filteredTickets.filter(ticket => ticket.estado !== 'terminado');
+    else if (filter === 'fecha' && date) {
+        filteredTickets = tickets.filter(ticket => ticket.fechaConsulta === date);
     } else {
-        // existing filter logic...
+        filteredTickets = [...tickets];
     }
     
-    // Apply internal date filter if visible
-    if (verTicketsDate && !verTicketsDateContainer.classList.contains('hidden') && verTicketsDate.value) {
-        filteredTickets = filteredTickets.filter(ticket => {
-            const dateVal = ticket.fechaConsulta || ticket.fecha;
-            if (!dateVal) return false;
-            return dateVal.split('T')[0] === verTicketsDate.value;
-        });
+    // Aplicar filtros
+    if (filter === 'espera') {
+        filteredTickets = tickets.filter(ticket => ticket.estado === 'espera');
+    } else if (filter === 'consultorio') {
+        filteredTickets = tickets.filter(ticket => 
+            ticket.estado === 'consultorio1' || 
+            ticket.estado === 'consultorio2' || 
+            ticket.estado === 'consultorio3'
+        );
+    } else if (filter === 'terminado') {
+        filteredTickets = tickets.filter(ticket => ticket.estado === 'terminado');
+    } else if (filter === 'urgentes') {
+        // Filtrar tickets con urgencia alta
+        filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta');
     }
-
+    
     // Ordenar por urgencia y luego por fecha
     filteredTickets.sort((a, b) => {
         // Primero por urgencia (alta > media > normal)
@@ -667,14 +697,6 @@ function renderTickets(filter = 'todos') {
         
         // Check if user is in 'visitas' role with limited view
         if (!hasPermission('canViewFullTicket')) {
-            // Add icon based on pet type
-            let animalIcon = '';
-            switch(ticket.tipoMascota) {
-              case 'perro': animalIcon = '<i class="fas fa-dog animal-icon"></i>'; break;
-              case 'gato': animalIcon = '<i class="fas fa-cat animal-icon"></i>'; break;
-              case 'ave': animalIcon = '<i class="fas fa-dove animal-icon"></i>'; break;
-              default: animalIcon = '<i class="fas fa-paw animal-icon"></i>';
-            }
             // Get urgency class and icon
             let urgenciaClass = '';
             let urgenciaIcon = '';
@@ -721,7 +743,7 @@ function renderTickets(filter = 'todos') {
             // Simplified view for 'visitas' role with added urgency and status
             ticketContent = `
                 <div class="ticket-header">
-                    <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
+                    <div class="ticket-title">${ticket.mascota}</div>
                     <div class="ticket-number">#${ticket.id}</div>
                 </div>
                 <div class="ticket-info">
@@ -732,9 +754,10 @@ function renderTickets(filter = 'todos') {
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
-                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${(ticket.urgencia||'').toUpperCase()}</p>
+                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${(ticket.urgencia || '').toUpperCase()}</p>
                     <div class="estado-badge ${estadoClass}">
-                        <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : (typeof ticket.estado === 'string' && ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle')}"></i>
+                        <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
+                                     typeof ticket.estado === 'string' && ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
                         ${estadoText}
                     </div>
                 </div>
@@ -822,6 +845,7 @@ function renderTickets(filter = 'todos') {
                                      typeof ticket.estado === 'string' && ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
                         ${estadoText}
                     </div>
+                    ${ticket.porCobrar ? `<p><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong> ${ticket.porCobrar}</p>` : ''}
                 </div>
             `;
         }
@@ -1110,6 +1134,21 @@ function editTicket(id) {
         }
     }
     
+    // Obtener el rol actual
+    const userRole = sessionStorage.getItem('userRole');
+    // Contador de ediciones para consulta externa
+    if (!ticket.editCount) ticket.editCount = 0;
+    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consulta_externa' || ticket.editCount < 2);
+    const porCobrarField = canEditPorCobrar
+      ? `<div class="form-group">
+            <label for="editPorCobrar">Por Cobrar</label>
+            <input type="text" id="editPorCobrar" value="${ticket.porCobrar || ''}" placeholder="Introduzca lo que hay que cobrar al cliente">
+        </div>`
+      : `<div class="form-group">
+            <label for="editPorCobrar">Por Cobrar</label>
+            <input type="text" id="editPorCobrar" value="${ticket.porCobrar || ''}" readonly style="background:#f5f5f5; color:#888; cursor:not-allowed;">
+        </div>`;
+    
     // Crear el contenido del modal con el formulario
     modal.innerHTML = `
         <div class="modal-content animate-scale">
@@ -1236,6 +1275,7 @@ function editTicket(id) {
                             <option value="">Seleccione un doctor</option>
                             <option value="Dr. Luis Coto" ${doctorSeleccionado === "Dr. Luis Coto" ? 'selected' : ''}>Dr. Luis Coto</option>
                             <option value="Dr. Randall Azofeifa" ${doctorSeleccionado === "Dr. Randall Azofeifa" ? 'selected' : ''}>Dr. Randall Azofeifa</option>
+                            <option value="Dr. Gustavo González" ${doctorSeleccionado === "Dr. Gustavo González" ? 'selected' : ''}>Dr. Gustavo González</option>
                             <option value="Dra. Daniela Sancho" ${doctorSeleccionado === "Dra. Daniela Sancho" ? 'selected' : ''}>Dra. Daniela Sancho</option>
                             <option value="Dra. Kharen Moreno" ${doctorSeleccionado === "Dra. Kharen Moreno" ? 'selected' : ''}>Dra. Kharen Moreno</option>
                             <option value="Dra. Karina Madrigal" ${doctorSeleccionado === "Dra. Karina Madrigal" ? 'selected' : ''}>Dra. Karina Madrigal</option>
@@ -1259,6 +1299,8 @@ function editTicket(id) {
                         </select>
                     </div>
                 </div>
+                
+                ${porCobrarField}
                 
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
@@ -1284,7 +1326,7 @@ function editTicket(id) {
         } else if (editDoctorAtiende) {
             medicoAtiende = editDoctorAtiende;
         } else if (editAsistenteAtiende) {
-            medicoAtiende = editAsistenteAtiende;
+            medicoAtiende = editAsistenteAtiene;
         }
         
         // Recoger todos los datos del formulario
@@ -1305,12 +1347,24 @@ function editTicket(id) {
             urgencia: document.getElementById('editUrgencia').value,
             numFactura: document.getElementById('editNumFactura').value,
             tipoServicio: document.getElementById('editTipoServicio').value,
-            firebaseKey: safeTicket.firebaseKey
+            firebaseKey: safeTicket.firebaseKey,
+            porCobrar: document.getElementById('editPorCobrar')?.value || ''
         };
         
         // Guardar el ticket actualizado
         saveEditedTicket(updatedTicket);
     });
+    
+    // Deshabilitar el botón de guardar si se alcanzó el límite de ediciones
+    if (userRole === 'consulta_externa' && ticket.editCount >= 2) {
+        const saveBtn = modal.querySelector('.btn-save');
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = 'Límite de ediciones alcanzado';
+            saveBtn.style.background = '#ccc';
+            saveBtn.style.cursor = 'not-allowed';
+        }
+    }
 }
 
 function saveEditedTicket(ticket) {
@@ -1361,6 +1415,9 @@ function saveEditedTicket(ticket) {
                         btn.classList.add('active');
                     }
                 });
+                
+                // Asegurar que el botón de navegación también está activo
+                setActiveButton(verTicketsBtn);
             } else if (currentSection && currentSection.id === 'horarioSection') {
                 mostrarHorario();
             } else {
@@ -1377,6 +1434,7 @@ function saveEditedTicket(ticket) {
             showNotification('Error al guardar los cambios: ' + error.message, 'error');
         });
 }
+
 function changeStatus(id) {
     const ticket = tickets.find(t => t.id === id);
     if (!ticket) return;
@@ -1445,7 +1503,7 @@ function changeStatus(id) {
                     const terminadoBtn = document.querySelector('.filter-btn[data-filter="terminado"]');
                     if (terminadoBtn) terminadoBtn.classList.add('active');
                     // Ensure the navigation button remains active
-                    if (verTicketsBtn) setActiveButton(verTicketsBtn);
+                    setActiveButton(verTicketsBtn);
                 }
                 
                 // If in schedule view, update schedule
@@ -1559,7 +1617,6 @@ function confirmDelete(id) {
                 // Si estamos en la vista de horario, actualizarla
                 else if (currentSection.id === 'horarioSection') {
                     mostrarHorario();
-                    setActiveButton(horarioBtn);
                 }
             }
             
@@ -1692,7 +1749,13 @@ function updateStats() {
     document.getElementById('pacientesConsulta').textContent = pacientesConsulta;
     document.getElementById('pacientesAtendidos').textContent = pacientesAtendidos;
     
-    // Only calculate wait time stats now that we've removed the chart
+    // Asegurarnos que la sección de tiempo promedio sea visible
+    const waitTimeSection = document.querySelector('.wait-time-statistics');
+    if (waitTimeSection) {
+        waitTimeSection.style.display = 'block';
+    }
+    
+    // Calcular estadísticas de tiempo de espera
     calculateWaitTimeStats();
 }
 
@@ -1785,10 +1848,10 @@ function exportarDia() {
 
 function exportarMes() {
     const fecha = fechaHorario.value;
-    const [year, month] = fecha.split('-');
-    
-    // Filtrar tickets del mes seleccionado
-    const ticketsDelMes = tickets.filter(ticket => {
+const [year, month] = fecha.split('-');
+
+// Filtrar tickets del mes seleccionado
+const ticketsDelMes = tickets.filter(ticket => {
         let ticketDate;
         if (ticket.fechaConsulta) {
             ticketDate = new Date(ticket.fechaConsulta);
@@ -2248,7 +2311,7 @@ function generarEstadisticasPersonalServicios() {
         }
         
         // Split in case of multiple people
-        const personas = ticket.medicoAtiende.split(',').map(p => p.trim());
+        const personas = ticket.medicoAtiene.split(',').map(p => p.trim());
         
         personas.forEach(persona => {
             if (!persona) return;
@@ -2684,111 +2747,6 @@ function renderWaitTimeChart(tiemposEspera) {
     }
 }
 
-// Hacer más resistente a errores la función calculateWaitTimeStats
-function calculateWaitTimeStats() {
-    try {
-        const tiemposEspera = {};
-        let ticketsConTiempos = 0;
-        
-        // Filtrar tickets que tienen tanto hora de llegada como de atención
-        tickets.forEach(ticket => {
-            if (ticket && ticket.horaLlegada && ticket.horaAtencion) {
-                const servicio = ticket.tipoServicio || 'consulta';
-                
-                try {
-                    // Convertir tiempos a minutos para calcular la diferencia
-                    const llegada = convertTimeToMinutes(ticket.horaLlegada);
-                    const atencion = convertTimeToMinutes(ticket.horaAtencion);
-                    
-                    // Calcular la diferencia en minutos
-                    const tiempoEspera = atencion - llegada;
-                    
-                    // Solo considerar diferencias válidas (positivas)
-                    if (tiempoEspera >= 0) {
-                        // Inicializar el objeto si no existe
-                        if (!tiemposEspera[servicio]) {
-                            tiemposEspera[servicio] = {
-                                total: 0,
-                                count: 0,
-                                tiempos: []
-                            };
-                        }
-                        
-                        // Sumar el tiempo de espera y contar este ticket
-                        tiemposEspera[servicio].total += tiempoEspera;
-                        tiemposEspera[servicio].count++;
-                        tiemposEspera[servicio].tiempos.push(tiempoEspera);
-                        ticketsConTiempos++;
-                    }
-                } catch (err) {
-                    console.warn("Error procesando tiempos para ticket:", ticket.id, err);
-                }
-            }
-        });
-        
-        // Generar tabla de resultados
-        const waitTimeStatsBody = document.getElementById('waitTimeStatsBody');
-        if (waitTimeStatsBody) {
-            waitTimeStatsBody.innerHTML = '';
-            
-            if (ticketsConTiempos === 0) {
-                waitTimeStatsBody.innerHTML = `
-                    <tr>
-                        <td colspan="3" class="no-data">No hay datos suficientes para calcular tiempos de espera</td>
-                    </tr>
-                `;
-            } else {
-                // Ordenar servicios por tiempo promedio (mayor a menor)
-                const serviciosOrdenados = Object.keys(tiemposEspera).sort((a, b) => {
-                    const avgA = tiemposEspera[a].total / tiemposEspera[a].count;
-                    const avgB = tiemposEspera[b].total / tiemposEspera[b].count;
-                    return avgB - avgA; // Orden descendente
-                });
-                
-                serviciosOrdenados.forEach(servicio => {
-                    const { total, count } = tiemposEspera[servicio];
-                    const promedio = total / count;
-                    
-                    const row = document.createElement('tr');
-                    row.innerHTML = `
-                        <td>${getNombreServicio(servicio)}</td>
-                        <td>${formatMinutesToTime(promedio)}</td>
-                        <td>${count}</td>
-                    `;
-                    waitTimeStatsBody.appendChild(row);
-                });
-            }
-        }
-        
-        // Generar gráfico de tiempos de espera
-        renderWaitTimeChart(tiemposEspera);
-    } catch (error) {
-        console.error("Error calculando estadísticas de tiempo de espera:", error);
-    }
-}
-
-// Función para convertir hora (HH:MM) a minutos desde medianoche con manejo de errores
-function convertTimeToMinutes(timeString) {
-    try {
-        if (!timeString || typeof timeString !== 'string') {
-            return 0;
-        }
-        
-        const parts = timeString.split(':');
-        if (parts.length < 2) {
-            return 0;
-        }
-        
-        const hours = parseInt(parts[0], 10) || 0;
-        const minutes = parseInt(parts[1], 10) || 0;
-        
-        return hours * 60 + minutes;
-    } catch (error) {
-        console.error("Error convirtiendo tiempo a minutos:", error);
-        return 0;
-    }
-}
-
 // Integrar con estadísticas existentes
 function updateStats() {
     const totalPacientes = tickets.length;
@@ -2802,6 +2760,12 @@ function updateStats() {
     document.getElementById('pacientesEspera').textContent = pacientesEspera;
     document.getElementById('pacientesConsulta').textContent = pacientesConsulta;
     document.getElementById('pacientesAtendidos').textContent = pacientesAtendidos;
+    
+    // Asegurarnos que la sección de tiempo promedio sea visible
+    const waitTimeSection = document.querySelector('.wait-time-statistics');
+    if (waitTimeSection) {
+        waitTimeSection.style.display = 'block';
+    }
     
     // Calcular estadísticas de tiempo de espera
     calculateWaitTimeStats();
@@ -2841,3 +2805,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+

@@ -555,7 +555,36 @@ section h2 i {
   height: 300px;
   margin-bottom: 20px; /* Ensure consistent spacing below the chart */
 }
-/* ... código existente ... */
+
+/* Mejorar la visibilidad de la sección de tiempos de espera */
+.wait-time-statistics {
+  margin-top: 30px;
+  padding: 25px;
+  background-color: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15); 
+  display: block !important; /* Forzar visualización */
+  visibility: visible !important; /* Forzar visibilidad */
+  opacity: 1 !important; /* Forzar opacidad */
+  border-left: 5px solid var(--primary-color);
+}
+
+.wait-time-chart {
+  min-height: 350px;
+  margin-bottom: 30px;
+  background: #f9f9f9;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  display: block !important; /* Forzar visualización */
+}
+
+/* Asegurar que la tabla sea visible */
+.wait-time-table {
+  overflow-x: auto;
+  margin-top: 20px;
+  display: block !important; /* Forzar visualización */
+}
 
 /* Mejoras en botones de acción */
 .ticket-actions {
@@ -1460,11 +1489,6 @@ section h2 i {
   padding-bottom: 15px;
 }
 
-.wait-time-statistics h3 i {
-  color: var(--primary-color);
-  opacity: 0.8;
-}
-
 .wait-time-chart {
   height: 350px;
   margin-bottom: 30px;
@@ -1787,4 +1811,25 @@ body.admin-role .backup-controls button {
 #estadisticasSection {
   margin: 0;
   padding: 0;
+}
+
+/* estilos selector de fecha */
+.date-filter {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.date-filter label {
+  font-weight: 500;
+}
+.date-filter input {
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* ocultar para visitas */
+body.visitas-role #dateFilterContainer {
+  display: none !important;
 }

@@ -121,7 +121,18 @@
               <select id="tipoServicio" required>
                 <option value="consulta">Consulta general</option>
                 <option value="revaloracion">Revaloración</option>
-                <!-- más opciones... -->
+                <option value="retiroHilos">Retiro de hilos</option>
+                <option value="rayosX">Rayos X</option>
+                <option value="desparasitacion">Desparasitación</option>
+                <option value="inyectable">Inyectables</option>
+                <option value="corteUnas">Corte de uñas</option>
+                <option value="emergencia">Emergencia</option>
+                <option value="tomaMuestras">Toma de muestras</option>
+                <option value="tests">Tests</option>
+                <option value="hemograma">Hemograma</option>
+                <option value="eutanasia">Eutanasia</option>
+                <option value="quitarPuntos">Quitar puntos</option>
+                <option value="otro">Otro</option>
               </select>
             </div>
 
@@ -133,6 +144,7 @@
                   <option value="">Seleccione un doctor</option>
                   <option value="Dr. Luis Coto">Dr. Luis Coto</option>
                   <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
+                  <option value="Dr. Gustavo Gonzalez">Dr. Gustavo Gonzalez</option>
                   <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
                   <option value="Dra. Kharen Moreno">Dra. Kharen Moreno</option>
                   <option value="Dra. Karina Madrigal">Dra. Karina Madrigal</option>
@@ -176,17 +188,18 @@
       <section id="verTicketsSection" class="hidden">
         <h2><i class="fas fa-list"></i> Sala de Espera</h2>
         
+        <!-- nuevo filtro de fecha -->
+        <div id="dateFilterContainer" class="date-filter hidden">
+          <label for="filterDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
+          <input type="date" id="filterDate">
+        </div>
+
         <div class="filter-container">
           <button class="filter-btn active" data-filter="todos">Todos</button>
           <button class="filter-btn" data-filter="espera">En Espera</button>
           <button class="filter-btn" data-filter="consultorio">En Consultorio</button>
           <button class="filter-btn" data-filter="terminado">Terminados</button>
           <button class="filter-btn" data-filter="porCobrar">Por Cobrar</button>
-        </div>
-
-        <div id="verTicketsDateContainer" class="date-filter-container hidden">
-          <label for="verTicketsDate"><i class="fas fa-calendar-alt"></i> Fecha:</label>
-          <input type="date" id="verTicketsDate">
         </div>
         
         <div id="ticketContainer" class="ticket-container"></div>
@@ -217,9 +230,29 @@
             <p id="pacientesAtendidos">0</p>
           </div>
         </div>
-        <div class="chart-container">
-          <canvas id="ticketsChart"></canvas>
-        </div>
+    
+
+        <!-- Nuevo: Sección de tiempo promedio de espera por servicio -->
+        <section class="wait-time-statistics">
+          <h3><i class="fas fa-hourglass-half"></i> Tiempo Promedio de Espera por Servicio</h3>
+          <div class="wait-time-chart">
+            <canvas id="waitTimeChart"></canvas>
+          </div>
+          <div class="wait-time-table">
+            <table class="stats-table">
+              <thead>
+                <tr>
+                  <th>Servicio</th>
+                  <th>Tiempo Promedio</th>
+                  <th>Cantidad</th>
+                </tr>
+              </thead>
+              <tbody id="waitTimeStatsBody">
+                <!-- Se llenará dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         <!-- Agregar dentro de la sección de estadísticas, después del gráfico existente -->
 <div class="estadisticas-personal-section">
@@ -407,5 +440,6 @@
   <script src="firebase-config.js"></script>
   <script src="auth.js"></script>
   <script src="index.js"></script>
+  <script src="fix-wait-time.js"></script>
 </body>
 </html>

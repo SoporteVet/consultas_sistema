@@ -11,7 +11,6 @@ const PERMISSIONS = {
     canManageBackup: true,
     canViewFullTicket: true,
     canViewSchedule: true,
-    canViewSidebarSchedule: true,
     canExportData: true
   },
   recepcion: {
@@ -21,9 +20,19 @@ const PERMISSIONS = {
     canDeleteTickets: false,
     canViewStats: false,
     canManageBackup: false,
-    canViewFullTicket: false,
-    canViewSchedule: true,  // enable calendar view
-    canViewSidebarSchedule: false, // hide sidebar horario tab
+    canViewFullTicket: true,
+    canViewSchedule: false,  
+    canExportData: false
+  },
+  consulta_externa: {
+    canViewTickets: true,
+    canCreateTickets: true,
+    canEditTickets: true,
+    canDeleteTickets: false,
+    canViewStats: false,
+    canManageBackup: false,
+    canViewFullTicket: true,
+    canViewSchedule: false,  
     canExportData: false
   },
   visitas: {
@@ -34,8 +43,7 @@ const PERMISSIONS = {
     canViewStats: false,
     canManageBackup: false,
     canViewFullTicket: false,
-    canViewSchedule: false,  // disable calendar for visitas
-    canViewSidebarSchedule: false,
+    canViewSchedule: false,
     canExportData: false
   }
 };
@@ -45,11 +53,42 @@ function checkAuth() {
   return new Promise((resolve, reject) => {
     console.log("Checking authentication status...");
     
-    const onLoginPage = window.location.pathname.toLowerCase().includes('home.html');
+    // Check if we're already on the login page (home.html)
+    const onLoginPage = window.location.pathname.toLowerCase().includes('home.html') || 
+                       window.location.pathname.endsWith('/');
     
-    // Remove sessionStorage shortcut to force Firebase auth check
+    // Check session storage first for quick UI response
+    const userRole = sessionStorage.getItem('userRole');
+    const userName = sessionStorage.getItem('userName');
     
-    // If on login page, skip auth
+    console.log("Session storage check - Role:", userRole, "Name:", userName);
+    
+    // If we have session data and we're not on the login page, trust it for immediate UI rendering
+    if (userRole && userName && !onLoginPage) {
+      console.log("Using session data for:", userName, "with role:", userRole);
+      
+      // Return cached session data immediately
+      resolve({
+        role: userRole,
+        name: userName,
+        email: sessionStorage.getItem('userEmail')
+      });
+      
+      // Still verify with Firebase in background without redirecting
+      try {
+        firebase.auth().onAuthStateChanged((user) => {
+          if (!user) {
+            console.warn("Firebase session invalid but using sessionStorage data");
+            // Don't clear sessionStorage here to prevent UI flashing
+          }
+        });
+      } catch (error) {
+        console.error("Error verifying authentication:", error);
+      }
+      return;
+    }
+    
+    // If on login page, prevent checking auth to avoid redirects
     if (onLoginPage) {
       console.log("On login page, skipping auth check");
       reject(new Error('On login page'));
@@ -60,12 +99,6 @@ function checkAuth() {
     try {
       firebase.auth().onAuthStateChanged((user) => {
         if (user) {
-          if (user.isAnonymous) {
-            console.log("Anonymous session detected - forcing login");
-            firebase.auth().signOut();
-            reject(new Error('User not authenticated'));
-            return;
-          }
           console.log("User authenticated:", user.email);
           
           // Get user role from database
@@ -75,8 +108,7 @@ function checkAuth() {
               if (userData && userData.role) {
                 // Store role in session
                 sessionStorage.setItem('userRole', userData.role);
-                const derivedName = userData.name || (user.email ? user.email.split('@')[0] : '');
-                sessionStorage.setItem('userName', derivedName);
+                sessionStorage.setItem('userName', userData.name || user.email.split('@')[0]);
                 sessionStorage.setItem('userEmail', user.email);
                 sessionStorage.setItem('userId', user.uid);
                 
@@ -88,7 +120,7 @@ function checkAuth() {
                 const defaultUserData = {
                   email: user.email,
                   role: 'recepcion',
-                  name: user.email ? user.email.split('@')[0] : ''
+                  name: user.email.split('@')[0]
                 };
                 
                 firebase.database().ref(`users/${user.uid}`).set(defaultUserData)
@@ -110,11 +142,11 @@ function checkAuth() {
             .catch(error => {
               console.error("Error fetching user data:", error);
               if (error.code === 'PERMISSION_DENIED') {
-                // Fallback to default role if no permission to read user records
-                const fallbackData = { role: 'recepcion', name: user.email ? user.email.split('@')[0] : '' };
-                sessionStorage.setItem('userRole', fallbackData.role);
-                sessionStorage.setItem('userName', fallbackData.name);
-                resolve(fallbackData);
+                // Sign out and redirect to login if no permission to read user record
+                firebase.auth().signOut().finally(() => {
+                  sessionStorage.clear();
+                  window.location.href = 'home.html';
+                });
                 return;
               }
               reject(error);
