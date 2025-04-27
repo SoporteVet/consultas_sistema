@@ -1138,7 +1138,8 @@ function editTicket(id) {
     const userRole = sessionStorage.getItem('userRole');
     // Contador de ediciones para consulta externa
     if (!ticket.editCount) ticket.editCount = 0;
-    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consulta_externa' || ticket.editCount < 2);
+    const isConsultaExterna = sessionStorage.getItem('userEmail') === 'consultaexterna@veterinaria.com';
+    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (!isConsultaExterna || ticket.editCount < 3);
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
@@ -1326,7 +1327,7 @@ function editTicket(id) {
         } else if (editDoctorAtiende) {
             medicoAtiende = editDoctorAtiende;
         } else if (editAsistenteAtiende) {
-            medicoAtiende = editAsistenteAtiene;
+            medicoAtiende = editAsistenteAtiende;
         }
         
         // Recoger todos los datos del formulario
@@ -1356,7 +1357,7 @@ function editTicket(id) {
     });
     
     // Deshabilitar el botón de guardar si se alcanzó el límite de ediciones
-    if (userRole === 'consulta_externa' && ticket.editCount >= 2) {
+    if (isConsultaExterna && ticket.editCount >= 3) {
         const saveBtn = modal.querySelector('.btn-save');
         if (saveBtn) {
             saveBtn.disabled = true;
@@ -2311,7 +2312,7 @@ function generarEstadisticasPersonalServicios() {
         }
         
         // Split in case of multiple people
-        const personas = ticket.medicoAtiene.split(',').map(p => p.trim());
+        const personas = ticket.medicoAtiende.split(',').map(p => p.trim());
         
         personas.forEach(persona => {
             if (!persona) return;
@@ -2805,4 +2806,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-

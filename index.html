@@ -36,7 +36,10 @@
       
       <!-- Añadir botón de cerrar sesión -->
       <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
-      
+
+      <!-- Botón solo para admin -->
+      <button id="adminUsersBtn" class="admin-btn" style="display:none; margin-top:10px;"><i class="fas fa-users-cog"></i> Administrar usuarios</button>
+
       <div class="sidebar-footer">
         <p>© 2025 Veterinaria SMP</p>
       </div>
@@ -430,7 +433,35 @@
       </div>
     </div>
   </div>
-  
+
+  <!-- Modal de administración de usuarios -->
+<div id="adminUsersModal" class="edit-modal" style="display:none;z-index:2000;">
+  <div class="modal-content animate-scale" style="max-width:420px;">
+    <span class="close-modal" id="closeAdminUsersModal" style="float:right;cursor:pointer;font-size:1.5rem;">&times;</span>
+    <h3><i class="fas fa-users-cog"></i> Administración de Usuarios</h3>
+    <form id="createUserForm">
+      <div class="form-group">
+        <label for="newUserEmail">Correo electrónico</label>
+        <input type="email" id="newUserEmail" required>
+      </div>
+      <div class="form-group">
+        <label for="newUserName">Nombre</label>
+        <input type="text" id="newUserName" required>
+      </div>
+      <div class="form-group">
+        <label for="newUserRole">Rol</label>
+        <select id="newUserRole" required>
+          <option value="recepcion">Recepción</option>
+          <option value="consulta_externa">Consulta Externa</option>
+          <option value="quirofano">Quirofano</option>
+          <option value="internos">Internos</option>
+          <option value="visitas">Visitas</option>
+        </select>
+      </div>
+      <button type="submit" class="btn-save" style="width:100%;margin-bottom:10px;">Crear usuario</button>
+    </form>
+  </div>
+</div>
   <!-- External scripts - keep these external references -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -441,5 +472,6 @@
   <script src="auth.js"></script>
   <script src="index.js"></script>
   <script src="fix-wait-time.js"></script>
+<script src="admin-users.js"></script>
 </body>
 </html>

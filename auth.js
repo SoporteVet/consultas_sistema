@@ -32,7 +32,29 @@ const PERMISSIONS = {
     canViewStats: false,
     canManageBackup: false,
     canViewFullTicket: true,
-    canViewSchedule: false,  
+    canViewSchedule: false,
+    canExportData: false
+  },
+  quirofano: {
+    canViewTickets: true,
+    canCreateTickets: false,
+    canEditTickets: false,
+    canDeleteTickets: false,
+    canViewStats: false,
+    canManageBackup: false,
+    canViewFullTicket: true,
+    canViewSchedule: false,
+    canExportData: false
+  },
+  internos: {
+    canViewTickets: true,
+    canCreateTickets: false,
+    canEditTickets: false,
+    canDeleteTickets: false,
+    canViewStats: false,
+    canManageBackup: false,
+    canViewFullTicket: true,
+    canViewSchedule: false,
     canExportData: false
   },
   visitas: {

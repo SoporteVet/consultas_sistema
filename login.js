@@ -258,7 +258,8 @@ function createTestUsers() {
   const testUsers = [
     { email: 'admin@veterinaria.com', password: 'password123', role: 'admin', name: 'Administrador' },
     { email: 'recepcion@veterinaria.com', password: 'password123', role: 'recepcion', name: 'Recepción' },
-    { email: 'visitas@veterinaria.com', password: 'password123', role: 'visitas', name: 'Visitas' }
+    { email: 'visitas@veterinaria.com', password: 'password123', role: 'visitas', name: 'Visitas' },
+    { email: 'consultaexterna@veterinaria.com', password: 'password123', role: 'consultaexterna', name: 'Consulta Externa' }
   ];
 
   // Only attempt this if Firebase is properly initialized
