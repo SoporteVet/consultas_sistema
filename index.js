@@ -262,7 +262,12 @@ safeAddEventListener('verTicketsBtn', 'click', () => {
     if (section) {
         showSection(section);
         setActiveButton(document.getElementById('verTicketsBtn'));
-        renderTickets();
+        // Establecer fecha actual en el filtro de fecha si está vacío
+        const filterDateInput = document.getElementById('filterDate');
+        if (filterDateInput && !filterDateInput.value) {
+            filterDateInput.value = new Date().toISOString().split('T')[0];
+        }
+        renderTickets('fecha', filterDateInput ? filterDateInput.value : null);
     } else {
         console.error("Section 'verTicketsSection' not found");
     }
@@ -677,6 +682,26 @@ function renderTickets(filter = 'todos', date = null) {
         return;
     }
     
+    // Al renderizar la tabla de tickets en ver consultas, agrega la columna de fecha para todos los roles excepto visitas
+    // Busca el lugar donde se arma la tabla (renderTickets) y agrega:
+    // ...dentro de renderTickets, en la generación de la tabla...
+    // Si el usuario no es visitas, agrega la columna de fecha
+    const isVisitas = sessionStorage.getItem('userRole') === 'visitas';
+    let tableHeader = `<tr>
+      <th>Hora</th>
+      <th>Cliente</th>
+      <th>Mascota</th>
+      <th>Tipo</th>
+      <th>Estado</th>
+      <th>Urgencia</th>
+      <th>Médico</th>
+      <th>ID Paciente</th>
+      <th>Factura</th>
+      <th>Por Cobrar</th>
+      <th>Acciones</th>
+    `;
+    if (!isVisitas) tableHeader = `<tr><th>Fecha</th>` + tableHeader.slice(4);
+    // ...en cada fila de la tabla...
     filteredTickets.forEach((ticket, index) => {
         const ticketElement = document.createElement('div');
         
@@ -947,6 +972,7 @@ function formatDate(dateString) {
 }
 
 function mostrarHorario() {
+    const isVisitas = sessionStorage.getItem('userRole') === 'visitas';
     const fecha = fechaHorario.value;
     
     // Filtrar tickets por fecha de consulta
@@ -1038,7 +1064,9 @@ function mostrarHorario() {
         // Setear el índice para la animación
         row.style.setProperty('--index', index);
         
-        row.innerHTML = `
+        let rowContent = '';
+        if (!isVisitas) rowContent += `<td>${ticket.fechaConsulta || (ticket.fecha ? ticket.fecha.split('T')[0] : '-')}</td>`;
+        rowContent += `
             <td>${hora}</td>
             <td>${ticket.nombre}</td>
             <td>${ticket.mascota}</td>
@@ -1048,6 +1076,7 @@ function mostrarHorario() {
             <td>${ticket.medicoAtiende || '-'}</td>
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
+            <td>${ticket.porCobrar || '-'}</td>
             <td>
                 <button class="btn-edit" onclick="editTicket(${ticket.id})">
                     <i class="fas fa-edit"></i>
@@ -1058,6 +1087,7 @@ function mostrarHorario() {
             </td>
         `;
         
+        row.innerHTML = rowContent;
         horarioBody.appendChild(row);
     });
 }
@@ -1138,8 +1168,13 @@ function editTicket(id) {
     const userRole = sessionStorage.getItem('userRole');
     // Contador de ediciones para consulta externa
     if (!ticket.editCount) ticket.editCount = 0;
-    const isConsultaExterna = sessionStorage.getItem('userEmail') === 'consultaexterna@veterinaria.com';
-    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (!isConsultaExterna || ticket.editCount < 3);
+    const isConsultaExternaRole = userRole === 'consulta_externa';
+    if (isConsultaExternaRole) {
+      // Asegura que el contador se inicialice correctamente desde el ticket
+      if (typeof ticket.editCount !== 'number') ticket.editCount = 0;
+    }
+    const isRecepcionRole = userRole === 'recepcion';
+    const canEditPorCobrar = hasPermission('canEditTickets') && !isRecepcionRole && (!isConsultaExternaRole || ticket.editCount < 3);
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
@@ -1352,12 +1387,18 @@ function editTicket(id) {
             porCobrar: document.getElementById('editPorCobrar')?.value || ''
         };
         
+        // Incrementa y guarda editCount solo para consulta_externa
+        if (isConsultaExternaRole) {
+            ticket.editCount = (ticket.editCount || 0) + 1;
+            updatedTicket.editCount = ticket.editCount;
+        }
+        
         // Guardar el ticket actualizado
         saveEditedTicket(updatedTicket);
     });
     
     // Deshabilitar el botón de guardar si se alcanzó el límite de ediciones
-    if (isConsultaExterna && ticket.editCount >= 3) {
+    if (isConsultaExternaRole && ticket.editCount >= 3) {
         const saveBtn = modal.querySelector('.btn-save');
         if (saveBtn) {
             saveBtn.disabled = true;
@@ -1876,44 +1917,54 @@ const ticketsDelMes = tickets.filter(ticket => {
 function exportToCSV(data, filename) {
     // Encabezados del CSV
     const headers = [
-        'ID', 
-        'Cliente', 
-        'Mascota', 
-        'Tipo', 
-        'Cédula', 
+        'ID',
+        'Nombre del Cliente',
+        'Nombre del Paciente',
+        'Cédula',
         'ID Paciente',
         'Médico',
-        'Fecha', 
-        'Hora', 
-        'Estado', 
+        'Fecha',
+        'Hora',
+        'Estado',
         'Urgencia',
         'Factura',
-        'Motivo'
+        'Motivo',
+        'Por Cobrar',
+        'Tipo de Mascota',
+        'Tipo de Servicio'
     ];
-    
+    // Función para escapar valores solo si es necesario
+    function escapeCSV(val) {
+        if (val == null) return '';
+        val = val.toString();
+        if (val.includes(';') || val.includes('"') || val.includes('\n')) {
+            return '"' + val.replace(/"/g, '""') + '"';
+        }
+        return val;
+    }
     // Crear las filas de datos
     const rows = data.map(ticket => [
         ticket.id,
         ticket.nombre,
         ticket.mascota,
-        getTipoMascotaLabel(ticket.tipoMascota),
         ticket.cedula,
         ticket.idPaciente || '',
         ticket.medicoAtiende || '',
-        ticket.fechaConsulta || new Date(ticket.fecha).toISOString().split('T')[0],
-        ticket.horaConsulta || ticket.horaCreacion,
-        getEstadoLabel(ticket.estado),
+        ticket.fechaConsulta || (ticket.fecha ? ticket.fecha.split('T')[0] : ''),
+        ticket.horaConsulta || ticket.horaCreacion || '',
+        ticket.estado,
         (ticket.urgencia || '').toUpperCase(),
         ticket.numFactura || '',
-        ticket.motivo
+        ticket.motivo || '',
+        ticket.porCobrar || '',
+        ticket.tipoMascota || '',
+        ticket.tipoServicio || ''
     ]);
-    
-    // Combinar encabezados y filas
+    // Combinar encabezados y filas usando punto y coma
     const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
+        headers.join(';'),
+        ...rows.map(row => row.map(escapeCSV).join(';'))
     ].join('\n');
-    
     // Crear blob y enlace de descarga
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -1924,7 +1975,6 @@ function exportToCSV(data, filename) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    
     showNotification('Archivo CSV generado correctamente', 'success');
 }
 
@@ -1975,13 +2025,16 @@ function cleanOldData() {
     
     // Obtener tickets a eliminar (terminados con más de 3 meses)
     const ticketsToDelete = tickets.filter(ticket => {
-        if (ticket.estado !== 'terminado') {
-            return false; // Mantener tickets que no estén terminados
+        // Si el ticket tiene los campos nuevos de fecha y hora
+        if (ticket.fechaConsulta) {
+            const fechaTicket = new Date(ticket.fechaConsulta);
+            return ticket.estado === 'terminado' && fechaTicket < tresMesesAtras;
         }
-        
-        // Para tickets terminados, verificar la fecha
-        const fechaTicket = new Date(ticket.fecha);
-        return fechaTicket < tresMesesAtras;
+        // Compatibilidad con tickets antiguos: validar fecha
+        if (!ticket.fecha) return false;
+        const parsedDate = new Date(ticket.fecha);
+        if (isNaN(parsedDate.getTime())) return false;
+        return ticket.estado === 'terminado' && parsedDate < tresMesesAtras;
     });
     
     // Contador para operaciones pendientes
@@ -2534,12 +2587,20 @@ function generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicio
                     plugins: {
                         legend: {
                             position: 'right',
+                            labels: {
+                                boxWidth: 15,
+                                padding: 15,
+                                font: {
+                                    size: 12
+                                }
+                            }
                         },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
+                                    const value = context.dataset.data[context.dataIndex];
                                     const label = context.label || '';
-                                    const value = context.raw || 0;
+                                    // Calculate percentage
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percentage = Math.round((value / total) * 100);
                                     return `${label}: ${value} (${percentage}%)`;
@@ -2693,7 +2754,7 @@ function renderWaitTimeChart(tiemposEspera) {
     // Limitar a los 10 servicios con mayor tiempo de espera
     const serviciosMostrados = serviciosValidos.slice(0, 10);
     
-    serviciosMostrados.forEach((servicio, index) => {
+    serviciosMostrados.forEach(servicio => {
         const { total, count } = tiemposEspera[servicio];
         const promedio = total / count;
         
