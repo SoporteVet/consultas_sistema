@@ -423,7 +423,7 @@ section h2 i {
 /* Hacer que el nivel de urgencia sea más visible en tickets de urgencia alta */
 .ticket-urgencia-alta .urgencia-alta {
   animation: pulseUrgent 2s infinite;
-  box-shadow: 0 0 5px rgba(229, 57, 53, 0.5);
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
 }
 
 @keyframes pulseUrgent {
@@ -709,9 +709,18 @@ section h2 i {
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-  animation: scaleIn 0.3s forwards;
+  animation: scaleIn 0.5s forwards;
 }
-
+@keyframes scaleIn {
+  0% {
+    transform: scale(0.98);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
 .modal-content h3 {
   margin-bottom: 20px;
   color: var(--primary-color);
@@ -1078,8 +1087,9 @@ section h2 i {
 }
 
 .modal-closing {
-  animation: fadeOut 0.2s forwards;
+  animation: fadeOut 0.25s forwards;
 }
+
 /* Responsive Styles */
 @media (max-width: 980px) {
   .main-container {
@@ -1161,7 +1171,7 @@ section h2 i {
 
 @keyframes scaleIn {
   0% {
-    transform: scale(0.9);
+    transform: scale(0.98);
     opacity: 0;
   }
   100% {
@@ -1454,20 +1464,6 @@ section h2 i {
   }
 }
 
-/* Animación para cerrar el modal */
-@keyframes fadeOut {
-  from {
-    opacity: 1;
-  }
-  to {
-    opacity: 0;
-  }
-}
-
-.modal-closing {
-  animation: fadeOut 0.2s forwards;
-}
-
 /* Wait Time Statistics Styles */
 .wait-time-statistics {
   margin-top: 20px; /* Add spacing above wait time statistics */
@@ -1704,8 +1700,6 @@ body.visitas-role .estado-badge {
   justify-content: center;
   font-weight: 600;
   box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-  border-radius: 8px;
-  animation: pulse-estado 1.5s infinite ease-in-out;
 }
 
 body.visitas-role .estado-badge i {
@@ -1832,4 +1826,17 @@ body.admin-role .backup-controls button {
 /* ocultar para visitas */
 body.visitas-role #dateFilterContainer {
   display: none !important;
+}
+
+body.visitas-role .ticket-title,
+body.visitas-role .ticket-info,
+body.visitas-role .ticket-info p,
+body.visitas-role .ticket-number {
+  font-size: 1.2rem !important;
+}
+body.visitas-role .ticket-info p {
+  line-height: 1.7rem;
+}
+body.visitas-role .ticket-header {
+  margin-bottom: 16px;
 }

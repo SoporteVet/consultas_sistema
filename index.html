@@ -6,6 +6,7 @@
   <title>Sistema de Consultas - Veterinaria</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="index.css">
+  <link rel="icon" href="empresa.jpg" type="image/x-icon">
 </head>
 <body>
   <div class="main-container">
@@ -78,14 +79,24 @@
             </div>
 
             <div class="form-group">
+              <label for="horaLlegada">Hora de Llegada</label>
+              <input type="time" id="horaLlegada" required>
+            </div>
+            
+            <div class="form-group">
               <label for="hora">Hora de Consulta</label>
               <input type="time" id="hora" required>
             </div>
+            
 
 
             <div class="form-group">
-              <label for="motivo">Motivo de Consulta y Motivo de Llegada</label>
-              <textarea id="motivo" placeholder="Describa el motivo de la consulta o de llegada" required></textarea>
+              <label for="motivo">Motivo de Consulta</label>
+              <textarea id="motivo" placeholder="Describa el motivo de la consulta" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="motivoLlegada">Motivo de Llegada</label>
+              <textarea id="motivoLlegada" placeholder="Describa el motivo de llegada" required></textarea>
             </div>
             
             <div class="form-group">
@@ -95,6 +106,8 @@
                 <option value="consultorio1">Consultorio 1</option>
                 <option value="consultorio2">Consultorio 2</option>
                 <option value="consultorio3">Consultorio 3</option>
+                <option value="consultorio4">Consultorio 4</option>
+                <option value="consultorio5">Consultorio 5</option>
                 <option value="terminado">Consulta Terminada</option>
               </select>
             </div>
@@ -102,9 +115,9 @@
             <div class="form-group">
               <label for="tipoMascota">Tipo de Mascota</label>
               <select id="tipoMascota" required>
+                <option value="conejo">Conejo</option>
                 <option value="perro">Perro</option>
                 <option value="gato">Gato</option>
-                <option value="ave">Ave</option>
                 <option value="otro">Otro</option>
               </select>
             </div>
@@ -168,6 +181,9 @@
                   <option value="Tec. Johnny Chacón">Tec. Johnny Chacón</option>
                   <option value="Tec. Gabriela Zuñiga">Tec. Gabriela Zuñiga</option>
                   <option value="Tec. Indra Perez">Tec. Indra Perez</option>
+                  <option value="Tec. Randy Arias">Tec. Randy Arias</option>
+                  <option value="Tec. Yancy Picado">Tec. Yancy Picado</option>
+                  <option value="Tec. Maria Fernanda">Tec. Maria Fernanda</option>
                 </select>
               </div>
             </div>
