@@ -1,8 +1,3 @@
-// Redirigir a home.html si no está autenticado
-if (!sessionStorage.getItem('userRole')) {
-    window.location.href = 'home.html';
-} 
-
 let currentTicketId = 1;
 let isDataLoaded = false;
 // Add this missing declaration
@@ -112,30 +107,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(err => {
         // Si estamos en la página de login, no mostrar error ni notificación
         if (window.location.pathname.toLowerCase().includes('home.html')) {
-            // Si el error es "On login page", no hacer nada (ni log, ni notificación)
-            if (err && err.message === "On login page") return;
-            console.error("Authentication error:", err);
-            hideLoading();
-            showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
-            // Add a login button instead of auto-redirect
-            const mainContainer = document.querySelector('.main-container');
-            if (mainContainer) {
-                mainContainer.innerHTML = `
-                    <div style="text-align: center; padding: 50px;">
-                        <h2>Sesión expirada</h2>
-                        <p>Su sesión ha expirado o no ha iniciado sesión correctamente.</p>
-                        <button onclick="window.location.href='home.html'" 
-                                style="padding: 10px 20px; background: var(--primary-color); 
-                                color: white; border: none; border-radius: 5px; cursor: pointer; 
-                                margin-top: 20px;">
-                            Iniciar sesión
-                        </button>
-                    </div>
-                `;
-            }
             return;
         }
-        // Solo aquí mostrar el error si no es el caso anterior
         console.error("Authentication error:", err);
         hideLoading();
         showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
@@ -289,12 +262,7 @@ safeAddEventListener('verTicketsBtn', 'click', () => {
     if (section) {
         showSection(section);
         setActiveButton(document.getElementById('verTicketsBtn'));
-        // Establecer fecha actual en el filtro de fecha si está vacío
-        const filterDateInput = document.getElementById('filterDate');
-        if (filterDateInput && !filterDateInput.value) {
-            filterDateInput.value = new Date().toISOString().split('T')[0];
-        }
-        renderTickets('fecha', filterDateInput ? filterDateInput.value : null);
+        renderTickets();
     } else {
         console.error("Section 'verTicketsSection' not found");
     }
@@ -473,7 +441,7 @@ function loadTickets() {
             
         // Configurar escucha en tiempo real para actualizaciones
         ticketsRef.on('child_added', snapshot => {
-            if (!isDataLoaded) return;
+            // Eliminar la condición de isDataLoaded para que todos los usuarios reciban updates
             const entry = snapshot.val();
             // Remove invalid tickets
             if (!entry || entry.id == null || !entry.mascota) {
@@ -483,12 +451,13 @@ function loadTickets() {
             const newTicket = { ...entry, firebaseKey: snapshot.key };
             if (!tickets.some(t => t.id === newTicket.id)) {
                 tickets.push(newTicket);
-                renderTickets();
+                // Usar el filtro activo actual
+                const currentFilterBtn = document.querySelector('.filter-btn.active');
+                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+                renderTickets(currentFilter);
                 updateStats();
                 // Real-time UI update for active section
-                // Update schedule view if active
                 if (horarioSection.classList.contains('active')) mostrarHorario();
-                // Update statistics section if active
                 if (estadisticasSection.classList.contains('active')) generarEstadisticasPersonalServicios();
             }
         });
@@ -498,11 +467,13 @@ function loadTickets() {
                 ...snapshot.val(),
                 firebaseKey: snapshot.key
             };
-            
             const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
             if (index !== -1) {
                 tickets[index] = updatedTicket;
-                renderTickets();
+                // Usar el filtro activo actual
+                const currentFilterBtn = document.querySelector('.filter-btn.active');
+                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+                renderTickets(currentFilter);
                 updateStats();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) generarEstadisticasPersonalServicios();
@@ -513,7 +484,10 @@ function loadTickets() {
             const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
             if (index !== -1) {
                 tickets.splice(index, 1);
-                renderTickets();
+                // Usar el filtro activo actual
+                const currentFilterBtn = document.querySelector('.filter-btn.active');
+                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+                renderTickets(currentFilter);
                 updateStats();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) generarEstadisticasPersonalServicios();
@@ -574,7 +548,6 @@ function addTicket() {
             mascota,
             cedula,
             motivo,
-            motivoLlegada,
             estado,
             tipoMascota,
             urgencia,
@@ -608,22 +581,35 @@ function addTicket() {
         ticketsRef.push(nuevoTicket)
             .then(() => {
                 console.log("Ticket guardado exitosamente");
+                
+                // Incrementar el ID para el siguiente ticket
                 currentTicketId++;
+                
+                // Actualizar currentTicketId en Firebase si settingsRef existe
                 if (settingsRef) {
                     settingsRef.update({ currentTicketId })
                         .catch(error => console.error("Error actualizando currentTicketId:", error));
                 }
+                
+                // Limpiar formulario
                 ticketForm.reset();
+                
+                // Restaurar fecha actual en el formulario
                 if (document.getElementById('fecha')) {
                     document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
                 }
+                
+                // Quitar indicador de carga
                 hideLoadingButton(document.querySelector('.btn-submit'));
+                
+                // Mostrar mensaje de éxito
                 showNotification('Consulta creada correctamente', 'success');
+                
+                // Cambiar a la vista de tickets
                 setTimeout(() => {
                     showSection(verTicketsSection);
                     setActiveButton(verTicketsBtn);
                 }, 1500);
-                // No llamar a renderTickets ni updateStats aquí, los listeners de Firebase lo harán
             })
             .catch(error => {
                 console.error("Error guardando ticket:", error);
@@ -666,9 +652,7 @@ function renderTickets(filter = 'todos', date = null) {
         filteredTickets = tickets.filter(ticket => 
             ticket.estado === 'consultorio1' || 
             ticket.estado === 'consultorio2' || 
-            ticket.estado === 'consultorio3' || 
-            ticket.estado === 'consultorio4' || 
-            ticket.estado === 'consultorio5'
+            ticket.estado === 'consultorio3'
         );
     } else if (filter === 'terminado') {
         filteredTickets = tickets.filter(ticket => ticket.estado === 'terminado');
@@ -699,26 +683,6 @@ function renderTickets(filter = 'todos', date = null) {
         return;
     }
     
-    // Al renderizar la tabla de tickets en ver consultas, agrega la columna de fecha para todos los roles excepto visitas
-    // Busca el lugar donde se arma la tabla (renderTickets) y agrega:
-    // ...dentro de renderTickets, en la generación de la tabla...
-    // Si el usuario no es visitas, agrega la columna de fecha
-    const isVisitas = sessionStorage.getItem('userRole') === 'visitas';
-    let tableHeader = `<tr>
-      <th>Hora</th>
-      <th>Cliente</th>
-      <th>Mascota</th>
-      <th>Tipo</th>
-      <th>Estado</th>
-      <th>Urgencia</th>
-      <th>Médico</th>
-      <th>ID Paciente</th>
-      <th>Factura</th>
-      <th>Por Cobrar</th>
-      <th>Acciones</th>
-    `;
-    if (!isVisitas) tableHeader = `<tr><th>Fecha</th>` + tableHeader.slice(4);
-    // ...en cada fila de la tabla...
     filteredTickets.forEach((ticket, index) => {
         const ticketElement = document.createElement('div');
         
@@ -739,21 +703,6 @@ function renderTickets(filter = 'todos', date = null) {
         
         // Check if user is in 'visitas' role with limited view
         if (!hasPermission('canViewFullTicket')) {
-            // Get animal icon for visitas
-            let animalIcon = '';
-            switch(ticket.tipoMascota) {
-                case 'perro':
-                    animalIcon = '<i class="fas fa-dog" style="font-size:2rem;"></i>';
-                    break;
-                case 'gato':
-                    animalIcon = '<i class="fas fa-cat" style="font-size:2rem;"></i>';
-                    break;
-                case 'conejo':
-                    animalIcon = '<i class="fa-solid fa-rabbit" style="font-size:2rem;"></i>';
-                    break;
-                default:
-                    animalIcon = '<i class="fas fa-paw" style="font-size:2rem;"></i>';
-            }
             // Get urgency class and icon
             let urgenciaClass = '';
             let urgenciaIcon = '';
@@ -791,14 +740,6 @@ function renderTickets(filter = 'todos', date = null) {
                     estadoText = 'Consultorio 3';
                     estadoClass = 'estado-consultorio';
                     break;
-                case 'consultorio4':
-                        estadoText = 'Consultorio 4';
-                        estadoClass = 'estado-consultorio';
-                        break;    
-                case 'consultorio5':
-                        estadoText = 'Consultorio 5';
-                        estadoClass = 'estado-consultorio';
-                        break;        
                 case 'terminado':
                     estadoText = 'Consulta terminada';
                     estadoClass = 'estado-terminado';
@@ -808,14 +749,14 @@ function renderTickets(filter = 'todos', date = null) {
             // Simplified view for 'visitas' role with added urgency and status
             ticketContent = `
                 <div class="ticket-header">
-                <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
+                    <div class="ticket-title">${ticket.mascota}</div>
                     <div class="ticket-number">#${ticket.id}</div>
                 </div>
                 <div class="ticket-info">
                     <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
-                    ${ticket.motivo ? `<p><i class="fas fa-stethoscope"></i>Motivo de Consulta: ${ticket.motivo}</p>` : ''}
+                    <p><i class="fas fa-stethoscope"></i> ${ticket.motivo}</p>
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
@@ -834,16 +775,16 @@ function renderTickets(filter = 'todos', date = null) {
             let animalIcon = '';
             switch(ticket.tipoMascota) {
                 case 'perro':
-                    animalIcon = '<i class="fas fa-dog"></i>';
+                    animalIcon = '<i class="fas fa-dog animal-icon"></i>';
                     break;
                 case 'gato':
-                    animalIcon = '<i class="fas fa-cat"></i>';
+                    animalIcon = '<i class="fas fa-cat animal-icon"></i>';
                     break;
-                case 'conejo':
-                    animalIcon = '<i class="fas fa-rabbit"></i>';
+                case 'ave':
+                    animalIcon = '<i class="fas fa-dove animal-icon"></i>';
                     break;
                 default:
-                    animalIcon = '<i class="fas fa-paw"></i>';
+                    animalIcon = '<i class="fas fa-paw animal-icon"></i>';
             }
             
             let estadoText = '';
@@ -863,14 +804,6 @@ function renderTickets(filter = 'todos', date = null) {
                     break;
                 case 'consultorio3':
                     estadoText = 'Consultorio 3';
-                    estadoClass = 'estado-consultorio';
-                    break;
-                case 'consultorio4':
-                    estadoText = 'Consultorio 4';
-                    estadoClass = 'estado-consultorio';
-                    break;
-                case 'consultorio5':
-                    estadoText = 'Consultorio 5';
                     estadoClass = 'estado-consultorio';
                     break;
                 case 'terminado':
@@ -907,8 +840,7 @@ function renderTickets(filter = 'todos', date = null) {
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
-                    ${ticket.motivo ? `<p><i class="fas fa-stethoscope"></i> Motivo de Consulta:  ${ticket.motivo}</p>` : ''}
-                    ${ticket.motivoLlegada ? `<p><i class="fa-solid fa-briefcase-medical"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>` : ''}
+                    <p><i class="fas fa-stethoscope"></i> ${ticket.motivo}</p>
                     ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-day"></i> Fecha: ${formatDate(ticket.fechaConsulta)}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
@@ -924,21 +856,23 @@ function renderTickets(filter = 'todos', date = null) {
             `;
         }
         
-        // Cambiar los botones de acción para pasar también la fechaConsulta
+        // Add action buttons based on permissions
         let actionButtons = '';
+        
         if (hasPermission('canEditTickets')) {
             actionButtons += `
-                <button class="action-btn btn-editar" onclick="editTicket(${ticket.id}, '${ticket.fechaConsulta || ''}')">
+                <button class="action-btn btn-editar" onclick="editTicket(${ticket.id})">
                     <i class="fas fa-edit"></i> Editar
                 </button>
-                <button class="action-btn btn-cambiar" onclick="changeStatus(${ticket.id}, '${ticket.fechaConsulta || ''}')">
+                <button class="action-btn btn-cambiar" onclick="changeStatus(${ticket.id})">
                     <i class="fas fa-exchange-alt"></i> Cambiar Estado
                 </button>
             `;
         }
+        
         if (hasPermission('canDeleteTickets')) {
             actionButtons += `
-                <button class="action-btn btn-eliminar" onclick="deleteTicket(${ticket.id}, '${ticket.fechaConsulta || ''}')">
+                <button class="action-btn btn-eliminar" onclick="deleteTicket(${ticket.id})">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             `;
@@ -1019,7 +953,6 @@ function formatDate(dateString) {
 }
 
 function mostrarHorario() {
-    const isVisitas = sessionStorage.getItem('userRole') === 'visitas';
     const fecha = fechaHorario.value;
     
     // Filtrar tickets por fecha de consulta
@@ -1082,12 +1015,12 @@ function mostrarHorario() {
             case 'consultorio3':
                 estadoLabel = 'Consultorio 3';
                 break;
-            case 'consultorio4':
-                estadoLabel = 'Consultorio 4';
-                break;
-            case 'consultorio5':
-                estadoLabel = 'Consultorio 5';
-                break;
+                case 'consultorio4':
+                    estadoLabel = 'Consultorio 4'
+                    break;
+                    case 'consultorio5':
+                        estadoLabel = 'Consultorio 5';
+                        break;
             case 'terminado':
                 estadoLabel = 'Terminado';
                 break;
@@ -1104,8 +1037,8 @@ function mostrarHorario() {
             case 'gato':
                 tipoLabel = 'Gato';
                 break;
-            case 'conejo':
-                tipoLabel = 'Conejo';
+            case 'ave':
+                tipoLabel = 'Ave';
                 break;
             default:
                 tipoLabel = 'Otro';
@@ -1117,9 +1050,7 @@ function mostrarHorario() {
         // Setear el índice para la animación
         row.style.setProperty('--index', index);
         
-        let rowContent = '';
-        if (!isVisitas) rowContent += `<td>${ticket.fechaConsulta || (ticket.fecha ? ticket.fecha.split('T')[0] : '-')}</td>`;
-        rowContent += `
+        row.innerHTML = `
             <td>${hora}</td>
             <td>${ticket.nombre}</td>
             <td>${ticket.mascota}</td>
@@ -1129,7 +1060,6 @@ function mostrarHorario() {
             <td>${ticket.medicoAtiende || '-'}</td>
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
-            <td>${ticket.porCobrar || '-'}</td>
             <td>
                 <button class="btn-edit" onclick="editTicket(${ticket.id})">
                     <i class="fas fa-edit"></i>
@@ -1140,15 +1070,15 @@ function mostrarHorario() {
             </td>
         `;
         
-        row.innerHTML = rowContent;
         horarioBody.appendChild(row);
     });
 }
 
-function editTicket(id, fechaConsulta) {
-    const ticket = tickets.find(t => t.id === id && (t.fechaConsulta || '') === (fechaConsulta || ''));
+function editTicket(id) {
+    const ticket = tickets.find(t => t.id === id);
+    
     if (!ticket) {
-        console.error("Ticket no encontrado con ID y fecha:", id, fechaConsulta);
+        console.error("Ticket no encontrado con ID:", id);
         showNotification('Error: Ticket no encontrado', 'error');
         return;
     }
@@ -1172,8 +1102,8 @@ function editTicket(id, fechaConsulta) {
         case 'gato':
             animalIcon = '<i class="fas fa-cat"></i>';
             break;
-        case 'conejo':
-            animalIcon = '<i class="fas fa-rabbit"></i>';
+        case 'ave':
+            animalIcon = '<i class="fas fa-dove"></i>';
             break;
         default:
             animalIcon = '<i class="fas fa-paw"></i>';
@@ -1220,13 +1150,7 @@ function editTicket(id, fechaConsulta) {
     const userRole = sessionStorage.getItem('userRole');
     // Contador de ediciones para consulta externa
     if (!ticket.editCount) ticket.editCount = 0;
-    const isConsultaExternaRole = userRole === 'consulta_externa';
-    if (isConsultaExternaRole) {
-      // Asegura que el contador se inicialice correctamente desde el ticket
-      if (typeof ticket.editCount !== 'number') ticket.editCount = 0;
-    }
-    const isRecepcionRole = userRole === 'recepcion';
-    const canEditPorCobrar = hasPermission('canEditTickets') && !isRecepcionRole && (!isConsultaExternaRole || ticket.editCount < 3);
+    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consulta_externa' || ticket.editCount < 2);
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
@@ -1296,10 +1220,7 @@ function editTicket(id, fechaConsulta) {
                     <label for="editMotivo">Motivo de Consulta</label>
                     <textarea id="editMotivo" required>${safeTicket.motivo}</textarea>
                 </div>
-                <div class="form-group">
-                    <label for="editMotivoLlegada">Motivo de Llegada</label>
-                    <textarea id="editMotivoLlegada">${ticket.motivoLlegada || ''}</textarea>
-                </div>
+                
                 <div class="form-row">
                     <div class="form-group">
                         <label for="editEstado">Estado</label>
@@ -1309,7 +1230,9 @@ function editTicket(id, fechaConsulta) {
                             <option value="consultorio2" ${safeTicket.estado === 'consultorio2' ? 'selected' : ''}>Consultorio 2</option>
                             <option value="consultorio3" ${safeTicket.estado === 'consultorio3' ? 'selected' : ''}>Consultorio 3</option>
                             <option value="consultorio4" ${safeTicket.estado === 'consultorio4' ? 'selected' : ''}>Consultorio 4</option>
+
                             <option value="consultorio5" ${safeTicket.estado === 'consultorio5' ? 'selected' : ''}>Consultorio 5</option>
+
                             <option value="terminado" ${safeTicket.estado === 'terminado' ? 'selected' : ''}>Consulta Terminada</option>
                         </select>
                     </div>
@@ -1319,7 +1242,7 @@ function editTicket(id, fechaConsulta) {
                         <select id="editTipoMascota" required>
                             <option value="perro" ${safeTicket.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
                             <option value="gato" ${safeTicket.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
-                            <option value="ave" ${safeTicket.tipoMascota === 'conejo' ? 'selected' : ''}>Conejo</option>
+                            <option value="ave" ${safeTicket.tipoMascota === 'ave' ? 'selected' : ''}>Ave</option>
                             <option value="otro" ${safeTicket.tipoMascota === 'otro' ? 'selected' : ''}>Otro</option>
                         </select>
                     </div>
@@ -1389,9 +1312,6 @@ function editTicket(id, fechaConsulta) {
                             <option value="Tec. Johnny Chacón" ${asistenteSeleccionado === "Tec. Johnny Chacón" ? 'selected' : ''}>Tec. Johnny Chacón</option>
                             <option value="Tec. Gabriela Zuñiga" ${asistenteSeleccionado === "Tec. Gabriela Zuñiga" ? 'selected' : ''}>Tec. Gabriela Zuñiga</option>
                             <option value="Tec. Indra Perez" ${asistenteSeleccionado === "Tec. Indra Perez" ? 'selected' : ''}>Tec. Indra Perez</option>
-                            <option value="Tec. Randy Arias" ${asistenteSeleccionado === "Tec. Randy Arias" ? 'selected' : ''}>Tec. Randy Arias</option>
-                            <option value="Tec. Yancy Picado" ${asistenteSeleccionado === "Tec. Yancy Picado" ? 'selected' : ''}>Tec. Yancy Picado</option>
-                            <option value="Tec. Maria Fernanda" ${asistenteSeleccionado === "Tec. Maria Fernanda" ? 'selected' : ''}>Tec. Maria Fernanda</option>
                         </select>
                     </div>
                 </div>
@@ -1422,7 +1342,7 @@ function editTicket(id, fechaConsulta) {
         } else if (editDoctorAtiende) {
             medicoAtiende = editDoctorAtiende;
         } else if (editAsistenteAtiende) {
-            medicoAtiende = editAsistenteAtiende;
+            medicoAtiende = editAsistenteAtiene;
         }
         
         // Recoger todos los datos del formulario
@@ -1438,7 +1358,6 @@ function editTicket(id, fechaConsulta) {
             horaAtencion: document.getElementById('editHoraAtencion').value,
             medicoAtiende: medicoAtiende,
             motivo: document.getElementById('editMotivo').value,
-            motivoLlegada: document.getElementById('editMotivoLlegada').value,
             estado: document.getElementById('editEstado').value,
             tipoMascota: document.getElementById('editTipoMascota').value,
             urgencia: document.getElementById('editUrgencia').value,
@@ -1448,18 +1367,12 @@ function editTicket(id, fechaConsulta) {
             porCobrar: document.getElementById('editPorCobrar')?.value || ''
         };
         
-        // Incrementa y guarda editCount solo para consulta_externa
-        if (isConsultaExternaRole) {
-            ticket.editCount = (ticket.editCount || 0) + 1;
-            updatedTicket.editCount = ticket.editCount;
-        }
-        
         // Guardar el ticket actualizado
         saveEditedTicket(updatedTicket);
     });
     
     // Deshabilitar el botón de guardar si se alcanzó el límite de ediciones
-    if (isConsultaExternaRole && ticket.editCount >= 3) {
+    if (userRole === 'consulta_externa' && ticket.editCount >= 2) {
         const saveBtn = modal.querySelector('.btn-save');
         if (saveBtn) {
             saveBtn.disabled = true;
@@ -1538,8 +1451,8 @@ function saveEditedTicket(ticket) {
         });
 }
 
-function changeStatus(id, fechaConsulta) {
-    const ticket = tickets.find(t => t.id === id && (t.fechaConsulta || '') === (fechaConsulta || ''));
+function changeStatus(id) {
+    const ticket = tickets.find(t => t.id === id);
     if (!ticket) return;
     
     // Mostrar modal para cambiar estado
@@ -1627,14 +1540,15 @@ function changeStatus(id, fechaConsulta) {
 }
 
 // Modify the deleteTicket function to check permissions
-function deleteTicket(id, fechaConsulta) {
+function deleteTicket(id) {
+    // Check if user has permission to delete
     if (!hasPermission('canDeleteTickets')) {
         showNotification('No tienes permiso para eliminar consultas', 'error');
         return;
     }
     
     // Confirmar antes de eliminar
-    const ticket = tickets.find(t => t.id === id && (t.fechaConsulta || '') === (fechaConsulta || ''));
+    const ticket = tickets.find(t => t.id === id);
     if (!ticket) return;
     
     // Seleccionar icono según tipo de mascota
@@ -1646,8 +1560,8 @@ function deleteTicket(id, fechaConsulta) {
         case 'gato':
             animalIcon = '<i class="fas fa-cat" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
-        case 'conejo':
-            animalIcon = '<i class="fas fa-rabbit" style="font-size: 1.5rem; margin-right: 10px;"></i>';
+        case 'ave':
+            animalIcon = '<i class="fas fa-dove" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
         default:
             animalIcon = '<i class="fas fa-paw" style="font-size: 1.5rem; margin-right: 10px;"></i>';
@@ -1668,7 +1582,7 @@ function deleteTicket(id, fechaConsulta) {
             </div>
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-                <button class="btn-delete" onclick="confirmDelete(${ticket.id}, '${ticket.fechaConsulta || ''}')">
+                <button class="btn-delete" onclick="confirmDelete(${ticket.id})">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             </div>
@@ -1678,9 +1592,9 @@ function deleteTicket(id, fechaConsulta) {
     document.body.appendChild(modal);
 }
 
-function confirmDelete(id, fechaConsulta) {
-    const ticket = tickets.find(t => t.id ===id && (t.fechaConsulta || '') === (fechaConsulta || ''));
-    if (!ticket) {
+function confirmDelete(id) {
+    const ticket = tickets.find(t => t.id === id);
+    if (!ticket || !ticket.firebaseKey) {
         showNotification('Error al eliminar la consulta', 'error');
         return;
     }
@@ -1775,7 +1689,7 @@ function initAuth() {
             reject(error);
           });
       }
-       });
+    });
   });
 }
 
@@ -1789,12 +1703,12 @@ function showNotification(message, type = 'info') {
                 position: fixed;
                 bottom: 20px;
                 right: 20px;
-                 padding: 15px 20px;
+                padding: 15px 20px;
                 border-radius: 5px;
                 color: white;
                 font-weight: 500;
                 box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-                z-index: 9999;
+                z-index: 1001;
                 transform: translateY(100px);
                 opacity: 0;
                 transition: all 0.3s ease;
@@ -1830,6 +1744,7 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.classList.add('show');
     }, 10);
+    
     // Ocultar después de 3 segundos
     setTimeout(() => {
         notification.classList.remove('show');
@@ -1843,7 +1758,7 @@ function updateStats() {
     const totalPacientes = tickets.length;
     const pacientesEspera = tickets.filter(t => t.estado === 'espera').length;
     const pacientesConsulta = tickets.filter(t => 
-        t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3' || t.estado === 'consultorio4' || t.estado === 'consultorio5'
+        t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3'
     ).length;
     const pacientesAtendidos = tickets.filter(t => t.estado === 'terminado').length;
     
@@ -1978,57 +1893,44 @@ const ticketsDelMes = tickets.filter(ticket => {
 function exportToCSV(data, filename) {
     // Encabezados del CSV
     const headers = [
-        'ID',
-        'Nombre del Cliente',
-        'Nombre del Paciente',
-        'Cédula',
+        'ID', 
+        'Cliente', 
+        'Mascota', 
+        'Tipo', 
+        'Cédula', 
         'ID Paciente',
         'Médico',
-        'Fecha',
-        'Hora',
-        'Estado',
+        'Fecha', 
+        'Hora', 
+        'Estado', 
         'Urgencia',
         'Factura',
-        'Motivo',
-        'Motivo de Llegada',
-        'Hora de Llegada',
-        'Por Cobrar',
-        'Tipo de Mascota',
-        'Tipo de Servicio'
+        'Motivo'
     ];
-    // Función para escapar valores solo si es necesario
-function escapeCSV(val) {
-        if (val == null) return '';
-        val = val.toString();
-        if (val.includes(';') || val.includes('"') || val.includes('\n')) {
-            return '"' + val.replace(/"/g, '""') + '"';
-        }
-        return val;
-    }
+    
     // Crear las filas de datos
     const rows = data.map(ticket => [
         ticket.id,
         ticket.nombre,
         ticket.mascota,
+        getTipoMascotaLabel(ticket.tipoMascota),
         ticket.cedula,
         ticket.idPaciente || '',
         ticket.medicoAtiende || '',
-        ticket.fechaConsulta || (ticket.fecha ? ticket.fecha.split('T')[0] : ''),
-        ticket.horaConsulta || ticket.horaCreacion || '',
-        ticket.estado,
+        ticket.fechaConsulta || new Date(ticket.fecha).toISOString().split('T')[0],
+        ticket.horaConsulta || ticket.horaCreacion,
+        getEstadoLabel(ticket.estado),
         (ticket.urgencia || '').toUpperCase(),
         ticket.numFactura || '',
-        ticket.motivo || '',
-        ticket.motivoLlegada || '',
-        ticket.porCobrar || '',
-        ticket.tipoMascota || '',
-        ticket.tipoServicio || ''
+        ticket.motivo
     ]);
-    // Combinar encabezados y filas usando punto y coma
+    
+    // Combinar encabezados y filas
     const csvContent = [
-        headers.join(';'),
-        ...rows.map(row => row.map(escapeCSV).join(';'))
+        headers.join(','),
+        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
     ].join('\n');
+    
     // Crear blob y enlace de descarga
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -2039,6 +1941,7 @@ function escapeCSV(val) {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    
     showNotification('Archivo CSV generado correctamente', 'success');
 }
 
@@ -2087,28 +1990,25 @@ function cleanOldData() {
     // Mostrar indicador de carga
     showLoading();
     
-// Obtener tickets a eliminar (terminados con más de 3 meses)
-const ticketsToDelete = tickets.filter(ticket => {
-    // Si el ticket tiene los campos nuevos de fecha y hora
-    if (ticket.fechaConsulta) {
-        const fechaTicket = new Date(ticket.fechaConsulta);
-        return ticket.estado === 'terminado' && fechaTicket < tresMesesAtras;
+    // Obtener tickets a eliminar (terminados con más de 3 meses)
+    const ticketsToDelete = tickets.filter(ticket => {
+        if (ticket.estado !== 'terminado') {
+            return false; // Mantener tickets que no estén terminados
+        }
+        
+        // Para tickets terminados, verificar la fecha
+        const fechaTicket = new Date(ticket.fecha);
+        return fechaTicket < tresMesesAtras;
+    });
+    
+    // Contador para operaciones pendientes
+    let pendingOperations = ticketsToDelete.length;
+    
+    if (pendingOperations === 0) {
+        hideLoading();
+        showNotification('No hay consultas antiguas para eliminar', 'info');
+        return;
     }
-    // Compatibilidad con tickets antiguos: validar fecha
-    if (!ticket.fecha) return false;
-    const parsedDate = new Date(ticket.fecha);
-    if (isNaN(parsedDate.getTime())) return false;
-    return ticket.estado === 'terminado' && parsedDate < tresMesesAtras;
-});
-
-// Contador para operaciones pendientes
-let pendingOperations = ticketsToDelete.length;
-
-if (pendingOperations === 0) {
-    hideLoading();
-    showNotification('No hay consultas antiguas para eliminar', 'info');
-    return;
-}
     
     // Eliminar cada ticket en Firebase
     ticketsToDelete.forEach(ticket => {
@@ -2145,7 +2045,7 @@ function getTipoMascotaLabel(tipo) {
     const tipos = {
         'perro': 'Perro',
         'gato': 'Gato',
-        'conejo': 'Conejo',
+        'ave': 'Ave',
         'otro': 'Otro'
     };
     return tipos[tipo] || tipo;
@@ -2431,7 +2331,7 @@ function generarEstadisticasPersonalServicios() {
         }
         
         // Split in case of multiple people
-        const personas = ticket.medicoAtiende.split(',').map(p => p.trim());
+        const personas = ticket.medicoAtiene.split(',').map(p => p.trim());
         
         personas.forEach(persona => {
             if (!persona) return;
@@ -2534,7 +2434,8 @@ function generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicio
             // Colors for services
             const colores = [
                 '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-                '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
+                '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
+                '#a3a4a5', '#d1d3e2', '#eaecf4'
             ];
             
             // Create a dataset for each service
@@ -2619,7 +2520,8 @@ function generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicio
             // Colors for the chart
             const colores = [
                 '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-                '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
+                '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
+                '#a3a4a5', '#d1d3e2', '#eaecf4'
             ];
             
             // For each service, get its total
@@ -2651,20 +2553,12 @@ function generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicio
                     plugins: {
                         legend: {
                             position: 'right',
-                            labels: {
-                                boxWidth: 15,
-                                padding: 15,
-                                font: {
-                                    size: 12
-                                }
-                            }
                         },
                         tooltip: {
                             callbacks: {
                                 label: function(context) {
-                                    const value = context.dataset.data[context.dataIndex];
                                     const label = context.label || '';
-                                    // Calculate percentage
+                                    const value = context.raw || 0;
                                     const total = context.dataset.data.reduce((a, b) => a + b, 0);
                                     const percentage = Math.round((value / total) * 100);
                                     return `${label}: ${value} (${percentage}%)`;
@@ -2818,7 +2712,7 @@ function renderWaitTimeChart(tiemposEspera) {
     // Limitar a los 10 servicios con mayor tiempo de espera
     const serviciosMostrados = serviciosValidos.slice(0, 10);
     
-    serviciosMostrados.forEach(servicio => {
+    serviciosMostrados.forEach((servicio, index) => {
         const { total, count } = tiemposEspera[servicio];
         const promedio = total / count;
         
@@ -2878,7 +2772,7 @@ function updateStats() {
     const totalPacientes = tickets.length;
     const pacientesEspera = tickets.filter(t => t.estado === 'espera').length;
     const pacientesConsulta = tickets.filter(t => 
-        t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3' || t.estado === 'consultorio4' || t.estado === 'consultorio5'
+        t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3'
     ).length;
     const pacientesAtendidos = tickets.filter(t => t.estado === 'terminado').length;
     
@@ -2930,19 +2824,4 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 100);
         });
     }
-
-  // Sidebar toggle para VISITAS
-  const menuToggle = document.getElementById('menuToggle');
-  const body = document.body;
-  const userRole = sessionStorage.getItem('userRole');
-  if (userRole === 'visitas' && menuToggle) {
-    menuToggle.style.display = 'block';
-    body.classList.add('visitas-role');
-    menuToggle.addEventListener('click', function() {
-      body.classList.toggle('sidebar-hidden');
-    });
-  } else if (menuToggle) {
-    menuToggle.style.display = 'none';
-  }
 });
-
