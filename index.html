@@ -120,7 +120,7 @@
                 <option value="conejo">Conejo</option>
                 <option value="otro">Otro</option>
               </select>
-            </div>
+              <span id="conejoImg" style="display:none; font-size:40px; margin-top:8px;">🐇</span>
             
             <div class="form-group">
               <label for="urgencia">Nivel de Urgencia</label>
@@ -489,5 +489,16 @@
   <script src="index.js"></script>
   <script src="fix-wait-time.js"></script>
 <script src="admin-users.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const tipoMascota = document.getElementById('tipoMascota');
+  const conejoImg = document.getElementById('conejoImg');
+  if (tipoMascota && conejoImg) {
+    tipoMascota.addEventListener('change', function() {
+      conejoImg.style.display = tipoMascota.value === 'conejo' ? 'inline-block' : 'none';
+    });
+  }
+});
+</script>
 </body>
 </html>

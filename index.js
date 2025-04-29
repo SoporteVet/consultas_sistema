@@ -1,3 +1,8 @@
+// Redirigir a home.html si no está autenticado
+if (!sessionStorage.getItem('userRole')) {
+    window.location.href = 'home.html';
+} 
+
 let currentTicketId = 1;
 let isDataLoaded = false;
 // Add this missing declaration
@@ -107,8 +112,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }).catch(err => {
         // Si estamos en la página de login, no mostrar error ni notificación
         if (window.location.pathname.toLowerCase().includes('home.html')) {
+            // Si el error es "On login page", no hacer nada (ni log, ni notificación)
+            if (err && err.message === "On login page") return;
+            console.error("Authentication error:", err);
+            hideLoading();
+            showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
+            // Add a login button instead of auto-redirect
+            const mainContainer = document.querySelector('.main-container');
+            if (mainContainer) {
+                mainContainer.innerHTML = `
+                    <div style="text-align: center; padding: 50px;">
+                        <h2>Sesión expirada</h2>
+                        <p>Su sesión ha expirado o no ha iniciado sesión correctamente.</p>
+                        <button onclick="window.location.href='home.html'" 
+                                style="padding: 10px 20px; background: var(--primary-color); 
+                                color: white; border: none; border-radius: 5px; cursor: pointer; 
+                                margin-top: 20px;">
+                            Iniciar sesión
+                        </button>
+                    </div>
+                `;
+            }
             return;
         }
+        // Solo aquí mostrar el error si no es el caso anterior
         console.error("Authentication error:", err);
         hideLoading();
         showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
@@ -722,7 +749,7 @@ function renderTickets(filter = 'todos', date = null) {
                     animalIcon = '<i class="fas fa-cat" style="font-size:2rem;"></i>';
                     break;
                 case 'conejo':
-                    animalIcon = '<span style="font-size:2rem;">🐇</span>';
+                    animalIcon = '<i class="fa-solid fa-rabbit" style="font-size:2rem;"></i>';
                     break;
                 default:
                     animalIcon = '<i class="fas fa-paw" style="font-size:2rem;"></i>';
@@ -813,7 +840,7 @@ function renderTickets(filter = 'todos', date = null) {
                     animalIcon = '<i class="fas fa-cat"></i>';
                     break;
                 case 'conejo':
-                    animalIcon = '<span style="font-size:2rem;">🐇</span>';
+                    animalIcon = '<i class="fas fa-rabbit"></i>';
                     break;
                 default:
                     animalIcon = '<i class="fas fa-paw"></i>';
@@ -1146,7 +1173,7 @@ function editTicket(id, fechaConsulta) {
             animalIcon = '<i class="fas fa-cat"></i>';
             break;
         case 'conejo':
-            animalIcon = '<span style="font-size:2rem;">🐇</span>';
+            animalIcon = '<i class="fas fa-rabbit"></i>';
             break;
         default:
             animalIcon = '<i class="fas fa-paw"></i>';
@@ -1620,7 +1647,7 @@ function deleteTicket(id, fechaConsulta) {
             animalIcon = '<i class="fas fa-cat" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
         case 'conejo':
-            animalIcon = '🐇'; style="font-size: 1.5rem; margin-right: 10px;";
+            animalIcon = '<i class="fa-solid fa-rabbit" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
         default:
             animalIcon = '<i class="fas fa-paw" style="font-size: 1.5rem; margin-right: 10px;"></i>';
@@ -1652,8 +1679,8 @@ function deleteTicket(id, fechaConsulta) {
 }
 
 function confirmDelete(id, fechaConsulta) {
-    const ticket = tickets.find(t => t.id === id && (t.fechaConsulta || '') === (fechaConsulta || ''));
-    if (!ticket || !ticket.firebaseKey) {
+    const ticket = tickets.find(t => t.id ===id && (t.fechaConsulta || '') === (fechaConsulta || ''));
+    if (!ticket) {
         showNotification('Error al eliminar la consulta', 'error');
         return;
     }
@@ -1681,7 +1708,7 @@ function confirmDelete(id, fechaConsulta) {
                     renderTickets(currentFilter);
                     
                     // También actualizar el botón activo de filtro
-                                        if (currentFilterBtn) {
+                    if (currentFilterBtn) {
                         document.querySelectorAll('.filter-btn').forEach(btn => {
                             btn.classList.remove('active');
                         });
@@ -1767,7 +1794,7 @@ function showNotification(message, type = 'info') {
                 color: white;
                 font-weight: 500;
                 box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
-                z-index:                1001;
+                z-index: 9999;
                 transform: translateY(100px);
                 opacity: 0;
                 transition: all 0.3s ease;
@@ -2904,5 +2931,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
 
