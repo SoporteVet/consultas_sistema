@@ -1647,7 +1647,7 @@ function deleteTicket(id, fechaConsulta) {
             animalIcon = '<i class="fas fa-cat" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
         case 'conejo':
-            animalIcon = '<i class="fa-solid fa-rabbit" style="font-size: 1.5rem; margin-right: 10px;"></i>';
+            animalIcon = '<i class="fas fa-rabbit" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
         default:
             animalIcon = '<i class="fas fa-paw" style="font-size: 1.5rem; margin-right: 10px;"></i>';
@@ -2930,5 +2930,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }, 100);
         });
     }
+
+  // Sidebar toggle para VISITAS
+  const menuToggle = document.getElementById('menuToggle');
+  const body = document.body;
+  const userRole = sessionStorage.getItem('userRole');
+  if (userRole === 'visitas' && menuToggle) {
+    menuToggle.style.display = 'block';
+    body.classList.add('visitas-role');
+    menuToggle.addEventListener('click', function() {
+      body.classList.toggle('sidebar-hidden');
+    });
+  } else if (menuToggle) {
+    menuToggle.style.display = 'none';
+  }
 });
 
