@@ -13,6 +13,14 @@ function safeAddEventListener(elementId, eventType, handler) {
   }
 }
 
+// Utilidad para obtener la fecha local en formato YYYY-MM-DD
+function getLocalDateString(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
 const crearTicketBtn = document.getElementById('crearTicketBtn');
 const verTicketsBtn = document.getElementById('verTicketsBtn');
 const estadisticasBtn = document.getElementById('estadisticasBtn');
@@ -39,6 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Check authentication before doing anything else
     checkAuth().then(userData => {
+        if (!userData) {
+            // Si no hay datos de usuario, redirigir al login
+            window.location.href = 'home.html'; // O 'login.html' según corresponda
+            return;
+        }
         // Show the UI elements based on user role
         applyRoleBasedUI(userData.role);
         
@@ -75,17 +88,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Establecer fecha actual en el formulario
                 const fechaInput = document.getElementById('fecha');
                 if (fechaInput) {
-                    fechaInput.value = new Date().toISOString().split('T')[0];
+                    fechaInput.value = getLocalDateString();
                 }
                 
                 // Establecer fecha actual en el campo de fecha del horario
-                const today = new Date().toISOString().split('T')[0];
+                const today = getLocalDateString();
                 if (fechaHorario) {
                     fechaHorario.value = today;
                 }
 
                 // --- reset diario del contador de tickets ---
-                const todayDaily = new Date().toISOString().split('T')[0];
+                const todayDaily = getLocalDateString();
                 const todaysTickets = tickets.filter(t => t.fechaConsulta === todayDaily);
                 currentTicketId = todaysTickets.length
                     ? Math.max(...todaysTickets.map(t => t.id)) + 1
@@ -137,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // inicializar con fecha actual y filtrar al cargar
         const filterDateInput = document.getElementById('filterDate');
         if (filterDateInput) {
-            const today = new Date().toISOString().split('T')[0];
+            const today = getLocalDateString();
             filterDateInput.value = today;
             renderTickets('fecha', today);
         }
@@ -246,6 +259,31 @@ function applyRoleBasedUI(role) {
     console.log("UI permissions applied successfully for role:", role);
 }
 
+// Mostrar/ocultar sidebar para visitas
+function setupVisitasSidebarToggle() {
+  const btn = document.getElementById('menuToggleBtn');
+  const sidebar = document.querySelector('.sidebar');
+  const mainContainer = document.querySelector('.main-container');
+  if (!btn || !sidebar || !mainContainer) return;
+
+  // Mostrar solo si es visitas
+  if (sessionStorage.getItem('userRole') === 'visitas') {
+    btn.style.display = 'block';
+    btn.addEventListener('click', function() {
+      mainContainer.classList.toggle('sidebar-hidden');
+      if (mainContainer.classList.contains('sidebar-hidden')) {
+        btn.innerHTML = '<i class="fas fa-angle-double-right"></i> ';
+      } else {
+        btn.innerHTML = '<i class="fas fa-angle-double-left"></i>';
+      }
+    });
+  } else {
+    btn.style.display = 'none';
+  }
+}
+
+document.addEventListener('DOMContentLoaded', setupVisitasSidebarToggle);
+
 // Event listeners
 safeAddEventListener('crearTicketBtn', 'click', () => {
     const section = document.getElementById('crearTicketSection');
@@ -258,11 +296,18 @@ safeAddEventListener('crearTicketBtn', 'click', () => {
 });
 
 safeAddEventListener('verTicketsBtn', 'click', () => {
+    setDefaultFilterDate();
+    // Si el filtro de fecha tiene valor, mostrar solo los tickets de ese día
+    const filterDateInput = document.getElementById('filterDate');
+    if (filterDateInput && filterDateInput.value) {
+        renderTickets('fecha', filterDateInput.value);
+    } else {
+        renderTickets('todos');
+    }
     const section = document.getElementById('verTicketsSection');
     if (section) {
         showSection(section);
         setActiveButton(document.getElementById('verTicketsBtn'));
-        renderTickets();
     } else {
         console.error("Section 'verTicketsSection' not found");
     }
@@ -277,7 +322,7 @@ safeAddEventListener('horarioBtn', 'click', () => {
         // Set today's date in the date field
         const fechaHorario = document.getElementById('fechaHorario');
         if (fechaHorario) {
-            fechaHorario.value = new Date().toISOString().split('T')[0];
+            fechaHorario.value = getLocalDateString();
         }
         // Optionally load today's schedule automatically
         mostrarHorario();
@@ -505,6 +550,7 @@ function addTicket() {
         const mascota = document.getElementById('mascota').value;
         const cedula = document.getElementById('cedula').value;
         const motivo = document.getElementById('motivo').value;
+        const motivoLlegada = document.getElementById('motivoLlegada')?.value || '';
         const estado = document.getElementById('estado').value;
         const tipoMascota = document.getElementById('tipoMascota').value;
         const urgencia = document.getElementById('urgencia').value;
@@ -548,6 +594,7 @@ function addTicket() {
             mascota,
             cedula,
             motivo,
+            motivoLlegada,
             estado,
             tipoMascota,
             urgencia,
@@ -596,7 +643,7 @@ function addTicket() {
                 
                 // Restaurar fecha actual en el formulario
                 if (document.getElementById('fecha')) {
-                    document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+                    document.getElementById('fecha').value = getLocalDateString();
                 }
                 
                 // Quitar indicador de carga
@@ -703,6 +750,21 @@ function renderTickets(filter = 'todos', date = null) {
         
         // Check if user is in 'visitas' role with limited view
         if (!hasPermission('canViewFullTicket')) {
+            // Get animal icon for visitas
+            let animalIcon = '';
+            switch(ticket.tipoMascota) {
+                case 'perro':
+                    animalIcon = '<i class="fas fa-dog animal-icon"></i>';
+                    break;
+                case 'gato':
+                    animalIcon = '<i class="fas fa-cat animal-icon"></i>';
+                    break;
+                case 'conejo':
+                    animalIcon = '<i class="fas fa-paw animal-icon"></i>';
+                    break;
+                default:
+                    animalIcon = '<i class="fas fa-paw animal-icon"></i>';
+            }
             // Get urgency class and icon
             let urgenciaClass = '';
             let urgenciaIcon = '';
@@ -719,7 +781,6 @@ function renderTickets(filter = 'todos', date = null) {
                     urgenciaClass = 'urgencia-normal';
                     urgenciaIcon = 'fa-info-circle';
             }
-            
             // Get status text and class
             let estadoText = '';
             let estadoClass = '';
@@ -745,11 +806,10 @@ function renderTickets(filter = 'todos', date = null) {
                     estadoClass = 'estado-terminado';
                     break;
             }
-            
-            // Simplified view for 'visitas' role with added urgency and status
+            // Simplified view for 'visitas' role with animal icon
             ticketContent = `
                 <div class="ticket-header">
-                    <div class="ticket-title">${ticket.mascota}</div>
+                    <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
                     <div class="ticket-number">#${ticket.id}</div>
                 </div>
                 <div class="ticket-info">
@@ -769,9 +829,7 @@ function renderTickets(filter = 'todos', date = null) {
                 </div>
             `;
         } else {
-            // Full view for other roles
-            // ...existing code for full ticket display...
-            
+            // Full view for other roles, show motivo de consulta debajo del motivo de llegada
             let animalIcon = '';
             switch(ticket.tipoMascota) {
                 case 'perro':
@@ -780,13 +838,12 @@ function renderTickets(filter = 'todos', date = null) {
                 case 'gato':
                     animalIcon = '<i class="fas fa-cat animal-icon"></i>';
                     break;
-                case 'ave':
-                    animalIcon = '<i class="fas fa-dove animal-icon"></i>';
+                case 'conejo':
+                    animalIcon = '<i class="fas fa-paw animal-icon"></i>';
                     break;
                 default:
                     animalIcon = '<i class="fas fa-paw animal-icon"></i>';
             }
-            
             let estadoText = '';
             let estadoClass = '';
             switch(ticket.estado) {
@@ -811,7 +868,6 @@ function renderTickets(filter = 'todos', date = null) {
                     estadoClass = 'estado-terminado';
                     break;
             }
-            
             // Crear clase y texto para el nivel de urgencia
             let urgenciaClass = '';
             let urgenciaIcon = '';
@@ -828,7 +884,6 @@ function renderTickets(filter = 'todos', date = null) {
                     urgenciaClass = 'urgencia-normal';
                     urgenciaIcon = 'fa-info-circle';
             }
-            
             ticketContent = `
                 <div class="ticket-header">
                     <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
@@ -840,7 +895,8 @@ function renderTickets(filter = 'todos', date = null) {
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
-                    <p><i class="fas fa-stethoscope"></i> ${ticket.motivo}</p>
+                    <p><i class="fas fa-stethoscope"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>
+                    <p><i class='fas fa-notes-medical'></i> Motivo de consulta: ${ticket.motivo}</p>
                     ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-day"></i> Fecha: ${formatDate(ticket.fechaConsulta)}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
@@ -1037,8 +1093,8 @@ function mostrarHorario() {
             case 'gato':
                 tipoLabel = 'Gato';
                 break;
-            case 'ave':
-                tipoLabel = 'Ave';
+            case 'conejo':
+                tipoLabel = 'Conejo'; 
                 break;
             default:
                 tipoLabel = 'Otro';
@@ -1102,8 +1158,8 @@ function editTicket(id) {
         case 'gato':
             animalIcon = '<i class="fas fa-cat"></i>';
             break;
-        case 'ave':
-            animalIcon = '<i class="fas fa-dove"></i>';
+        case 'conejo':
+            animalIcon = '<i class="fas fa-paw"></i>';
             break;
         default:
             animalIcon = '<i class="fas fa-paw"></i>';
@@ -1120,6 +1176,7 @@ function editTicket(id) {
         horaConsulta: ticket.horaConsulta || '',
         medicoAtiende: ticket.medicoAtiende || '',
         motivo: ticket.motivo || '',
+        motivoLlegada: ticket.motivoLlegada || '',
         numFactura: ticket.numFactura || '',
         tipoMascota: ticket.tipoMascota || 'otro',
         urgencia: ticket.urgencia || 'normal',
@@ -1150,7 +1207,7 @@ function editTicket(id) {
     const userRole = sessionStorage.getItem('userRole');
     // Contador de ediciones para consulta externa
     if (!ticket.editCount) ticket.editCount = 0;
-    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consulta_externa' || ticket.editCount < 2);
+    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consulta_externa' || ticket.editCount < 5);
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
@@ -1217,6 +1274,11 @@ function editTicket(id) {
                 </div>
                 
                 <div class="form-group">
+                    <label for="editMotivoLlegada">Motivo de Llegada</label>
+                    <textarea id="editMotivoLlegada">${safeTicket.motivoLlegada || ''}</textarea>
+                </div>
+                
+                <div class="form-group">
                     <label for="editMotivo">Motivo de Consulta</label>
                     <textarea id="editMotivo" required>${safeTicket.motivo}</textarea>
                 </div>
@@ -1242,7 +1304,7 @@ function editTicket(id) {
                         <select id="editTipoMascota" required>
                             <option value="perro" ${safeTicket.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
                             <option value="gato" ${safeTicket.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
-                            <option value="ave" ${safeTicket.tipoMascota === 'ave' ? 'selected' : ''}>Ave</option>
+                            <option value="conejo" ${safeTicket.tipoMascota === 'conejo' ? 'selected' : ''}>Conejo</option>
                             <option value="otro" ${safeTicket.tipoMascota === 'otro' ? 'selected' : ''}>Otro</option>
                         </select>
                     </div>
@@ -1312,6 +1374,9 @@ function editTicket(id) {
                             <option value="Tec. Johnny Chacón" ${asistenteSeleccionado === "Tec. Johnny Chacón" ? 'selected' : ''}>Tec. Johnny Chacón</option>
                             <option value="Tec. Gabriela Zuñiga" ${asistenteSeleccionado === "Tec. Gabriela Zuñiga" ? 'selected' : ''}>Tec. Gabriela Zuñiga</option>
                             <option value="Tec. Indra Perez" ${asistenteSeleccionado === "Tec. Indra Perez" ? 'selected' : ''}>Tec. Indra Perez</option>
+                            <option value="Tec. Randy Arias" ${asistenteSeleccionado === "Tec. Randy Arias" ? 'selected' : ''}>Tec. Randy Arias</option>
+                            <option value="Tec. Yancy Picado" ${asistenteSeleccionado === "Tec. Yancy Picado" ? 'selected' : ''}>Tec. Yancy Picado</option>
+                            <option value="Tec. Maria Fernanda"${asistenteSeleccionado === "Tec. Maria Fernanda" ? 'selected' : ''}>Tec. Maria Fernanda</option>
                         </select>
                     </div>
                 </div>
@@ -1358,6 +1423,7 @@ function editTicket(id) {
             horaAtencion: document.getElementById('editHoraAtencion').value,
             medicoAtiende: medicoAtiende,
             motivo: document.getElementById('editMotivo').value,
+            motivoLlegada: document.getElementById('editMotivoLlegada').value,
             estado: document.getElementById('editEstado').value,
             tipoMascota: document.getElementById('editTipoMascota').value,
             urgencia: document.getElementById('editUrgencia').value,
@@ -1372,7 +1438,7 @@ function editTicket(id) {
     });
     
     // Deshabilitar el botón de guardar si se alcanzó el límite de ediciones
-    if (userRole === 'consulta_externa' && ticket.editCount >= 2) {
+    if (userRole === 'consulta_externa' && ticket.editCount >= 5) {
         const saveBtn = modal.querySelector('.btn-save');
         if (saveBtn) {
             saveBtn.disabled = true;
@@ -1560,7 +1626,8 @@ function deleteTicket(id) {
         case 'gato':
             animalIcon = '<i class="fas fa-cat" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
-        case 'ave':
+        
+        case 'conejo':
             animalIcon = '<i class="fas fa-dove" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
         default:
@@ -1668,26 +1735,13 @@ function initAuth() {
   return new Promise((resolve, reject) => {
     console.log("Initializing auth...");
     
-    // Check if the user is already authenticated first
     firebase.auth().onAuthStateChanged((user) => {
       if (user) {
         console.log("User already authenticated:", user.uid);
         resolve(user);
       } else {
-        console.log("No active user, signing in anonymously...");
-        // Sign in anonymously with proper variable scoping
-        firebase.auth().signInAnonymously()
-          .then((credential) => {
-            // Properly scope userCredential within this block
-            const userCredential = credential.user;
-            console.log("Anonymous auth successful:", userCredential.uid);
-            resolve(userCredential);
-          })
-          .catch((error) => {
-            console.error("Authentication error:", error);
-            showNotification('Error al conectar con la base de datos', 'error');
-            reject(error);
-          });
+        // Redirigir al login si no hay usuario autenticado
+        window.location.href = 'home.html'; // Cambia a 'login.html' si tu login es ese archivo
       }
     });
   });
@@ -1905,7 +1959,8 @@ function exportToCSV(data, filename) {
         'Estado', 
         'Urgencia',
         'Factura',
-        'Motivo'
+        'Motivo de Llegada',
+        'Motivo de Consulta'
     ];
     
     // Crear las filas de datos
@@ -1922,17 +1977,20 @@ function exportToCSV(data, filename) {
         getEstadoLabel(ticket.estado),
         (ticket.urgencia || '').toUpperCase(),
         ticket.numFactura || '',
-        ticket.motivo
+        ticket.motivoLlegada || '',
+        ticket.motivo || ''
     ]);
     
-    // Combinar encabezados y filas
+    // Usar punto y coma como separador y agregar BOM para UTF-8
+    const separator = ';';
+    const bom = '\uFEFF';
     const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(','))
+        headers.join(separator),
+        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(separator))
     ].join('\n');
     
-    // Crear blob y enlace de descarga
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    // Crear blob y enlace de descarga con BOM
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
@@ -2045,7 +2103,7 @@ function getTipoMascotaLabel(tipo) {
     const tipos = {
         'perro': 'Perro',
         'gato': 'Gato',
-        'ave': 'Ave',
+        'conejo': 'Conejo',
         'otro': 'Otro'
     };
     return tipos[tipo] || tipo;
@@ -2331,7 +2389,7 @@ function generarEstadisticasPersonalServicios() {
         }
         
         // Split in case of multiple people
-        const personas = ticket.medicoAtiene.split(',').map(p => p.trim());
+        const personas = ticket.medicoAtiende.split(',').map(p => p.trim());
         
         personas.forEach(persona => {
             if (!persona) return;
@@ -2825,3 +2883,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Función para obtener la fecha actual en formato yyyy-mm-dd en zona horaria de Costa Rica
+function getCostaRicaToday() {
+    // Costa Rica es UTC-6 todo el año
+    const now = new Date();
+    // Obtener la hora UTC y restar 6 horas
+    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+    const crTime = new Date(utc - (6 * 60 * 60000));
+    // Formato yyyy-mm-dd
+    const yyyy = crTime.getFullYear();
+    const mm = String(crTime.getMonth() + 1).padStart(2, '0');
+    const dd = String(crTime.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+// Mostrar la fecha de hoy por defecto en el filtro de fecha de ver consultas
+function setDefaultFilterDate() {
+    const filterDateInput = document.getElementById('filterDate');
+    if (filterDateInput && !filterDateInput.value) {
+        filterDateInput.value = getCostaRicaToday();
+    }
+}

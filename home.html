@@ -74,14 +74,6 @@
         <div id="error-message" class="error-message"></div>
         <button type="submit" class="btn-login"><i class="fas fa-sign-in-alt"></i> Iniciar sesión</button>
       </form>
-      <div class="test-accounts-info">
-        <p style="margin-top: 20px; font-size: 0.9rem; color: #666; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-          <strong>Cuentas de prueba:</strong><br>
-          Admin: admin@veterinaria.com / password123<br>
-          Recepción: recepcion@veterinaria.com / password123<br>
-          Visitas: visitas@veterinaria.com / password123
-        </p>
-      </div>
     </div>
   </div>
 
@@ -252,12 +244,13 @@
     // Function to create test users for development purposes
     function createTestUsers() {
       const testUsers = [
-        { email: 'admin@veterinaria.com', password: 'password123', role: 'admin', name: 'Administrador' },
-        { email: 'recepcion@veterinaria.com', password: 'password123', role: 'recepcion', name: 'Recepción' },
-        { email: 'visitas@veterinaria.com', password: 'password123', role: 'visitas', name: 'Visitas' },
-        { email: 'consultaexterna@veterinaria.com', password: 'password123', role: 'consulta_externa', name: 'Consulta Externa' },
-        { email: 'quirofano@veterinaria.com', password: 'password123', role: 'quirofano', name: 'Quirofano' },
-        { email: 'internos@veterinaria.com', password: 'password123', role: 'internos', name: 'Internos' }
+        { email: 'admin@veterinaria.com', password: 'Adm!n#Vet_2025$Xy', role: 'admin', name: 'Administrador' },
+        { email: 'recepcion@veterinaria.com', password: 'Rec3pC!on$2025@Lp', role: 'recepcion', name: 'Recepción' },
+        { email: 'visitas@veterinaria.com', password: 'V1s!t@s*2025#Qw', role: 'visitas', name: 'Visitas' },
+        { email: 'consultaexterna@veterinaria.com', password: 'C0nsuLt@Ext!2025%Zz', role: 'consulta_externa', name: 'Consulta Externa' },
+        { email: 'quirofano@veterinaria.com', password: 'Qu!r0f@n0%2025*Rt', role: 'quirofano', name: 'Quirofano' },
+        { email: 'internos@veterinaria.com', password: '1nt3rn0s@2025!Uv', role: 'internos', name: 'Internos' },
+        { email: 'laboratorio@veterinaria.com', password: 'Lab0r@t0r!o2025#Xx', role: 'laboratorio', name: 'Laboratorio' }
       ];
       
       // Only attempt this if Firebase is properly initialized

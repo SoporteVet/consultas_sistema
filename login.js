@@ -144,8 +144,12 @@ document.addEventListener('DOMContentLoaded', function() {
         return;
       }
       
-      // Sign in with Firebase Auth
-      firebase.auth().signInWithEmailAndPassword(email, password)
+      // USAR PERSISTENCIA NONE PARA SESIÓN POR PESTAÑA
+      firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE)
+        .then(() => {
+          // Sign in with Firebase Auth SOLO en esta pestaña
+          return firebase.auth().signInWithEmailAndPassword(email, password);
+        })
         .then((userCredential) => {
           clearTimeout(loginTimeout); // Clear timeout
           
@@ -215,22 +219,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
   }
-
-  // Add helper text for development
-  const formContainer = document.querySelector('.login-card');
-  if (formContainer) {
-    const testAccountsInfo = document.createElement('div');
-    testAccountsInfo.className = 'test-accounts-info';
-    testAccountsInfo.innerHTML = `
-      <p style="margin-top: 20px; font-size: 0.9rem; color: #666; text-align: center; border-top: 1px solid #eee; padding-top: 15px;">
-        <strong>Cuentas de prueba:</strong><br>
-        Admin: admin@veterinaria.com / password123<br>
-        Recepción: recepcion@veterinaria.com / password123<br>
-        Visitas: visitas@veterinaria.com / password123
-      </p>
-    `;
-    formContainer.appendChild(testAccountsInfo);
-  }
   
   // Helper function to show error message
   function showError(message) {
@@ -256,12 +244,13 @@ document.addEventListener('DOMContentLoaded', function() {
 // Function to create test users for development purposes
 function createTestUsers() {
   const testUsers = [
-    { email: 'admin@veterinaria.com', password: 'password123', role: 'admin', name: 'Administrador' },
-    { email: 'recepcion@veterinaria.com', password: 'password123', role: 'recepcion', name: 'Recepción' },
-    { email: 'visitas@veterinaria.com', password: 'password123', role: 'visitas', name: 'Visitas' },
-    { email: 'consultaexterna@veterinaria.com', password: 'password123', role: 'consultaexterna', name: 'Consulta Externa' },
-    { email: 'internos@veterinaria.com', password: 'password123', role: 'internos', name: 'Internos' },
-    { email: 'quirofano@veterinaria.com', password: 'password123', role: 'quirofano', name: 'Quirófano' },
+    { email: 'admin@veterinaria.com', password: 'Adm!n#Vet_2025$Xy', role: 'admin', name: 'Administrador' },
+    { email: 'recepcion@veterinaria.com', password: 'Rec3pC!on$2025@Lp', role: 'recepcion', name: 'Recepción' },
+    { email: 'visitas@veterinaria.com', password: 'V1s!t@s*2025#Qw', role: 'visitas', name: 'Visitas' },
+    { email: 'consultaexterna@veterinaria.com', password: 'C0nsuLt@Ext!2025%Zz', role: 'consultaexterna', name: 'Consulta Externa' },
+    { email: 'internos@veterinaria.com', password: '1nt3rn0s@2025!Uv', role: 'internos', name: 'Internos' },
+    { email: 'quirofano@veterinaria.com', password: 'Qu!r0f@n0%2025*Rt', role: 'quirofano', name: 'Quirófano' },
+    { email: 'laboratorio@veterinaria.com', password: 'Lab0r@t0r!o2025#Xx', role: 'laboratorio', name: 'Laboratorio' },
   ];
 
   // Only attempt this if Firebase is properly initialized

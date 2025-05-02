@@ -13,6 +13,10 @@
 <button id="menuToggle" class="menu-toggle" title="Mostrar/Ocultar menú" style="display:none;">
   <i class="fas fa-bars"></i>
 </button>
+  <!-- Botón para ocultar sidebar solo para visitas -->
+  <button id="menuToggleBtn" class="menu-toggle" style="display:none;">
+    <i class="fas fa-angle-double-left"></i> 
+  </button>
   <div class="main-container">
     <!-- Sidebar con navegación -->
     <aside class="sidebar">
@@ -57,106 +61,56 @@
         <h2><i class="fas fa-paw"></i> Crear Consulta</h2>
         <div class="form-container">
           <form id="ticketForm">
-            <div class="form-group">
-              <label for="nombre">Nombre del Cliente</label>
-              <input type="text" id="nombre" required>
-            </div>
-            
-            <div class="form-group">
-              <label for="mascota">Nombre de la Mascota</label>
-              <input type="text" id="mascota" required>
-            </div>
-
-            <div class="form-group">
-              <label for="idPaciente">Número ID del paciente</label>
-              <input type="text" id="idPaciente" placeholder="ID del paciente" required>
-            </div>
-            
-            <div class="form-group">
-              <label for="cedula">Cédula</label>
-              <input type="text" id="cedula" required>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="nombre">Nombre del Cliente</label>
+                <input type="text" id="nombre" required>
+              </div>
+              <div class="form-group">
+                <label for="cedula">Cédula</label>
+                <input type="text" id="cedula" required>
+              </div>
             </div>
 
-            <div class="form-group">
-              <label for="fecha">Fecha de Consulta</label>
-              <input type="date" id="fecha" required>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="mascota">Nombre de la Mascota</label>
+                <input type="text" id="mascota" required>
+              </div>
+              <div class="form-group">
+                <label for="tipoMascota">Tipo de Mascota</label>
+                <select id="tipoMascota" required>
+                  <option value="perro">Perro</option>
+                  <option value="gato">Gato</option>
+                  <option value="conejo">Conejo</option>
+                  <option value="otro">Otro</option>
+                </select>
+                <span id="conejoImg" style="display:none; font-size:40px; margin-top:8px;">🐇</span>
+              </div>
             </div>
 
-            <div class="form-group">
-              <label for="horaLlegada">Hora de Llegada</label>
-              <input type="time" id="horaLlegada" required>
-            </div>
-            
-            <div class="form-group">
-              <label for="hora">Hora de Consulta</label>
-              <input type="time" id="hora" required>
-            </div>
-            
-
-
-            <div class="form-group">
-              <label for="motivo">Motivo de Consulta</label>
-              <textarea id="motivo" placeholder="Describa el motivo de la consulta" required></textarea>
-            </div>
-            <div class="form-group">
-              <label for="motivoLlegada">Motivo de Llegada</label>
-              <textarea id="motivoLlegada" placeholder="Describa el motivo de llegada" required></textarea>
-            </div>
-            
-            <div class="form-group">
-              <label for="estado">Estado</label>
-              <select id="estado" required>
-                <option value="espera">En Sala de Espera</option>
-                <option value="consultorio1">Consultorio 1</option>
-                <option value="consultorio2">Consultorio 2</option>
-                <option value="consultorio3">Consultorio 3</option>
-                <option value="consultorio4">Consultorio 4</option>
-                <option value="consultorio5">Consultorio 5</option>
-                <option value="terminado">Consulta Terminada</option>
-              </select>
-            </div>
-            
-            <div class="form-group">
-              <label for="tipoMascota">Tipo de Mascota</label>
-              <select id="tipoMascota" required>
-                <option value="perro">Perro</option>
-                <option value="gato">Gato</option>
-                <option value="conejo">Conejo</option>
-                <option value="otro">Otro</option>
-              </select>
-              <span id="conejoImg" style="display:none; font-size:40px; margin-top:8px;">🐇</span>
-            
-            <div class="form-group">
-              <label for="urgencia">Nivel de Urgencia</label>
-              <select id="urgencia" required>
-                <option value="normal">Normal</option>
-                <option value="media">Media</option>
-                <option value="alta">Alta</option>
-              </select>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="idPaciente">Número ID del paciente</label>
+                <input type="text" id="idPaciente" placeholder="ID del paciente" required>
+              </div>
+              <div class="form-group">
+                <label for="fecha">Fecha de Consulta</label>
+                <input type="date" id="fecha" required>
+              </div>
             </div>
 
-            <!-- Agregar después del campo de urgencia y antes del número de factura -->
-            <div class="form-group">
-              <label for="tipoServicio">Tipo de Servicio</label>
-              <select id="tipoServicio" required>
-                <option value="consulta">Consulta general</option>
-                <option value="revaloracion">Revaloración</option>
-                <option value="retiroHilos">Retiro de hilos</option>
-                <option value="rayosX">Rayos X</option>
-                <option value="desparasitacion">Desparasitación</option>
-                <option value="inyectable">Inyectables</option>
-                <option value="corteUnas">Corte de uñas</option>
-                <option value="emergencia">Emergencia</option>
-                <option value="tomaMuestras">Toma de muestras</option>
-                <option value="tests">Tests</option>
-                <option value="hemograma">Hemograma</option>
-                <option value="eutanasia">Eutanasia</option>
-                <option value="quitarPuntos">Quitar puntos</option>
-                <option value="otro">Otro</option>
-              </select>
+            <div class="form-row">
+              <div class="form-group">
+                <label for="horaLlegada">Hora de Llegada</label>
+                <input type="time" id="horaLlegada" required>
+              </div>
+              <div class="form-group">
+                <label for="hora">Hora de Consulta</label>
+                <input type="time" id="hora" required>
+              </div>
             </div>
 
-            <!-- Add these form groups for doctor and assistant selection after the fields for patient information -->
             <div class="form-row">
               <div class="form-group">
                 <label for="doctorAtiende"><i class="fas fa-user-md"></i> Doctor que atiende</label>
@@ -192,16 +146,67 @@
               </div>
             </div>
 
-            <div class="form-group">
-              <label for="numFactura">Número de factura</label>
-              <input type="text" id="numFactura" placeholder="Número de factura">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="estado">Estado</label>
+                <select id="estado" required>
+                  <option value="espera">En Sala de Espera</option>
+                  <option value="consultorio1">Consultorio 1</option>
+                  <option value="consultorio2">Consultorio 2</option>
+                  <option value="consultorio3">Consultorio 3</option>
+                  <option value="consultorio4">Consultorio 4</option>
+                  <option value="consultorio5">Consultorio 5</option>
+                  <option value="terminado">Consulta Terminada</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="urgencia">Nivel de Urgencia</label>
+                <select id="urgencia" required>
+                  <option value="normal">Normal</option>
+                  <option value="media">Media</option>
+                  <option value="alta">Alta</option>
+                </select>
+              </div>
             </div>
-            
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="tipoServicio">Tipo de Servicio</label>
+                <select id="tipoServicio" required>
+                  <option value="consulta">Consulta general</option>
+                  <option value="revaloracion">Revaloración</option>
+                  <option value="retiroHilos">Retiro de hilos</option>
+                  <option value="rayosX">Rayos X</option>
+                  <option value="desparasitacion">Desparasitación</option>
+                  <option value="inyectable">Inyectables</option>
+                  <option value="corteUnas">Corte de uñas</option>
+                  <option value="emergencia">Emergencia</option>
+                  <option value="tomaMuestras">Toma de muestras</option>
+                  <option value="tests">Tests</option>
+                  <option value="hemograma">Hemograma</option>
+                  <option value="eutanasia">Eutanasia</option>
+                  <option value="quitarPuntos">Quitar puntos</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="numFactura">Número de factura</label>
+                <input type="text" id="numFactura" placeholder="Número de factura">
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="motivoLlegada">Motivo de Llegada</label>
+              <textarea id="motivoLlegada" placeholder="Describa el motivo de llegada" required></textarea>
+            </div>
+            <div class="form-group">
+              <label for="motivo">Motivo de Consulta</label>
+              <textarea id="motivo" placeholder="Describa el motivo de la consulta" required></textarea>
+            </div>
             <div class="form-group">
               <label for="porCobrar">Por Cobrar</label>
               <input type="text" id="porCobrar" placeholder="Introduzca lo que hay que cobrar al cliente">
             </div>
-            
             <button type="submit" class="btn-submit"><i class="fas fa-ticket-alt"></i> Agregar Consulta</button>
           </form>
         </div>
@@ -503,6 +508,50 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+
+// Navegación con flechas en el formulario de tickets
+(function() {
+  const form = document.getElementById('ticketForm');
+  if (!form) return;
+  // Selecciona todos los inputs, selects y textareas visibles en orden
+  const getFields = () => Array.from(form.querySelectorAll('input, select, textarea')).filter(el => el.offsetParent !== null && !el.disabled);
+
+  form.addEventListener('keydown', function(e) {
+    const fields = getFields();
+    const idx = fields.indexOf(document.activeElement);
+    if (idx === -1) return;
+    // Columnas por fila (ajustar si cambias el diseño)
+    const cols = 2;
+    // Flecha abajo
+    if (e.key === 'ArrowDown') {
+      if (idx + cols < fields.length) {
+        fields[idx + cols].focus();
+        e.preventDefault();
+      }
+    }
+    // Flecha arriba
+    else if (e.key === 'ArrowUp') {
+      if (idx - cols >= 0) {
+        fields[idx - cols].focus();
+        e.preventDefault();
+      }
+    }
+    // Flecha derecha
+    else if (e.key === 'ArrowRight') {
+      if ((idx + 1) % cols !== 0 && idx + 1 < fields.length) {
+        fields[idx + 1].focus();
+        e.preventDefault();
+      }
+    }
+    // Flecha izquierda
+    else if (e.key === 'ArrowLeft') {
+      if (idx % cols !== 0 && idx - 1 >= 0) {
+        fields[idx - 1].focus();
+        e.preventDefault();
+      }
+    }
+  });
+})();
 </script>
 </body>
 </html>

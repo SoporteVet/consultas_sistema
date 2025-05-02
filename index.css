@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
+
 :root {
   --primary-color: #4285f4;
   --secondary-color: #34a853;
@@ -19,6 +21,10 @@
   padding: 0;
   box-sizing: border-box;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body, html {
+  font-family: 'Poppins', Arial, Helvetica, sans-serif !important;
 }
 
 body {
@@ -1846,7 +1852,7 @@ body.visitas-role .ticket-header {
   position: absolute;
   top: 10px;
   left: 20px;
-  z-index: 10;
+  z-index: 1001;
   background: var(--primary-color);
   color: white;
   border: none;
@@ -1867,6 +1873,25 @@ body.visitas-role .menu-toggle {
 
 body.visitas-role .sidebar {
   transition: margin-left 0.3s, width 0.3s;
+}
+body.visitas-role .main-container.sidebar-hidden .sidebar {
+  display: none !important;
+}
+body.visitas-role .main-container.sidebar-hidden .content {
+  margin-left: 0 !important;
+  width: 100% !important;
+  max-width: 100vw;
+  transition: width 0.3s, margin-left 0.3s;
+}
+body.visitas-role .main-container {
+  transition: all 0.3s;
+}
+@media (max-width: 980px) {
+  body.visitas-role .main-container.sidebar-hidden .sidebar {
+    left: -280px !important;
+    width: 0 !important;
+    min-width: 0 !important;
+  }
 }
 body.visitas-role.sidebar-hidden .sidebar {
   margin-left: -40px;

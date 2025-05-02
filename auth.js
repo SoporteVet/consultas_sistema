@@ -37,8 +37,8 @@ const PERMISSIONS = {
   },
   quirofano: {
     canViewTickets: true,
-    canCreateTickets: false,
-    canEditTickets: false,
+    canCreateTickets: true,
+    canEditTickets: true,
     canDeleteTickets: false,
     canViewStats: false,
     canManageBackup: false,
@@ -48,8 +48,8 @@ const PERMISSIONS = {
   },
   internos: {
     canViewTickets: true,
-    canCreateTickets: false,
-    canEditTickets: false,
+    canCreateTickets: true,
+    canEditTickets: true,
     canDeleteTickets: false,
     canViewStats: false,
     canManageBackup: false,
@@ -113,7 +113,7 @@ function checkAuth() {
     // If on login page, prevent checking auth to avoid redirects
     if (onLoginPage) {
       console.log("On login page, skipping auth check");
-      reject(new Error('On login page'));
+      resolve(null); // Cambiado: resolver en vez de rechazar para evitar error
       return;
     }
     
