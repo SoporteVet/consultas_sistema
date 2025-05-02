@@ -24,9 +24,11 @@ function getLocalDateString(date = new Date()) {
 const crearTicketBtn = document.getElementById('crearTicketBtn');
 const verTicketsBtn = document.getElementById('verTicketsBtn');
 const estadisticasBtn = document.getElementById('estadisticasBtn');
+const edicionesBtn = document.getElementById('edicionesBtn');
 const crearTicketSection = document.getElementById('crearTicketSection');
 const verTicketsSection = document.getElementById('verTicketsSection');
 const estadisticasSection = document.getElementById('estadisticasSection');
+const edicionesSection = document.getElementById('edicionesSection');
 const ticketForm = document.getElementById('ticketForm');
 const ticketContainer = document.getElementById('ticketContainer');
 const filterBtns = document.querySelectorAll('.filter-btn');
@@ -106,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 // mostrar sólo tickets del día al cargar
                 renderTickets('fecha', todayDaily);
-                updateStats();
+                updateStatsGlobal();
             }).catch(err => {
                 console.error("Error cargando tickets:", err);
                 hideLoading();
@@ -294,6 +296,17 @@ safeAddEventListener('crearTicketBtn', 'click', () => {
         console.error("Section 'crearTicketSection' not found");
     }
 });
+function setDefaultFilterDate() {
+    const filterDateInput = document.getElementById('filterDate');
+    if (filterDateInput && !filterDateInput.value) {
+        // Usa la fecha de hoy en formato yyyy-mm-dd
+        const today = new Date();
+        const yyyy = today.getFullYear();
+        const mm = String(today.getMonth() + 1).padStart(2, '0');
+        const dd = String(today.getDate()).padStart(2, '0');
+        filterDateInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+}
 
 safeAddEventListener('verTicketsBtn', 'click', () => {
     setDefaultFilterDate();
@@ -336,7 +349,7 @@ safeAddEventListener('estadisticasBtn', 'click', () => {
     if (section) {
         showSection(section);
         setActiveButton(document.getElementById('estadisticasBtn'));
-        updateStats();
+        updateStatsGlobal();
         
         // Asegurarnos que se vea la sección de tiempo de espera
         const waitTimeSection = document.querySelector('.wait-time-statistics');
@@ -346,16 +359,60 @@ safeAddEventListener('estadisticasBtn', 'click', () => {
         
         // Initialize personnel statistics 
         setTimeout(() => {
-            llenarSelectorPersonal();
-            generarEstadisticasPersonalServicios();
+            llenarSelectorPersonal(tickets);
+            renderizarGraficosPersonalServicios(tickets);
             
             // Regenerar el gráfico de tiempo de espera para asegurar que se muestre
-            calculateWaitTimeStats();
+            renderizarGraficosTiempoEspera(tickets);
         }, 200);
     } else {
         console.error("Section 'estadisticasSection' not found");
     }
 });
+
+safeAddEventListener('edicionesBtn', 'click', () => {
+    showSectionById('edicionesSection');
+    cargarHistorialEdiciones();
+    setActiveButton(document.getElementById('edicionesBtn'));
+});
+
+function cargarHistorialEdiciones() {
+    const tbody = document.getElementById('edicionesTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
+    if (typeof firebase === 'undefined' || !firebase.database) {
+        tbody.innerHTML = '<tr><td colspan="6">No se puede conectar a la base de datos</td></tr>';
+        return;
+    }
+    firebase.database().ref('ticket_edits').orderByChild('fecha').once('value', function(snapshot) {
+        const edits = [];
+        snapshot.forEach(child => {
+            edits.push(child.val());
+        });
+        // Ordenar por fecha y hora descendente
+        edits.sort((a, b) => (b.fecha + ' ' + b.hora).localeCompare(a.fecha + ' ' + a.hora));
+        if (edits.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6">No hay ediciones registradas</td></tr>';
+            return;
+        }
+        tbody.innerHTML = '';
+        edits.forEach(edit => {
+            const cambios = Object.entries(edit.cambios || {}).map(([campo, val]) =>
+                `<div><strong>${campo}:</strong> <span style='color:#b00'>${val.antes}</span> → <span style='color:#080'>${val.despues}</span></div>`
+            ).join('');
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${edit.fecha}</td>
+                <td>${edit.hora}</td>
+                <td>${edit.usuario}</td>
+                <td>${edit.email}</td>
+                <td>${edit.idTicket}</td>
+                <td>${cambios}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    });
+}
 
 if (ticketForm) {
     ticketForm.addEventListener('submit', (e) => {
@@ -500,10 +557,10 @@ function loadTickets() {
                 const currentFilterBtn = document.querySelector('.filter-btn.active');
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
                 renderTickets(currentFilter);
-                updateStats();
+                updateStatsGlobal();
                 // Real-time UI update for active section
                 if (horarioSection.classList.contains('active')) mostrarHorario();
-                if (estadisticasSection.classList.contains('active')) generarEstadisticasPersonalServicios();
+                if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
         });
         
@@ -519,9 +576,9 @@ function loadTickets() {
                 const currentFilterBtn = document.querySelector('.filter-btn.active');
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
                 renderTickets(currentFilter);
-                updateStats();
+                updateStatsGlobal();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
-                if (estadisticasSection.classList.contains('active')) generarEstadisticasPersonalServicios();
+                if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
         });
         
@@ -533,9 +590,9 @@ function loadTickets() {
                 const currentFilterBtn = document.querySelector('.filter-btn.active');
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
                 renderTickets(currentFilter);
-                updateStats();
+                updateStatsGlobal();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
-                if (estadisticasSection.classList.contains('active')) generarEstadisticasPersonalServicios();
+                if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
         });
     });
@@ -1129,6 +1186,234 @@ function mostrarHorario() {
         horarioBody.appendChild(row);
     });
 }
+function exportarDia() {
+    // Check permissions
+    if (!hasPermission('canExportData')) {
+        showNotification('No tienes permiso para exportar datos', 'error');
+        return;
+    }
+    
+    const fecha = fechaHorario.value;
+    
+    // Filtrar tickets por fecha
+    const ticketsDelDia = tickets.filter(ticket => {
+        if (ticket.fechaConsulta) {
+            return ticket.fechaConsulta === fecha;
+        }
+        return new Date(ticket.fecha).toISOString().split('T')[0] === fecha;
+    });
+    
+    if (ticketsDelDia.length === 0) {
+        showNotification('No hay consultas para la fecha seleccionada', 'error');
+        return;
+    }
+    
+    // Generar el CSV
+    exportToCSV(ticketsDelDia, `consultas_${fecha}`);
+}
+
+function getTipoMascotaLabel(tipo) {
+    const tipos = {
+        'perro': 'Perro',
+        'gato': 'Gato',
+        'conejo': 'Conejo',
+        'otro': 'Otro'
+    };
+    return tipos[tipo] || tipo || '';
+}
+function getEstadoLabel(estado) {
+    const estados = {
+        'espera': 'En sala de espera',
+        'consultorio1': 'Consultorio 1',
+        'consultorio2': 'Consultorio 2',
+        'consultorio3': 'Consultorio 3',
+        'consultorio4': 'Consultorio 4',
+        'consultorio5': 'Consultorio 5',
+        'terminado': 'Consulta terminada'
+    };
+    return estados[estado] || estado || '';
+}
+function exportarMes() {
+    const fecha = fechaHorario.value;
+const [year, month] = fecha.split('-');
+
+// Filtrar tickets del mes seleccionado
+const ticketsDelMes = tickets.filter(ticket => {
+        let ticketDate;
+        if (ticket.fechaConsulta) {
+            ticketDate = new Date(ticket.fechaConsulta);
+        } else {
+            ticketDate = new Date(ticket.fecha);
+        }
+        
+        return ticketDate.getFullYear() === parseInt(year) && 
+               ticketDate.getMonth() === parseInt(month) - 1;
+    });
+    
+    if (ticketsDelMes.length === 0) {
+        showNotification('No hay consultas para el mes seleccionado', 'error');
+        return;
+    }
+    
+    // Generar el CSV
+    exportToCSV(ticketsDelMes, `consultas_${year}_${month}`);
+}
+
+function exportToCSV(data, filename) {
+    // Encabezados del CSV
+    const headers = [
+        'ID', 
+        'Cliente', 
+        'Mascota', 
+        'Tipo', 
+        'Cédula', 
+        'ID Paciente',
+        'Médico',
+        'Fecha', 
+        'Hora', 
+        'Estado', 
+        'Urgencia',
+        'Factura',
+        'Motivo de Llegada',
+        'Motivo de Consulta',
+        'Por Cobrar'
+    ];
+    
+    // Crear las filas de datos
+    const rows = data.map(ticket => [
+        ticket.id,
+        ticket.nombre,
+        ticket.mascota,
+        getTipoMascotaLabel(ticket.tipoMascota),
+        ticket.cedula,
+        ticket.idPaciente || '',
+        ticket.medicoAtiende || '',
+        ticket.fechaConsulta || new Date(ticket.fecha).toISOString().split('T')[0],
+        ticket.horaConsulta || ticket.horaCreacion,
+        getEstadoLabel(ticket.estado),
+        (ticket.urgencia || '').toUpperCase(),
+        ticket.numFactura || '',
+        ticket.motivoLlegada || '',
+        ticket.motivo || '',
+        ticket.porCobrar || ''
+    ]);
+    
+    // Usar punto y coma como separador y agregar BOM para UTF-8
+    const separator = ';';
+    const bom = '\uFEFF';
+    const csvContent = [
+        headers.join(separator),
+        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(separator))
+    ].join('\n');
+    
+    // Crear blob y enlace de descarga con BOM
+    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${filename}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    showNotification('Archivo CSV generado correctamente', 'success');
+}
+
+function exportarGoogle() {
+    showNotification('Para exportar a Google Sheets, configura la API en producción', 'info');
+    
+    // Opción alternativa: abrir Google Sheets en nueva pestaña
+    window.open('https://docs.google.com/spreadsheets', '_blank');
+}
+
+function backupData() {
+    // Crear una copia sin las claves de Firebase para el backup
+    const ticketsBackup = tickets.map(ticket => {
+        const { firebaseKey, ...ticketData } = ticket;
+        return ticketData;
+    });
+    
+    const backup = {
+        tickets: ticketsBackup,
+        currentTicketId: currentTicketId,
+        timestamp: new Date().toISOString(),
+        version: '1.0'
+    };
+    
+    const jsonString = JSON.stringify(backup);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `backup_veterinaria_${new Date().toISOString().split('T')[0]}.json`;
+    link.click();
+    
+    URL.revokeObjectURL(url);
+    showNotification('Respaldo generado correctamente', 'success');
+}
+
+function cleanOldData() {
+    if (!confirm('¿Estás seguro de limpiar las consultas terminadas con más de 3 meses de antigüedad? Esta acción no se puede deshacer.')) {
+        return;
+    }
+    
+    const tresMesesAtras = new Date();
+    tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
+    
+    // Mostrar indicador de carga
+    showLoading();
+    
+    // Obtener tickets a eliminar (terminados con más de 3 meses)
+    const ticketsToDelete = tickets.filter(ticket => {
+        if (ticket.estado !== 'terminado') {
+            return false; // Mantener tickets que no estén terminados
+        }
+        
+        // Para tickets terminados, verificar la fecha
+        const fechaTicket = new Date(ticket.fecha);
+        return fechaTicket < tresMesesAtras;
+    });
+    
+    // Contador para operaciones pendientes
+    let pendingOperations = ticketsToDelete.length;
+    
+    if (pendingOperations === 0) {
+        hideLoading();
+        showNotification('No hay consultas antiguas para eliminar', 'info');
+        return;
+    }
+    
+    // Eliminar cada ticket en Firebase
+    ticketsToDelete.forEach(ticket => {
+        if (!ticket.firebaseKey) {
+            pendingOperations--;
+            if (pendingOperations === 0) {
+                hideLoading();
+                showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
+            }
+            return;
+        }
+        
+        ticketsRef.child(ticket.firebaseKey).remove()
+            .then(() => {
+                pendingOperations--;
+                if (pendingOperations === 0) {
+                    hideLoading();
+                    showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
+                }
+            })
+            .catch(error => {
+                console.error("Error eliminando ticket antiguo:", error);
+                pendingOperations--;
+                if (pendingOperations === 0) {
+                    hideLoading();
+                    showNotification('Hubo errores al eliminar algunas consultas antiguas', 'error');
+                }
+            });
+    });
+}
 
 function editTicket(id) {
     const ticket = tickets.find(t => t.id === id);
@@ -1449,6 +1734,17 @@ function editTicket(id) {
     }
 }
 
+function getTicketDiff(oldTicket, newTicket) {
+    const diff = {};
+    Object.keys(newTicket).forEach(key => {
+        if (key === 'firebaseKey') return;
+        if (oldTicket[key] !== newTicket[key]) {
+            diff[key] = { antes: oldTicket[key] || '', despues: newTicket[key] || '' };
+        }
+    });
+    return diff;
+}
+
 function saveEditedTicket(ticket) {
     console.log("Guardando ticket actualizado:", ticket);
     
@@ -1480,6 +1776,29 @@ function saveEditedTicket(ticket) {
         }
     });
     
+    // Obtener el ticket anterior para comparar cambios
+    const oldTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey) || {};
+    const diff = getTicketDiff(oldTicket, ticket);
+    
+    // Si hay cambios, registrar la edición
+    if (Object.keys(diff).length > 0) {
+        const userName = sessionStorage.getItem('userName') || 'Desconocido';
+        const userEmail = sessionStorage.getItem('userEmail') || '';
+        const now = new Date();
+        const editLog = {
+            idTicket: ticket.id,
+            usuario: userName,
+            email: userEmail,
+            fecha: now.toISOString().split('T')[0],
+            hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+            cambios: diff
+        };
+        // Guardar en la rama ticket_edits en Firebase
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            firebase.database().ref('ticket_edits').push(editLog);
+        }
+    }
+    
     // Usar update en lugar de eliminar y recrear el ticket
     ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
         .then(() => {
@@ -1506,7 +1825,7 @@ function saveEditedTicket(ticket) {
                 renderTickets();
             }
             
-            updateStats();
+            updateStatsGlobal();
         })
         .catch(error => {
             console.error("Error actualizando ticket:", error);
@@ -1706,7 +2025,7 @@ function confirmDelete(id) {
             }
             
             // Actualizar estadísticas
-            updateStats();
+            updateStatsGlobal();
         })
         .catch(error => {
             console.error("Error eliminando ticket:", error);
@@ -1808,321 +2127,497 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-function updateStats() {
-    const totalPacientes = tickets.length;
-    const pacientesEspera = tickets.filter(t => t.estado === 'espera').length;
-    const pacientesConsulta = tickets.filter(t => 
-        t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3'
-    ).length;
-    const pacientesAtendidos = tickets.filter(t => t.estado === 'terminado').length;
-    
-    document.getElementById('totalPacientes').textContent = totalPacientes;
-    document.getElementById('pacientesEspera').textContent = pacientesEspera;
-    document.getElementById('pacientesConsulta').textContent = pacientesConsulta;
-    document.getElementById('pacientesAtendidos').textContent = pacientesAtendidos;
-    
-    // Asegurarnos que la sección de tiempo promedio sea visible
-    const waitTimeSection = document.querySelector('.wait-time-statistics');
-    if (waitTimeSection) {
-        waitTimeSection.style.display = 'block';
-    }
-    
-    // Calcular estadísticas de tiempo de espera
-    calculateWaitTimeStats();
+// --- Actualizar estadísticas usando el filtro global ---
+function updateStatsGlobal() {
+  const filtered = filtrarTicketsPorPeriodoGlobal(tickets);
+  console.log('[DEBUG] Tickets filtrados:', filtered.length, filtered.map(t => t.fechaConsulta));
+  
+  // Actualizar contadores
+  document.getElementById('totalPacientes').textContent = filtered.length;
+  document.getElementById('pacientesEspera').textContent = filtered.filter(t => t.estado === 'espera').length;
+  document.getElementById('pacientesConsulta').textContent = filtered.filter(t => 
+    t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3'
+  ).length;
+  document.getElementById('pacientesAtendidos').textContent = filtered.filter(t => t.estado === 'terminado').length;
+  
+  // Generar todos los gráficos
+  renderizarGraficosTiempoEspera(filtered);
+  renderizarGraficosPersonalServicios(filtered);
 }
 
-function renderChart() {
-    const ctx = document.getElementById('ticketsChart');
-    if (!ctx) return;
-    
-    // Contar tickets por tipo de mascota
-    const mascotas = {};
-    tickets.forEach(ticket => {
-        mascotas[ticket.tipoMascota] = (mascotas[ticket.tipoMascota] || 0) + 1;
-    });
-    
-    // Si ya existe un gráfico, destruirlo
-    if (window.ticketsChart) {
-        window.ticketsChart.destroy();
+// Función para renderizar el gráfico de tiempo de espera y la tabla
+function renderizarGraficosTiempoEspera(ticketsFiltrados) {
+  // Calcular tiempos de espera
+  const tiemposEspera = {};
+  let ticketsConTiempos = 0;
+  
+  ticketsFiltrados.forEach(ticket => {
+    if (ticket.horaLlegada && ticket.horaAtencion) {
+      const servicio = ticket.tipoServicio || 'consulta';
+      const llegada = convertTimeToMinutes(ticket.horaLlegada);
+      const atencion = convertTimeToMinutes(ticket.horaAtencion);
+      const tiempoEspera = atencion - llegada;
+      
+      if (tiempoEspera >= 0) {
+        if (!tiemposEspera[servicio]) tiemposEspera[servicio] = { total: 0, count: 0 };
+        tiemposEspera[servicio].total += tiempoEspera;
+        tiemposEspera[servicio].count++;
+        ticketsConTiempos++;
+      }
     }
+  });
+  
+  // Actualizar tabla de tiempos de espera
+  const waitTimeStatsBody = document.getElementById('waitTimeStatsBody');
+  if (waitTimeStatsBody) {
+    waitTimeStatsBody.innerHTML = '';
     
-    // Crear nuevo gráfico
-    window.ticketsChart = new Chart(ctx, {
-        type: 'pie',
-        data: {
-            labels: Object.keys(mascotas).map(tipo => 
-                tipo.charAt(0).toUpperCase() + tipo.slice(1)
-            ),
-            datasets: [{
-                data: Object.values(mascotas),
-                backgroundColor: [
-                    '#4285f4',
-                    '#ea4335',
-                    '#fbbc05',
-                    '#34a853'
-                ],
-                borderWidth: 2,
-                borderColor: '#f9f9f9'
-            }]
+    if (ticketsConTiempos === 0) {
+      waitTimeStatsBody.innerHTML = `<tr><td colspan="3" class="no-data">No hay datos suficientes para calcular tiempos de espera</td></tr>`;
+    } else {
+      const serviciosOrdenados = Object.keys(tiemposEspera).sort((a, b) => 
+        (tiemposEspera[b].total / tiemposEspera[b].count) - (tiemposEspera[a].total / tiemposEspera[a].count)
+      );
+      
+      serviciosOrdenados.forEach(servicio => {
+        const { total, count } = tiemposEspera[servicio];
+        const promedio = total / count;
+        const row = document.createElement('tr');
+        row.innerHTML = `<td>${getNombreServicio(servicio)}</td><td>${formatMinutesToTime(promedio)}</td><td>${count}</td>`;
+        waitTimeStatsBody.appendChild(row);
+      });
+    }
+  }
+  
+  // Renderizar gráfico de tiempo de espera
+  const ctx = document.getElementById('waitTimeChart');
+  if (!ctx) return;
+  
+  // Destruir gráfico anterior si existe
+  if (window.waitTimeChart) {
+    try {
+      window.waitTimeChart.destroy();
+    } catch (error) {
+      console.log('Error al destruir gráfico anterior:', error);
+    }
+  }
+  
+  // Si no hay datos, mostrar mensaje
+  if (ticketsConTiempos === 0) {
+    const ctxCanvas = ctx.getContext('2d');
+    if (ctxCanvas) {
+      ctxCanvas.clearRect(0, 0, ctx.width, ctx.height);
+      ctxCanvas.font = '16px Arial';
+      ctxCanvas.fillStyle = '#888';
+      ctxCanvas.textAlign = 'center';
+      ctxCanvas.fillText('No hay datos suficientes para calcular tiempos de espera', 
+        ctx.width / 2 || 150, ctx.height / 2 || 150);
+    }
+    return;
+  }
+  
+  // Preparar datos para el gráfico
+  const labels = [];
+  const data = [];
+  const backgroundColors = [
+    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+    '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
+  ];
+  
+  // Tomar hasta 10 servicios para el gráfico
+  const serviciosParaGrafico = Object.keys(tiemposEspera)
+    .sort((a, b) => (tiemposEspera[b].total / tiemposEspera[b].count) - (tiemposEspera[a].total / tiemposEspera[a].count))
+    .slice(0, 10);
+  
+  serviciosParaGrafico.forEach((servicio, index) => {
+    const { total, count } = tiemposEspera[servicio];
+    const promedio = total / count;
+    
+    labels.push(getNombreServicio(servicio));
+    data.push(promedio);
+  });
+  
+  // Crear gráfico
+  try {
+    window.waitTimeChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Tiempo promedio de espera (minutos)',
+          data: data,
+          backgroundColor: backgroundColors.slice(0, data.length),
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: 'Minutos'
+            }
+          }
         },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'right',
-                    labels: {
-                        boxWidth: 15,
-                        padding: 15,
-                        font: {
-                            size: 12
-                        }
-                    }
-                },
-                title: {
-                    display: true,
-                    text: 'Distribución por Tipo de Mascota',
-                    font: {
-                        size: 16
-                    }
-                }
+        plugins: {
+          legend: {
+            display: false
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const value = context.raw;
+                return `Tiempo de espera: ${formatMinutesToTime(value)}`;
+              }
             }
+          }
         }
+      }
     });
+  } catch (error) {
+    console.error("Error al crear gráfico de tiempos de espera:", error);
+  }
 }
 
-// Funciones de exportación y respaldo
-function exportarDia() {
-    // Check permissions
-    if (!hasPermission('canExportData')) {
-        showNotification('No tienes permiso para exportar datos', 'error');
-        return;
+// Función para renderizar los gráficos de personal y servicios
+function renderizarGraficosPersonalServicios(ticketsFiltrados) {
+  // Aplicar filtros adicionales si están seleccionados
+  const filtroPersonal = document.getElementById('filtroPersonal')?.value || 'todos';
+  const filtroServicio = document.getElementById('filtroServicio')?.value || 'todos';
+  
+  let ticketsAGraficar = [...ticketsFiltrados];
+  
+  // Filtrar por servicio específico si no es "todos"
+  if (filtroServicio !== 'todos') {
+    ticketsAGraficar = ticketsAGraficar.filter(ticket => {
+      return (ticket.tipoServicio || '').trim().toLowerCase() === filtroServicio.trim().toLowerCase();
+    });
+  }
+  
+  console.log('[DEBUG] Tickets para gráficos después de filtro servicio:', ticketsAGraficar.length);
+  
+  // Conteo de servicios por personal y servicios totales
+  const conteoPersonalServicio = {};
+  const conteoServicios = {};
+  let totalServicios = 0;
+  
+  // Procesar tickets para estadísticas
+  ticketsAGraficar.forEach(ticket => {
+    if (!ticket) return;
+    
+    // Normalizar servicio (por defecto consulta)
+    const servicio = (ticket.tipoServicio || 'consulta').trim().toLowerCase();
+    
+    // Incrementar conteo general de servicios
+    conteoServicios[servicio] = (conteoServicios[servicio] || 0) + 1;
+    totalServicios++;
+    
+    // Procesar personal (médicos)
+    let personalList = [];
+    
+    if (ticket.medicoAtiende && ticket.medicoAtiende.trim()) {
+      // Dividir si hay varios médicos separados por coma
+      personalList = ticket.medicoAtiende.split(',').map(p => p.trim()).filter(Boolean);
+    } else {
+      personalList = ['Sin asignar'];
     }
     
-    const fecha = fechaHorario.value;
+    // Para cada persona en el ticket
+    personalList.forEach(persona => {
+      // Si hay filtro de personal específico, verificar
+      if (filtroPersonal !== 'todos' && persona.toLowerCase() !== filtroPersonal.toLowerCase()) {
+        return;
+      }
+      
+      // Inicializar estructura si no existe
+      if (!conteoPersonalServicio[persona]) {
+        conteoPersonalServicio[persona] = {};
+      }
+      
+      // Incrementar conteo para esta persona y servicio
+      conteoPersonalServicio[persona][servicio] = (conteoPersonalServicio[persona][servicio] || 0) + 1;
+    });
+  });
+  
+  console.log('[DEBUG] Conteo personal/servicio:', conteoPersonalServicio);
+  console.log('[DEBUG] Conteo servicios:', conteoServicios);
+  
+  // Actualizar tabla de estadísticas
+  actualizarTablaEstadisticas(conteoPersonalServicio, conteoServicios, totalServicios);
+  
+  // Renderizar gráficos
+  renderizarGraficoPersonalPorServicio(conteoPersonalServicio);
+  renderizarGraficoDistribucionServicios(conteoServicios);
+}
+
+// Actualizar la tabla de estadísticas
+function actualizarTablaEstadisticas(conteoPersonalServicio, conteoServicios, totalServicios) {
+  const tablaBody = document.getElementById('tablaEstadisticasBody');
+  if (!tablaBody) return;
+  
+  tablaBody.innerHTML = '';
+  
+  // Si no hay datos, mostrar mensaje
+  if (totalServicios === 0) {
+    tablaBody.innerHTML = `<tr><td colspan="4" class="no-data">No hay datos para los filtros seleccionados</td></tr>`;
+    return;
+  }
+  
+  // Ordenar personal alfabéticamente
+  const personalOrdenado = Object.keys(conteoPersonalServicio).sort();
+  
+  // Para cada persona, mostrar sus servicios
+  personalOrdenado.forEach(persona => {
+    // Ordenar servicios alfabéticamente
+    const serviciosPersona = Object.keys(conteoPersonalServicio[persona]).sort();
     
-    // Filtrar tickets por fecha
-    const ticketsDelDia = tickets.filter(ticket => {
-        if (ticket.fechaConsulta) {
-            return ticket.fechaConsulta === fecha;
+    serviciosPersona.forEach((servicio, index) => {
+      const cantidad = conteoPersonalServicio[persona][servicio];
+      const porcentaje = ((cantidad / totalServicios) * 100).toFixed(1);
+      
+      const row = document.createElement('tr');
+      
+      // Primera fila incluye el nombre de la persona con rowspan
+      if (index === 0) {
+        row.innerHTML = `
+          <td rowspan="${serviciosPersona.length}">${persona}</td>
+          <td>${getNombreServicio(servicio)}</td>
+          <td>${cantidad}</td>
+          <td>${porcentaje}%</td>
+        `;
+      } else {
+        row.innerHTML = `
+          <td>${getNombreServicio(servicio)}</td>
+          <td>${cantidad}</td>
+          <td>${porcentaje}%</td>
+        `;
+      }
+      
+      tablaBody.appendChild(row);
+    });
+  });
+}
+
+// Renderizar gráfico de servicios por personal (gráfico de barras)
+function renderizarGraficoPersonalPorServicio(conteoPersonalServicio) {
+  const canvas = document.getElementById('chartServiciosPersonal');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  
+  // Destruir gráfico anterior si existe
+  if (window.chartServiciosPersonal) {
+    try {
+      window.chartServiciosPersonal.destroy();
+    } catch (error) {
+      console.log('Error al destruir gráfico anterior:', error);
+    }
+    window.chartServiciosPersonal = null;
+  }
+  
+  // Limpiar canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Si no hay datos, mostrar mensaje
+  const personal = Object.keys(conteoPersonalServicio);
+  if (personal.length === 0) {
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#888';
+    ctx.textAlign = 'center';
+    ctx.fillText('No hay datos para mostrar', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+  
+  // Recopilar todos los servicios únicos
+  const serviciosUnicos = new Set();
+  Object.values(conteoPersonalServicio).forEach(servicios => {
+    Object.keys(servicios).forEach(servicio => serviciosUnicos.add(servicio));
+  });
+  
+  // Colores para los servicios
+  const colores = [
+    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+    '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
+  ];
+  
+  // Crear datasets para el gráfico
+  const datasets = [];
+  
+  // Convertir el conjunto a array y ordenar
+  const servicios = Array.from(serviciosUnicos).sort();
+  
+  // Para cada servicio, crear un dataset
+  servicios.forEach((servicio, index) => {
+    const data = personal.map(persona => conteoPersonalServicio[persona][servicio] || 0);
+    
+    datasets.push({
+      label: getNombreServicio(servicio),
+      data: data,
+      backgroundColor: colores[index % colores.length],
+      borderWidth: 1
+    });
+  });
+  
+  // Crear gráfico de barras
+  try {
+    window.chartServiciosPersonal = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: personal,
+        datasets: datasets
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { stacked: true },
+          y: { stacked: true, beginAtZero: true }
+        },
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: { mode: 'index', intersect: false }
         }
-        return new Date(ticket.fecha).toISOString().split('T')[0] === fecha;
+      }
     });
-    
-    if (ticketsDelDia.length === 0) {
-        showNotification('No hay consultas para la fecha seleccionada', 'error');
-        return;
+  } catch (error) {
+    console.error('Error al crear gráfico de servicios por personal:', error);
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#f00';
+    ctx.textAlign = 'center';
+    ctx.fillText('Error al crear gráfico', canvas.width / 2, canvas.height / 2);
+  }
+}
+
+// Renderizar gráfico de distribución de servicios (gráfico de pie)
+function renderizarGraficoDistribucionServicios(conteoServicios) {
+  const canvas = document.getElementById('chartDistribucionServicios');
+  if (!canvas) return;
+  
+  const ctx = canvas.getContext('2d');
+  
+  // Destruir gráfico anterior si existe
+  if (window.chartDistribucionServicios) {
+    try {
+      window.chartDistribucionServicios.destroy();
+    } catch (error) {
+      console.log('Error al destruir gráfico anterior:', error);
     }
-    
-    // Generar el CSV
-    exportToCSV(ticketsDelDia, `consultas_${fecha}`);
-}
-
-function exportarMes() {
-    const fecha = fechaHorario.value;
-const [year, month] = fecha.split('-');
-
-// Filtrar tickets del mes seleccionado
-const ticketsDelMes = tickets.filter(ticket => {
-        let ticketDate;
-        if (ticket.fechaConsulta) {
-            ticketDate = new Date(ticket.fechaConsulta);
-        } else {
-            ticketDate = new Date(ticket.fecha);
-        }
-        
-        return ticketDate.getFullYear() === parseInt(year) && 
-               ticketDate.getMonth() === parseInt(month) - 1;
-    });
-    
-    if (ticketsDelMes.length === 0) {
-        showNotification('No hay consultas para el mes seleccionado', 'error');
-        return;
-    }
-    
-    // Generar el CSV
-    exportToCSV(ticketsDelMes, `consultas_${year}_${month}`);
-}
-
-function exportToCSV(data, filename) {
-    // Encabezados del CSV
-    const headers = [
-        'ID', 
-        'Cliente', 
-        'Mascota', 
-        'Tipo', 
-        'Cédula', 
-        'ID Paciente',
-        'Médico',
-        'Fecha', 
-        'Hora', 
-        'Estado', 
-        'Urgencia',
-        'Factura',
-        'Motivo de Llegada',
-        'Motivo de Consulta'
-    ];
-    
-    // Crear las filas de datos
-    const rows = data.map(ticket => [
-        ticket.id,
-        ticket.nombre,
-        ticket.mascota,
-        getTipoMascotaLabel(ticket.tipoMascota),
-        ticket.cedula,
-        ticket.idPaciente || '',
-        ticket.medicoAtiende || '',
-        ticket.fechaConsulta || new Date(ticket.fecha).toISOString().split('T')[0],
-        ticket.horaConsulta || ticket.horaCreacion,
-        getEstadoLabel(ticket.estado),
-        (ticket.urgencia || '').toUpperCase(),
-        ticket.numFactura || '',
-        ticket.motivoLlegada || '',
-        ticket.motivo || ''
-    ]);
-    
-    // Usar punto y coma como separador y agregar BOM para UTF-8
-    const separator = ';';
-    const bom = '\uFEFF';
-    const csvContent = [
-        headers.join(separator),
-        ...rows.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(separator))
-    ].join('\n');
-    
-    // Crear blob y enlace de descarga con BOM
-    const blob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${filename}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    
-    showNotification('Archivo CSV generado correctamente', 'success');
-}
-
-function exportarGoogle() {
-    showNotification('Para exportar a Google Sheets, configura la API en producción', 'info');
-    
-    // Opción alternativa: abrir Google Sheets en nueva pestaña
-    window.open('https://docs.google.com/spreadsheets', '_blank');
-}
-
-function backupData() {
-    // Crear una copia sin las claves de Firebase para el backup
-    const ticketsBackup = tickets.map(ticket => {
-        const { firebaseKey, ...ticketData } = ticket;
-        return ticketData;
-    });
-    
-    const backup = {
-        tickets: ticketsBackup,
-        currentTicketId: currentTicketId,
-        timestamp: new Date().toISOString(),
-        version: '1.0'
-    };
-    
-    const jsonString = JSON.stringify(backup);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `backup_veterinaria_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    
-    URL.revokeObjectURL(url);
-    showNotification('Respaldo generado correctamente', 'success');
-}
-
-function cleanOldData() {
-    if (!confirm('¿Estás seguro de limpiar las consultas terminadas con más de 3 meses de antigüedad? Esta acción no se puede deshacer.')) {
-        return;
-    }
-    
-    const tresMesesAtras = new Date();
-    tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
-    
-    // Mostrar indicador de carga
-    showLoading();
-    
-    // Obtener tickets a eliminar (terminados con más de 3 meses)
-    const ticketsToDelete = tickets.filter(ticket => {
-        if (ticket.estado !== 'terminado') {
-            return false; // Mantener tickets que no estén terminados
-        }
-        
-        // Para tickets terminados, verificar la fecha
-        const fechaTicket = new Date(ticket.fecha);
-        return fechaTicket < tresMesesAtras;
-    });
-    
-    // Contador para operaciones pendientes
-    let pendingOperations = ticketsToDelete.length;
-    
-    if (pendingOperations === 0) {
-        hideLoading();
-        showNotification('No hay consultas antiguas para eliminar', 'info');
-        return;
-    }
-    
-    // Eliminar cada ticket en Firebase
-    ticketsToDelete.forEach(ticket => {
-        if (!ticket.firebaseKey) {
-            pendingOperations--;
-            if (pendingOperations === 0) {
-                hideLoading();
-                showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
+    window.chartDistribucionServicios = null;
+  }
+  
+  // Limpiar canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // Si no hay datos, mostrar mensaje
+  const servicios = Object.keys(conteoServicios);
+  if (servicios.length === 0) {
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#888';
+    ctx.textAlign = 'center';
+    ctx.fillText('No hay datos para mostrar', canvas.width / 2, canvas.height / 2);
+    return;
+  }
+  
+  // Colores para los servicios
+  const colores = [
+    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
+    '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
+  ];
+  
+  // Preparar datos
+  const data = servicios.map(servicio => conteoServicios[servicio]);
+  const labels = servicios.map(servicio => getNombreServicio(servicio));
+  const colors = colores.slice(0, servicios.length);
+  
+  // Crear gráfico de pie
+  try {
+    window.chartDistribucionServicios = new Chart(ctx, {
+      type: 'pie',
+      data: {
+        labels: labels,
+        datasets: [{
+          data: data,
+          backgroundColor: colors,
+          borderWidth: 1
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'right' },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                const label = context.label || '';
+                const value = context.raw || 0;
+                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                const percentage = total ? Math.round((value / total) * 100) : 0;
+                return `${label}: ${value} (${percentage}%)`;
+              }
             }
-            return;
+          }
         }
-        
-        ticketsRef.child(ticket.firebaseKey).remove()
-            .then(() => {
-                pendingOperations--;
-                if (pendingOperations === 0) {
-                    hideLoading();
-                    showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
-                }
-            })
-            .catch(error => {
-                console.error("Error eliminando ticket antiguo:", error);
-                pendingOperations--;
-                if (pendingOperations === 0) {
-                    hideLoading();
-                    showNotification('Hubo errores al eliminar algunas consultas antiguas', 'error');
-                }
-            });
+      }
     });
+  } catch (error) {
+    console.error('Error al crear gráfico de distribución de servicios:', error);
+    ctx.font = '16px Arial';
+    ctx.fillStyle = '#f00';
+    ctx.textAlign = 'center';
+    ctx.fillText('Error al crear gráfico', canvas.width / 2, canvas.height / 2);
+  }
 }
 
-// Funciones auxiliares
-function getTipoMascotaLabel(tipo) {
-    const tipos = {
-        'perro': 'Perro',
-        'gato': 'Gato',
-        'conejo': 'Conejo',
-        'otro': 'Otro'
-    };
-    return tipos[tipo] || tipo;
-}
+// Configurar Event Listeners para estadísticas
+document.addEventListener('DOMContentLoaded', function() {
+  // Botón para aplicar filtros estadísticos
+  const aplicarFiltrosBtn = document.getElementById('aplicarFiltrosEstadisticasBtn');
+  if (aplicarFiltrosBtn) {
+    aplicarFiltrosBtn.addEventListener('click', updateStatsGlobal);
+  }
+  
+  // Cambio en filtro de periodo
+  const filtroPeriodoGlobal = document.getElementById('filtroPeriodoGlobal');
+  if (filtroPeriodoGlobal) {
+    filtroPeriodoGlobal.addEventListener('change', function() {
+      // Mostrar/ocultar sección de fechas personalizadas
+      const periodPersonalizadoGlobal = document.getElementById('periodPersonalizadoGlobal');
+      if (periodPersonalizadoGlobal) {
+        periodPersonalizadoGlobal.style.display = 
+          this.value === 'personalizado' ? 'flex' : 'none';
+      }
+      // Actualizar estadísticas
+      updateStatsGlobal();
+    });
+  }
+  
+  // Inputs de fecha personalizada
+  const fechaInicioInput = document.getElementById('fechaInicioEstadisticasGlobal');
+  const fechaFinInput = document.getElementById('fechaFinEstadisticasGlobal');
+  if (fechaInicioInput) fechaInicioInput.addEventListener('change', updateStatsGlobal);
+  if (fechaFinInput) fechaFinInput.addEventListener('change', updateStatsGlobal);
+  
+  // Filtros adicionales
+  const filtroPersonal = document.getElementById('filtroPersonal');
+  const filtroServicio = document.getElementById('filtroServicio');
+  if (filtroPersonal) filtroPersonal.addEventListener('change', updateStatsGlobal);
+  if (filtroServicio) filtroServicio.addEventListener('change', updateStatsGlobal);
+  
+  // Actualizar estadísticas al entrar a la sección
+  const estadisticasBtn = document.getElementById('estadisticasBtn');
+  if (estadisticasBtn) {
+    estadisticasBtn.addEventListener('click', function() {
+      // Inicializar al acceder a la sección
+      setTimeout(updateStatsGlobal, 300);
+    });
+  }
+});
 
-function getEstadoLabel(estado) {
-    const estados = {
-        'espera': 'En Sala de Espera',
-        'consultorio1': 'Consultorio 1',
-        'consultorio2': 'Consultorio 2',
-        'consultorio3': 'Consultorio 3',
-        'consultorio4': 'Consultorio 4',
-        'consultorio5': 'Consultorio 5',
-        'terminado': 'Terminado'
-    };
-    return estados[estado] || estado;
-}
-
-// Funciones para indicadores de carga
+// --- FUNCIONES FALTANTES PARA ERRORES DE REFERENCIA ---
 function showLoading() {
     // Crear overlay de carga
     const loadingOverlay = document.createElement('div');
@@ -2209,16 +2704,48 @@ function hideLoadingButton(button) {
     button.disabled = false;
 }
 
-// Agregar después de su función renderChart() actual
+function filtrarTicketsPorPeriodoGlobal(tickets) {
+  const periodo = document.getElementById('filtroPeriodoGlobal')?.value || 'hoy';
+  const fechaInicio = document.getElementById('fechaInicioEstadisticasGlobal')?.value;
+  const fechaFin = document.getElementById('fechaFinEstadisticasGlobal')?.value;
+  const hoy = new Date();
+  let inicio, fin;
+  switch (periodo) {
+    case 'hoy':
+      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+      fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+      break;
+    case 'semana':
+      const diaSemana = hoy.getDay();
+      inicio = new Date(hoy);
+      inicio.setDate(hoy.getDate() - diaSemana);
+      inicio = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+      fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
+      break;
+    case 'mes':
+      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+      fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
+      break;
+    case 'ano':
+      inicio = new Date(hoy.getFullYear(), 0, 1);
+      fin = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59);
+      break;
+    case 'personalizado':
+      inicio = fechaInicio ? new Date(fechaInicio) : new Date(0);
+      fin = fechaFin ? new Date(fechaFin + 'T23:59:59') : new Date();
+      break;
+    default:
+      inicio = new Date(0);
+      fin = new Date();
+  }
+  return tickets.filter(ticket => {
+    const fechaTicket = ticket.fechaConsulta ? new Date(ticket.fechaConsulta) : new Date(ticket.fecha);
+    return fechaTicket >= inicio && fechaTicket <= fin;
+  });
+}
 
-// Variables para los nuevos charts
-let chartServiciosPersonal = null;
-let chartDistribucionServicios = null;
-
-// Función para obtener todos los nombres de personal único
 function obtenerPersonalUnico() {
     const personal = new Set();
-    
     tickets.forEach(ticket => {
         if (ticket.medicoAtiende) {
             // Dividir en caso de que haya múltiples personas separadas por comas
@@ -2228,22 +2755,17 @@ function obtenerPersonalUnico() {
             });
         }
     });
-    
     return Array.from(personal).sort();
 }
 
-// Función para llenar el selector de personal
 function llenarSelectorPersonal() {
     const personalUnico = obtenerPersonalUnico();
     const select = document.getElementById('filtroPersonal');
-    
     if (!select) return;
-    
     // Limpiar opciones existentes excepto "Todos"
     while (select.options.length > 1) {
         select.remove(1);
     }
-    
     // Agregar personal único
     personalUnico.forEach(persona => {
         const option = document.createElement('option');
@@ -2253,7 +2775,6 @@ function llenarSelectorPersonal() {
     });
 }
 
-// Función para obtener el nombre legible de un tipo de servicio
 function getNombreServicio(tipoServicio) {
     const servicios = {
         'consulta': 'Consulta general',
@@ -2271,637 +2792,22 @@ function getNombreServicio(tipoServicio) {
         'quitarPuntos': 'Quitar puntos',
         'otro': 'Otro'
     };
-    
     return servicios[tipoServicio] || tipoServicio;
 }
 
-// Función para filtrar tickets por período
-function filtrarPorPeriodo(tickets, periodo) {
-    const hoy = new Date();
-    const inicioHoy = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-    
-    let fechaInicio, fechaFin;
-    
-    switch(periodo) {
-        case 'hoy':
-            fechaInicio = inicioHoy;
-            fechaFin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
-            break;
-        case 'semana':
-            const diaSemana = hoy.getDay(); // 0 = domingo, 1 = lunes, etc.
-            const inicioSemana = new Date(hoy);
-            inicioSemana.setDate(hoy.getDate() - diaSemana);
-            fechaInicio = new Date(inicioSemana.getFullYear(), inicioSemana.getMonth(), inicioSemana.getDate());
-            fechaFin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
-            break;
-        case 'mes':
-            fechaInicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-            fechaFin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
-            break;
-        case 'ano':
-            fechaInicio = new Date(hoy.getFullYear(), 0, 1);
-            fechaFin = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59);
-            break;
-        case 'personalizado':
-            const fechaInicioInput = document.getElementById('fechaInicioEstadisticas');
-            const fechaFinInput = document.getElementById('fechaFinEstadisticas');
-            
-            if (fechaInicioInput && fechaInicioInput.value) {
-                fechaInicio = new Date(fechaInicioInput.value);
-            } else {
-                fechaInicio = new Date(0); // Fecha más antigua posible
-            }
-            
-            if (fechaFinInput && fechaFinInput.value) {
-                fechaFin = new Date(fechaFinInput.value);
-                fechaFin.setHours(23, 59, 59);
-            } else {
-                fechaFin = new Date(); // Fecha actual
-            }
-            break;
-        default:
-            fechaInicio = new Date(0); // Fecha más antigua posible
-            fechaFin = new Date(); // Fecha actual
-    }
-    
-    return tickets.filter(ticket => {
-        const fechaTicket = ticket.fechaConsulta 
-            ? new Date(ticket.fechaConsulta) 
-            : new Date(ticket.fecha);
-            
-        return fechaTicket >= fechaInicio && fechaTicket <= fechaFin;
-    });
+function cleanOldData() {
+  alert('Función de limpieza no implementada.');
 }
 
-// Función para generar las estadísticas de personal y servicios
-function generarEstadisticasPersonalServicios() {
-    console.log("Generating personnel and service statistics");
-    
-    // Get filter values
-    const filtroPersonal = document.getElementById('filtroPersonal').value;
-    const filtroServicio = document.getElementById('filtroServicio').value;
-    const filtroPeriodo = document.getElementById('filtroPeriodo').value;
-    
-    console.log("Filters:", { personal: filtroPersonal, servicio: filtroServicio, periodo: filtroPeriodo });
-    console.log("Total tickets:", tickets.length);
-    
-    // Filter tickets by period
-    let ticketsFiltrados = filtrarPorPeriodo(tickets, filtroPeriodo);
-    console.log("Filtered by period:", ticketsFiltrados.length);
-    
-    // Filter by service if not "todos"
-    if (filtroServicio !== 'todos') {
-        ticketsFiltrados = ticketsFiltrados.filter(ticket => 
-            ticket && ticket.tipoServicio === filtroServicio);
-        console.log("Filtered by service:", ticketsFiltrados.length);
-    }
-    
-    // Prepare structure to count services by personnel
-    const conteoPersonalServicio = {};
-    const conteoServicios = {};
-    let totalServicios = 0;
-    
-    // Count services by personnel
-    ticketsFiltrados.forEach(ticket => {
-        if (!ticket) return; // Skip undefined tickets
-        
-        // If no service type, assume "consulta"
-        const servicio = ticket.tipoServicio || 'consulta';
-        
-        // Add to general service count - ONLY ONCE PER TICKET
-        conteoServicios[servicio] = (conteoServicios[servicio] || 0) + 1;
-        totalServicios++;
-        
-        // If no médico/personnel, add to "Sin asignar" category
-        if (!ticket.medicoAtiende || ticket.medicoAtiende.trim() === '') {
-            const persona = "Sin asignar";
-            
-            // Initialize structure if it doesn't exist
-            if (!conteoPersonalServicio[persona]) {
-                conteoPersonalServicio[persona] = {};
-            }
-            
-            // Increment count
-            conteoPersonalServicio[persona][servicio] = 
-                (conteoPersonalServicio[persona][servicio] || 0) + 1;
-            
-            return;
-        }
-        
-        // Split in case of multiple people
-        const personas = ticket.medicoAtiende.split(',').map(p => p.trim());
-        
-        personas.forEach(persona => {
-            if (!persona) return;
-            
-            // Filter by specific personnel if not "todos"
-            if (filtroPersonal !== 'todos' && persona !== filtroPersonal) return;
-            
-            // Initialize structure if it doesn't exist
-            if (!conteoPersonalServicio[persona]) {
-                conteoPersonalServicio[persona] = {};
-            }
-            
-            // Increment count for each person (the service is credited to each person)
-            conteoPersonalServicio[persona][servicio] = 
-                (conteoPersonalServicio[persona][servicio] || 0) + 1;
-        });
-    });
-    
-    console.log("Personnel count:", Object.keys(conteoPersonalServicio).length);
-    console.log("Service count:", Object.keys(conteoServicios).length);
-    console.log("Total services:", totalServicios);
-    
-    // Generate table data
-    const tablaBody = document.getElementById('tablaEstadisticasBody');
-    if (tablaBody) {
-        tablaBody.innerHTML = '';
-        
-        if (totalServicios === 0) {
-            tablaBody.innerHTML = `
-                <tr>
-                    <td colspan="4" class="no-data">No hay datos para los filtros seleccionados</td>
-                </tr>
-            `;
-        } else {
-            // For each person
-            Object.keys(conteoPersonalServicio).sort().forEach(persona => {
-                // For each service of that person
-                Object.keys(conteoPersonalServicio[persona]).sort().forEach((servicio, index) => {
-                    const cantidad = conteoPersonalServicio[persona][servicio];
-                    const porcentaje = ((cantidad / totalServicios) * 100).toFixed(1);
-                    
-                    const row = document.createElement('tr');
-                    
-                    // In the first row of this person, show their name
-                    if (index === 0) {
-                        row.innerHTML = `
-                            <td rowspan="${Object.keys(conteoPersonalServicio[persona]).length}">${persona}</td>
-                            <td>${getNombreServicio(servicio)}</td>
-                            <td>${cantidad}</td>
-                            <td>${porcentaje}%</td>
-                        `;
-                    } else {
-                        row.innerHTML = `
-                            <td>${getNombreServicio(servicio)}</td>
-                            <td>${cantidad}</td>
-                            <td>${porcentaje}%</td>
-                        `;
-                    }
-                    
-                    tablaBody.appendChild(row);
-                });
-            });
-        }
-    }
-    
-    // Generate charts
-    generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicios);
-}
-
-// Modify the function to handle empty data gracefully
-function generarGraficosPersonalServicios(conteoPersonalServicio, conteoServicios) {
-    console.log("Generating charts for personnel and services");
-    
-    // Chart 1: Services by Personnel (bar chart)
-    const ctxPersonal = document.getElementById('chartServiciosPersonal')?.getContext('2d');
-    if (ctxPersonal) {
-        // Check if there's data to display
-        if (Object.keys(conteoPersonalServicio).length === 0) {
-            // No data, display a message
-            if (chartServiciosPersonal) {
-                chartServiciosPersonal.destroy();
-                chartServiciosPersonal = null;
-            }
-            
-            // Draw "No data" text
-            ctxPersonal.font = '16px Arial';
-            ctxPersonal.fillStyle = '#888';
-            ctxPersonal.textAlign = 'center';
-            ctxPersonal.fillText('No hay datos para mostrar', ctxPersonal.canvas.width / 2, ctxPersonal.canvas.height / 2);
-        } else {
-            // Prepare data for the chart
-            const datasets = [];
-            const serviciosUnicos = new Set();
-            
-            // Collect all unique services
-            Object.values(conteoPersonalServicio).forEach(servicios => {
-                Object.keys(servicios).forEach(servicio => serviciosUnicos.add(servicio));
-            });
-            
-            // Colors for services
-            const colores = [
-                '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-                '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
-                '#a3a4a5', '#d1d3e2', '#eaecf4'
-            ];
-            
-            // Create a dataset for each service
-            Array.from(serviciosUnicos).sort().forEach((servicio, index) => {
-                const data = [];
-                const labels = Object.keys(conteoPersonalServicio).sort();
-                
-                // For each person, get the amount of this service
-                labels.forEach(persona => {
-                    data.push(conteoPersonalServicio[persona][servicio] || 0);
-                });
-                
-                datasets.push({
-                    label: getNombreServicio(servicio),
-                    data: data,
-                    backgroundColor: colores[index % colores.length],
-                    borderColor: colores[index % colores.length],
-                    borderWidth: 1
-                });
-            });
-            
-            // Destroy previous chart if it exists
-            if (chartServiciosPersonal) {
-                chartServiciosPersonal.destroy();
-            }
-            
-            // Create new chart
-            chartServiciosPersonal = new Chart(ctxPersonal, {
-                type: 'bar',
-                data: {
-                    labels: Object.keys(conteoPersonalServicio).sort(),
-                    datasets: datasets
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    scales: {
-                        x: {
-                            stacked: true,
-                        },
-                        y: {
-                            stacked: true,
-                            beginAtZero: true
-                        }
-                    },
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                        },
-                        tooltip: {
-                            mode: 'index',
-                            intersect: false
-                        }
-                    }
-                }
-            });
-        }
-    }
-    
-    // Chart 2: Service Distribution (pie chart)
-    const ctxServicios = document.getElementById('chartDistribucionServicios')?.getContext('2d');
-    if (ctxServicios) {
-        // Check if there's data to display
-        if (Object.keys(conteoServicios).length === 0) {
-            // No data, display a message
-            if (chartDistribucionServicios) {
-                chartDistribucionServicios.destroy();
-                chartDistribucionServicios = null;
-            }
-            
-            // Draw "No data" text
-            ctxServicios.font = '16px Arial';
-            ctxServicios.fillStyle = '#888';
-            ctxServicios.textAlign = 'center';
-            ctxServicios.fillText('No hay datos para mostrar', ctxServicios.canvas.width / 2, ctxServicios.canvas.height / 2);
-        } else {
-            // Prepare data for the chart
-            const labels = [];
-            const data = [];
-            const backgroundColor = [];
-            
-            // Colors for the chart
-            const colores = [
-                '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-                '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69',
-                '#a3a4a5', '#d1d3e2', '#eaecf4'
-            ];
-            
-            // For each service, get its total
-            Object.keys(conteoServicios).sort().forEach((servicio, index) => {
-                labels.push(getNombreServicio(servicio));
-                data.push(conteoServicios[servicio]);
-                backgroundColor.push(colores[index % colores.length]);
-            });
-            
-            // Destroy previous chart if it exists
-            if (chartDistribucionServicios) {
-                chartDistribucionServicios.destroy();
-            }
-            
-            // Create new chart
-            chartDistribucionServicios = new Chart(ctxServicios, {
-                type: 'pie',
-                data: {
-                    labels: labels,
-                    datasets: [{
-                        data: data,
-                        backgroundColor: backgroundColor,
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'right',
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: function(context) {
-                                    const label = context.label || '';
-                                    const value = context.raw || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = Math.round((value / total) * 100);
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
-                        }
-                    }
-                }
-            });
-        }
-    }
-}
-
-// Agregar esta función para calcular estadísticas de tiempo de espera
-function calculateWaitTimeStats() {
-    const tiemposEspera = {};
-    let ticketsConTiempos = 0;
-    
-    // Filtrar tickets que tienen tanto hora de llegada como de atención
-    tickets.forEach(ticket => {
-        if (ticket.horaLlegada && ticket.horaAtencion) {
-            const servicio = ticket.tipoServicio || 'consulta';
-            
-            // Convertir tiempos a minutos para calcular la diferencia
-            const llegada = convertTimeToMinutes(ticket.horaLlegada);
-            const atencion = convertTimeToMinutes(ticket.horaAtencion);
-            
-            // Calcular la diferencia en minutos
-            const tiempoEspera = atencion - llegada;
-            
-            // Solo considerar diferencias válidas (positivas)
-            if (tiempoEspera >= 0) {
-                // Inicializar el objeto si no existe
-                if (!tiemposEspera[servicio]) {
-                    tiemposEspera[servicio] = {
-                        total: 0,
-                        count: 0,
-                        tiempos: []
-                    };
-                }
-                
-                // Sumar el tiempo de espera y contar este ticket
-                tiemposEspera[servicio].total += tiempoEspera;
-                tiemposEspera[servicio].count++;
-                tiemposEspera[servicio].tiempos.push(tiempoEspera);
-                ticketsConTiempos++;
-            }
-        }
-    });
-    
-    // Generar tabla de resultados
-    const waitTimeStatsBody = document.getElementById('waitTimeStatsBody');
-    if (waitTimeStatsBody) {
-        waitTimeStatsBody.innerHTML = '';
-        
-        if (ticketsConTiempos === 0) {
-            waitTimeStatsBody.innerHTML = `
-                <tr>
-                    <td colspan="3" class="no-data">No hay datos suficientes para calcular tiempos de espera</td>
-                </tr>
-            `;
-        } else {
-            // Ordenar servicios por tiempo promedio (mayor a menor)
-            const serviciosOrdenados = Object.keys(tiemposEspera).sort((a, b) => {
-                const avgA = tiemposEspera[a].total / tiemposEspera[a].count;
-                const avgB = tiemposEspera[b].total / tiemposEspera[b].count;
-                return avgB - avgA; // Orden descendente
-            });
-            
-            serviciosOrdenados.forEach(servicio => {
-                const { total, count } = tiemposEspera[servicio];
-                const promedio = total / count;
-                
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${getNombreServicio(servicio)}</td>
-                    <td>${formatMinutesToTime(promedio)}</td>
-                    <td>${count}</td>
-                `;
-                waitTimeStatsBody.appendChild(row);
-            });
-        }
-    }
-    
-    // Generar gráfico de tiempos de espera
-    renderWaitTimeChart(tiemposEspera);
-}
-
-// Función para convertir hora (HH:MM) a minutos desde medianoche
 function convertTimeToMinutes(timeString) {
+    if (!timeString) return 0;
     const [hours, minutes] = timeString.split(':').map(Number);
     return hours * 60 + minutes;
 }
 
-// Función para formatear minutos a tiempo HH:MM
 function formatMinutesToTime(minutes) {
+    if (isNaN(minutes) || minutes < 0) return '-';
     const hrs = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);
     return `${hrs}h ${mins}m`;
-}
-
-// Función para renderizar gráfico de tiempos de espera
-function renderWaitTimeChart(tiemposEspera) {
-    const ctx = document.getElementById('waitTimeChart');
-    if (!ctx) return;
-    
-    // Destruir gráfico anterior si existe y es un objeto Chart válido
-    if (window.waitTimeChart && typeof window.waitTimeChart.destroy === 'function') {
-        try {
-            window.waitTimeChart.destroy();
-        } catch (error) {
-            console.error("Error al destruir el gráfico anterior:", error);
-        }
-    }
-    
-    // Si no hay datos para mostrar, no intentamos crear un gráfico
-    const serviciosValidos = Object.keys(tiemposEspera)
-        .filter(servicio => tiemposEspera[servicio] && tiemposEspera[servicio].count > 0);
-    
-    if (serviciosValidos.length === 0) {
-        // No hay datos, dibujar un mensaje
-        const ctxCanvas = ctx.getContext('2d');
-        if (ctxCanvas) {
-            ctxCanvas.clearRect(0, 0, ctx.width, ctx.height);
-            ctxCanvas.font = '16px Arial';
-            ctxCanvas.fillStyle = '#888';
-            ctxCanvas.textAlign = 'center';
-            ctxCanvas.fillText('No hay datos suficientes para calcular tiempos de espera', 
-                ctx.width / 2 || 150, ctx.height / 2 || 150);
-        }
-        // Importante: no asignar el objeto window.waitTimeChart en este caso
-        window.waitTimeChart = null;
-        return;
-    }
-    
-    // Preparar datos para el gráfico
-    const labels = [];
-    const data = [];
-    const backgroundColors = [
-        '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-        '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
-    ];
-    
-    // Ordenar por tiempo promedio
-    serviciosValidos.sort((a, b) => {
-        const avgA = tiemposEspera[a].total / tiemposEspera[a].count;
-        const avgB = tiemposEspera[b].total / tiemposEspera[b].count;
-        return avgB - avgA; // Orden descendente
-    });
-    
-    // Limitar a los 10 servicios con mayor tiempo de espera
-    const serviciosMostrados = serviciosValidos.slice(0, 10);
-    
-    serviciosMostrados.forEach((servicio, index) => {
-        const { total, count } = tiemposEspera[servicio];
-        const promedio = total / count;
-        
-        labels.push(getNombreServicio(servicio));
-        data.push(promedio);
-    });
-    
-    try {
-        // Crear gráfico con manejo de errores
-        window.waitTimeChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Tiempo promedio de espera (minutos)',
-                    data: data,
-                    backgroundColor: backgroundColors,
-                    borderColor: backgroundColors,
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        title: {
-                            display: true,
-                            text: 'Minutos'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                const value = context.raw;
-                                return `Tiempo de espera: ${formatMinutesToTime(value)}`;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    } catch (error) {
-        console.error("Error al crear el gráfico de tiempos de espera:", error);
-        window.waitTimeChart = null;
-    }
-}
-
-// Integrar con estadísticas existentes
-function updateStats() {
-    const totalPacientes = tickets.length;
-    const pacientesEspera = tickets.filter(t => t.estado === 'espera').length;
-    const pacientesConsulta = tickets.filter(t => 
-        t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3'
-    ).length;
-    const pacientesAtendidos = tickets.filter(t => t.estado === 'terminado').length;
-    
-    document.getElementById('totalPacientes').textContent = totalPacientes;
-    document.getElementById('pacientesEspera').textContent = pacientesEspera;
-    document.getElementById('pacientesConsulta').textContent = pacientesConsulta;
-    document.getElementById('pacientesAtendidos').textContent = pacientesAtendidos;
-    
-    // Asegurarnos que la sección de tiempo promedio sea visible
-    const waitTimeSection = document.querySelector('.wait-time-statistics');
-    if (waitTimeSection) {
-        waitTimeSection.style.display = 'block';
-    }
-    
-    // Calcular estadísticas de tiempo de espera
-    calculateWaitTimeStats();
-}
-
-// Event listeners para los filtros
-document.addEventListener('DOMContentLoaded', function() {
-    // Selector de período personalizado
-    const filtroPeriodo = document.getElementById('filtroPeriodo');
-    const periodPersonalizado = document.getElementById('periodPersonalizado');
-    
-    if (filtroPeriodo && periodPersonalizado) {
-        filtroPeriodo.addEventListener('change', function() {
-            if (this.value === 'personalizado') {
-                periodPersonalizado.style.display = 'flex';
-            } else {
-                periodPersonalizado.style.display = 'none';
-            }
-        });
-    }
-    
-    // Botón para aplicar filtros
-    const aplicarFiltrosBtn = document.getElementById('aplicarFiltrosBtn');
-    if (aplicarFiltrosBtn) {
-        aplicarFiltrosBtn.addEventListener('click', generarEstadisticasPersonalServicios);
-    }
-    
-    // Inicializar estadísticas al cargar la sección
-    const estadisticasBtn = document.getElementById('estadisticasBtn');
-    if (estadisticasBtn) {
-        estadisticasBtn.addEventListener('click', function() {
-            // Llenar selector de personal después de cargar tickets
-            setTimeout(() => {
-                llenarSelectorPersonal();
-                generarEstadisticasPersonalServicios();
-            }, 100);
-        });
-    }
-});
-
-// Función para obtener la fecha actual en formato yyyy-mm-dd en zona horaria de Costa Rica
-function getCostaRicaToday() {
-    // Costa Rica es UTC-6 todo el año
-    const now = new Date();
-    // Obtener la hora UTC y restar 6 horas
-    const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
-    const crTime = new Date(utc - (6 * 60 * 60000));
-    // Formato yyyy-mm-dd
-    const yyyy = crTime.getFullYear();
-    const mm = String(crTime.getMonth() + 1).padStart(2, '0');
-    const dd = String(crTime.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-}
-
-// Mostrar la fecha de hoy por defecto en el filtro de fecha de ver consultas
-function setDefaultFilterDate() {
-    const filterDateInput = document.getElementById('filterDate');
-    if (filterDateInput && !filterDateInput.value) {
-        filterDateInput.value = getCostaRicaToday();
-    }
 }

@@ -107,6 +107,11 @@ nav button i {
   font-size: 1.1rem;
 }
 
+nav button.admin-only {
+  display: flex;
+  align-items: right;
+}
+
 nav button:hover {
   background: rgba(255, 255, 255, 0.25);
   transform: translateX(5px);
@@ -1752,7 +1757,8 @@ body.visitas-role .estado-terminado {
   gap: 8px;
 }
 
-.admin-btn {
+.admin-btn,
+.admin-only {
   background: rgba(255, 255, 255, 0.15);
   border: none;
   color: white;
@@ -1767,11 +1773,13 @@ body.visitas-role .estado-terminado {
   transition: var(--transition);
 }
 
-.admin-btn i {
+.admin-btn i,
+.admin-only i {
   margin-right: 8px;
 }
 
-.admin-btn:hover {
+.admin-btn:hover,
+.admin-only:hover {
   background: rgba(255, 255, 255, 0.25);
   transform: translateX(5px);
 }
