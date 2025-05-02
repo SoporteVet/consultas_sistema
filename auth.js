@@ -35,6 +35,17 @@ const PERMISSIONS = {
     canViewSchedule: false,
     canExportData: false
   },
+  laboratorio: {
+    canViewTickets: true,
+    canCreateTickets: true,
+    canEditTickets: true,
+    canDeleteTickets: false,
+    canViewStats: false,
+    canManageBackup: false,
+    canViewFullTicket: true,
+    canViewSchedule: false,
+    canExportData: false
+  },
   quirofano: {
     canViewTickets: true,
     canCreateTickets: true,
