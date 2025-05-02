@@ -873,7 +873,7 @@ function renderTickets(filter = 'todos', date = null) {
                     <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
-                    <p><i class="fas fa-stethoscope"></i> ${ticket.motivo}</p>
+                    <p><i class="fas fa-stethoscope"></i> ${ticket.motivoLlegada}</p>
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
