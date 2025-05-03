@@ -1840,6 +1840,24 @@ function editTicket(randomId) {
                         <option value="rayosX" ${safeTicket.tipoServicio === 'rayosX' ? 'selected' : ''}>Rayos X</option>
                         <option value="desparasitacion" ${safeTicket.tipoServicio === 'desparasitacion' ? 'selected' : ''}>Desparasitación</option>
                         <option value="inyectable" ${safeTicket.tipoServicio === 'inyectable' ? 'selected' : ''}>Inyectables</option>
+                        <option value="vacunas" ${safeTicket.tipoServicio === 'vacunas' ? 'selected' : ''}>Vacunas</option>
+                        <option value="consulta_8pm" ${safeTicket.tipoServicio === 'consulta_8pm' ? 'selected' : ''}>Consulta después de las 8 P.M</option>
+                        <option value="consulta_6pm" ${safeTicket.tipoServicio === 'consulta_6pm' ? 'selected' : ''}>Consulta después de las 6 P.M</option>
+                        <option value="hmg_limpieza" ${safeTicket.tipoServicio === 'hmg_limpieza' ? 'selected' : ''}>HMG Limpieza</option>
+                        <option value="hmg_castracion" ${safeTicket.tipoServicio === 'hmg_castracion' ? 'selected' : ''}>HMG Castración</option>
+                        <option value="cambio_vendaje" ${safeTicket.tipoServicio === 'cambio_vendaje' ? 'selected' : ''}>Cambio de vendaje</option>
+                        <option value="convenia_cx" ${safeTicket.tipoServicio === 'convenia_cx' ? 'selected' : ''}>Convenia de CX</option>
+                        <option value="analito" ${safeTicket.tipoServicio === 'analito' ? 'selected' : ''}>Analito</option>
+                        <option value="panel_general_basico" ${safeTicket.tipoServicio === 'panel_general_basico' ? 'selected' : ''}>Panel General Básico</option>
+                        <option value="panel_plus" ${safeTicket.tipoServicio === 'panel_plus' ? 'selected' : ''}>Panel Plus</option>
+                        <option value="perfil_quimico_general" ${safeTicket.tipoServicio === 'perfil_quimico_general' ? 'selected' : ''}>Perfil quimico general</option>
+                        <option value="perfil_pre_quirurgico" ${safeTicket.tipoServicio === 'perfil_pre_quirurgico' ? 'selected' : ''}>Perfil pre quirurgico</option>
+                        <option value="perfil_renal" ${safeTicket.tipoServicio === 'perfil_renal' ? 'selected' : ''}>Perfil renal</option>
+                        <option value="cirugia" ${safeTicket.tipoServicio === 'cirugia' ? 'selected' : ''}>Cirugía</option>
+                        <option value="muestra_test" ${safeTicket.tipoServicio === 'muestra_test' ? 'selected' : ''}>Muestra para test</option>
+                        <option value="tiempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selected' : ''}>Tiempos de coagulación</option>
+                        <option value="internamiento" ${safeTicket.tipoServicio === 'internamiento' ? 'selected' : ''}>Internamiento</option>
+                        <option value="test_sida_leucemia" ${safeTicket.tipoServicio === 'test_sida_leucemia' ? 'selected' : ''}>Test sida leucemia</option>
                         <option value="corteUnas" ${safeTicket.tipoServicio === 'corteUnas' ? 'selected' : ''}>Corte de uñas</option>
                         <option value="emergencia" ${safeTicket.tipoServicio === 'emergencia' ? 'selected' : ''}>Emergencia</option>
                         <option value="tomaMuestras" ${safeTicket.tipoServicio === 'tomaMuestras' ? 'selected' : ''}>Toma de muestras</option>
@@ -2953,6 +2971,24 @@ function getNombreServicio(tipoServicio) {
         'rayosX': 'Rayos X',
         'desparasitacion': 'Desparasitación',
         'inyectable': 'Inyectables',
+        'vacunas': 'Vacunas',
+        'consulta_8pm': 'Consulta después de las 8 P.M',
+        'consulta_6pm': 'Consulta después de las 6 P.M',
+        'hmg_limpieza': 'HMG Limpieza',
+        'hmg_castracion': 'HMG Castración',
+        'cambio_vendaje': 'Cambio de vendaje',
+        'convenia_cx': 'Convenia de CX',
+        'analito': 'Analito',
+        'panel_general_basico': 'Panel General Básico',
+        'panel_plus': 'Panel Plus',
+        'perfil_quimico_general': 'Perfil quimico general',
+        'perfil_pre_quirurgico': 'Perfil pre quirurgico',
+        'perfil_renal': 'Perfil renal',
+        'cirugia': 'Cirugía',
+        'muestra_test': 'Muestra para test',
+        'tiempos_coagulacion': 'Tiempos de coagulación',
+        'internamiento': 'Internamiento',
+        'test_sida_leucemia': 'Test sida leucemia',
         'corteUnas': 'Corte de uñas',
         'emergencia': 'Emergencia',
         'tomaMuestras': 'Toma de muestras',
