@@ -160,12 +160,14 @@
                 </select>
               </div>
               <div class="form-group">
-                <label for="urgencia">Nivel de Urgencia</label>
+                <label for="urgencia">Categorización de pacientes</label>
                 <select id="urgencia" required>
-                  <option value="normal">Normal</option>
-                  <option value="media">Media</option>
-                  <option value="alta">Alta</option>
+                  <option value="Emergencia">🔴 Emergencias</option>
+                  <option value="Urgencia">🟠 Urgencias</option>
+                  <option value="Leve">🟢 Leve</option>
+                  <option value="Consulta">🔵 Consulta</option>
                 </select>
+                <div id="urgenciaDesc" style="font-size:0.95em;color:#1976d2;margin-top:4px;"></div>
               </div>
             </div>
 
@@ -520,6 +522,48 @@ document.addEventListener('DOMContentLoaded', function() {
     tipoMascota.addEventListener('change', function() {
       conejoImg.style.display = tipoMascota.value === 'conejo' ? 'inline-block' : 'none';
     });
+  }
+
+  // Ocultar campo Hora de Cita según el rol
+  const userRole = sessionStorage.getItem('userRole');
+  const horaCitaGroup = document.querySelector('input#hora')?.closest('.form-group');
+  if (horaCitaGroup) {
+    if (!["admin", "recepción", "quirofano"].includes(userRole)) {
+      horaCitaGroup.style.display = 'none';
+    } else {
+      horaCitaGroup.style.display = '';
+    }
+  }
+
+  // Descripciones para cada categorización
+  const urgenciaDescriptions = {
+    emergencia: 'Emergencias. Situaciones críticas que requieren atención médica inmediata. Se mostrará como EMERGENCIA en el ticket.',
+    urgencia: 'Urgencias. Problemas de salud que deben atenderse pronto, pero no son críticos.',
+    leve: 'Leve. Puede esperar, sin riesgo inmediato.',
+    consulta: 'Consulta. Atención general o rutinaria.'
+  };
+
+  function updateUrgenciaDescription(selectId, descId) {
+    const select = document.getElementById(selectId);
+    const desc = document.getElementById(descId);
+    if (!select || !desc) return;
+    const value = select.value;
+    desc.textContent = urgenciaDescriptions[value] || '';
+  }
+
+  // Descripción dinámica en creación
+  const urgenciaSelect = document.getElementById('urgencia');
+  if (urgenciaSelect) {
+    const descDiv = document.createElement('div');
+    descDiv.id = 'urgenciaDesc';
+    descDiv.style.fontSize = '0.95em';
+    descDiv.style.color = '#1976d2';
+    descDiv.style.marginTop = '4px';
+    urgenciaSelect.parentNode.appendChild(descDiv);
+    urgenciaSelect.addEventListener('change', function() {
+      updateUrgenciaDescription('urgencia', 'urgenciaDesc');
+    });
+    updateUrgenciaDescription('urgencia', 'urgenciaDesc');
   }
 });
 

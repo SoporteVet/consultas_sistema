@@ -294,6 +294,15 @@ section h2 i {
   overflow: hidden;
   animation: fadeIn 0.5s ease;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+  border-radius: 8px;
+  margin-bottom: 18px;
+  transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.ticket:hover {
+  box-shadow: 0 4px 16px rgba(0,0,0,0.13);
+  transform: translateY(-2px) scale(1.01);
 }
 
 .ticket-hover-icon {
@@ -340,7 +349,7 @@ section h2 i {
 }
 
 .ticket-espera {
-  border-top-color: var(--espera-color);
+  border-top: none !important;
 }
 
 .ticket-consultorio1,
@@ -462,6 +471,39 @@ section h2 i {
   0% { transform: scale(1); }
   50% { transform: scale(1.05); }
   100% { transform: scale(1); }
+}
+.ticket-urgencia-normal {
+  background: #e8f5e9 !important;
+  color: #333 !important;
+  border-left: 8px solid #43a047;
+  border-top: none !important;
+}
+.ticket-urgencia-normal.ticket-espera,
+.ticket-urgencia-normal.ticket-consultorio1,
+.ticket-urgencia-normal.ticket-consultorio2,
+.ticket-urgencia-normal.ticket-consultorio3,
+.ticket-urgencia-normal.ticket-terminado {
+  border-top: none !important;
+}
+.ticket-urgencia-emergencia {
+  background: #ffebee !important; /* Rojo muy claro */
+  color: #b71c1c !important;
+  border-left: 8px solid #e53935;
+}
+.ticket-urgencia-urgencia {
+  background: #fffde7 !important; /* Amarillo muy claro */
+  color: #ff9800 !important;
+  border-left: 8px solid #fb8c00;
+}
+.ticket-urgencia-leve {
+  background: #e8f5e9 !important; /* Verde muy claro */
+  color: #1b5e20 !important;
+  border-left: 8px solid #43a047;
+}
+.ticket-urgencia-consulta {
+  background: #e3f2fd !important; /* Azul muy claro */
+  color: #1976d2 !important;
+  border-left: 8px solid #1976d2;
 }
 .estado-badge {
   display: inline-flex;
@@ -1665,6 +1707,36 @@ section h2 i {
   border-top-color: var(--urgencia-normal);
 }
 
+/* Colores para la categorización ESI */
+.ticket-urgencia-critico {
+  background: #ffebee !important; /* Rojo muy claro */
+  color: #b71c1c !important;
+  border-left: 8px solid #e57373;
+}
+.ticket-urgencia-media {
+  background: #fffde7 !important; /* Amarillo muy claro */
+  color: #ff9800 !important;
+  border-left: 8px solid #fad669;
+}
+.ticket-urgencia-leve {
+  background: #e8f5e9 !important; /* Verde muy claro */
+  color: #1b5e20 !important;
+  border-left: 8px solid #a5d6a7;
+}
+.ticket-urgencia-general {
+  background: #e3f2fd !important; /* Azul mucho más claro */
+  color: #333 !important;
+  border-left: 8px solid #64b5f6;
+  border-top: none !important;
+}
+.ticket-urgencia-general.ticket-espera,
+.ticket-urgencia-general.ticket-consultorio1,
+.ticket-urgencia-general.ticket-consultorio2,
+.ticket-urgencia-general.ticket-consultorio3,
+.ticket-urgencia-general.ticket-terminado {
+  border-top: none !important;
+}
+
 /* Add styles for user information in sidebar */
 .user-info {
   display: flex;
@@ -2089,4 +2161,22 @@ body.visitas-role .main-container {
   .excel-tickets-table th, .excel-tickets-table td {
     padding: 5px 2px;
   }
+}
+
+/* Animación heartbeat-emergencia */
+@keyframes heartbeat-emergencia {
+  0% { transform: scale(1); }
+  10% { transform: scale(1.08); }
+  20% { transform: scale(1.15); }
+  30% { transform: scale(1.10); }
+  40% { transform: scale(1.18); }
+  50% { transform: scale(1); }
+  60% { transform: scale(1.12); }
+  70% { transform: scale(1.18); }
+  80% { transform: scale(1.10); }
+  90% { transform: scale(1.08); }
+  100% { transform: scale(1); }
+}
+.ticket-emergencia-anim {
+  animation: heartbeat-emergencia 6s infinite cubic-bezier(0.4, 0.1, 0.6, 0.9);
 }

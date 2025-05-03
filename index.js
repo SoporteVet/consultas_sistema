@@ -895,6 +895,7 @@ function renderTickets(filter = 'todos', date = null) {
                     <th>Estado</th>
                     <th>Hora Llegada</th>
                     <th>Hora Atención</th>
+                    <th>Hora Finalización</th>
                     <th>Médico/Asistente</th>
                     <th>Urgencia</th>
                 </tr>
@@ -915,6 +916,7 @@ function renderTickets(filter = 'todos', date = null) {
                 <td>${ticket.estado || ''}</td>
                 <td>${ticket.horaLlegada || ''}</td>
                 <td>${ticket.horaAtencion || ''}</td>
+                <td>${ticket.horaFinalizacion || ''}</td>
                 <td>${ticket.medicoAtiende || ''}</td>
                 <td>${(ticket.urgencia || '').toUpperCase()}</td>
             </tr>`;
@@ -1054,7 +1056,8 @@ function renderTickets(filter = 'todos', date = null) {
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
-                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${(ticket.urgencia || '').toUpperCase()}</p>
+                    <p class="${urgenciaClass}"><strong>Categorización de paciente:</strong> ${getUrgenciaLabel(ticket.urgencia)}</p>
+                    ${ticket.urgencia === 'emergencia' ? `<div class="ticket-emergencia-anim" style='position:absolute;top:10px;right:10px;z-index:2;'><span style='background:#d32f2f;color:#fff;padding:4px 10px;border-radius:6px;font-weight:bold;font-size:0.95em;box-shadow:0 2px 8px rgba(0,0,0,0.12);letter-spacing:1px;'>Emergencia</span></div>` : ''}
                     <div class="estado-badge ${estadoClass}">
                         <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
                                      typeof ticket.estado === 'string' && ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
@@ -1143,7 +1146,8 @@ function renderTickets(filter = 'todos', date = null) {
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
-                    <p class="${urgenciaClass}"><i class="fas ${urgenciaIcon}"></i> Urgencia: ${(ticket.urgencia || '').toUpperCase()}</p>
+                    <p class="${urgenciaClass}"><strong>Categorización de paciente:</strong> ${getUrgenciaLabel(ticket.urgencia)}</p>
+                    ${ticket.urgencia === 'emergencia' ? `<div class="ticket-emergencia-anim" style='position:absolute;top:10px;right:10px;z-index:2;'><span style='background:#d32f2f;color:#fff;padding:4px 10px;border-radius:6px;font-weight:bold;font-size:0.95em;box-shadow:0 2px 8px rgba(0,0,0,0.12);letter-spacing:1px;'>Emergencia</span></div>` : ''}
                     <div class="estado-badge ${estadoClass}">
                         <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
                                      typeof ticket.estado === 'string' && ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
@@ -1363,6 +1367,8 @@ function mostrarHorario() {
             <td>${ticket.medicoAtiende || '-'}</td>
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
+            <td>${ticket.horaFinalizacion || '-'}</td>
+            <td>${ticket.porCobrar || '-'}</td>
             <td>
                 <button class="btn-edit" onclick="editTicket('${ticket.randomId}')">
                     <i class="fas fa-edit"></i>
@@ -1682,7 +1688,7 @@ function editTicket(randomId) {
     const userRole = sessionStorage.getItem('userRole');
     // Contador de ediciones para consulta externa
     if (!ticket.editCount) ticket.editCount = 0;
-    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consulta_externa' || ticket.editCount < 5);
+    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepción' && (userRole !== 'consulta_externa' || ticket.editCount < 5);
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
@@ -1692,6 +1698,9 @@ function editTicket(randomId) {
             <label for="editPorCobrar">Por Cobrar</label>
             <input type="text" id="editPorCobrar" value="${ticket.porCobrar || ''}" readonly style="background:#f5f5f5; color:#888; cursor:not-allowed;">
         </div>`;
+    
+    // Mostrar/ocultar campo Hora de Cita según el rol en edición
+    const canShowHoraCita = ["admin", "recepción", "quirofano"].includes(userRole);
     
     // Crear el contenido del modal con el formulario
     modal.innerHTML = `
@@ -1733,10 +1742,10 @@ function editTicket(randomId) {
                         <label for="editHoraLlegada">Hora de Llegada</label>
                         <input type="time" id="editHoraLlegada" value="${safeTicket.horaLlegada || ''}">
                     </div>
-                    <div class="form-group">
+                    ${canShowHoraCita ? `<div class="form-group">
                         <label for="editHora">Hora de Cita</label>
                         <input type="time" id="editHora" value="${safeTicket.horaConsulta || ''}">
-                    </div>
+                    </div>` : ''}
                     <div class="form-group">
                         <label for="editHoraAtencion">Hora de Atención</label>
                         <input type="time" id="editHoraAtencion" value="${safeTicket.horaAtencion || ''}">
@@ -1815,12 +1824,14 @@ function editTicket(randomId) {
                     </div>
                     
                     <div class="form-group">
-                        <label for="editUrgencia">Nivel de Urgencia</label>
+                        <label for="editUrgencia">Categorización de pacientes</label>
                         <select id="editUrgencia" required>
-                            <option value="normal" ${safeTicket.urgencia === 'normal' ? 'selected' : ''}>Normal</option>
-                            <option value="media" ${safeTicket.urgencia === 'media' ? 'selected' : ''}>Media</option>
-                            <option value="alta" ${safeTicket.urgencia === 'alta' ? 'selected' : ''}>Alta</option>
+                            <option value="emergencia" ${safeTicket.urgencia === 'emergencia' ? 'selected' : ''}>🔴 Emergencias</option>
+                            <option value="urgencia" ${safeTicket.urgencia === 'urgencia' ? 'selected' : ''}>🟠 Urgencias</option>
+                            <option value="leve" ${safeTicket.urgencia === 'leve' ? 'selected' : ''}>🟢 Leve</option>
+                            <option value="consulta" ${safeTicket.urgencia === 'consulta' ? 'selected' : ''}>🔵 Consulta</option>
                         </select>
+                        <div id="editUrgenciaDesc" style="font-size:0.95em;color:#1976d2;margin-top:4px;"></div>
                     </div>
                 </div>
                 
@@ -1853,9 +1864,11 @@ function editTicket(randomId) {
                         <option value="perfil_quimico_general" ${safeTicket.tipoServicio === 'perfil_quimico_general' ? 'selected' : ''}>Perfil quimico general</option>
                         <option value="perfil_pre_quirurgico" ${safeTicket.tipoServicio === 'perfil_pre_quirurgico' ? 'selected' : ''}>Perfil pre quirurgico</option>
                         <option value="perfil_renal" ${safeTicket.tipoServicio === 'perfil_renal' ? 'selected' : ''}>Perfil renal</option>
-                        <option value="cirugia" ${safeTicket.tipoServicio === 'cirugia' ? 'selected' : ''}>Cirugía</option>
+<option value="cirugia" ${safeTicket.tipoServicio === 'cirugia' ? 'selected' : ''}>Cirugía</option>
                         <option value="muestra_test" ${safeTicket.tipoServicio === 'muestra_test' ? 'selected' : ''}>Muestra para test</option>
-                        <option value="tiempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selected' : ''}>Tiempos de coagulación</option>
+                        <option value="t<option value="cirugia" ${safeTicket.tipoServicio === 'cirugia' ? 'selected' : ''}>Cirugía</option>
+                        <option value="muestra_test" ${safeTicket.tipoServicio === 'muestra_test' ? 'selected' : ''}>Muestra para test</option>
+iempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selected' : ''}>Tiempos de coagulación</option>
                         <option value="internamiento" ${safeTicket.tipoServicio === 'internamiento' ? 'selected' : ''}>Internamiento</option>
                         <option value="test_sida_leucemia" ${safeTicket.tipoServicio === 'test_sida_leucemia' ? 'selected' : ''}>Test sida leucemia</option>
                         <option value="corteUnas" ${safeTicket.tipoServicio === 'corteUnas' ? 'selected' : ''}>Corte de uñas</option>
@@ -1921,6 +1934,12 @@ function editTicket(randomId) {
             porCobrar: document.getElementById('editPorCobrar')?.value || ''
         };
         
+        // Si el estado cambia a terminado, registrar hora de finalización si no existe
+        if (updatedTicket.estado === 'terminado' && !ticket.horaFinalizacion) {
+            const ahora = new Date();
+            updatedTicket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
+        
         // Guardar el ticket actualizado
         saveEditedTicket(updatedTicket);
     });
@@ -1934,6 +1953,25 @@ function editTicket(randomId) {
             saveBtn.style.background = '#ccc';
             saveBtn.style.cursor = 'not-allowed';
         }
+    }
+    
+    // Actualizar descripción de urgencia
+    const editUrgenciaDescriptions = {
+        emergencia: 'Emergencias. Situaciones críticas que requieren atención médica inmediata. Se mostrará como EMERGENCIA en el ticket.',
+        urgencia: 'Urgencias. Problemas de salud que deben atenderse pronto, pero no son críticos.',
+        leve: 'Leve. Puede esperar, sin riesgo inmediato.',
+        consulta: 'Consulta. Atención general o rutinaria.'
+    };
+    function updateEditUrgenciaDescription() {
+        const select = document.getElementById('editUrgencia');
+        const desc = document.getElementById('editUrgenciaDesc');
+        if (!select || !desc) return;
+        desc.textContent = editUrgenciaDescriptions[select.value] || '';
+    }
+    const editUrgenciaSelect = document.getElementById('editUrgencia');
+    if (editUrgenciaSelect) {
+        editUrgenciaSelect.addEventListener('change', updateEditUrgenciaDescription);
+        updateEditUrgenciaDescription();
     }
 }
 
@@ -2083,6 +2121,24 @@ function changeStatus(randomId) {
         if (nuevoEstado.includes('consultorio') && !ticket.horaAtencion) {
             const ahora = new Date();
             ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
+        // Si el ticket pasa a terminado, registrar hora de finalización
+        if (nuevoEstado === 'terminado') {
+            const ahora = new Date();
+            ticket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            // Guardar en Firebase inmediatamente
+            const ticketToSave = {...ticket};
+            delete ticketToSave.firebaseKey;
+            ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+                .then(() => {
+                    // Refrescar la tabla después de guardar
+                    if (document.getElementById('verTicketsSection').classList.contains('active')) {
+                        renderTickets('terminado');
+                    }
+                    if (document.getElementById('horarioSection').classList.contains('active')) {
+                        mostrarHorario();
+                    }
+                });
         }
         
         // Mostrar indicador de carga
@@ -2338,19 +2394,21 @@ function renderizarGraficosTiempoEspera(ticketsFiltrados) {
   // Calcular tiempos de espera
   const tiemposEspera = {};
   let ticketsConTiempos = 0;
+  let tiemposTotales = [];
   
   ticketsFiltrados.forEach(ticket => {
-    if (ticket.horaLlegada && ticket.horaAtencion) {
+    // Usar horaFinalizacion si existe, si no horaAtencion
+    if (ticket.horaLlegada && (ticket.horaFinalizacion || ticket.horaAtencion)) {
       const servicio = ticket.tipoServicio || 'consulta';
       const llegada = convertTimeToMinutes(ticket.horaLlegada);
-      const atencion = convertTimeToMinutes(ticket.horaAtencion);
-      const tiempoEspera = atencion - llegada;
-      
-      if (tiempoEspera >= 0) {
+      const fin = convertTimeToMinutes(ticket.horaFinalizacion || ticket.horaAtencion);
+      const tiempoTotal = fin - llegada;
+      if (tiempoTotal >= 0) {
         if (!tiemposEspera[servicio]) tiemposEspera[servicio] = { total: 0, count: 0 };
-        tiemposEspera[servicio].total += tiempoEspera;
+        tiemposEspera[servicio].total += tiempoTotal;
         tiemposEspera[servicio].count++;
         ticketsConTiempos++;
+        tiemposTotales.push({ servicio, tiempoTotal });
       }
     }
   });
@@ -2900,9 +2958,13 @@ function filtrarTicketsPorPeriodoGlobal(tickets) {
   let inicio, fin;
   switch (periodo) {
     case 'hoy':
-      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
-      fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
-      break;
+        // Mostrar todos los tickets de hoy, sin importar el estado
+        const hoyStr = getLocalDateString();
+        return tickets.filter(ticket => {
+            // Usar fechaConsulta si existe, si no fecha
+            const ticketStr = ticket.fechaConsulta ? ticket.fechaConsulta : (ticket.fecha ? ticket.fecha.split('T')[0] : '');
+            return ticketStr === hoyStr;
+        });
     case 'semana':
       const diaSemana = hoy.getDay();
       inicio = new Date(hoy);
@@ -3016,4 +3078,19 @@ function formatMinutesToTime(minutes) {
     const hrs = Math.floor(minutes / 60);
     const mins = Math.round(minutes % 60);
     return `${hrs}h ${mins}m`;
+}
+
+function getUrgenciaLabel(urgencia) {
+    const labels = {
+        'alta': 'Alta',
+        'media': 'Media',
+        'normal': 'Normal',
+        'critico': 'Crítico',
+        'leve': 'Leve',
+        'general': 'General',
+        'emergencia': 'Emergencia',
+        'urgencia': 'Urgencia',
+        'consulta': 'Consulta'
+    };
+    return labels[urgencia] || urgencia || '';
 }
