@@ -21,6 +21,18 @@ function getLocalDateString(date = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+// Generar un identificador aleatorio seguro para cada ticket
+function generateRandomId(length = 16) {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let result = '';
+    const array = new Uint32Array(length);
+    window.crypto.getRandomValues(array);
+    for (let i = 0; i < length; i++) {
+        result += chars[array[i] % chars.length];
+    }
+    return result;
+}
+
 const crearTicketBtn = document.getElementById('crearTicketBtn');
 const verTicketsBtn = document.getElementById('verTicketsBtn');
 const estadisticasBtn = document.getElementById('estadisticasBtn');
@@ -106,8 +118,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? Math.max(...todaysTickets.map(t => t.id)) + 1
                     : 1;
 
-                // mostrar sólo tickets del día al cargar
-                renderTickets('fecha', todayDaily);
+                // Mostrar solo tickets EN ESPERA al cargar para todos menos admin
+                const userRole = sessionStorage.getItem('userRole');
+                document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                if (userRole === 'admin') {
+                    renderTickets('todos');
+                    const todosBtn = document.querySelector('.filter-btn[data-filter="todos"]');
+                    if (todosBtn) todosBtn.classList.add('active');
+                } else {
+                    renderTickets('espera');
+                    const esperaBtn = document.querySelector('.filter-btn[data-filter="espera"]');
+                    if (esperaBtn) esperaBtn.classList.add('active');
+                }
                 updateStatsGlobal();
             }).catch(err => {
                 console.error("Error cargando tickets:", err);
@@ -158,11 +180,52 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // evento para filtrar por fecha
+    // Evento para búsqueda en tiempo real
+    const searchInput = document.getElementById('ticketSearchInput');
+    if (searchInput) {
+        searchInput.addEventListener('input', () => {
+            // Detecta el filtro activo
+            const currentFilterBtn = document.querySelector('.filter-btn.active');
+            const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
+            renderTickets(currentFilter);
+        });
+    }
+
+    // Evento para filtrar por fecha
     safeAddEventListener('filterDate', 'change', () => {
-        const d = document.getElementById('filterDate').value;
-        if (d) renderTickets('fecha', d);
+        // Detecta el filtro activo
+        const currentFilterBtn = document.querySelector('.filter-btn.active');
+        const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
+        renderTickets(currentFilter);
     });
+
+    // Ocultar filtro "Todos" en ver consultas para todos menos admin
+    const userRole = sessionStorage.getItem('userRole');
+    if (userRole !== 'admin') {
+        const todosBtn = document.querySelector('.filter-btn[data-filter="todos"]');
+        if (todosBtn) todosBtn.style.display = 'none';
+    }
+
+    // Mostrar barra de búsqueda solo para roles distintos a visitas
+    const searchBar = document.getElementById('searchBarContainer');
+    if (searchBar && userRole !== 'visitas') {
+        searchBar.style.display = 'flex';
+    }
+
+    // Agregar filtro 'Lista' solo para roles distintos a visitas
+    const filterContainer = document.querySelector('.filter-container');
+    if (filterContainer && sessionStorage.getItem('userRole') !== 'visitas') {
+        const listaBtn = document.createElement('button');
+        listaBtn.className = 'filter-btn';
+        listaBtn.setAttribute('data-filter', 'lista');
+        listaBtn.textContent = 'Lista';
+        filterContainer.appendChild(listaBtn);
+        listaBtn.addEventListener('click', () => {
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            listaBtn.classList.add('active');
+            renderTickets('lista');
+        });
+    }
 });
 
 // Improved version of applyRoleBasedUI with better debugging and role detection
@@ -309,13 +372,22 @@ function setDefaultFilterDate() {
 }
 
 safeAddEventListener('verTicketsBtn', 'click', () => {
-    setDefaultFilterDate();
-    // Si el filtro de fecha tiene valor, mostrar solo los tickets de ese día
+    // Siempre inicializar el filtro de fecha antes de renderizar
     const filterDateInput = document.getElementById('filterDate');
-    if (filterDateInput && filterDateInput.value) {
-        renderTickets('fecha', filterDateInput.value);
-    } else {
+    if (filterDateInput && !filterDateInput.value) {
+        filterDateInput.value = getLocalDateString();
+    }
+    // Forzar el filtro visualmente al botón de espera para todos menos admin
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    const userRole = sessionStorage.getItem('userRole');
+    if (userRole === 'admin') {
         renderTickets('todos');
+        const todosBtn = document.querySelector('.filter-btn[data-filter="todos"]');
+        if (todosBtn) todosBtn.classList.add('active');
+    } else {
+        renderTickets('espera');
+        const esperaBtn = document.querySelector('.filter-btn[data-filter="espera"]');
+        if (esperaBtn) esperaBtn.classList.add('active');
     }
     const section = document.getElementById('verTicketsSection');
     if (section) {
@@ -512,7 +584,6 @@ function loadTickets() {
                 const data = snapshot.val() || {};
                 Object.keys(data).forEach(key => {
                     const entry = data[key];
-                    // Only keep valid tickets with id and mascota
                     if (entry && entry.id != null && entry.mascota) {
                         tickets.push({
                             ...entry,
@@ -520,7 +591,6 @@ function loadTickets() {
                         });
                         if (entry.id >= currentTicketId) currentTicketId = entry.id + 1;
                     } else {
-                        // Remove invalid ticket from database
                         ticketsRef.child(key).remove();
                     }
                 });
@@ -540,30 +610,26 @@ function loadTickets() {
                 console.error("Error cargando datos:", error);
                 reject(error);
             });
-            
-        // Configurar escucha en tiempo real para actualizaciones
+        // --- Escuchas en tiempo real ---
         ticketsRef.on('child_added', snapshot => {
-            // Eliminar la condición de isDataLoaded para que todos los usuarios reciban updates
             const entry = snapshot.val();
-            // Remove invalid tickets
             if (!entry || entry.id == null || !entry.mascota) {
                 ticketsRef.child(snapshot.key).remove();
                 return;
             }
             const newTicket = { ...entry, firebaseKey: snapshot.key };
-            if (!tickets.some(t => t.id === newTicket.id)) {
+            // Solo agregar si no existe ya un ticket con esa firebaseKey
+            if (!tickets.some(t => t.firebaseKey === newTicket.firebaseKey)) {
                 tickets.push(newTicket);
                 // Usar el filtro activo actual
                 const currentFilterBtn = document.querySelector('.filter-btn.active');
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
                 renderTickets(currentFilter);
                 updateStatsGlobal();
-                // Real-time UI update for active section
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
         });
-        
         ticketsRef.on('child_changed', snapshot => {
             const updatedTicket = {
                 ...snapshot.val(),
@@ -572,7 +638,6 @@ function loadTickets() {
             const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
             if (index !== -1) {
                 tickets[index] = updatedTicket;
-                // Usar el filtro activo actual
                 const currentFilterBtn = document.querySelector('.filter-btn.active');
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
                 renderTickets(currentFilter);
@@ -581,12 +646,10 @@ function loadTickets() {
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
         });
-        
         ticketsRef.on('child_removed', snapshot => {
             const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
             if (index !== -1) {
                 tickets.splice(index, 1);
-                // Usar el filtro activo actual
                 const currentFilterBtn = document.querySelector('.filter-btn.active');
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
                 renderTickets(currentFilter);
@@ -647,6 +710,7 @@ function addTicket() {
         // 2. Crear nuevo ticket
         const nuevoTicket = {
             id: currentTicketId,
+            randomId: generateRandomId(), // identificador oculto
             nombre,
             mascota,
             cedula,
@@ -727,42 +791,137 @@ function addTicket() {
     }
 }
 
+// Función para corregir IDs duplicados de tickets
+async function fixDuplicateTicketIds() {
+    // Crear un mapa para contar ocurrencias de cada id
+    const idMap = new Map();
+    let maxId = tickets.length > 0 ? Math.max(...tickets.map(t => t.id)) : 0;
+    const updates = [];
+
+    tickets.forEach(ticket => {
+        if (!idMap.has(ticket.id)) {
+            idMap.set(ticket.id, [ticket]);
+        } else {
+            idMap.get(ticket.id).push(ticket);
+        }
+    });
+
+    idMap.forEach((ticketList, id) => {
+        if (ticketList.length > 1) {
+            // El primero se queda igual, los demás se corrigen
+            for (let i = 1; i < ticketList.length; i++) {
+                maxId++;
+                const ticket = ticketList[i];
+                const oldId = ticket.id;
+                ticket.id = maxId;
+                updates.push({ firebaseKey: ticket.firebaseKey, newId: maxId, oldId });
+            }
+        }
+    });
+
+    if (updates.length === 0) {
+        console.log('No hay IDs duplicados.');
+        showNotification('No se encontraron tickets duplicados.', 'success');
+        return;
+    }
+
+    // Actualizar en Firebase
+    for (const upd of updates) {
+        await ticketsRef.child(upd.firebaseKey).update({ id: upd.newId });
+        console.log(`Ticket con firebaseKey ${upd.firebaseKey}: ID cambiado de ${upd.oldId} a ${upd.newId}`);
+    }
+    showNotification('IDs de tickets duplicados corregidos.', 'success');
+}
+const filterDateInput = document.getElementById('filterDate');
+if (filterDateInput && !filterDateInput.value) {
+    filterDateInput.value = getLocalDateString();
+}
+renderTickets('espera');
 function renderTickets(filter = 'todos', date = null) {
     ticketContainer.innerHTML = '';
     let filteredTickets;
 
-    // 'todos' muestra sólo tickets activos, limitados a la fecha si hay datePicker
+    const filterDateInput = document.getElementById('filterDate');
+    const selectedDate = (filterDateInput && filterDateInput.value) ? filterDateInput.value : getLocalDateString();
+    // --- Búsqueda por texto ---
+    const searchInput = document.getElementById('ticketSearchInput');
+    const searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
+
     if (filter === 'todos') {
-        const filterDateInput = document.getElementById('filterDate');
-        if (filterDateInput && filterDateInput.value) {
-            filteredTickets = tickets.filter(t =>
-                t.estado !== 'terminado' &&
-                t.fechaConsulta === filterDateInput.value
-            );
-        } else {
-            filteredTickets = tickets.filter(t => t.estado !== 'terminado');
-        }
-    }
-    else if (filter === 'fecha' && date) {
-        filteredTickets = tickets.filter(ticket => ticket.fechaConsulta === date);
-    } else {
-        filteredTickets = [...tickets];
-    }
-    
-    // Aplicar filtros
-    if (filter === 'espera') {
-        filteredTickets = tickets.filter(ticket => ticket.estado === 'espera');
+        filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate && t.estado !== 'terminado');
+    } else if (filter === 'espera') {
+        filteredTickets = tickets.filter(ticket => ticket.estado === 'espera' && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'consultorio') {
         filteredTickets = tickets.filter(ticket => 
-            ticket.estado === 'consultorio1' || 
+            (ticket.estado === 'consultorio1' || 
             ticket.estado === 'consultorio2' || 
-            ticket.estado === 'consultorio3'
+            ticket.estado === 'consultorio3' ||
+            ticket.estado === 'consultorio4' ||
+            ticket.estado === 'consultorio5') &&
+            ticket.fechaConsulta === selectedDate
         );
     } else if (filter === 'terminado') {
-        filteredTickets = tickets.filter(ticket => ticket.estado === 'terminado');
+        filteredTickets = tickets.filter(ticket => ticket.estado === 'terminado' && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'urgentes') {
-        // Filtrar tickets con urgencia alta
-        filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta');
+        filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta' && ticket.fechaConsulta === selectedDate);
+    } else if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
+        // Filtro lista: igual que 'todos' pero en formato tabla
+        filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate);
+    } else {
+        filteredTickets = tickets.filter(ticket => ticket.fechaConsulta === selectedDate);
+    }
+
+    // Aplicar filtro de búsqueda si hay texto
+    if (searchText) {
+        filteredTickets = filteredTickets.filter(ticket => {
+            return (
+                (ticket.nombre && ticket.nombre.toLowerCase().includes(searchText)) ||
+                (ticket.mascota && ticket.mascota.toLowerCase().includes(searchText)) ||
+                (ticket.idPaciente && ticket.idPaciente.toLowerCase().includes(searchText)) ||
+                (ticket.numFactura && ticket.numFactura.toLowerCase().includes(searchText))
+            );
+        });
+    }
+
+    if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
+        let table = `<table class="excel-tickets-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>N° Ticket</th>
+                    <th>Cliente</th>
+                    <th>Mascota</th>
+                    <th>ID Paciente</th>
+                    <th>Estado</th>
+                    <th>Hora Llegada</th>
+                    <th>Hora Atención</th>
+                    <th>Médico/Asistente</th>
+                    <th>Urgencia</th>
+                </tr>
+            </thead>
+            <tbody>`;
+        filteredTickets.forEach((ticket, index) => {
+            let estadoColor = '';
+            if (ticket.estado === 'espera') estadoColor = 'excel-estado-espera';
+            else if (ticket.estado && ticket.estado.startsWith('consultorio')) estadoColor = 'excel-estado-consultorio';
+            else if (ticket.estado === 'terminado') estadoColor = 'excel-estado-terminado';
+            else estadoColor = '';
+            table += `<tr class="${estadoColor}">
+                <td>${index + 1}</td>
+                <td>#${ticket.id}</td>
+                <td>${ticket.nombre || ''}</td>
+                <td>${ticket.mascota || ''}</td>
+                <td>${ticket.idPaciente || ''}</td>
+                <td>${ticket.estado || ''}</td>
+                <td>${ticket.horaLlegada || ''}</td>
+                <td>${ticket.horaAtencion || ''}</td>
+                <td>${ticket.medicoAtiende || ''}</td>
+                <td>${(ticket.urgencia || '').toUpperCase()}</td>
+            </tr>`;
+        });
+        table += '</tbody></table>';
+        ticketContainer.innerHTML = table;
+        return;
     }
     
     // Ordenar por urgencia y luego por fecha
@@ -805,6 +964,16 @@ function renderTickets(filter = 'todos', date = null) {
         
         let ticketContent = '';
         
+        // Check azul si el ticket ya fue pasado a consultorio o atendido
+        let checkIcon = '';
+        if (ticket.estado !== 'espera') {
+            checkIcon = '<span class="ticket-check-icon"><i class="fas fa-check-circle"></i></span>';
+        }
+        // Insertar el check al inicio del ticketContent
+        ticketContent = checkIcon + ticketContent;
+
+       
+
         // Check if user is in 'visitas' role with limited view
         if (!hasPermission('canViewFullTicket')) {
             // Get animal icon for visitas
@@ -858,13 +1027,21 @@ function renderTickets(filter = 'todos', date = null) {
                     estadoText = 'Consultorio 3';
                     estadoClass = 'estado-consultorio';
                     break;
+                case 'consultorio4':
+                    estadoText = 'Consultorio 4';
+                    estadoClass = 'estado-consultorio';
+                    break;
+                case 'consultorio5':
+                    estadoText = 'Consultorio 5';
+                    estadoClass = 'estado-consultorio';
+                    break;
                 case 'terminado':
                     estadoText = 'Consulta terminada';
                     estadoClass = 'estado-terminado';
                     break;
             }
             // Simplified view for 'visitas' role with animal icon
-            ticketContent = `
+            ticketContent += `
                 <div class="ticket-header">
                     <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
                     <div class="ticket-number">#${ticket.id}</div>
@@ -920,6 +1097,14 @@ function renderTickets(filter = 'todos', date = null) {
                     estadoText = 'Consultorio 3';
                     estadoClass = 'estado-consultorio';
                     break;
+                case 'consultorio4':
+                    estadoText = 'Consultorio 4';
+                    estadoClass = 'estado-consultorio';
+                    break;
+                case 'consultorio5':
+                    estadoText = 'Consultorio 5';
+                    estadoClass = 'estado-consultorio';
+                    break;
                 case 'terminado':
                     estadoText = 'Consulta terminada';
                     estadoClass = 'estado-terminado';
@@ -941,7 +1126,7 @@ function renderTickets(filter = 'todos', date = null) {
                     urgenciaClass = 'urgencia-normal';
                     urgenciaIcon = 'fa-info-circle';
             }
-            ticketContent = `
+            ticketContent += `
                 <div class="ticket-header">
                     <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
                     <div class="ticket-number">#${ticket.id}</div>
@@ -969,23 +1154,21 @@ function renderTickets(filter = 'todos', date = null) {
             `;
         }
         
-        // Add action buttons based on permissions
-        let actionButtons = '';
-        
-        if (hasPermission('canEditTickets')) {
-            actionButtons += `
-                <button class="action-btn btn-editar" onclick="editTicket(${ticket.id})">
-                    <i class="fas fa-edit"></i> Editar
-                </button>
-                <button class="action-btn btn-cambiar" onclick="changeStatus(${ticket.id})">
-                    <i class="fas fa-exchange-alt"></i> Cambiar Estado
+        // Icono de edición (visible solo en hover)
+        ticketContent += ``;
+        // Botón de eliminar solo para admin (hover)
+        if (hasPermission('canDeleteTickets')) {
+            ticketContent += `
+            
                 </button>
             `;
         }
-        
+
+        // Quitar los botones de editar y cambiar estado
+        let actionButtons = '';
         if (hasPermission('canDeleteTickets')) {
             actionButtons += `
-                <button class="action-btn btn-eliminar" onclick="deleteTicket(${ticket.id})">
+                <button class="action-btn btn-eliminar" onclick="event.stopPropagation(); deleteTicketByRandomId('${ticket.randomId}')">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             `;
@@ -997,6 +1180,13 @@ function renderTickets(filter = 'todos', date = null) {
         }
         
         ticketElement.innerHTML = ticketContent;
+        
+        // Abrir modal de edición solo al hacer click, excepto para visitas
+        if (sessionStorage.getItem('userRole') !== 'visitas') {
+            ticketElement.addEventListener('click', () => {
+                editTicket(ticket.randomId);
+            });
+        }
         
         // Agregar animación basada en el índice para escalonamiento
         ticketElement.style.animationDelay = `${index * 0.1}s`;
@@ -1174,10 +1364,10 @@ function mostrarHorario() {
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
             <td>
-                <button class="btn-edit" onclick="editTicket(${ticket.id})">
+                <button class="btn-edit" onclick="editTicket('${ticket.randomId}')">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn-delete" onclick="deleteTicket(${ticket.id})">
+                <button class="btn-delete" onclick="deleteTicketByRandomId('${ticket.randomId}')">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -1415,11 +1605,11 @@ function cleanOldData() {
     });
 }
 
-function editTicket(id) {
-    const ticket = tickets.find(t => t.id === id);
+function editTicket(randomId) {
+    const ticket = tickets.find(t => t.randomId === randomId);
     
     if (!ticket) {
-        console.error("Ticket no encontrado con ID:", id);
+        console.error("Ticket no encontrado con randomId:", randomId);
         showNotification('Error: Ticket no encontrado', 'error');
         return;
     }
@@ -1545,7 +1735,7 @@ function editTicket(id) {
                     </div>
                     <div class="form-group">
                         <label for="editHora">Hora de Cita</label>
-                        <input type="time" id="editHora" value="${safeTicket.horaConsulta || ''}" required>
+                        <input type="time" id="editHora" value="${safeTicket.horaConsulta || ''}">
                     </div>
                     <div class="form-group">
                         <label for="editHoraAtencion">Hora de Atención</label>
@@ -1553,9 +1743,39 @@ function editTicket(id) {
                     </div>
                 </div>
                 
-                <div class="form-group">
-                    <label for="editMedicoAtiende">Médico que atiende</label>
-                    <input type="text" id="editMedicoAtiende" value="${safeTicket.medicoAtiende}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editDoctorAtiende"><i class="fas fa-user-md"></i> Doctor que atiende</label>
+                        <select id="editDoctorAtiende" name="editDoctorAtiende">
+                            <option value="">Seleccione un doctor</option>
+                            <option value="Dr. Luis Coto" ${doctorSeleccionado === "Dr. Luis Coto" ? 'selected' : ''}>Dr. Luis Coto</option>
+                            <option value="Dr. Randall Azofeifa" ${doctorSeleccionado === "Dr. Randall Azofeifa" ? 'selected' : ''}>Dr. Randall Azofeifa</option>
+                            <option value="Dr. Gustavo González" ${doctorSeleccionado === "Dr. Gustavo González" ? 'selected' : ''}>Dr. Gustavo González</option>
+                            <option value="Dra. Daniela Sancho" ${doctorSeleccionado === "Dra. Daniela Sancho" ? 'selected' : ''}>Dra. Daniela Sancho</option>
+                            <option value="Dra. Kharen Moreno" ${doctorSeleccionado === "Dra. Kharen Moreno" ? 'selected' : ''}>Dra. Kharen Moreno</option>
+                            <option value="Dra. Karina Madrigal" ${doctorSeleccionado === "Dra. Karina Madrigal" ? 'selected' : ''}>Dra. Karina Madrigal</option>
+                            <option value="Dra. Lourdes Chacón" ${doctorSeleccionado === "Dra. Lourdes Chacón" ? 'selected' : ''}>Dra. Lourdes Chacón</option>
+                            <option value="Dra. Sofia Carrillo" ${doctorSeleccionado === "Dra. Sofia Carrillo" ? 'selected' : ''}>Dra. Sofia Carrillo</option>
+                            <option value="Dra. Francinny Nuñez" ${doctorSeleccionado === "Dra. Francinny Nuñez" ? 'selected' : ''}>Dra. Francinny Nuñez</option>
+                            <option value="Dra. Karla Quesada" ${doctorSeleccionado === "Dra. Karla Quesada" ? 'selected' : ''}>Dra. Karla Quesada</option>
+                            <option value="Dra. Natalia Alvarado" ${doctorSeleccionado === "Dra. Natalia Alvarado" ? 'selected' : ''}>Dra. Natalia Alvarado</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editAsistenteAtiende"><i class="fas fa-user-nurse"></i> Asistente que atiende</label>
+                        <select id="editAsistenteAtiende" name="editAsistenteAtiende">
+                            <option value="">Seleccione un asistente</option>
+                            <option value="Tec. Maribel Guzmán" ${asistenteSeleccionado === "Tec. Maribel Guzmán" ? 'selected' : ''}>Tec. Maribel Guzmán</option>
+                            <option value="Tec. Juliana Perez" ${asistenteSeleccionado === "Tec. Juliana Perez" ? 'selected' : ''}>Tec. Juliana Perez</option>
+                            <option value="Tec. Jafeth Bermudez" ${asistenteSeleccionado === "Tec. Jafeth Bermudez" ? 'selected' : ''}>Tec. Jafeth Bermudez</option>
+                            <option value="Tec. Johnny Chacón" ${asistenteSeleccionado === "Tec. Johnny Chacón" ? 'selected' : ''}>Tec. Johnny Chacón</option>
+                            <option value="Tec. Gabriela Zuñiga" ${asistenteSeleccionado === "Tec. Gabriela Zuñiga" ? 'selected' : ''}>Tec. Gabriela Zuñiga</option>
+                            <option value="Tec. Indra Perez" ${asistenteSeleccionado === "Tec. Indra Perez" ? 'selected' : ''}>Tec. Indra Perez</option>
+                            <option value="Tec. Randy Arias" ${asistenteSeleccionado === "Tec. Randy Arias" ? 'selected' : ''}>Tec. Randy Arias</option>
+                            <option value="Tec. Yancy Picado" ${asistenteSeleccionado === "Tec. Yancy Picado" ? 'selected' : ''}>Tec. Yancy Picado</option>
+                            <option value="Tec. Maria Fernanda"${asistenteSeleccionado === "Tec. Maria Fernanda" ? 'selected' : ''}>Tec. Maria Fernanda</option>
+                        </select>
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -1565,7 +1785,7 @@ function editTicket(id) {
                 
                 <div class="form-group">
                     <label for="editMotivo">Motivo de Consulta</label>
-                    <textarea id="editMotivo" required>${safeTicket.motivo}</textarea>
+                    <textarea id="editMotivo">${safeTicket.motivo}</textarea>
                 </div>
                 
                 <div class="form-row">
@@ -1631,41 +1851,6 @@ function editTicket(id) {
                     </select>
                 </div>
                 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="editDoctorAtiende">Doctor que atiende</label>
-                        <select id="editDoctorAtiende">
-                            <option value="">Seleccione un doctor</option>
-                            <option value="Dr. Luis Coto" ${doctorSeleccionado === "Dr. Luis Coto" ? 'selected' : ''}>Dr. Luis Coto</option>
-                            <option value="Dr. Randall Azofeifa" ${doctorSeleccionado === "Dr. Randall Azofeifa" ? 'selected' : ''}>Dr. Randall Azofeifa</option>
-                            <option value="Dr. Gustavo González" ${doctorSeleccionado === "Dr. Gustavo González" ? 'selected' : ''}>Dr. Gustavo González</option>
-                            <option value="Dra. Daniela Sancho" ${doctorSeleccionado === "Dra. Daniela Sancho" ? 'selected' : ''}>Dra. Daniela Sancho</option>
-                            <option value="Dra. Kharen Moreno" ${doctorSeleccionado === "Dra. Kharen Moreno" ? 'selected' : ''}>Dra. Kharen Moreno</option>
-                            <option value="Dra. Karina Madrigal" ${doctorSeleccionado === "Dra. Karina Madrigal" ? 'selected' : ''}>Dra. Karina Madrigal</option>
-                            <option value="Dra. Lourdes Chacón" ${doctorSeleccionado === "Dra. Lourdes Chacón" ? 'selected' : ''}>Dra. Lourdes Chacón</option>
-                            <option value="Dra. Sofia Carrillo" ${doctorSeleccionado === "Dra. Sofia Carrillo" ? 'selected' : ''}>Dra. Sofia Carrillo</option>
-                            <option value="Dra. Francinny Nuñez" ${doctorSeleccionado === "Dra. Francinny Nuñez" ? 'selected' : ''}>Dra. Francinny Nuñez</option>
-                            <option value="Dra. Karla Quesada" ${doctorSeleccionado === "Dra. Karla Quesada" ? 'selected' : ''}>Dra. Karla Quesada</option>
-                            <option value="Dra. Natalia Alvarado" ${doctorSeleccionado === "Dra. Natalia Alvarado" ? 'selected' : ''}>Dra. Natalia Alvarado</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label for="editAsistenteAtiende">Asistente que atiende</label>
-                        <select id="editAsistenteAtiende">
-                            <option value="">Seleccione un asistente</option>
-                            <option value="Tec. Maribel Guzmán" ${asistenteSeleccionado === "Tec. Maribel Guzmán" ? 'selected' : ''}>Tec. Maribel Guzmán</option>
-                            <option value="Tec. Juliana Perez" ${asistenteSeleccionado === "Tec. Juliana Perez" ? 'selected' : ''}>Tec. Juliana Perez</option>
-                            <option value="Tec. Jafeth Bermudez" ${asistenteSeleccionado === "Tec. Jafeth Bermudez" ? 'selected' : ''}>Tec. Jafeth Bermudez</option>
-                            <option value="Tec. Johnny Chacón" ${asistenteSeleccionado === "Tec. Johnny Chacón" ? 'selected' : ''}>Tec. Johnny Chacón</option>
-                            <option value="Tec. Gabriela Zuñiga" ${asistenteSeleccionado === "Tec. Gabriela Zuñiga" ? 'selected' : ''}>Tec. Gabriela Zuñiga</option>
-                            <option value="Tec. Indra Perez" ${asistenteSeleccionado === "Tec. Indra Perez" ? 'selected' : ''}>Tec. Indra Perez</option>
-                            <option value="Tec. Randy Arias" ${asistenteSeleccionado === "Tec. Randy Arias" ? 'selected' : ''}>Tec. Randy Arias</option>
-                            <option value="Tec. Yancy Picado" ${asistenteSeleccionado === "Tec. Yancy Picado" ? 'selected' : ''}>Tec. Yancy Picado</option>
-                            <option value="Tec. Maria Fernanda"${asistenteSeleccionado === "Tec. Maria Fernanda" ? 'selected' : ''}>Tec. Maria Fernanda</option>
-                        </select>
-                    </div>
-                </div>
-                
                 ${porCobrarField}
                 
                 <div class="modal-actions">
@@ -1692,7 +1877,7 @@ function editTicket(id) {
         } else if (editDoctorAtiende) {
             medicoAtiende = editDoctorAtiende;
         } else if (editAsistenteAtiende) {
-            medicoAtiende = editAsistenteAtiene;
+            medicoAtiende = editAsistenteAtiende;
         }
         
         // Recoger todos los datos del formulario
@@ -1836,8 +2021,8 @@ function saveEditedTicket(ticket) {
         });
 }
 
-function changeStatus(id) {
-    const ticket = tickets.find(t => t.id === id);
+function changeStatus(randomId) {
+    const ticket = tickets.find(t => t.randomId === randomId);
     if (!ticket) return;
     
     // Mostrar modal para cambiar estado
@@ -1924,19 +2109,23 @@ function changeStatus(id) {
     });
 }
 
-// Modify the deleteTicket function to check permissions
-function deleteTicket(id) {
+// Nueva función para eliminar por randomId
+function deleteTicketByRandomId(randomId) {
+    const ticket = tickets.find(t => t.randomId === randomId);
+    if (!ticket) return;
+    deleteTicketByFirebaseKey(ticket.firebaseKey);
+}
+
+// Nueva función para eliminar por firebaseKey
+function deleteTicketByFirebaseKey(firebaseKey) {
     // Check if user has permission to delete
     if (!hasPermission('canDeleteTickets')) {
         showNotification('No tienes permiso para eliminar consultas', 'error');
         return;
     }
-    
-    // Confirmar antes de eliminar
-    const ticket = tickets.find(t => t.id === id);
+    const ticket = tickets.find(t => t.firebaseKey === firebaseKey);
     if (!ticket) return;
-    
-    // Seleccionar icono según tipo de mascota
+    // Confirmar antes de eliminar
     let animalIcon = '';
     switch(ticket.tipoMascota) {
         case 'perro':
@@ -1945,14 +2134,12 @@ function deleteTicket(id) {
         case 'gato':
             animalIcon = '<i class="fas fa-cat" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
-        
         case 'conejo':
             animalIcon = '<i class="fas fa-dove" style="font-size: 1.5rem; margin-right: 10px;"></i>';
             break;
         default:
             animalIcon = '<i class="fas fa-paw" style="font-size: 1.5rem; margin-right: 10px;"></i>';
     }
-    
     const modal = document.createElement('div');
     modal.className = 'edit-modal';
     modal.innerHTML = `
@@ -1968,63 +2155,46 @@ function deleteTicket(id) {
             </div>
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
-                <button class="btn-delete" onclick="confirmDelete(${ticket.id})">
+                <button class="btn-delete" onclick="confirmDeleteByFirebaseKey('${firebaseKey}')">
                     <i class="fas fa-trash"></i> Eliminar
                 </button>
             </div>
         </div>
     `;
-    
     document.body.appendChild(modal);
 }
 
-function confirmDelete(id) {
-    const ticket = tickets.find(t => t.id === id);
+function confirmDeleteByFirebaseKey(firebaseKey) {
+    const ticket = tickets.find(t => t.firebaseKey === firebaseKey);
     if (!ticket || !ticket.firebaseKey) {
         showNotification('Error al eliminar la consulta', 'error');
         return;
     }
-    
-    // Store current active section and filter before deleting
     const currentSection = document.querySelector('.content section.active');
     const currentFilterBtn = document.querySelector('.filter-btn.active');
     const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
-    
-    // Mostrar indicador de carga
     const deleteButton = document.querySelector('.btn-delete');
     if (deleteButton) {
         showLoadingButton(deleteButton);
     }
-    
     ticketsRef.child(ticket.firebaseKey).remove()
         .then(() => {
             showNotification('Consulta eliminada correctamente', 'success');
             closeModal();
-            
-            // Mantener la vista actual
             if (currentSection) {
-                // Si estamos en la vista de tickets, aplicar el filtro actual
                 if (currentSection.id === 'verTicketsSection') {
                     renderTickets(currentFilter);
-                    
-                    // También actualizar el botón activo de filtro
                     if (currentFilterBtn) {
                         document.querySelectorAll('.filter-btn').forEach(btn => {
                             btn.classList.remove('active');
                         });
                         currentFilterBtn.classList.add('active');
                     }
-                    
-                    // Asegurar que el botón de navegación también está activo
                     setActiveButton(verTicketsBtn);
-                } 
-                // Si estamos en la vista de horario, actualizarla
-                else if (currentSection.id === 'horarioSection') {
+                } else if (currentSection.id === 'horarioSection') {
                     mostrarHorario();
                 }
             }
-            
-            // Actualizar estadísticas
             updateStatsGlobal();
         })
         .catch(error => {
@@ -2136,7 +2306,7 @@ function updateStatsGlobal() {
   document.getElementById('totalPacientes').textContent = filtered.length;
   document.getElementById('pacientesEspera').textContent = filtered.filter(t => t.estado === 'espera').length;
   document.getElementById('pacientesConsulta').textContent = filtered.filter(t => 
-    t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3'
+    t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3' || t.estado === 'consultorio4' || t.estado === 'consultorio5'
   ).length;
   document.getElementById('pacientesAtendidos').textContent = filtered.filter(t => t.estado === 'terminado').length;
   

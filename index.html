@@ -107,7 +107,7 @@
               </div>
               <div class="form-group">
                 <label for="hora">Hora de Consulta</label>
-                <input type="time" id="hora" required>
+                <input type="time" id="hora">
               </div>
             </div>
 
@@ -201,7 +201,7 @@
             </div>
             <div class="form-group">
               <label for="motivo">Motivo de Consulta</label>
-              <textarea id="motivo" placeholder="Describa el motivo de la consulta" required></textarea>
+              <textarea id="motivo" placeholder="Describa el motivo de la consulta"></textarea>
             </div>
             <div class="form-group">
               <label for="porCobrar">Por Cobrar</label>
@@ -215,6 +215,12 @@
       <!-- Sección para visualizar tickets -->
       <section id="verTicketsSection" class="hidden">
         <h2><i class="fas fa-list"></i> Sala de Espera</h2>
+        
+        <!-- Barra de búsqueda (visible para todos menos visitas) -->
+        <div id="searchBarContainer" class="search-bar" style="display:none; margin-bottom: 15px;">
+          <input type="text" id="ticketSearchInput" placeholder="Buscar por cliente, mascota, ID paciente o factura..." autocomplete="off">
+          <i class="fas fa-search"></i>
+        </div>
         
         <!-- nuevo filtro de fecha -->
         <div id="dateFilterContainer" class="date-filter hidden">
