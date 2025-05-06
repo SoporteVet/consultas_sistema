@@ -3094,3 +3094,205 @@ function getUrgenciaLabel(urgencia) {
     };
     return labels[urgencia] || urgencia || '';
 }
+document.addEventListener('DOMContentLoaded', function() {
+  const tipoMascota = document.getElementById('tipoMascota');
+  const conejoImg = document.getElementById('conejoImg');
+  if (tipoMascota && conejoImg) {
+    tipoMascota.addEventListener('change', function() {
+      conejoImg.style.display = tipoMascota.value === 'conejo' ? 'inline-block' : 'none';
+    });
+  }
+
+  // Ocultar campo Hora de Cita según el rol
+  const userRole = sessionStorage.getItem('userRole');
+  const horaCitaGroup = document.querySelector('input#hora')?.closest('.form-group');
+  if (horaCitaGroup) {
+    if (!["admin", "recepción", "quirofano"].includes(userRole)) {
+      horaCitaGroup.style.display = 'none';
+    } else {
+      horaCitaGroup.style.display = '';
+    }
+  }
+
+  // Mostrar botón Hoja de Laboratorio solo para ciertos roles
+  const labSheetBtn = document.getElementById('labSheetBtn');
+  const labSheetSection = document.getElementById('labSheetSection');
+  const allowedRoles = ["consulta_externa", "laboratorio", "internos", "admin"];
+  if (labSheetBtn && allowedRoles.includes(userRole)) {
+    labSheetBtn.style.display = '';
+    labSheetBtn.onclick = function() {
+      // Oculta todas las secciones
+      document.querySelectorAll('.content section').forEach(s => {
+        s.classList.add('hidden');
+        s.classList.remove('active');
+      });
+      // Muestra la hoja de laboratorio
+      if (labSheetSection) {
+        labSheetSection.classList.remove('hidden');
+        setTimeout(() => labSheetSection.classList.add('active'), 50);
+      }
+      // Quita active de todos los botones y pon solo este
+      document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
+      labSheetBtn.classList.add('active');
+    };
+  }
+
+  // Descripciones para cada categorización
+  const urgenciaDescriptions = {
+    emergencia: 'Emergencias. Situaciones críticas que requieren atención médica inmediata. Se mostrará como EMERGENCIA en el ticket.',
+    urgencia: 'Urgencias. Problemas de salud que deben atenderse pronto, pero no son críticos.',
+    leve: 'Leve. Puede esperar, sin riesgo inmediato.',
+    consulta: 'Consulta. Atención general o rutinaria.'
+  };
+
+  function updateUrgenciaDescription(selectId, descId) {
+    const select = document.getElementById(selectId);
+    const desc = document.getElementById(descId);
+    if (!select || !desc) return;
+    const value = select.value;
+    desc.textContent = urgenciaDescriptions[value] || '';
+  }
+
+  // Descripción dinámica en creación
+  const urgenciaSelect = document.getElementById('urgencia');
+  if (urgenciaSelect) {
+    const descDiv = document.createElement('div');
+    descDiv.id = 'urgenciaDesc';
+    descDiv.style.fontSize = '0.95em';
+    descDiv.style.color = '#1976d2';
+    descDiv.style.marginTop = '4px';
+    urgenciaSelect.parentNode.appendChild(descDiv);
+    urgenciaSelect.addEventListener('change', function() {
+      updateUrgenciaDescription('urgencia', 'urgenciaDesc');
+    });
+    updateUrgenciaDescription('urgencia', 'urgenciaDesc');
+  }
+
+  // Mostrar filtro de laboratorio solo para roles permitidos
+  const allowedLabRoles = ["admin", "consulta_externa", "internos", "laboratorio"];
+  const labFilterBtn = document.getElementById('labFilterBtn');
+  if (labFilterBtn && allowedLabRoles.includes(userRole)) {
+    labFilterBtn.style.display = '';
+  }
+
+  // Evento para mostrar tabla de laboratorio
+  if (labFilterBtn) {
+    labFilterBtn.addEventListener('click', function() {
+      // Oculta otras vistas
+      document.getElementById('ticketContainer').style.display = 'none';
+      document.getElementById('labResultsContainer').classList.remove('hidden');
+      renderLabResults();
+      // Marcar botón activo
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      labFilterBtn.classList.add('active');
+    });
+  }
+
+  // Cuando se selecciona otro filtro, ocultar la tabla de laboratorio
+  document.querySelectorAll('.filter-btn:not(#labFilterBtn)').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.getElementById('labResultsContainer').classList.add('hidden');
+      document.getElementById('ticketContainer').style.display = '';
+    });
+  });
+
+  // Actualización en tiempo real
+  window.renderLabResults = function() {
+    const labResultsBody = document.getElementById('labResultsBody');
+    if (!labResultsBody) return;
+    labResultsBody.innerHTML = '';
+    // Filtrar tickets con servicios de laboratorio
+    const labTickets = (window.tickets || []).filter(t =>
+      t.tipoServicio && (
+        t.tipoServicio.includes('panel') ||
+        t.tipoServicio.includes('perfil') ||
+        t.tipoServicio.includes('hemograma') ||
+        t.tipoServicio.includes('quimica') ||
+        t.tipoServicio.includes('test') ||
+        t.tipoServicio.includes('analito') ||
+        t.tipoServicio.includes('laboratorio')
+      )
+    );
+    if (labTickets.length === 0) {
+      labResultsBody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#888;">No hay registros de laboratorio</td></tr>';
+      return;
+    }
+    labTickets.forEach(t => {
+      // Apellido del cliente (última palabra del nombre)
+      const apellido = (t.nombre || '').trim().split(' ').slice(-1)[0] || '';
+      // Servicios a realizar (puedes mejorar esto si tienes un campo específico)
+      const servicios = t.tipoServicio ? t.tipoServicio.replace(/_/g, ' ') : '';
+      // Estado laboratorio (puedes mejorar lógica según tu flujo)
+      let estadoLab = 'En proceso';
+      if (t.estado === 'terminado') estadoLab = 'Realizado';
+      // Hora creación
+      const hora = t.horaCreacion || '';
+      // Doctor encargado
+      const doctor = t.medicoAtiende || '';
+      labResultsBody.innerHTML += `
+        <tr>
+          <td>${t.mascota || ''}</td>
+          <td>${apellido}</td>
+          <td>${servicios}</td>
+          <td>${estadoLab}</td>
+          <td>${hora}</td>
+          <td>${doctor}</td>
+        </tr>
+      `;
+    });
+  };
+
+  // Actualizar tabla en tiempo real cuando cambian los tickets
+  if (typeof window.ticketsRef !== 'undefined') {
+    window.ticketsRef.on('value', function() {
+      const labResultsContainer = document.getElementById('labResultsContainer');
+      if (labResultsContainer && !labResultsContainer.classList.contains('hidden')) {
+        renderLabResults();
+      }
+    });
+  }
+
+  // Navegación con flechas en el formulario de tickets
+  (function() {
+    const form = document.getElementById('ticketForm');
+    if (!form) return;
+    // Selecciona todos los inputs, selects y textareas visibles en orden
+    const getFields = () => Array.from(form.querySelectorAll('input, select, textarea')).filter(el => el.offsetParent !== null && !el.disabled);
+
+    form.addEventListener('keydown', function(e) {
+      const fields = getFields();
+      const idx = fields.indexOf(document.activeElement);
+      if (idx === -1) return;
+      // Columnas por fila (ajustar si cambias el diseño)
+      const cols = 2;
+      // Flecha abajo
+      if (e.key === 'ArrowDown') {
+        if (idx + cols < fields.length) {
+          fields[idx + cols].focus();
+          e.preventDefault();
+        }
+      }
+      // Flecha arriba
+      else if (e.key === 'ArrowUp') {
+        if (idx - cols >= 0) {
+          fields[idx - cols].focus();
+          e.preventDefault();
+        }
+      }
+      // Flecha derecha
+      else if (e.key === 'ArrowRight') {
+        if ((idx + 1) % cols !== 0 && idx + 1 < fields.length) {
+          fields[idx + 1].focus();
+          e.preventDefault();
+        }
+      }
+      // Flecha izquierda
+      else if (e.key === 'ArrowLeft') {
+        if (idx % cols !== 0 && idx - 1 >= 0) {
+          fields[idx - 1].focus();
+          e.preventDefault();
+        }
+      }
+    });
+  })();
+});
