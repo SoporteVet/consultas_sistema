@@ -1,0 +1,842 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Boleta de laboratorio clínico para pacientes veterinarios">
+    <title>Laboratorio Clínico Veterinario</title>
+    <link rel="stylesheet" href="hoja_lab.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header class="lab-header">
+            <div class="header-top">
+                <img src="empresa.jpg" alt="Veterinaria Logo" class="logo">
+                <div class="header-text">
+                    <h1>Boleta Ingreso Laboratorio Clínico</h1>
+                    <p class="subtitle">Yo te curo, Dios te sana</p>
+                </div>
+            </div>
+            <div class="lab-info">
+                <p><i class="fas fa-calendar-alt"></i> Fecha: <span id="current-date"></span></p>
+                <p><i class="fas fa-hashtag"></i> Factura Nº: <input type="text" class="form-input" value=""></p>
+            </div>
+        </header>
+
+        <form id="lab-form">
+            <div class="content-wrapper">
+                <section class="patient-info" aria-labelledby="patient-heading">
+                    <h2 id="patient-heading"><i class="fas fa-paw"></i> Información del Paciente</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <i class="fas fa-cat"></i>
+                            <p><strong>Paciente:</strong> <input type="text" name="nombre-paciente" class="form-input" placeholder="Nombre" required></p>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-dna"></i>
+                            <p>
+                                <strong>Raza:</strong>
+                                <input type="text" name="raza" class="form-input" id="mascotaRaza" placeholder="Raza" list="razas" required>
+                                <datalist id="razas"></datalist>
+                            </p>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-feather"></i>
+                            <p>
+                                <strong>Especie:</strong>
+                                <select name="especie" class="form-select" id="especieSelector" required>
+                                    <option value="Felino">Felino</option>
+                                    <option value="Canino">Canino</option>
+                                    <option value="Lagomorfo">Lagomorfo</option>
+                                    <option value="Cuilo">Cuilo</option>
+                                    <option value="Otro">Otro</option>
+                                </select>
+                            </p>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-venus-mars"></i>
+                            <p><strong>Sexo:</strong> 
+                                <select name="sexo" class="form-select" required>
+                                    <option value="hembra">Hembra</option>
+                                    <option value="macho">Macho</option>
+                                </select>
+                            </p>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-birthday-cake"></i>
+                            <p><strong>Edad:</strong> <input type="text" name="edad" class="form-input" placeholder="Edad" required> 
+                                <select name="unidad-edad" class="form-select-small" required>
+                                    <option value="años">años</option>
+                                    <option value="meses">meses</option>
+                                </select>
+                            </p>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-weight"></i>
+                            <p><strong>Peso:</strong> <input type="number" step="0.1" name="peso" class="form-input" placeholder="Peso" required> kg</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="owner-info" aria-labelledby="owner-heading">
+                    <h2 id="owner-heading"><i class="fas fa-user"></i> Información del Propietario</h2>
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <i class="fas fa-id-card"></i>
+                            <p><strong>Propietario:</strong> <input type="text" name="propietario" class="form-input" placeholder="Nombre completo" required></p>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-address-card"></i>
+                            <p><strong>Cédula:</strong> <input type="text" name="cedula" class="form-input" placeholder="Cédula del propietario" required></p>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-phone"></i>
+                            <p><strong>Teléfono:</strong> <input type="tel" name="telefono" class="form-input" placeholder="Número de teléfono" required></p>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-envelope"></i>
+                            <p><strong>Correo:</strong> <input type="email" name="correo" class="form-input" placeholder="Correo electrónico" required></p>
+                        </div>
+                    </div>
+                </section>
+                <section class="notes-section">
+                    <h2><i class="fas fa-clipboard"></i>Anamnesis</h2>
+                    <div class="notes-container">
+                        <textarea name="notas" class="notes-input" placeholder="Ingrese notas o síntomas relevantes aquí..."></textarea>
+                    </div>
+                </section>
+            </div>
+            
+                <section class="test-info" aria-labelledby="test-heading">
+                    <h2 id="test-heading"><i class="fas fa-flask"></i> Perfiles de Laboratorio</h2>
+                    <div class="category-filter">
+                        <label for="service-category"><i class="fas fa-filter"></i> Filtrar por categoría:</label>
+                        <select id="service-category" class="form-select">
+                            <option value="todos">Todos los servicios</option>
+                            <option value="perfiles">Perfiles</option>
+                            <option value="paneles">Paneles</option>
+                            <option value="paneles-intensivos">Paneles Intensivos</option>
+                            <option value="inmunohematologia">Inmunohematología/Banco de sangre</option>
+                            <option value="infectocontagiosos">Paneles Infecto-Contagiosos</option>
+                            <option value="pruebas-rapidas">Pruebas Rápidas</option>
+                            <option value="inmunología">Inmunología, Hormona, Serología, Tiempos de Coagulación</option>
+                            <option value="hemogramas">Hemogramas</option>
+                            <option value="quimica-clinica">Química Clínica</option>
+                            <option value="productos">Productos</option>
+                            <option value="microbiologia">Microbiología Clínica</option>
+                        </select>
+                    </div>
+    
+                    <div class="table-container">
+                        <table id="services-table">
+                            <thead>
+                                <tr>
+                                    <th><i class="fas fa-vial"></i> Exámen a realizar</th>
+                                    <th><i class="fas fa-tag"></i> Precio</th>
+                                    <th><i class="fas fa-check"></i> Seleccionado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr data-categoria="perfiles">
+                                    <td>
+                                        <strong>Perfil Químico General</strong> (Hg, Glu, Renal, Hepática, Alb, TP)
+                                        <p class="test-description">Evalúa funciones metabólicas y orgánicas básicas.</p>
+                                    </td>
+                                    <td data-precio="37000">₡37,000</td>
+                                    <td><input type="checkbox" name="test" value="quimico-general" data-precio="37000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="perfiles">
+                                    <td>
+                                        <strong>Perfil Renal Completo</strong> (Hg, Glu, Crea, Bun-Crea, Au, P, Mg, Urea, Orina, Electrólitos)
+                                        <p class="test-description">Evalúa la salud renal del paciente.</p>
+                                    </td>
+                                    <td data-precio="35000">₡35,000</td>
+<td><input type="checkbox" name="test" value="renal-completo" data-precio="35000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="perfiles">
+                                    <td>
+                                        <strong>Perfil Hepático Completo</strong> (Hg, Glu, Renal, AST, ALT, GGT, ALP, P, Alb, TP, TBA, Urea, TG, TC, Glob, Glob-Alb, TBil, Dbil)
+                                        <p class="test-description">Analiza función hepática.</p>
+                                    </td>
+                                    <td data-precio="30000">₡30,000</td>
+                                    <td><input type="checkbox" name="test" value="hepatico-completo" data-precio="30000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="perfiles">
+                                    <td>
+                                        <strong>Perfil Prequirúrgico</strong> (Hg, Glu, Renal, AST, ALT, Alb, TP, Tiempos de coagulación)
+                                        <p class="test-description">Evalúa parámetros esenciales antes de una cirugía.</p>
+                                    </td>
+                                    <td data-precio="38000">₡38,000</td>
+                                    <td><input type="checkbox" name="test" value="pre-quirurgico" data-precio="38000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="perfiles">
+                                    <td>
+                                        <strong>Perfil Cachorro Completo</strong> (Hg, Urea, Crea, Alb, ALT, ALP, AST, Heces)
+                                        <p class="test-description">Diseñado para cachorros, es un conjunto de análisis clínicos diseñado específicamente para evaluar la función renal y la salud general de los cachorros. </p>
+                                    </td>
+                                    <td data-precio="38000">₡38,000</td>
+                                    <td><input type="checkbox" name="test" value="cachorro-completo" data-precio="38000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="perfiles">
+                                    <td>
+                                        <strong>Perfil Adulto Completo</strong> (Hg, Renal, hepático, Alb, TP, CK, Orina, Heces)
+                                        <p class="test-description">Examen integral para adultos.</p>
+                                    </td>
+                                    <td data-precio="48000">₡48,000</td>
+                                    <td><input type="checkbox" name="test" value="adulto-completo" data-precio="48000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="perfiles">
+                                    <td>
+                                        <strong>Perfil Adulto Básico</strong> (Hg, Urea, Crea, ALT, AST, ALP, GGT, Glu, Alb, CK)
+                                        <p class="test-description">Versión simplificada del perfil adulto.</p>
+                                    </td>
+                                    <td data-precio="26000">₡26,000</td>
+                                    <td><input type="checkbox" name="test" value="adulto-basico" data-precio="26000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="perfiles">
+                                    <td>
+                                        <strong>Perfil Cardíaco Completo</strong> (Hg, AST, ALT, Alb, TP, CK)
+                                        <p class="test-description">Evalúa la función cardíaca mediante pruebas.</p>
+                                    </td>
+                                    <td data-precio="26000">₡26,000</td>
+                                    <td><input type="checkbox" name="test" value="cardiaco-completo" data-precio="26000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="perfiles">
+                                    <td>
+                                        <strong>Perfil Pancreático Canino o Felino</strong> (Hg, Lipasa, Amilasa, AST, ALP, ALT, Glu, GGT, LDH, TBILL, TG, ALB)
+                                        <p class="test-description">Especializado en evaluar páncreas con pruebas.</p>
+                                    </td>
+                                    <td data-precio="30000">₡30,000</td>
+                                    <td><input type="checkbox" name="test" value="pancreatico" data-precio="30000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="paneles">
+                                    <td>
+                                        <strong>Panel Plus</strong> (Alb, ALT, ALP, AMY, Bun, CA, Crea, Bun/Crea, Glob, Alb/Glob, P, TBILL, TP, CHOL, TBA, Electrolitos, glu)
+                                        <p class="test-description">Evaluación avanzada de albúmina, electrolitos, proteínas, lípidos y función hepática/renal.</p>
+                                    </td>
+                                    <td data-precio="25000">₡25,000</td>
+                                    <td><input type="checkbox" name="test" value="panel-plus" data-precio="25000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="paneles">
+                                    <td>
+                                        <strong>Panel General Básico</strong> (Alb, ALP, ALT, AMY, Bun, Crea, Bun-Crea, Ca, Glob, Glo-Alb- Glu, TP, TC, CK, P, BillT)
+                                        <p class="test-description">Alternativa simplificada del Panel Plus, con enfoque en función renal, hepática.</p>
+                                    </td>
+                                    <td data-precio="23000">₡23,000</td>
+                                    <td><input type="checkbox" name="test" value="panel-basico" data-precio="23000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="paneles">
+                                    <td>
+                                        <strong>Panel Electrolitos</strong> (Cl, K, Na, Na-K, CO2, Ca, P, MG)
+                                        <p class="test-description">Mide niveles de sodio (Na), potasio (K), cloro (Cl), calcio (Ca), fósforo (P), magnesio (Mg) y otros.</p>
+                                    </td>
+                                    <td data-precio="18000">₡18,000</td>
+                                    <td><input type="checkbox" name="test" value="panel-electrolitos" data-precio="18000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="paneles">
+                                    <td>
+                                        <strong>Electrolitos para pacientes con Parvovirus</strong> (NA, K, CL)
+                                        <p class="test-description">Específico para pacientes con parvovirus, analiza los electrolitos más relevantes para su tratamiento.</p>
+                                    </td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="electrolitos-parvo" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="paneles-intensivos">
+                                    <td>
+                                        <strong>Panel Intensivo Atropello</strong> (Hg, Glu, Renal, Hepatico)
+                                        <p class="test-description">Evaluación rápida para pacientes traumatizados por atropello, enfocado en daño orgánico.</p>
+                                    </td>
+                                    <td data-precio="28000">₡28,000</td>
+                                    <td><input type="checkbox" name="test" value="intensivo-atropello" data-precio="28000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="paneles-intensivos">
+                                    <td>
+                                        <strong>Panel FLUTD</strong> (Hg, Glu, Renal, Orina, SDMA)
+                                        <p class="test-description">Especializado para enfermedad del tracto urinario inferior felino, incluye biomarcador SDMA.</p>
+                                    </td>
+                                    <td data-precio="50000">₡50,000</td>
+                                    <td><input type="checkbox" name="test" value="flutd" data-precio="50000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Tipificación DEA 1 Canino</strong>
+                                        <p class="test-description">Determina el grupo sanguíneo DEA 1 en perros, fundamental para transfusiones seguras.</p>
+                                    </td>
+                                    <td data-precio="28000">₡28,000</td>
+                                    <td><input type="checkbox" name="test" value="tipificacion-dea1" data-precio="28000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Tipificación AB Felino</strong>
+                                        <p class="test-description">Determina el grupo sanguíneo (A, B o AB) en gatos, esencial antes de cualquier transfusión.</p>
+                                    </td>
+                                    <td data-precio="28000">₡28,000</td>
+                                    <td><input type="checkbox" name="test" value="tipificacion-ab" data-precio="28000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Compatibilidad Sanguínea</strong>
+                                        <p class="test-description">Prueba cruzada que confirma la compatibilidad entre donante y receptor.</p>
+                                    </td>
+                                    <td data-precio="10000">₡10,000</td>
+                                    <td><input type="checkbox" name="test" value="compatibilidad" data-precio="10000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Bolsa de sangre canina 500ml + Venoclisis</strong>
+                                        <p class="test-description">Unidad de sangre completa canina con equipo de administración incluido.</p>
+                                    </td>
+                                    <td data-precio="45000">₡45,000</td>
+                                    <td><input type="checkbox" name="test" value="bolsa-sangre-canina" data-precio="45000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Bolsa de sangre Felina 250ml + venoclisis</strong>
+                                        <p class="test-description">Unidad de sangre completa felina con equipo de administración incluido.</p>
+                                    </td>
+                                    <td data-precio="50000">₡50,000</td>
+                                    <td><input type="checkbox" name="test" value="bolsa-sangre-felina" data-precio="50000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Procedimiento transfusión</strong>
+                                        <p class="test-description">Servicio de administración de transfusión con monitorización del paciente.</p>
+                                    </td>
+                                    <td data-precio="30000">₡30,000</td>
+                                    <td><input type="checkbox" name="test" value="procedimiento-transfusion" data-precio="30000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Bolsa Plasma 250ml + venoclisis</strong>
+                                        <p class="test-description">Unidad de plasma con equipo para pacientes que requieren factores de coagulación o proteínas.</p>
+                                    </td>
+                                    <td data-precio="30000">₡30,000</td>
+                                    <td><input type="checkbox" name="test" value="bolsa-plasma" data-precio="30000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Procedimiento donador: tipificación+anestesia+bolsa+hemograma</strong>
+                                        <p class="test-description">Proceso completo para donantes de primera vez, incluye tipificación y evaluación.</p>
+                                    </td>
+                                    <td data-precio="53000">₡53,000</td>
+                                    <td><input type="checkbox" name="test" value="procedimiento-donador-completo" data-precio="53000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Procedimiento donador ya tipificado: anestesia+bolsa+hemograma</strong>
+                                        <p class="test-description">Proceso para donantes recurrentes ya tipificados previamente.</p>
+                                    </td>
+                                    <td data-precio="28000">₡28,000</td>
+                                    <td><input type="checkbox" name="test" value="procedimiento-donador-tipificado" data-precio="28000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Combo transfusión canino sin sangre</strong> (Tipificación DEA 1, procedimiento transfusión, compatibilidad, 2 hemogramas post-transfusión)
+                                        <p class="test-description">Paquete completo para transfusión canina, no incluye la bolsa de sangre.</p>
+                                    </td>
+                                    <td data-precio="80000">₡80,000</td>
+                                    <td><input type="checkbox" name="test" value="combo-transfusion-canino" data-precio="80000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunohematologia">
+                                    <td>
+                                        <strong>Combo transfusión felina sin sangre</strong> (Tipificación AB, procedimiento transfusión, compatibilidad, 2 hemogramas)
+                                        <p class="test-description">Paquete completo para transfusión felina, no incluye la bolsa de sangre.</p>
+                                    </td>
+                                    <td data-precio="80000">₡80,000</td>
+                                    <td><input type="checkbox" name="test" value="combo-transfusion-felino" data-precio="80000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="infectocontagiosos">
+                                    <td>
+                                        <strong>Panel Parvo virus</strong> (Hg, Glu, Renal, Hepático, Heces, Test CPV, Electrolitos)
+                                        <p class="test-description">Evaluación completa para pacientes con sospecha de parvovirosis, incluye test específico.</p>
+                                    </td>
+                                    <td data-precio="35000">₡35,000</td>
+                                    <td><input type="checkbox" name="test" value="panel-parvovirus" data-precio="35000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="infectocontagiosos">
+                                    <td>
+                                        <strong>Panel Distemper</strong> (Hg, Glu, Hepático, Alb, TP, Test CDV)
+                                        <p class="test-description">Evaluación para pacientes con sospecha de moquillo canino, incluye test específico para el virus.</p>
+                                    </td>
+                                    <td data-precio="30000">₡30,000</td>
+                                    <td><input type="checkbox" name="test" value="panel-distemper" data-precio="30000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="pruebas-rapidas">
+                                    <td>
+                                        <strong>Test sida leucemia</strong>
+                                        <p class="test-description">Prueba rápida para detectar virus de inmunodeficiencia felina y leucemia felina.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="test-sida-leucemia" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="pruebas-rapidas">
+                                    <td>
+                                        <strong>Test Distemper</strong>
+                                        <p class="test-description">Prueba rápida para detección de antígeno de moquillo canino.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="test-distemper" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="pruebas-rapidas">
+                                    <td>
+                                        <strong>ParvoVirus+corona+giardia</strong>
+                                        <p class="test-description">Panel combinado para detección rápida de tres patógenos comunes en perros.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="parvovirus-corona-giardia" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="pruebas-rapidas">
+                                    <td>
+                                        <strong>Erhlichia canis</strong>
+                                        <p class="test-description">Prueba para detectar anticuerpos contra la bacteria transmitida por garrapatas.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="erhlichia-canis" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="pruebas-rapidas">
+                                    <td>
+                                        <strong>Erhlichia canis + anaplasma</strong>
+                                        <p class="test-description">Panel combinado para detección de dos enfermedades transmitidas por garrapatas.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="erhlichia-anaplasma" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="pruebas-rapidas">
+                                    <td>
+                                        <strong>CaniV4</strong>
+                                        <p class="test-description">Panel de detección de 4 enfermedades caninas comunes.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="caniv4" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="pruebas-rapidas">
+                                    <td>
+                                        <strong>Parvovirus+Corona</strong>
+                                        <p class="test-description">Prueba dual para detección simultánea de dos virus comunes en perros.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="parvovirus-corona" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="pruebas-rapidas">
+                                    <td>
+                                        <strong>Giardia</strong>
+                                        <p class="test-description">Detección de parásito protozoario intestinal común en mascotas.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="giardia" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="pruebas-rapidas">
+                                    <td>
+                                        <strong>Giardia+Cryptosporidium</strong>
+                                        <p class="test-description">Panel para detección de dos parásitos intestinales comunes en mascotas.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="giardia-crypto" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>CTSH (Vcheck)</strong>
+                                        <p class="test-description">Medición de hormona estimulante de tiroides canina mediante tecnología Vcheck.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="ctsh-vcheck" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>T4 Total (Vcheck)</strong>
+                                        <p class="test-description">Medición de tiroxina total mediante tecnología Vcheck.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="t4-total-vcheck" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>FPL (Vcheck)</strong>
+                                        <p class="test-description">Lipasa pancreática felina, para diagnóstico de pancreatitis en gatos.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="fpl-vcheck" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>AG. Distemper (Vcheck)</strong>
+                                        <p class="test-description">Detección de antígeno de distemper canino mediante tecnología Vcheck.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="ag-distemper-vcheck" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>SDMA (Vcheck)</strong>
+                                        <p class="test-description">Dimetilarginina simétrica, biomarcador precoz de enfermedad renal.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="sdma-vcheck" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>CPL (Vcheck)</strong>
+                                        <p class="test-description">Lipasa pancreática canina, para diagnóstico de pancreatitis en perros.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="cpl-vcheck" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>Cortisol (Vcheck)</strong>
+                                        <p class="test-description">Medición de cortisol mediante tecnología Vcheck.</p>
+                                    </td>
+                                    <td data-precio="consultar">Lab/Recep</td>
+                                    <td><input type="checkbox" name="test" value="cortisol-vcheck" data-precio="0" class="test-checkbox-consultar"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>Test rivalta+tira reactiva</strong>
+                                        <p class="test-description">Evaluación de líquidos corporales mediante prueba de Rivalta y análisis con tira reactiva.</p>
+                                    </td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="test-rivalta" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>Análisis liquido libre</strong> (Directo, tinción gram, tinción Diff Quick, tira reactiva, opcional prueba Rivalta)
+                                        <p class="test-description">Evaluación completa de líquidos corporales mediante múltiples técnicas.</p>
+                                    </td>
+                                    <td data-precio="18000">₡18,000</td>
+                                    <td><input type="checkbox" name="test" value="analisis-liquido-libre" data-precio="18000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="inmunología">
+                                    <td>
+                                        <strong>Tiempos de coagulación TP/ATTP</strong> (Tubo de citrato)
+                                        <p class="test-description">Evaluación de la capacidad de coagulación sanguínea.</p>
+                                    </td>
+                                    <td data-precio="17000">₡17,000</td>
+                                    <td><input type="checkbox" name="test" value="tiempos-coagulacion" data-precio="17000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Hemograma básico</strong> (sin frotis)
+                                        <p class="test-description">Análisis sanguíneo básico que incluye conteo celular automatizado.</p>
+                                    </td>
+                                    <td data-precio="15000">₡15,000</td>
+                                    <td><input type="checkbox" name="test" value="hemograma-basico" data-precio="15000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Hemograma Completo</strong> (con frotis)
+                                        <p class="test-description">Análisis sanguíneo completo que incluye evaluación microscópica de células.</p>
+                                    </td>
+                                    <td data-precio="18000">₡18,000</td>
+                                    <td><input type="checkbox" name="test" value="hemograma-completo" data-precio="18000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Hemograma + conteo de reticulosis</strong>
+                                        <p class="test-description">Hemograma con evaluación adicional de precursores de glóbulos rojos.</p>
+                                    </td>
+                                    <td data-precio="18000">₡18,000</td>
+                                    <td><input type="checkbox" name="test" value="hemograma-reticulosis" data-precio="18000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Hemograma control + conteo de reticulocitos</strong>
+                                        <p class="test-description">Seguimiento de pacientes previos con evaluación de precursores de glóbulos rojos.</p>
+                                    </td>
+                                    <td data-precio="11000">₡11,000</td>
+                                    <td><input type="checkbox" name="test" value="hemograma-control-reticulocitos" data-precio="11000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Frotis</strong>
+                                        <p class="test-description">Evaluación microscópica de células sanguíneas.</p>
+                                    </td>
+                                    <td data-precio="7000">₡7,000</td>
+                                    <td><input type="checkbox" name="test" value="frotis" data-precio="7000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Hemograma de control</strong>
+                                        <p class="test-description">Seguimiento de pacientes previamente diagnosticados.</p>
+                                    </td>
+                                    <td data-precio="7000">₡7,000</td>
+                                    <td><input type="checkbox" name="test" value="hemograma-control" data-precio="7000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Hemograma de control con frotis</strong>
+                                        <p class="test-description">Seguimiento de pacientes con evaluación microscópica adicional.</p>
+                                    </td>
+                                    <td data-precio="9000">₡9,000</td>
+                                    <td><input type="checkbox" name="test" value="hemograma-control-frotis" data-precio="9000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Frotis + conteo de reticulocitos</strong>
+                                        <p class="test-description">Evaluación microscópica con conteo específico de precursores de glóbulos rojos.</p>
+                                    </td>
+                                    <td data-precio="11000">₡11,000</td>
+                                    <td><input type="checkbox" name="test" value="frotis-reticulocitos" data-precio="11000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Frotis + conteo de reticulocitos de control</strong>
+                                        <p class="test-description">Seguimiento de pacientes con evaluación específica de precursores de glóbulos rojos.</p>
+                                    </td>
+                                    <td data-precio="8000">₡8,000</td>
+                                    <td><input type="checkbox" name="test" value="frotis-reticulocitos-control" data-precio="8000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="hemogramas">
+                                    <td>
+                                        <strong>Conteo de reticulocitos</strong> (Clasificación de Anemia)
+                                        <p class="test-description">Evaluación específica de precursores de glóbulos rojos para clasificar anemias.</p>
+                                    </td>
+                                    <td data-precio="6000">₡6,000</td>
+                                    <td><input type="checkbox" name="test" value="conteo-reticulocitos" data-precio="6000" class="test-checkbox"></td>
+                                </tr>
+                                <!-- QUÍMICA CLÍNICA -->
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>GGT</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="ggt" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Glucosa</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="glucosa" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Triglicéridos</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="trigliceridos" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>HDL-C</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="hdl-c" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Urea</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="urea" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Nitrógeno Ureico (BUN)</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="bun" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Creatinina</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="creatinina" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Combo (Crea+Bun+Urea+RelaciónBun/Crea+P)</strong></td>
+                                    <td data-precio="10000">₡10,000</td>
+                                    <td><input type="checkbox" name="test" value="combo-crea-bun-urea" data-precio="10000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Ácido Úrico</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="acido-urico" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Fósforo</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="fosforo" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Calcio</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="calcio" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Magnesio</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="magnesio" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>AST</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="ast" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>ALT</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="alt" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Bilirrubina Directa</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="bilirrubina-directa" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Bilirrubina Indirecta</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="bilirrubina-indirecta" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Bilirrubina Total</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="bilirrubina-total" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Albúmina</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="albumina" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Proteínas Totales</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="proteinas-totales" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>CK</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="ck" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>Fosfatasa Alcalina (ALP)</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="alp" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="quimica-clinica">
+                                    <td><strong>TC</strong></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="tc" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <!-- PRODUCTOS -->
+                                <tr data-categoria="productos">
+                                    <td><strong>Gotero plasma fresco congelado (EDTA)</strong><p class="test-description">Se encuentran activos todos los factores de coagulación, plasma rico en plaquetas y rico en factores de crecimiento. Coadyuvante en el tratamiento de úlceras corneales.</p></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="gotero-plasma-fresco" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="productos">
+                                    <td><strong>Suero Autólogo (ROJO)</strong><p class="test-description">Efectos beneficiosos en la reparación de lesiones sobre la superficie ocular, beneficiosas en los procesos de cicatrización epitelial y crecimiento celular</p></td>
+                                    <td data-precio="5000">₡5,000</td>
+                                    <td><input type="checkbox" name="test" value="suero-autologo" data-precio="5000" class="test-checkbox"></td>
+                                </tr>
+                                <!-- MICROBIOLOGÍA CLÍNICA -->
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Examen de heces general</strong><p class="test-description">(Directo, sangre oculta, flotación)</p></td>
+                                    <td data-precio="9000">₡9,000</td>
+                                    <td><input type="checkbox" name="test" value="heces-general" data-precio="9000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Examen de heces completo</strong><p class="test-description">(Directo, flotación, tinción, sangre oculta, Antígeno Giardia, Antígeno Cryptosporidium)</p></td>
+                                    <td data-precio="16000">₡16,000</td>
+                                    <td><input type="checkbox" name="test" value="heces-completo" data-precio="16000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Examen de heces seriado</strong><p class="test-description">3 muestras/3 días (Directo, flotación, tinción, sangre oculta, Antígeno Giardia, Antígeno Cryptosporidium)</p></td>
+                                    <td data-precio="25000">₡25,000</td>
+                                    <td><input type="checkbox" name="test" value="heces-seriado" data-precio="25000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Sangre oculta en heces</strong></td>
+                                    <td data-precio="2000">₡2,000</td>
+                                    <td><input type="checkbox" name="test" value="sangre-oculta-heces" data-precio="2000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Urianálisis (15 parámetros)</strong><p class="test-description">LEU, URO, ALB, PRO, BIL, GLU, ASC, SG, KET, NIT, CREA, PH, BLO, CA</p></td>
+                                    <td data-precio="8000">₡8,000</td>
+                                    <td><input type="checkbox" name="test" value="urianalisis-15" data-precio="8000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Urianálisis (11 parámetros)</strong><p class="test-description">LEU, URO, PRO, BIL, GLU, ASC, SG, KET, NIT, PH, BLO</p></td>
+                                    <td data-precio="7000">₡7,000</td>
+                                    <td><input type="checkbox" name="test" value="urianalisis-11" data-precio="7000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Tira reactiva (15 parámetros)</strong><p class="test-description">LEU, URO, ALB, PRO, BIL, GLU, ASC, SG, KET, NIT, CREA, PH, BLO, CA</p></td>
+                                    <td data-precio="1500">₡1,500</td>
+                                    <td><input type="checkbox" name="test" value="tira-reactiva-15" data-precio="1500" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Tira reactiva (11 parámetros)</strong><p class="test-description">LEU, URO, PRO, BIL, GLU, ASC, SG, KET, NIT, PH, BLO</p></td>
+                                    <td data-precio="1000">₡1,000</td>
+                                    <td><input type="checkbox" name="test" value="tira-reactiva-11" data-precio="1000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Frotis Raspado de Piel (Tinción de Gram)</strong></td>
+                                    <td data-precio="8000">₡8,000</td>
+                                    <td><input type="checkbox" name="test" value="frotis-gram" data-precio="8000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Frotis Raspado de Piel (KOH)</strong></td>
+                                    <td data-precio="8000">₡8,000</td>
+                                    <td><input type="checkbox" name="test" value="frotis-koh" data-precio="8000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Frotis Raspado de Piel (Combo: Tinción de Gram, KOH)</strong></td>
+                                    <td data-precio="13000">₡13,000</td>
+                                    <td><input type="checkbox" name="test" value="frotis-combo-gram-koh" data-precio="13000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Frotis Raspado de Piel (Combo: Tinción de Gram, KOH, Cultivo Dermatofitos)</strong></td>
+                                    <td data-precio="25000">₡25,000</td>
+                                    <td><input type="checkbox" name="test" value="frotis-combo-gram-koh-dermatofitos" data-precio="25000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Cultivo Dermatofitos</strong></td>
+                                    <td data-precio="15000">₡15,000</td>
+                                    <td><input type="checkbox" name="test" value="cultivo-dermatofitos" data-precio="15000" class="test-checkbox"></td>
+                                </tr>
+                                <tr data-categoria="microbiologia">
+                                    <td><strong>Hisopado</strong></td>
+                                    <td data-precio="8000">₡8,000</td>
+                                    <td><input type="checkbox" name="test" value="hisopado" data-precio="8000" class="test-checkbox"></td>
+                                </tr>
+                            </tbody>
+                            </tfoot>
+                        </table>
+                    </div>
+                </section>
+                <section class="selected-services-summary">
+                    <h2><i class="fas fa-list-check"></i> Servicios Seleccionados</h2>
+                    <div class="summary-container">
+                        <ul id="selected-services-list">
+                        </ul>
+                        <div class="summary-total">
+                            <td class="total-price"></td><strong>Total a pagar: </strong><span id="total-price">₡0</span>
+                        </div>
+                    </div>
+                </section>
+                
+                <div class="signature-section">
+                    <div class="signature-line">
+                        <p>Médico que requiere los exámenes</p>
+                        <select name="medico-encargado" class="form-select doctor-select" required>
+                            <option value="">No hay médico asignado</option>
+                            <option value="Dra. Lourdes Chacón">Dra. Lourdes Chacón</option>
+                            <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
+                            <option value="Dra. Alejandra León">Dra. Alejandra León</option>
+                            <option value="Dra. Franciny Nuñez">Dra. Franciny Nuñez</option>
+                            <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
+                            <option value="Dra. Karina Madrigal">Dra. Karina Madrigal</option>
+                            <option value="Dra. Maria Lourdes">Dra. Maria Lourdes</option>
+                            <option value="Dra. Karla">Dra. Karla Quesada</option>
+                            <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
+                            <option value="Dr. Luis Coto">Dr. Luis Coto</option>
+                            <option value="Dr. Gustavo Gonzalez">Dr. Gustavo Gonzalez</option>
+                        </select>
+                    </div>
+                </div>
+                <footer class="lab-footer">
+                    <div class="footer-info">
+                        <p><i class="fas fa-hospital"></i> Veterinaria San Martin de Porres</p>
+                        <p><i class="fas fa-map-marker-alt"></i>150 metros este del Mall, Zona Centro, San José, Desamparados, San Rafael Abajo, 10311</p>
+                        <p><i class="fas fa-phone-alt"></i> 4000 1365</p>
+                    </div>
+                <div class="form-buttons">
+                    <button type="button" class="btn btn-primary" id="btn-pdf"><i class="fas fa-file-pdf"></i> Generar PDF</button>
+                </div>
+            </footer>
+        </form>
+    </div>
+    <script src="hoja_lab.js"></script>
+</body>
+</html>
