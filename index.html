@@ -41,8 +41,6 @@
         <button id="verTicketsBtn"><i class="fas fa-list-alt"></i> Ver Consultas</button>
         <button id="horarioBtn"><i class="fas fa-calendar-alt"></i> Horario</button>
         <button id="estadisticasBtn"><i class="fas fa-chart-pie"></i> Estadísticas</button>
-        <!-- Botón Hoja de Laboratorio, oculto por defecto -->
-        <button id="labSheetBtn" style="display:none;"><i class="fas fa-vial"></i> Hoja de Laboratorio</button>
       </nav>
       
       <!-- Añadir botón de cerrar sesión -->
@@ -437,13 +435,6 @@
         </div>
       </section>
 
-      <!-- Sección de hoja de laboratorio -->
-      <section id="labSheetSection" class="hidden" style="background:#fff;min-height:80vh;padding:0;">
-        <iframe src="hoja_lab.html" style="width:100%;height:85vh;border:none;background:#fff;"></iframe>
-      </section>
-    </div>
-  </div>
-
   <!-- Plantillas para notificaciones y modales -->
   <div id="notificationContainer"></div>
   
@@ -511,14 +502,6 @@
   </div>
 </div>
 
-<!-- Modal de Hoja de Laboratorio -->
-<div id="labSheetModal" class="edit-modal" style="display:none;z-index:3000;">
-  <div class="modal-content animate-scale" style="max-width:1100px;width:95%;padding:0;overflow:auto;max-height:95vh;position:relative;">
-    <span class="close-modal" id="closeLabSheetModal" style="position:absolute;top:10px;right:20px;cursor:pointer;font-size:2rem;z-index:10;">&times;</span>
-    <iframe src="hoja_lab.html" style="width:100%;height:90vh;border:none;background:white;"></iframe>
-  </div>
-</div>
-
   <!-- External scripts - keep these external references -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
@@ -549,29 +532,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
       horaCitaGroup.style.display = '';
     }
-  }
-
-  // Mostrar botón Hoja de Laboratorio solo para ciertos roles
-  const labSheetBtn = document.getElementById('labSheetBtn');
-  const labSheetSection = document.getElementById('labSheetSection');
-  const allowedRoles = ["consulta_externa", "laboratorio", "internos", "admin"];
-  if (labSheetBtn && allowedRoles.includes(userRole)) {
-    labSheetBtn.style.display = '';
-    labSheetBtn.onclick = function() {
-      // Oculta todas las secciones
-      document.querySelectorAll('.content section').forEach(s => {
-        s.classList.add('hidden');
-        s.classList.remove('active');
-      });
-      // Muestra la hoja de laboratorio
-      if (labSheetSection) {
-        labSheetSection.classList.remove('hidden');
-        setTimeout(() => labSheetSection.classList.add('active'), 50);
-      }
-      // Quita active de todos los botones y pon solo este
-      document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
-      labSheetBtn.classList.add('active');
-    };
   }
 
   // Descripciones para cada categorización
