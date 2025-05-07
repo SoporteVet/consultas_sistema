@@ -673,7 +673,9 @@ function addTicket() {
         const motivoLlegada = document.getElementById('motivoLlegada')?.value || '';
         const estado = document.getElementById('estado').value;
         const tipoMascota = document.getElementById('tipoMascota').value;
-        const urgencia = document.getElementById('urgencia').value;
+        let urgencia = document.getElementById('urgencia')?.value || 'consulta';
+        // Normalizar a minúsculas para que coincida con las clases CSS
+        urgencia = urgencia.toLowerCase();
         const porCobrar = document.getElementById('porCobrar')?.value || '';
 
         // Campos adicionales
@@ -718,7 +720,7 @@ function addTicket() {
             motivoLlegada,
             estado,
             tipoMascota,
-            urgencia,
+            urgencia, // usar el valor seleccionado del selector (ya normalizado)
             idPaciente,
             medicoAtiende,
             numFactura,
@@ -926,15 +928,20 @@ function renderTickets(filter = 'todos', date = null) {
         return;
     }
     
-    // Ordenar por urgencia y luego por fecha
+    // Ordenar por nivel de urgencia personalizado y luego por fecha
+    const urgenciaOrden = {
+        'emergencia': 4,
+        'urgencia': 3,
+        'leve': 2,
+        'consulta': 1
+    };
     filteredTickets.sort((a, b) => {
-        // Primero por urgencia (alta > media > normal)
-        const urgenciaPrioridad = { 'alta': 3, 'media': 2, 'normal': 1 };
-        if (urgenciaPrioridad[b.urgencia] !== urgenciaPrioridad[a.urgencia]) {
-            return urgenciaPrioridad[b.urgencia] - urgenciaPrioridad[a.urgencia];
+        const aUrg = urgenciaOrden[a.urgencia] || 0;
+        const bUrg = urgenciaOrden[b.urgencia] || 0;
+        if (bUrg !== aUrg) {
+            return bUrg - aUrg;
         }
-        
-        // Luego por fecha (más reciente primero)
+        // Si tienen la misma urgencia, ordenar por fecha descendente
         return new Date(b.fecha) - new Date(a.fecha);
     });
     
@@ -993,22 +1000,11 @@ function renderTickets(filter = 'todos', date = null) {
                 default:
                     animalIcon = '<i class="fas fa-paw animal-icon"></i>';
             }
-            // Get urgency class and icon
-            let urgenciaClass = '';
-            let urgenciaIcon = '';
-            switch(ticket.urgencia) {
-                case 'alta':
-                    urgenciaClass = 'urgencia-alta';
-                    urgenciaIcon = 'fa-exclamation-triangle';
-                    break;
-                case 'media':
-                    urgenciaClass = 'urgencia-media';
-                    urgenciaIcon = 'fa-exclamation';
-                    break;
-                default: // normal
-                    urgenciaClass = 'urgencia-normal';
-                    urgenciaIcon = 'fa-info-circle';
-            }
+            // Get urgency class and icon using actual ticket.urgencia
+            let urgenciaClass = `urgencia-${ticket.urgencia}`;
+            let urgenciaIcon = ticket.urgencia === 'emergencia' ? 'fa-exclamation-triangle' :
+                                ticket.urgencia === 'urgencia'    ? 'fa-exclamation' :
+                                                                   'fa-info-circle';
             // Get status text and class
             let estadoText = '';
             let estadoClass = '';
@@ -1050,9 +1046,9 @@ function renderTickets(filter = 'todos', date = null) {
                 </div>
                 <div class="ticket-info">
                     <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
-                    ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> ${ticket.medicoAtiende}</p>` : ''}
+                    ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
-                    <p><i class="fas fa-stethoscope"></i> ${ticket.motivoLlegada}</p>
+                    <p><i class="fas fa-stethoscope"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
@@ -1113,22 +1109,11 @@ function renderTickets(filter = 'todos', date = null) {
                     estadoClass = 'estado-terminado';
                     break;
             }
-            // Crear clase y texto para el nivel de urgencia
-            let urgenciaClass = '';
-            let urgenciaIcon = '';
-            switch(ticket.urgencia) {
-                case 'alta':
-                    urgenciaClass = 'urgencia-alta';
-                    urgenciaIcon = 'fa-exclamation-triangle';
-                    break;
-                case 'media':
-                    urgenciaClass = 'urgencia-media';
-                    urgenciaIcon = 'fa-exclamation';
-                    break;
-                default: // normal
-                    urgenciaClass = 'urgencia-normal';
-                    urgenciaIcon = 'fa-info-circle';
-            }
+            // Crear clase y texto para el nivel de urgencia (NUEVO)
+            let urgenciaClass = `urgencia-${ticket.urgencia}`;
+            let urgenciaIcon = ticket.urgencia === 'emergencia' ? 'fa-exclamation-triangle' :
+                               ticket.urgencia === 'urgencia'    ? 'fa-exclamation' :
+                                                                  'fa-info-circle';
             ticketContent += `
                 <div class="ticket-header">
                     <div class="ticket-title">${animalIcon} ${ticket.mascota}</div>
@@ -1203,44 +1188,45 @@ function renderTickets(filter = 'todos', date = null) {
         const style = document.createElement('style');
         style.id = 'urgencia-styles';
         style.textContent = `
-            .ticket-info .urgencia-alta {
-                color: #e53935;
+            .ticket-info .urgencia-emergencia {
+                color: #d32f2f;
                 font-weight: bold;
-                background-color: rgba(229, 57, 53, 0.1);
+                background-color: rgba(211, 47, 47, 0.12);
                 padding: 5px 10px;
                 border-radius: 4px;
                 margin: 5px 0;
                 display: inline-block;
+                animation: pulseUrgent 1.5s infinite;
+                box-shadow: 0 0 8px rgba(211,47,47,0.18);
             }
-            
-            .ticket-info .urgencia-media {
+            .ticket-info .urgencia-urgencia {
                 color: #fb8c00;
                 font-weight: bold;
-                background-color: rgba(251, 140, 0, 0.1);
+                background-color: rgba(251, 140, 0, 0.12);
                 padding: 5px 10px;
                 border-radius: 4px;
                 margin: 5px 0;
                 display: inline-block;
             }
-            
-            .ticket-info .urgencia-normal {
+            .ticket-info .urgencia-leve {
                 color: #43a047;
-                background-color: rgba(67, 160, 71, 0.1);
+                background-color: rgba(67, 160, 71, 0.12);
                 padding: 5px 10px;
                 border-radius: 4px;
                 margin: 5px 0;
                 display: inline-block;
             }
-            
-            /* Hacer que el nivel de urgencia sea más visible en tickets de urgencia alta */
-            .ticket-urgencia-alta .urgencia-alta {
-                animation: pulseUrgent 2s infinite;
-                box-shadow: 0 0 5px rgba(229, 57, 53, 0.5);
+            .ticket-info .urgencia-consulta {
+                color: #1976d2;
+                background-color: rgba(25, 118, 210, 0.10);
+                padding: 5px 10px;
+                border-radius: 4px;
+                margin: 5px 0;
+                display: inline-block;
             }
-            
             @keyframes pulseUrgent {
                 0% { transform: scale(1); }
-                50% { transform: scale(1.05); }
+                50% { transform: scale(1.07); }
                 100% { transform: scale(1); }
             }
         `;
@@ -1688,7 +1674,8 @@ function editTicket(randomId) {
     const userRole = sessionStorage.getItem('userRole');
     // Contador de ediciones para consulta externa
     if (!ticket.editCount) ticket.editCount = 0;
-    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepción' && (userRole !== 'consulta_externa' || ticket.editCount < 5);
+    // Solo puede editar "porCobrar" si NO es recepcion y (si no es consultaexterna o no ha alcanzado el límite)
+    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consultaexterna' || ticket.editCount < 7);
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
@@ -1919,7 +1906,7 @@ iempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selec
             cedula: document.getElementById('editCedula').value,
             idPaciente: document.getElementById('editIdPaciente').value,
             fechaConsulta: document.getElementById('editFecha').value,
-            horaConsulta: document.getElementById('editHora').value,
+            horaConsulta: document.getElementById('editHora') ? document.getElementById('editHora').value : '',
             horaLlegada: document.getElementById('editHoraLlegada').value,
             horaAtencion: document.getElementById('editHoraAtencion').value,
             medicoAtiende: medicoAtiende,
@@ -1940,12 +1927,18 @@ iempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selec
             updatedTicket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         }
         
+        // Si el usuario es consultaexterna, incrementar el contador de ediciones
+        if (userRole === 'consultaexterna') {
+            ticket.editCount = (ticket.editCount || 0) + 1;
+            updatedTicket.editCount = ticket.editCount;
+        }
+        
         // Guardar el ticket actualizado
         saveEditedTicket(updatedTicket);
     });
     
     // Deshabilitar el botón de guardar si se alcanzó el límite de ediciones
-    if (userRole === 'consulta_externa' && ticket.editCount >= 5) {
+    if (userRole === 'consultaexterna' && ticket.editCount >= 7) {
         const saveBtn = modal.querySelector('.btn-save');
         if (saveBtn) {
             saveBtn.disabled = true;
@@ -2961,17 +2954,16 @@ function filtrarTicketsPorPeriodoGlobal(tickets) {
         // Mostrar todos los tickets de hoy, sin importar el estado
         const hoyStr = getLocalDateString();
         return tickets.filter(ticket => {
-            // Usar fechaConsulta si existe, si no fecha
-            const ticketStr = ticket.fechaConsulta ? ticket.fechaConsulta : (ticket.fecha ? ticket.fecha.split('T')[0] : '');
-            return ticketStr === hoyStr;
+            const fechaTicket = ticket.fechaConsulta ? ticket.fechaConsulta : (ticket.fecha ? new Date(ticket.fecha).toISOString().split('T')[0] : '');
+            return fechaTicket === hoyStr;
         });
     case 'semana':
-      const diaSemana = hoy.getDay();
-      inicio = new Date(hoy);
-      inicio.setDate(hoy.getDate() - diaSemana);
-      inicio = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
-      fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), 23, 59, 59);
-      break;
+        inicio = new Date(hoy);
+        const diaSemana = hoy.getDay();
+        inicio.setDate(hoy.getDate() - diaSemana);
+        inicio = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
+        fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + (6 - diaSemana), 23, 59, 59);
+        break;
     case 'mes':
       inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
       fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);

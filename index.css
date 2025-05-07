@@ -505,6 +505,22 @@ section h2 i {
   color: #1976d2 !important;
   border-left: 8px solid #1976d2;
 }
+.ticket-urgencia-emergencia {
+  border-left: 5px solid #d32f2f;
+  background-color: rgba(211,47,47,0.05);
+}
+.ticket-urgencia-urgencia {
+  border-left: 5px solid #fb8c00;
+  background-color: rgba(251,140,0,0.05);
+}
+.ticket-urgencia-leve {
+  border-left: 5px solid #43a047;
+  background-color: rgba(67,160,71,0.05);
+}
+.ticket-urgencia-consulta {
+  border-left: 5px solid #1976d2;
+  background-color: rgba(25,118,210,0.05);
+}
 .estado-badge {
   display: inline-flex;
   align-items: center;
