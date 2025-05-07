@@ -1770,6 +1770,8 @@ function editTicket(randomId) {
                             <option value="Tec. Randy Arias" ${asistenteSeleccionado === "Tec. Randy Arias" ? 'selected' : ''}>Tec. Randy Arias</option>
                             <option value="Tec. Yancy Picado" ${asistenteSeleccionado === "Tec. Yancy Picado" ? 'selected' : ''}>Tec. Yancy Picado</option>
                             <option value="Tec. Maria Fernanda"${asistenteSeleccionado === "Tec. Maria Fernanda" ? 'selected' : ''}>Tec. Maria Fernanda</option>
+                            <option value="Tec. Maria José Gutierrez"${asistenteSeleccionado === "Tec. Maria José Gutierrez" ? 'selected' : ''}>Tec. Maria José Gutierrez</option>
+                            <option value="Tec. Jimena Urtecho"${asistenteSeleccionado === "Tec.  Jimena Urtecho" ? 'selected' : ''}>Tec.  Jimena Urtecho</option>
                         </select>
                     </div>
                 </div>
