@@ -2025,7 +2025,7 @@ function editTicket(randomId) {
                     </div>` : ''}
                     <div class="form-group">
                         <label>Hora de Atención</label>
-                        <input type="text" value="${safeTicket.horaAtencion || ''}" readonly disabled style="background:#f5f5f5;color:#888;cursor:not-allowed;">
+                        <input type="text" id="editHoraAtencion" value="${safeTicket.horaAtencion || ''}" readonly disabled style="background:#f5f5f5;color:#888;cursor:not-allowed;">
                     </div>
                 </div>
                 
@@ -2270,6 +2270,19 @@ function editTicket(randomId) {
         horaAtencionInput.style.color = '#888';
         horaAtencionInput.style.cursor = 'not-allowed';
       }
+      // Agregar lógica para actualizar la hora de atención automáticamente al cambiar el estado
+      const estadoSelect = document.getElementById('editEstado');
+      if (estadoSelect && horaAtencionInput) {
+        estadoSelect.addEventListener('change', function() {
+          if (this.value.startsWith('consultorio') && !horaAtencionInput.value) {
+            const ahora = new Date();
+            const horaActual = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            horaAtencionInput.value = horaActual;
+          } else if (this.value === 'espera') {
+            horaAtencionInput.value = '';
+          }
+        });
+      }
     }, 0);
 }
 
@@ -2318,6 +2331,19 @@ function saveEditedTicket(ticket) {
     // Obtener el ticket anterior para comparar cambios
     const oldTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey) || {};
     const diff = getTicketDiff(oldTicket, ticket);
+    
+    // Verificar si el estado cambió a consultorio y establecer hora de atención si es necesario
+    if (diff.estado && 
+        ticketToSave.estado.startsWith('consultorio') && 
+        oldTicket.estado === 'espera' && 
+        !ticketToSave.horaAtencion) {
+        const ahora = new Date();
+        ticketToSave.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        diff.horaAtencion = {
+            antes: '',
+            despues: ticketToSave.horaAtencion
+        };
+    }
     
     // Si hay cambios, registrar la edición
     if (Object.keys(diff).length > 0) {
