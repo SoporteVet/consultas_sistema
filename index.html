@@ -102,10 +102,6 @@
 
             <div class="form-row">
               <div class="form-group">
-                <label for="horaLlegada">Hora de Llegada</label>
-                <input type="time" id="horaLlegada" required>
-              </div>
-              <div class="form-group">
                 <label for="hora">Hora de Consulta</label>
                 <input type="time" id="hora">
               </div>
@@ -142,8 +138,6 @@
                   <option value="Tec. Randy Arias">Tec. Randy Arias</option>
                   <option value="Tec. Yancy Picado">Tec. Yancy Picado</option>
                   <option value="Tec. Maria Fernanda">Tec. Maria Fernanda</option>
-                  <option value="Tec. Maria José Gutierrez">Tec. Maria José Gutierrez</option>
-                  <option value="Tec. Jimena Urtecho">Tec. Jimena Urtecho</option>
                 </select>
               </div>
             </div>
@@ -374,6 +368,41 @@
       <!-- Sección de ediciones (solo admin) -->
       <section id="edicionesSection" class="hidden">
         <h2><i class="fas fa-history"></i> Historial de Ediciones</h2>
+        
+        <!-- Agregar controles de filtro -->
+        <div class="filtros-ediciones" style="margin-bottom: 20px; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
+          <div class="filtro-grupo">
+            <label for="filtroPeriodoEdiciones">Período:</label>
+            <select id="filtroPeriodoEdiciones">
+              <option value="hoy">Hoy</option>
+              <option value="semana">Esta semana</option>
+              <option value="mes">Este mes</option>
+              <option value="ano">Este año</option>
+              <option value="personalizado">Personalizado</option>
+              <option value="todo">Todo</option>
+            </select>
+          </div>
+          <div id="periodPersonalizadoEdiciones" class="filtro-periodo-personalizado" style="display: none; gap: 8px;">
+            <div class="filtro-fecha">
+              <label for="fechaInicioEdiciones">Desde:</label>
+              <input type="date" id="fechaInicioEdiciones">
+            </div>
+            <div class="filtro-fecha">
+              <label for="fechaFinEdiciones">Hasta:</label>
+              <input type="date" id="fechaFinEdiciones">
+            </div>
+          </div>
+          <button id="aplicarFiltrosEdicionesBtn" class="btn-filtrar" style="margin-left: 8px;">
+            <i class="fas fa-filter"></i> Aplicar filtros
+          </button>
+        </div>
+
+        <!-- Agregar barra de búsqueda -->
+        <div class="search-bar" style="margin-bottom: 20px;">
+          <input type="text" id="searchEdiciones" placeholder="Buscar por nombre de mascota, ID, factura, nombre del dueño..." style="width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;">
+          <i class="fas fa-search" style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); color: #666;"></i>
+        </div>
+
         <div class="ediciones-container">
           <table class="stats-table">
             <thead>
@@ -383,6 +412,8 @@
                 <th>Usuario</th>
                 <th>Email</th>
                 <th>ID Ticket</th>
+                <th>Cliente</th>
+                <th>Mascota</th>
                 <th>Cambios Realizados</th>
               </tr>
             </thead>
@@ -390,6 +421,22 @@
               <!-- Se llenará dinámicamente -->
             </tbody>
           </table>
+
+          <!-- Controles de paginación -->
+          <div class="paginacion-container" style="margin-top: 20px; display: flex; justify-content: center; align-items: center; gap: 10px;">
+            <button id="prevPage" class="btn-pagina" disabled>
+              <i class="fas fa-chevron-left"></i> Anterior
+            </button>
+            <div id="numeroPaginas" style="display: flex; gap: 5px;">
+              <!-- Se llenará dinámicamente -->
+            </div>
+            <button id="nextPage" class="btn-pagina">
+              Siguiente <i class="fas fa-chevron-right"></i>
+            </button>
+            <div class="info-paginas" style="margin-left: 15px;">
+              <span>Mostrando página <span id="paginaActual">1</span> de <span id="totalPaginas">1</span></span>
+            </div>
+          </div>
         </div>
       </section>
 

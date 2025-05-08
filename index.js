@@ -448,30 +448,129 @@ safeAddEventListener('edicionesBtn', 'click', () => {
     setActiveButton(document.getElementById('edicionesBtn'));
 });
 
+// Variables globales para la paginación
+let paginaActualEdiciones = 1;
+const elementosPorPagina = 25;
+let edicionesGlobales = [];
+
 function cargarHistorialEdiciones() {
     const tbody = document.getElementById('edicionesTableBody');
     if (!tbody) return;
-    tbody.innerHTML = '<tr><td colspan="6">Cargando...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="8">Cargando...</td></tr>';
+    
     if (typeof firebase === 'undefined' || !firebase.database) {
-        tbody.innerHTML = '<tr><td colspan="6">No se puede conectar a la base de datos</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8">No se puede conectar a la base de datos</td></tr>';
         return;
     }
+
+    // Obtener el período seleccionado y las fechas si es personalizado
+    const periodo = document.getElementById('filtroPeriodoEdiciones')?.value || 'hoy';
+    const fechaInicio = document.getElementById('fechaInicioEdiciones')?.value;
+    const fechaFin = document.getElementById('fechaFinEdiciones')?.value;
+    const searchText = document.getElementById('searchEdiciones')?.value?.toLowerCase() || '';
+
+    // Calcular fechas según el período
+    const hoy = new Date();
+    let fechaInicioFiltro, fechaFinFiltro;
+
+    switch (periodo) {
+        case 'hoy':
+            fechaInicioFiltro = getLocalDateString();
+            fechaFinFiltro = fechaInicioFiltro;
+            break;
+        case 'semana':
+            const inicioSemana = new Date(hoy);
+            inicioSemana.setDate(hoy.getDate() - hoy.getDay());
+            fechaInicioFiltro = getLocalDateString(inicioSemana);
+            fechaFinFiltro = getLocalDateString(hoy);
+            break;
+        case 'mes':
+            fechaInicioFiltro = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`;
+            fechaFinFiltro = getLocalDateString(hoy);
+            break;
+        case 'ano':
+            fechaInicioFiltro = `${hoy.getFullYear()}-01-01`;
+            fechaFinFiltro = getLocalDateString(hoy);
+            break;
+        case 'personalizado':
+            if (!fechaInicio || !fechaFin) {
+                showNotification('Por favor seleccione ambas fechas para el período personalizado', 'error');
+                tbody.innerHTML = '<tr><td colspan="8">Seleccione un rango de fechas válido</td></tr>';
+                return;
+            }
+            fechaInicioFiltro = fechaInicio;
+            fechaFinFiltro = fechaFin;
+            break;
+        case 'todo':
+            fechaInicioFiltro = '2000-01-01';
+            fechaFinFiltro = '2100-12-31';
+            break;
+        default:
+            fechaInicioFiltro = '2000-01-01';
+            fechaFinFiltro = getLocalDateString(hoy);
+    }
+
     firebase.database().ref('ticket_edits').orderByChild('fecha').once('value', function(snapshot) {
         const edits = [];
         snapshot.forEach(child => {
-            edits.push(child.val());
+            const edit = child.val();
+            // Filtrar por fecha
+            if (edit.fecha >= fechaInicioFiltro && edit.fecha <= fechaFinFiltro) {
+                edits.push(edit);
+            }
         });
+
         // Ordenar por fecha y hora descendente
         edits.sort((a, b) => (b.fecha + ' ' + b.hora).localeCompare(a.fecha + ' ' + a.hora));
-        if (edits.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6">No hay ediciones registradas</td></tr>';
+
+        // Filtrar por búsqueda
+        const edicionesFiltradas = edits.filter(edit => {
+            const ticket = tickets.find(t => t.id === edit.idTicket);
+            const nombreCliente = ticket ? ticket.nombre : 'N/A';
+            const nombreMascota = ticket ? ticket.mascota : 'N/A';
+            const idPaciente = ticket ? ticket.idPaciente : 'N/A';
+            const numFactura = ticket ? ticket.numFactura : 'N/A';
+
+            return !searchText || (
+                nombreCliente.toLowerCase().includes(searchText) ||
+                nombreMascota.toLowerCase().includes(searchText) ||
+                idPaciente.toLowerCase().includes(searchText) ||
+                numFactura.toLowerCase().includes(searchText) ||
+                edit.idTicket.toString().includes(searchText)
+            );
+        });
+
+        // Guardar las ediciones filtradas globalmente
+        edicionesGlobales = edicionesFiltradas;
+
+        if (edicionesFiltradas.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="8">No hay ediciones registradas para los filtros seleccionados</td></tr>';
+            actualizarControlesPaginacion(0);
             return;
         }
+
+        // Calcular paginación
+        const totalPaginas = Math.ceil(edicionesFiltradas.length / elementosPorPagina);
+        if (paginaActualEdiciones > totalPaginas) {
+            paginaActualEdiciones = 1;
+        }
+
+        // Obtener elementos de la página actual
+        const inicio = (paginaActualEdiciones - 1) * elementosPorPagina;
+        const fin = inicio + elementosPorPagina;
+        const edicionesPagina = edicionesFiltradas.slice(inicio, fin);
+
+        // Renderizar tabla
         tbody.innerHTML = '';
-        edits.forEach(edit => {
+        edicionesPagina.forEach(edit => {
+            const ticket = tickets.find(t => t.id === edit.idTicket);
+            const nombreCliente = ticket ? ticket.nombre : 'N/A';
+            const nombreMascota = ticket ? ticket.mascota : 'N/A';
+
             const cambios = Object.entries(edit.cambios || {}).map(([campo, val]) =>
                 `<div><strong>${campo}:</strong> <span style='color:#b00'>${val.antes}</span> → <span style='color:#080'>${val.despues}</span></div>`
             ).join('');
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${edit.fecha}</td>
@@ -479,12 +578,237 @@ function cargarHistorialEdiciones() {
                 <td>${edit.usuario}</td>
                 <td>${edit.email}</td>
                 <td>${edit.idTicket}</td>
+                <td>${nombreCliente}</td>
+                <td>${nombreMascota}</td>
                 <td>${cambios}</td>
             `;
             tbody.appendChild(tr);
         });
+
+        // Actualizar controles de paginación
+        actualizarControlesPaginacion(totalPaginas);
     });
 }
+
+function actualizarControlesPaginacion(totalPaginas) {
+    const paginacionContainer = document.getElementById('numeroPaginas');
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+    const paginaActualSpan = document.getElementById('paginaActual');
+    const totalPaginasSpan = document.getElementById('totalPaginas');
+
+    if (!paginacionContainer || !prevBtn || !nextBtn || !paginaActualSpan || !totalPaginasSpan) return;
+
+    // Actualizar información de página actual
+    paginaActualSpan.textContent = paginaActualEdiciones;
+    totalPaginasSpan.textContent = totalPaginas;
+
+    // Actualizar estado de botones anterior/siguiente
+    prevBtn.disabled = paginaActualEdiciones === 1;
+    nextBtn.disabled = paginaActualEdiciones === totalPaginas || totalPaginas === 0;
+
+    // Generar botones de página
+    paginacionContainer.innerHTML = '';
+    
+    // Determinar qué páginas mostrar
+    let startPage = Math.max(1, paginaActualEdiciones - 2);
+    let endPage = Math.min(totalPaginas, startPage + 4);
+    
+    // Ajustar si estamos cerca del final
+    if (endPage - startPage < 4) {
+        startPage = Math.max(1, endPage - 4);
+    }
+
+    // Agregar botón para primera página si no es visible
+    if (startPage > 1) {
+        const firstBtn = crearBotonPagina(1);
+        paginacionContainer.appendChild(firstBtn);
+        if (startPage > 2) {
+            paginacionContainer.appendChild(crearPuntosSuspensivos());
+        }
+    }
+
+    // Agregar botones de página
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = crearBotonPagina(i);
+        paginacionContainer.appendChild(pageBtn);
+    }
+
+    // Agregar botón para última página si no es visible
+    if (endPage < totalPaginas) {
+        if (endPage < totalPaginas - 1) {
+            paginacionContainer.appendChild(crearPuntosSuspensivos());
+        }
+        const lastBtn = crearBotonPagina(totalPaginas);
+        paginacionContainer.appendChild(lastBtn);
+    }
+}
+
+function crearBotonPagina(numero) {
+    const btn = document.createElement('button');
+    btn.className = `btn-pagina ${numero === paginaActualEdiciones ? 'active' : ''}`;
+    btn.textContent = numero;
+    btn.onclick = () => {
+        paginaActualEdiciones = numero;
+        cargarHistorialEdiciones();
+    };
+    return btn;
+}
+
+function crearPuntosSuspensivos() {
+    const span = document.createElement('span');
+    span.className = 'puntos-suspensivos';
+    span.textContent = '...';
+    return span;
+}
+
+// Agregar event listeners para los controles de paginación
+document.addEventListener('DOMContentLoaded', function() {
+    // Event listeners para paginación
+    const prevBtn = document.getElementById('prevPage');
+    const nextBtn = document.getElementById('nextPage');
+
+    if (prevBtn) {
+        prevBtn.addEventListener('click', () => {
+            if (paginaActualEdiciones > 1) {
+                paginaActualEdiciones--;
+                cargarHistorialEdiciones();
+            }
+        });
+    }
+
+    if (nextBtn) {
+        nextBtn.addEventListener('click', () => {
+            const totalPaginas = Math.ceil(edicionesGlobales.length / elementosPorPagina);
+            if (paginaActualEdiciones < totalPaginas) {
+                paginaActualEdiciones++;
+                cargarHistorialEdiciones();
+            }
+        });
+    }
+
+    // Event listener para el filtro de período
+    const filtroPeriodoEdiciones = document.getElementById('filtroPeriodoEdiciones');
+    if (filtroPeriodoEdiciones) {
+        filtroPeriodoEdiciones.addEventListener('change', function() {
+            const periodPersonalizadoEdiciones = document.getElementById('periodPersonalizadoEdiciones');
+            if (periodPersonalizadoEdiciones) {
+                periodPersonalizadoEdiciones.style.display = 
+                    this.value === 'personalizado' ? 'flex' : 'none';
+            }
+            if (this.value !== 'personalizado') {
+                paginaActualEdiciones = 1; // Resetear a primera página
+                cargarHistorialEdiciones();
+            }
+        });
+    }
+
+    // Event listener para la búsqueda en tiempo real
+    const searchEdiciones = document.getElementById('searchEdiciones');
+    if (searchEdiciones) {
+        let timeoutId;
+        searchEdiciones.addEventListener('input', () => {
+            // Debounce para evitar demasiadas llamadas
+            clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                paginaActualEdiciones = 1; // Resetear a primera página al buscar
+                cargarHistorialEdiciones();
+            }, 300);
+        });
+    }
+
+    // Event listener para el botón de aplicar filtros
+    const aplicarFiltrosEdicionesBtn = document.getElementById('aplicarFiltrosEdicionesBtn');
+    if (aplicarFiltrosEdicionesBtn) {
+        aplicarFiltrosEdicionesBtn.addEventListener('click', function() {
+            const periodo = document.getElementById('filtroPeriodoEdiciones')?.value;
+            if (periodo === 'personalizado') {
+                const fechaInicio = document.getElementById('fechaInicioEdiciones')?.value;
+                const fechaFin = document.getElementById('fechaFinEdiciones')?.value;
+                if (!fechaInicio || !fechaFin) {
+                    showNotification('Por favor seleccione ambas fechas para el período personalizado', 'error');
+                    return;
+                }
+                if (new Date(fechaInicio) > new Date(fechaFin)) {
+                    showNotification('La fecha de inicio no puede ser posterior a la fecha final', 'error');
+                    return;
+                }
+            }
+            paginaActualEdiciones = 1; // Resetear a primera página al aplicar filtros
+            cargarHistorialEdiciones();
+        });
+    }
+
+    // Event listeners para las fechas personalizadas
+    const fechaInicioEdiciones = document.getElementById('fechaInicioEdiciones');
+    const fechaFinEdiciones = document.getElementById('fechaFinEdiciones');
+    
+    if (fechaInicioEdiciones) {
+        fechaInicioEdiciones.addEventListener('change', () => {
+            const periodo = document.getElementById('filtroPeriodoEdiciones')?.value;
+            if (periodo === 'personalizado') {
+                paginaActualEdiciones = 1;
+                cargarHistorialEdiciones();
+            }
+        });
+    }
+    
+    if (fechaFinEdiciones) {
+        fechaFinEdiciones.addEventListener('change', () => {
+            const periodo = document.getElementById('filtroPeriodoEdiciones')?.value;
+            if (periodo === 'personalizado') {
+                paginaActualEdiciones = 1;
+                cargarHistorialEdiciones();
+            }
+        });
+    }
+
+    // Agregar estilos para la paginación
+    const style = document.createElement('style');
+    style.textContent = `
+        .btn-pagina {
+            padding: 5px 10px;
+            border: 1px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 4px;
+            min-width: 35px;
+            transition: all 0.2s;
+        }
+        .btn-pagina:hover:not(:disabled) {
+            background: #f0f0f0;
+            border-color: #aaa;
+        }
+        .btn-pagina.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        .btn-pagina:disabled {
+            background: #f5f5f5;
+            cursor: not-allowed;
+            color: #999;
+        }
+        .puntos-suspensivos {
+            padding: 5px;
+            color: #666;
+        }
+        .paginacion-container {
+            user-select: none;
+        }
+        .search-bar {
+            position: relative;
+        }
+        .search-bar i {
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #666;
+        }
+    `;
+    document.head.appendChild(style);
+});
 
 if (ticketForm) {
     ticketForm.addEventListener('submit', (e) => {
@@ -674,18 +998,12 @@ function addTicket() {
         const estado = document.getElementById('estado').value;
         const tipoMascota = document.getElementById('tipoMascota').value;
         let urgencia = document.getElementById('urgencia')?.value || 'consulta';
-        // Normalizar a minúsculas para que coincida con las clases CSS
         urgencia = urgencia.toLowerCase();
         const porCobrar = document.getElementById('porCobrar')?.value || '';
-
-        // Campos adicionales
         const idPaciente = document.getElementById('idPaciente')?.value || '';
-        
-        // Nuevo código para combinar doctor y asistente
         const doctorAtiende = document.getElementById('doctorAtiende')?.value || '';
         const asistenteAtiende = document.getElementById('asistenteAtiende')?.value || '';
         let medicoAtiende = '';
-        
         if (doctorAtiende && asistenteAtiende) {
             medicoAtiende = `${doctorAtiende}, ${asistenteAtiende}`;
         } else if (doctorAtiende) {
@@ -693,26 +1011,21 @@ function addTicket() {
         } else if (asistenteAtiende) {
             medicoAtiende = asistenteAtiende;
         }
-        
         const numFactura = document.getElementById('numFactura')?.value || '';
-        const tipoServicio = document.getElementById('tipoServicio')?.value || 'consulta';
-        
-        // Obtener fecha y tiempos seleccionados
+        const tipoServicio = document.getElementById('tipoServicio').value;
         const fechaConsulta = document.getElementById('fecha')?.value;
         const horaCita = document.getElementById('hora')?.value;
-        const horaLlegada = document.getElementById('horaLlegada')?.value;
         const horaAtencion = document.getElementById('horaAtencion')?.value;
-        
-        console.log("Datos recopilados:", { 
-            nombre, mascota, fechaConsulta, horaCita, horaLlegada, horaAtencion, tipoServicio 
-        });
-        
+        console.log("Datos recopilados:", { nombre, mascota, fechaConsulta, horaCita, horaAtencion, tipoServicio });
         const fecha = new Date();
-        
+        // --- Calcular el número de ticket visual justo antes de guardar ---
+        const hoy = fechaConsulta || getLocalDateString();
+        const ticketsHoy = tickets.filter(t => t.fechaConsulta === hoy);
+        const nextVisualId = ticketsHoy.length ? Math.max(...ticketsHoy.map(t => parseInt(t.id, 10) || 0)) + 1 : 1;
         // 2. Crear nuevo ticket
         const nuevoTicket = {
-            id: currentTicketId,
-            randomId: generateRandomId(), // identificador oculto
+            id: nextVisualId, // Solo visual
+            randomId: generateRandomId(),
             nombre,
             mascota,
             cedula,
@@ -720,62 +1033,36 @@ function addTicket() {
             motivoLlegada,
             estado,
             tipoMascota,
-            urgencia, // usar el valor seleccionado del selector (ya normalizado)
+            urgencia,
             idPaciente,
             medicoAtiende,
             numFactura,
             tipoServicio,
             fecha: fecha.toISOString(),
             horaCreacion: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-            porCobrar
+            porCobrar,
+            // Asignar hora de llegada automáticamente
+            horaLlegada: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
         };
-        
-        // Añadir campos de fecha y tiempos de consulta si están disponibles
         if (fechaConsulta) nuevoTicket.fechaConsulta = fechaConsulta;
         if (horaCita) nuevoTicket.horaConsulta = horaCita;
-        if (horaLlegada) nuevoTicket.horaLlegada = horaLlegada;
         if (horaAtencion) nuevoTicket.horaAtencion = horaAtencion;
-        
-        // Mostrar indicador de carga
         showLoadingButton(document.querySelector('.btn-submit'));
-        
-        // Verificar la referencia a Firebase
         if (!ticketsRef) {
             console.error("Error: ticketsRef no está definido");
             showNotification('Error con la base de datos. Por favor recarga la página.', 'error');
             hideLoadingButton(document.querySelector('.btn-submit'));
             return;
         }
-        
-        // Guardar en Firebase con manejo de errores mejorado
         ticketsRef.push(nuevoTicket)
             .then(() => {
                 console.log("Ticket guardado exitosamente");
-                
-                // Incrementar el ID para el siguiente ticket
-                currentTicketId++;
-                
-                // Actualizar currentTicketId en Firebase si settingsRef existe
-                if (settingsRef) {
-                    settingsRef.update({ currentTicketId })
-                        .catch(error => console.error("Error actualizando currentTicketId:", error));
-                }
-                
-                // Limpiar formulario
                 ticketForm.reset();
-                
-                // Restaurar fecha actual en el formulario
                 if (document.getElementById('fecha')) {
                     document.getElementById('fecha').value = getLocalDateString();
                 }
-                
-                // Quitar indicador de carga
                 hideLoadingButton(document.querySelector('.btn-submit'));
-                
-                // Mostrar mensaje de éxito
                 showNotification('Consulta creada correctamente', 'success');
-                
-                // Cambiar a la vista de tickets
                 setTimeout(() => {
                     showSection(verTicketsSection);
                     setActiveButton(verTicketsBtn);
@@ -900,6 +1187,7 @@ function renderTickets(filter = 'todos', date = null) {
                     <th>Hora Finalización</th>
                     <th>Médico/Asistente</th>
                     <th>Urgencia</th>
+                    <th>Motivo de Llegada</th>
                 </tr>
             </thead>
             <tbody>`;
@@ -921,6 +1209,7 @@ function renderTickets(filter = 'todos', date = null) {
                 <td>${ticket.horaFinalizacion || ''}</td>
                 <td>${ticket.medicoAtiende || ''}</td>
                 <td>${(ticket.urgencia || '').toUpperCase()}</td>
+                <td>${ticket.motivoLlegada || ''}</td>
             </tr>`;
         });
         table += '</tbody></table>';
@@ -1650,7 +1939,8 @@ function editTicket(randomId) {
         estado: ticket.estado || 'espera',
         firebaseKey: ticket.firebaseKey,
         horaLlegada: ticket.horaLlegada || '',
-        horaAtencion: ticket.horaAtencion || ''
+        horaAtencion: ticket.horaAtencion || '',
+        tipoServicio: ticket.tipoServicio || 'consulta'
     };
     
     // Separar el médico y asistente si existe
@@ -1726,16 +2016,16 @@ function editTicket(randomId) {
                 
                 <div class="form-row">
                     <div class="form-group">
-                        <label for="editHoraLlegada">Hora de Llegada</label>
-                        <input type="time" id="editHoraLlegada" value="${safeTicket.horaLlegada || ''}">
+                        <label>Hora de Llegada</label>
+                        <input type="text" value="${safeTicket.horaLlegada || ''}" readonly disabled style="background:#f5f5f5;color:#888;cursor:not-allowed;">
                     </div>
                     ${canShowHoraCita ? `<div class="form-group">
                         <label for="editHora">Hora de Cita</label>
                         <input type="time" id="editHora" value="${safeTicket.horaConsulta || ''}">
                     </div>` : ''}
                     <div class="form-group">
-                        <label for="editHoraAtencion">Hora de Atención</label>
-                        <input type="time" id="editHoraAtencion" value="${safeTicket.horaAtencion || ''}">
+                        <label>Hora de Atención</label>
+                        <input type="text" value="${safeTicket.horaAtencion || ''}" readonly disabled style="background:#f5f5f5;color:#888;cursor:not-allowed;">
                     </div>
                 </div>
                 
@@ -1853,11 +2143,9 @@ function editTicket(randomId) {
                         <option value="perfil_quimico_general" ${safeTicket.tipoServicio === 'perfil_quimico_general' ? 'selected' : ''}>Perfil quimico general</option>
                         <option value="perfil_pre_quirurgico" ${safeTicket.tipoServicio === 'perfil_pre_quirurgico' ? 'selected' : ''}>Perfil pre quirurgico</option>
                         <option value="perfil_renal" ${safeTicket.tipoServicio === 'perfil_renal' ? 'selected' : ''}>Perfil renal</option>
-<option value="cirugia" ${safeTicket.tipoServicio === 'cirugia' ? 'selected' : ''}>Cirugía</option>
+                        <option value="cirugia" ${safeTicket.tipoServicio === 'cirugia' ? 'selected' : ''}>Cirugía</option>
                         <option value="muestra_test" ${safeTicket.tipoServicio === 'muestra_test' ? 'selected' : ''}>Muestra para test</option>
-                        <option value="t<option value="cirugia" ${safeTicket.tipoServicio === 'cirugia' ? 'selected' : ''}>Cirugía</option>
-                        <option value="muestra_test" ${safeTicket.tipoServicio === 'muestra_test' ? 'selected' : ''}>Muestra para test</option>
-iempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selected' : ''}>Tiempos de coagulación</option>
+                        <option value="tiempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selected' : ''}>Tiempos de coagulación</option>
                         <option value="internamiento" ${safeTicket.tipoServicio === 'internamiento' ? 'selected' : ''}>Internamiento</option>
                         <option value="test_sida_leucemia" ${safeTicket.tipoServicio === 'test_sida_leucemia' ? 'selected' : ''}>Test sida leucemia</option>
                         <option value="corteUnas" ${safeTicket.tipoServicio === 'corteUnas' ? 'selected' : ''}>Corte de uñas</option>
@@ -1901,6 +2189,10 @@ iempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selec
         }
         
         // Recoger todos los datos del formulario
+        const editHoraAtencion = document.getElementById('editHoraAtencion');
+        const horaAtencionValue = editHoraAtencion ? editHoraAtencion.value : '';
+        const editPorCobrar = document.getElementById('editPorCobrar');
+        const porCobrarValue = editPorCobrar ? editPorCobrar.value : '';
         const updatedTicket = {
             id: safeTicket.id,
             nombre: document.getElementById('editNombre').value,
@@ -1908,9 +2200,7 @@ iempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selec
             cedula: document.getElementById('editCedula').value,
             idPaciente: document.getElementById('editIdPaciente').value,
             fechaConsulta: document.getElementById('editFecha').value,
-            horaConsulta: document.getElementById('editHora') ? document.getElementById('editHora').value : '',
-            horaLlegada: document.getElementById('editHoraLlegada').value,
-            horaAtencion: document.getElementById('editHoraAtencion').value,
+            horaAtencion: horaAtencionValue,
             medicoAtiende: medicoAtiende,
             motivo: document.getElementById('editMotivo').value,
             motivoLlegada: document.getElementById('editMotivoLlegada').value,
@@ -1920,7 +2210,7 @@ iempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selec
             numFactura: document.getElementById('editNumFactura').value,
             tipoServicio: document.getElementById('editTipoServicio').value,
             firebaseKey: safeTicket.firebaseKey,
-            porCobrar: document.getElementById('editPorCobrar')?.value || ''
+            porCobrar: porCobrarValue
         };
         
         // Si el estado cambia a terminado, registrar hora de finalización si no existe
@@ -1968,6 +2258,19 @@ iempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selec
         editUrgenciaSelect.addEventListener('change', updateEditUrgenciaDescription);
         updateEditUrgenciaDescription();
     }
+
+    // --- En el modal de edición, mostrar la hora de atención como solo lectura ---
+    // Busca el input de hora de atención y cámbialo a readonly y deshabilitado
+    setTimeout(() => {
+      const horaAtencionInput = document.getElementById('editHoraAtencion');
+      if (horaAtencionInput) {
+        horaAtencionInput.readOnly = true;
+        horaAtencionInput.disabled = true;
+        horaAtencionInput.style.background = '#f5f5f5';
+        horaAtencionInput.style.color = '#888';
+        horaAtencionInput.style.cursor = 'not-allowed';
+      }
+    }, 0);
 }
 
 function getTicketDiff(oldTicket, newTicket) {
@@ -2818,7 +3121,23 @@ document.addEventListener('DOMContentLoaded', function() {
   // Botón para aplicar filtros estadísticos
   const aplicarFiltrosBtn = document.getElementById('aplicarFiltrosEstadisticasBtn');
   if (aplicarFiltrosBtn) {
-    aplicarFiltrosBtn.addEventListener('click', updateStatsGlobal);
+    aplicarFiltrosBtn.addEventListener('click', function() {
+      const periodo = document.getElementById('filtroPeriodoGlobal')?.value;
+      if (periodo === 'personalizado') {
+        const fechaInicio = document.getElementById('fechaInicioEstadisticasGlobal')?.value;
+        const fechaFin = document.getElementById('fechaFinEstadisticasGlobal')?.value;
+        if (!fechaInicio || !fechaFin) {
+          showNotification('Por favor seleccione ambas fechas para el período personalizado', 'error');
+          return;
+        }
+        if (new Date(fechaInicio) > new Date(fechaFin)) {
+          showNotification('La fecha de inicio no puede ser posterior a la fecha final', 'error');
+          return;
+        }
+      }
+      updateStatsGlobal();
+      showNotification('Filtros aplicados correctamente', 'success');
+    });
   }
   
   // Cambio en filtro de periodo
@@ -2950,42 +3269,60 @@ function filtrarTicketsPorPeriodoGlobal(tickets) {
   const fechaInicio = document.getElementById('fechaInicioEstadisticasGlobal')?.value;
   const fechaFin = document.getElementById('fechaFinEstadisticasGlobal')?.value;
   const hoy = new Date();
-  let inicio, fin;
+  
   switch (periodo) {
     case 'hoy':
         // Mostrar todos los tickets de hoy, sin importar el estado
         const hoyStr = getLocalDateString();
         return tickets.filter(ticket => {
-            const fechaTicket = ticket.fechaConsulta ? ticket.fechaConsulta : (ticket.fecha ? new Date(ticket.fecha).toISOString().split('T')[0] : '');
+            const fechaTicket = ticket.fechaConsulta || (ticket.fecha ? new Date(ticket.fecha).toISOString().split('T')[0] : '');
             return fechaTicket === hoyStr;
         });
     case 'semana':
-        inicio = new Date(hoy);
+        const inicio = new Date(hoy);
         const diaSemana = hoy.getDay();
         inicio.setDate(hoy.getDate() - diaSemana);
-        inicio = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate());
-        fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + (6 - diaSemana), 23, 59, 59);
-        break;
+        inicio.setHours(0, 0, 0, 0);
+        const fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + (6 - diaSemana), 23, 59, 59);
+        return tickets.filter(ticket => {
+            const fechaTicket = ticket.fechaConsulta || ticket.fecha;
+            if (!fechaTicket) return false;
+            const ticketDate = new Date(fechaTicket);
+            return ticketDate >= inicio && ticketDate <= fin;
+        });
     case 'mes':
-      inicio = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
-      fin = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
-      break;
+        const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+        const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0, 23, 59, 59);
+        return tickets.filter(ticket => {
+            const fechaTicket = ticket.fechaConsulta || ticket.fecha;
+            if (!fechaTicket) return false;
+            const ticketDate = new Date(fechaTicket);
+            return ticketDate >= inicioMes && ticketDate <= finMes;
+        });
     case 'ano':
-      inicio = new Date(hoy.getFullYear(), 0, 1);
-      fin = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59);
-      break;
+        const inicioAno = new Date(hoy.getFullYear(), 0, 1);
+        const finAno = new Date(hoy.getFullYear(), 11, 31, 23, 59, 59);
+        return tickets.filter(ticket => {
+            const fechaTicket = ticket.fechaConsulta || ticket.fecha;
+            if (!fechaTicket) return false;
+            const ticketDate = new Date(fechaTicket);
+            return ticketDate >= inicioAno && ticketDate <= finAno;
+        });
     case 'personalizado':
-      inicio = fechaInicio ? new Date(fechaInicio) : new Date(0);
-      fin = fechaFin ? new Date(fechaFin + 'T23:59:59') : new Date();
-      break;
+        if (!fechaInicio || !fechaFin) return tickets;
+        const inicioPersonalizado = new Date(fechaInicio);
+        inicioPersonalizado.setHours(0, 0, 0, 0);
+        const finPersonalizado = new Date(fechaFin);
+        finPersonalizado.setHours(23, 59, 59, 999);
+        return tickets.filter(ticket => {
+            const fechaTicket = ticket.fechaConsulta || ticket.fecha;
+            if (!fechaTicket) return false;
+            const ticketDate = new Date(fechaTicket);
+            return ticketDate >= inicioPersonalizado && ticketDate <= finPersonalizado;
+        });
     default:
-      inicio = new Date(0);
-      fin = new Date();
+        return tickets;
   }
-  return tickets.filter(ticket => {
-    const fechaTicket = ticket.fechaConsulta ? new Date(ticket.fechaConsulta) : new Date(ticket.fecha);
-    return fechaTicket >= inicio && fechaTicket <= fin;
-  });
 }
 
 function obtenerPersonalUnico() {
@@ -3289,4 +3626,10 @@ document.addEventListener('DOMContentLoaded', function() {
       }
     });
   })();
+
+  // Eliminar el campo de hora de llegada del formulario de creación si existe
+  const horaLlegadaGroup = document.querySelector('input#horaLlegada')?.closest('.form-group');
+  if (horaLlegadaGroup) {
+    horaLlegadaGroup.style.display = 'none';
+  }
 });
