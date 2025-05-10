@@ -1222,6 +1222,7 @@ function renderTickets(filter = 'todos', date = null) {
         'emergencia': 4,
         'urgencia': 3,
         'leve': 2,
+        'prequirurgico': 1.5,
         'consulta': 1
     };
     filteredTickets.sort((a, b) => {
@@ -1252,6 +1253,10 @@ function renderTickets(filter = 'todos', date = null) {
         
         // Add urgency class based on ticket urgency level
         ticketElement.classList.add(`ticket-urgencia-${ticket.urgencia}`);
+        // Si es prequirurgico, agregar clase especial para fondo lila
+        if (ticket.urgencia === 'prequirurgico') {
+            ticketElement.classList.add('ticket-prequirurgico-bg');
+        }
         
         // Add injectable class if service type is injectable - FIX ERROR
         if (ticket.tipoServicio && typeof ticket.tipoServicio === 'string' && ticket.tipoServicio.includes('inyectable')) {
@@ -1512,6 +1517,19 @@ function renderTickets(filter = 'todos', date = null) {
                 border-radius: 4px;
                 margin: 5px 0;
                 display: inline-block;
+            }
+            .ticket-info .urgencia-prequirurgico {
+                color: #8e24aa;
+                background-color: rgba(142, 36, 170, 0.13);
+                padding: 5px 10px;
+                border-radius: 4px;
+                margin: 5px 0;
+                display: inline-block;
+            }
+            .ticket-prequirurgico-bg {
+                background: linear-gradient(135deg, #f3e6fa 60%, #e1c8f7 100%);
+                border: 2px solid #b47ddb;
+                box-shadow: 0 2px 12px 0 rgba(142,36,170,0.08);
             }
             @keyframes pulseUrgent {
                 0% { transform: scale(1); }
@@ -3447,7 +3465,8 @@ function getUrgenciaLabel(urgencia) {
         'general': 'General',
         'emergencia': 'Emergencia',
         'urgencia': 'Urgencia',
-        'consulta': 'Consulta'
+        'consulta': 'Consulta Regular',
+        'prequirurgico': 'Exámenes Pre Quirúrgicos'
     };
     return labels[urgencia] || urgencia || '';
 }
