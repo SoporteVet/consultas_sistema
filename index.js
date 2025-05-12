@@ -1247,24 +1247,15 @@ function renderTickets(filter = 'todos', date = null) {
         'prequirurgico': 1.5,
         'consulta': 1
     };
-    if (filter === 'espera') {
-        // Ordenar por ID ascendente solo en espera
-        filteredTickets.sort((a, b) => a.id - b.id);
-    } else if (filter === 'terminado') {
-        // Ordenar por urgencia y fecha descendente en terminados
-        filteredTickets.sort((a, b) => {
-            const aUrg = urgenciaOrden[a.urgencia] || 0;
-            const bUrg = urgenciaOrden[b.urgencia] || 0;
-            if (bUrg !== aUrg) {
-                return bUrg - aUrg;
-            }
-            // Si tienen la misma urgencia, ordenar por fecha descendente
-            return new Date(b.fecha) - new Date(a.fecha);
-        });
-    } else {
-        // Puedes dejar el orden que prefieras para otros filtros
-        filteredTickets.sort((a, b) => a.id - b.id);
-    }
+    filteredTickets.sort((a, b) => {
+        const aUrg = urgenciaOrden[a.urgencia] || 0;
+        const bUrg = urgenciaOrden[b.urgencia] || 0;
+        if (bUrg !== aUrg) {
+            return bUrg - aUrg;
+        }
+        // Si tienen la misma urgencia, ordenar por fecha descendente
+        return new Date(b.fecha) - new Date(a.fecha);
+    });
     
     if (filteredTickets.length === 0) {
         ticketContainer.innerHTML = `
