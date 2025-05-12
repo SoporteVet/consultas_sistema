@@ -226,6 +226,28 @@ document.addEventListener('DOMContentLoaded', () => {
             renderTickets('lista');
         });
     }
+
+    // Mostrar filtro Laboratorio solo para roles distintos a visitas
+    const labFilterBtn = document.querySelector('.filter-btn[data-filter="laboratorio"]');
+    if (labFilterBtn && ["admin", "laboratorio", "consulta_externa"].includes(userRole)) {
+        labFilterBtn.style.display = '';
+    }
+    // Evento para filtro Laboratorio
+    if (labFilterBtn) {
+        labFilterBtn.addEventListener('click', () => {
+            // Quitar clase active de todos los botones de filtro
+            const allFilterBtns = document.querySelectorAll('.filter-btn');
+            if (allFilterBtns && allFilterBtns.length) {
+                allFilterBtns.forEach(b => b.classList.remove('active'));
+            }
+            if (labFilterBtn) labFilterBtn.classList.add('active');
+            const ticketContainer = document.getElementById('ticketContainer');
+            const labContainer = document.getElementById('labContainer');
+            if (ticketContainer) ticketContainer.style.display = 'none';
+            if (labContainer) labContainer.style.display = '';
+            if (typeof renderLabSheets === 'function') renderLabSheets();
+        });
+    }
 });
 
 // Improved version of applyRoleBasedUI with better debugging and role detection
@@ -1217,7 +1239,7 @@ function renderTickets(filter = 'todos', date = null) {
         return;
     }
     
-    // Ordenar por nivel de urgencia personalizado y luego por fecha
+    // Ordenar según el filtro
     const urgenciaOrden = {
         'emergencia': 4,
         'urgencia': 3,
@@ -1225,15 +1247,24 @@ function renderTickets(filter = 'todos', date = null) {
         'prequirurgico': 1.5,
         'consulta': 1
     };
-    filteredTickets.sort((a, b) => {
-        const aUrg = urgenciaOrden[a.urgencia] || 0;
-        const bUrg = urgenciaOrden[b.urgencia] || 0;
-        if (bUrg !== aUrg) {
-            return bUrg - aUrg;
-        }
-        // Si tienen la misma urgencia, ordenar por fecha descendente
-        return new Date(b.fecha) - new Date(a.fecha);
-    });
+    if (filter === 'espera') {
+        // Ordenar por ID ascendente solo en espera
+        filteredTickets.sort((a, b) => a.id - b.id);
+    } else if (filter === 'terminado') {
+        // Ordenar por urgencia y fecha descendente en terminados
+        filteredTickets.sort((a, b) => {
+            const aUrg = urgenciaOrden[a.urgencia] || 0;
+            const bUrg = urgenciaOrden[b.urgencia] || 0;
+            if (bUrg !== aUrg) {
+                return bUrg - aUrg;
+            }
+            // Si tienen la misma urgencia, ordenar por fecha descendente
+            return new Date(b.fecha) - new Date(a.fecha);
+        });
+    } else {
+        // Puedes dejar el orden que prefieras para otros filtros
+        filteredTickets.sort((a, b) => a.id - b.id);
+    }
     
     if (filteredTickets.length === 0) {
         ticketContainer.innerHTML = `
@@ -2043,7 +2074,7 @@ function editTicket(randomId) {
                     </div>` : ''}
                     <div class="form-group">
                         <label>Hora de Atención</label>
-                        <input type="text" id="editHoraAtencion" value="${safeTicket.horaAtencion || ''}" readonly disabled style="background:#f5f5f5;color:#888;cursor:not-allowed;">
+                        <input type="text" value="${safeTicket.horaAtencion || ''}" readonly disabled style="background:#f5f5f5;color:#888;cursor:not-allowed;">
                     </div>
                 </div>
                 
@@ -2127,6 +2158,7 @@ function editTicket(randomId) {
                             <option value="urgencia" ${safeTicket.urgencia === 'urgencia' ? 'selected' : ''}>🟠 Urgencias</option>
                             <option value="leve" ${safeTicket.urgencia === 'leve' ? 'selected' : ''}>🟢 Leve</option>
                             <option value="consulta" ${safeTicket.urgencia === 'consulta' ? 'selected' : ''}>🔵 Consulta</option>
+                            <option value="prequirurgico" ${safeTicket.urgencia === 'prequirurgico' ? 'selected' : ''}>🟣 Examenes Pre Quirurgicos</option>
                         </select>
                         <div id="editUrgenciaDesc" style="font-size:0.95em;color:#1976d2;margin-top:4px;"></div>
                     </div>
@@ -2174,6 +2206,11 @@ function editTicket(randomId) {
                         <option value="eutanasia" ${safeTicket.tipoServicio === 'eutanasia' ? 'selected' : ''}>Eutanasia</option>
                         <option value="quitarPuntos" ${safeTicket.tipoServicio === 'quitarPuntos' ? 'selected' : ''}>Quitar puntos</option>
                         <option value="otro" ${safeTicket.tipoServicio === 'otro' ? 'selected' : ''}>Otro</option>
+                        <option value="prequirurgico" ${safeTicket.tipoServicio === 'prequirurgico' ? 'selected' : ''}>Examenes Pre Quirurgicos</option>
+                        <option value="test_sida_leucemia" ${safeTicket.tipoServicio === 'test_sida_leucemia' ? 'selected' : ''}>Test de Sida Leucemia</option>
+                        <option value="test_distemper" ${safeTicket.tipoServicio === 'test_distemper' ? 'selected' : ''}>Test de Distemper</option>
+                        <option value="test_parvovirus" ${safeTicket.tipoServicio === 'test_parvovirus' ? 'selected' : ''}>Test Parvovirus</option>
+                        <option value="rx_control" ${safeTicket.tipoServicio === 'rx_control' ? 'selected' : ''}>RX de Control</option>
                     </select>
                 </div>
                 
@@ -3493,7 +3530,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Mostrar botón Hoja de Laboratorio solo para ciertos roles
   const labSheetBtn = document.getElementById('labSheetBtn');
   const labSheetSection = document.getElementById('labSheetSection');
-  const allowedRoles = ["consulta_externa", "laboratorio", "internos", "admin"];
+  const allowedRoles = ["consulta_externa", "laboratorio", "admin"];
   if (labSheetBtn && allowedRoles.includes(userRole)) {
     labSheetBtn.style.display = '';
     labSheetBtn.onclick = function() {
@@ -3510,6 +3547,8 @@ document.addEventListener('DOMContentLoaded', function() {
       // Quita active de todos los botones y pon solo este
       document.querySelectorAll('nav button').forEach(btn => btn.classList.remove('active'));
       labSheetBtn.classList.add('active');
+      // Llama a la función de renderizado de hoja de laboratorio
+      if (window.renderLabSheetList) window.renderLabSheetList();
     };
   }
 
@@ -3678,3 +3717,110 @@ document.addEventListener('DOMContentLoaded', function() {
     horaLlegadaGroup.style.display = 'none';
   }
 });
+
+// --- MODAL HOJA DE LABORATORIO ---
+window.openLabSheetModal = function(randomId) {
+    const ticket = tickets.find(t => t.randomId === randomId);
+    if (!ticket) {
+        showNotification('Ticket no encontrado', 'error');
+        return;
+    }
+    // Cerrar cualquier modal existente
+    closeModal();
+    // Crear modal
+    const modal = document.createElement('div');
+    modal.className = 'edit-modal';
+    // Cargar hoja de laboratorio si existe
+    let labSheet = null;
+    if (window.labSheets && window.labSheets[ticket.id]) {
+        labSheet = window.labSheets[ticket.id];
+    }
+    // Estados posibles
+    const estadosLab = ['en proceso', 'pendiente reportar', 'reportados'];
+    // Generar HTML del modal (simplificado, puedes expandirlo con más campos y estilos)
+    modal.innerHTML = `
+        <div class="modal-content animate-scale" style="max-width:900px;">
+            <span class="close-modal" onclick="closeModal()">&times;</span>
+            <h3><i class="fas fa-vials"></i> Hoja de Laboratorio</h3>
+            <form id="labSheetForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Paciente</label>
+                        <input type="text" value="${ticket.mascota || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Propietario</label>
+                        <input type="text" value="${ticket.nombre || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>ID Paciente</label>
+                        <input type="text" value="${ticket.idPaciente || ''}" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Fecha</label>
+                        <input type="text" value="${ticket.fechaConsulta || ''}" readonly>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Estado de laboratorio</label>
+                        <select id="labEstado" required>
+                            ${estadosLab.map(e => `<option value="${e}" ${labSheet && labSheet.estado === e ? 'selected' : ''}>${e.charAt(0).toUpperCase() + e.slice(1)}</option>`).join('')}
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Exámenes a realizar</label>
+                    <textarea id="labExamenes" placeholder="Ej: Hemograma, Química sanguínea, Test de Distemper..." rows="4">${labSheet && labSheet.examenes ? labSheet.examenes : ''}</textarea>
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                    <button type="submit" class="btn-save">Guardar Hoja de Laboratorio</button>
+                    ${(["admin"].includes(userRole) && labSheet) ? `<button type="button" class="btn-delete" id="deleteLabSheetBtn">Eliminar</button>` : ''}
+                </div>
+            </form>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    // Guardar cambios
+    document.getElementById('labSheetForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const estado = document.getElementById('labEstado').value;
+        const examenes = document.getElementById('labExamenes').value;
+        // Guardar en Firebase (o tu backend)
+        if (typeof firebase !== 'undefined' && firebase.database) {
+            firebase.database().ref('lab_sheets/' + ticket.id).set({
+                ticketId: ticket.id,
+                estado,
+                examenes,
+                paciente: ticket.mascota,
+                propietario: ticket.nombre,
+                idPaciente: ticket.idPaciente,
+                fecha: ticket.fechaConsulta
+            }).then(() => {
+                showNotification('Hoja de laboratorio guardada', 'success');
+                closeModal();
+            }).catch(err => {
+                showNotification('Error al guardar: ' + err.message, 'error');
+            });
+        }
+    });
+    // Eliminar hoja de laboratorio (solo admin)
+    if (document.getElementById('deleteLabSheetBtn')) {
+        document.getElementById('deleteLabSheetBtn').addEventListener('click', function() {
+            if (confirm('¿Seguro que deseas eliminar esta hoja de laboratorio?')) {
+                firebase.database().ref('lab_sheets/' + ticket.id).remove().then(() => {
+                    showNotification('Hoja de laboratorio eliminada', 'success');
+                    closeModal();
+                }).catch(err => {
+                    showNotification('Error al eliminar: ' + err.message, 'error');
+                });
+            }
+        });
+    }
+};
+
+// Importar lab.js
+const scriptLab = document.createElement('script');
+scriptLab.src = 'lab.js';
+document.body.appendChild(scriptLab);
