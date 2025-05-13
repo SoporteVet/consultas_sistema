@@ -464,12 +464,6 @@ safeAddEventListener('estadisticasBtn', 'click', () => {
     }
 });
 
-safeAddEventListener('edicionesBtn', 'click', () => {
-    showSectionById('edicionesSection');
-    cargarHistorialEdiciones();
-    setActiveButton(document.getElementById('edicionesBtn'));
-});
-
 // Variables globales para la paginación
 let paginaActualEdiciones = 1;
 const elementosPorPagina = 25;
@@ -1159,20 +1153,25 @@ function renderTickets(filter = 'todos', date = null) {
     const searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
     if (filter === 'todos') {
-        filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate && t.estado !== 'terminado');
+        // Mostrar todos menos terminados y cliente_se_fue
+        filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate && t.estado !== 'terminado' && t.estado !== 'cliente_se_fue');
     } else if (filter === 'espera') {
         filteredTickets = tickets.filter(ticket => ticket.estado === 'espera' && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'consultorio') {
         filteredTickets = tickets.filter(ticket => 
-            (ticket.estado === 'consultorio1' || 
-            ticket.estado === 'consultorio2' || 
-            ticket.estado === 'consultorio3' ||
-            ticket.estado === 'consultorio4' ||
-            ticket.estado === 'consultorio5') &&
+            (
+                ticket.estado === 'consultorio1' || 
+                ticket.estado === 'consultorio2' || 
+                ticket.estado === 'consultorio3' ||
+                ticket.estado === 'consultorio4' ||
+                ticket.estado === 'consultorio5' ||
+                ticket.estado === 'rayosx' ||
+                ticket.estado === 'quirofano'
+            ) &&
             ticket.fechaConsulta === selectedDate
         );
     } else if (filter === 'terminado') {
-        filteredTickets = tickets.filter(ticket => ticket.estado === 'terminado' && ticket.fechaConsulta === selectedDate);
+        filteredTickets = tickets.filter(ticket => (ticket.estado === 'terminado' || ticket.estado === 'cliente_se_fue') && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'urgentes') {
         filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta' && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
@@ -1218,6 +1217,9 @@ function renderTickets(filter = 'todos', date = null) {
             if (ticket.estado === 'espera') estadoColor = 'excel-estado-espera';
             else if (ticket.estado && ticket.estado.startsWith('consultorio')) estadoColor = 'excel-estado-consultorio';
             else if (ticket.estado === 'terminado') estadoColor = 'excel-estado-terminado';
+            else if (ticket.estado === 'rayosx') estadoColor = 'excel-estado-rayosx';
+            else if (ticket.estado === 'quirofano') estadoColor = 'excel-estado-quirofano';
+            else if (ticket.estado === 'cliente_se_fue') estadoColor = 'excel-estado-cliente-se-fue';
             else estadoColor = '';
             table += `<tr class="${estadoColor}">
                 <td>${index + 1}</td>
@@ -1349,6 +1351,18 @@ function renderTickets(filter = 'todos', date = null) {
                     estadoText = 'Consultorio 5';
                     estadoClass = 'estado-consultorio';
                     break;
+                case 'rayosx':
+                    estadoText = 'En Rayos X';
+                    estadoClass = 'estado-rayosx';
+                    break;
+                case 'quirofano':
+                    estadoText = 'En Quirófano';
+                    estadoClass = 'estado-quirofano';
+                    break;
+                case 'cliente_se_fue':
+                    estadoText = 'Cliente se fue';
+                    estadoClass = 'estado-cliente-se-fue';
+                    break;
                 case 'terminado':
                     estadoText = 'Consulta terminada';
                     estadoClass = 'estado-terminado';
@@ -1419,6 +1433,18 @@ function renderTickets(filter = 'todos', date = null) {
                 case 'consultorio5':
                     estadoText = 'Consultorio 5';
                     estadoClass = 'estado-consultorio';
+                    break;
+                case 'rayosx':
+                    estadoText = 'En Rayos X';
+                    estadoClass = 'estado-rayosx';
+                    break;
+                case 'quirofano':
+                    estadoText = 'En Quirófano';
+                    estadoClass = 'estado-quirofano';
+                    break;
+                case 'cliente_se_fue':
+                    estadoText = 'Cliente se fue';
+                    estadoClass = 'estado-cliente-se-fue';
                     break;
                 case 'terminado':
                     estadoText = 'Consulta terminada';
@@ -1643,6 +1669,15 @@ function mostrarHorario() {
                     case 'consultorio5':
                         estadoLabel = 'Consultorio 5';
                         break;
+            case 'rayosx':
+                estadoLabel = 'En Rayos X';
+                break;
+            case 'quirofano':
+                estadoLabel = 'En Quirófano';
+                break;
+            case 'cliente_se_fue':
+                estadoLabel = 'Cliente se fue';
+                break;
             case 'terminado':
                 estadoLabel = 'Terminado';
                 break;
@@ -1740,6 +1775,9 @@ function getEstadoLabel(estado) {
         'consultorio3': 'Consultorio 3',
         'consultorio4': 'Consultorio 4',
         'consultorio5': 'Consultorio 5',
+        'rayosx': 'En Rayos X',
+        'quirofano': 'En Quirófano',
+        'cliente_se_fue': 'Cliente se fue',
         'terminado': 'Consulta terminada'
     };
     return estados[estado] || estado || '';
@@ -2125,9 +2163,10 @@ function editTicket(randomId) {
                             <option value="consultorio2" ${safeTicket.estado === 'consultorio2' ? 'selected' : ''}>Consultorio 2</option>
                             <option value="consultorio3" ${safeTicket.estado === 'consultorio3' ? 'selected' : ''}>Consultorio 3</option>
                             <option value="consultorio4" ${safeTicket.estado === 'consultorio4' ? 'selected' : ''}>Consultorio 4</option>
-
                             <option value="consultorio5" ${safeTicket.estado === 'consultorio5' ? 'selected' : ''}>Consultorio 5</option>
-
+                            <option value="rayosx" ${safeTicket.estado === 'rayosx' ? 'selected' : ''}>En Rayos X</option>
+                            <option value="quirofano" ${safeTicket.estado === 'quirofano' ? 'selected' : ''}>En Quirófano</option>
+                            <option value="cliente_se_fue" ${safeTicket.estado === 'cliente_se_fue' ? 'selected' : ''}>Cliente se fue</option>
                             <option value="terminado" ${safeTicket.estado === 'terminado' ? 'selected' : ''}>Consulta Terminada</option>
                         </select>
                     </div>
@@ -2212,6 +2251,10 @@ function editTicket(randomId) {
                     <button type="submit" class="btn-save">Guardar Cambios</button>
                 </div>
             </form>
+            <div id="ticketEdicionesHistorial" style="margin-top:30px;">
+                <h4 style="margin-bottom:10px;">Historial de Ediciones</h4>
+                <div id="ticketEdicionesHistorialBody"><div style='color:#888;'>Cargando historial...</div></div>
+            </div>
         </div>
     `;
     
@@ -2330,6 +2373,51 @@ function editTicket(randomId) {
         });
       }
     }, 0);
+
+    // --- HISTORIAL DE EDICIONES SOLO DE ESTE TICKET (TIEMPO REAL) ---
+    const userRoleHistorial = sessionStorage.getItem('userRole');
+    const historialBody = modal.querySelector('#ticketEdicionesHistorialBody');
+    const historialContainer = modal.querySelector('#ticketEdicionesHistorial');
+    if (userRoleHistorial === 'admin' && historialBody && typeof firebase !== 'undefined' && firebase.database) {
+        // Limpiar listener previo si existe
+        if (window._ticketEdicionesListener) {
+            firebase.database().ref('ticket_edits').off('value', window._ticketEdicionesListener);
+        }
+        window._ticketEdicionesListener = function(snapshot) {
+            const edits = [];
+            snapshot.forEach(child => {
+                const edit = child.val();
+                if (edit.randomId === ticket.randomId) {
+                    edits.push(edit);
+                }
+            });
+            edits.sort((a, b) => (b.fecha + ' ' + b.hora).localeCompare(a.fecha + ' ' + a.hora));
+            if (edits.length === 0) {
+                historialBody.innerHTML = `<div style='color:#888;'>No hay ediciones para este ticket</div>`;
+                return;
+            }
+            let html = `<table style='width:100%;font-size:0.97em;border-collapse:collapse;'>
+                <thead><tr style='background:#f5f5f5;'><th>Fecha</th><th>Hora</th><th>Usuario</th><th>Email</th><th>Factura</th><th>Cambios</th></tr></thead><tbody>`;
+            edits.forEach(edit => {
+                const cambios = Object.entries(edit.cambios || {}).map(([campo, val]) =>
+                    `<div><strong>${campo}:</strong> <span style='color:#b00'>${val.antes}</span> → <span style='color:#080'>${val.despues}</span></div>`
+                ).join('');
+                html += `<tr style='border-bottom:1px solid #eee;'><td>${edit.fecha}</td><td>${edit.hora}</td><td>${edit.usuario}</td><td>${edit.email}</td><td>${ticket.numFactura || ''}</td><td>${cambios}</td></tr>`;
+            });
+            html += '</tbody></table>';
+            historialBody.innerHTML = html;
+        };
+        firebase.database().ref('ticket_edits').on('value', window._ticketEdicionesListener);
+        // Limpiar el listener al cerrar el modal
+        const closeBtn = modal.querySelector('.close-modal');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', () => {
+                firebase.database().ref('ticket_edits').off('value', window._ticketEdicionesListener);
+            });
+        }
+    } else if (historialContainer) {
+        historialContainer.style.display = 'none';
+    }
 }
 
 function getTicketDiff(oldTicket, newTicket) {
@@ -2396,6 +2484,17 @@ function saveEditedTicket(ticket) {
         const userName = sessionStorage.getItem('userName') || 'Desconocido';
         const userEmail = sessionStorage.getItem('userEmail') || '';
         const now = new Date();
+        let randomId = ticket.randomId;
+        if (!randomId) {
+            // Buscar por firebaseKey
+            const tByKey = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
+            if (tByKey && tByKey.randomId) randomId = tByKey.randomId;
+        }
+        if (!randomId && ticket.id) {
+            // Buscar por id (último recurso)
+            const tById = tickets.find(t => t.id === ticket.id);
+            if (tById && tById.randomId) randomId = tById.randomId;
+        }
         const editLog = {
             idTicket: ticket.id,
             usuario: userName,
@@ -2404,6 +2503,9 @@ function saveEditedTicket(ticket) {
             hora: now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
             cambios: diff
         };
+        if (randomId) {
+            editLog.randomId = randomId;
+        }
         // Guardar en la rama ticket_edits en Firebase
         if (typeof firebase !== 'undefined' && firebase.database) {
             firebase.database().ref('ticket_edits').push(editLog);
@@ -2467,6 +2569,9 @@ function changeStatus(randomId) {
                         <option value="consultorio3" ${ticket.estado === 'consultorio3' ? 'selected' : ''}>Consultorio 3</option>
                         <option value="consultorio4" ${ticket.estado === 'consultorio4' ? 'selected' : ''}>Consultorio 4</option>
                         <option value="consultorio5" ${ticket.estado === 'consultorio5' ? 'selected' : ''}>Consultorio 5</option>
+                        <option value="rayosx" ${ticket.estado === 'rayosx' ? 'selected' : ''}>En Rayos X</option>
+                        <option value="quirofano" ${ticket.estado === 'quirofano' ? 'selected' : ''}>En Quirófano</option>
+                        <option value="cliente_se_fue" ${ticket.estado === 'cliente_se_fue' ? 'selected' : ''}>Cliente se fue</option>
                         <option value="terminado" ${ticket.estado === 'terminado' ? 'selected' : ''}>Consulta Terminada</option>
                     </select>
                 </div>
