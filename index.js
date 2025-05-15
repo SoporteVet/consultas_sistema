@@ -1060,6 +1060,10 @@ function addTicket() {
             // Asignar hora de llegada automáticamente
             horaLlegada: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
         };
+        // Asignar hora de atención si el estado inicial es consultorio
+        if (["consultorio1", "consultorio2", "consultorio3", "consultorio4", "consultorio5"].includes(estado)) {
+            nuevoTicket.horaAtencion = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
         if (fechaConsulta) nuevoTicket.fechaConsulta = fechaConsulta;
         if (horaCita) nuevoTicket.horaConsulta = horaCita;
         if (horaAtencion) nuevoTicket.horaAtencion = horaAtencion;
@@ -1242,22 +1246,28 @@ function renderTickets(filter = 'todos', date = null) {
     }
     
     // Ordenar según el filtro
-    const urgenciaOrden = {
-        'emergencia': 4,
-        'urgencia': 3,
-        'leve': 2,
-        'prequirurgico': 1.5,
-        'consulta': 1
-    };
-    filteredTickets.sort((a, b) => {
-        const aUrg = urgenciaOrden[a.urgencia] || 0;
-        const bUrg = urgenciaOrden[b.urgencia] || 0;
-        if (bUrg !== aUrg) {
-            return bUrg - aUrg;
-        }
-        // Si tienen la misma urgencia, ordenar por fecha descendente
-        return new Date(b.fecha) - new Date(a.fecha);
-    });
+    if (filter === 'terminado') {
+        // Ordenar por número de ticket DESCENDENTE para tickets terminados
+        filteredTickets.sort((a, b) => b.id - a.id);
+    } else {
+        // Ordenar por urgencia para otros filtros
+        const urgenciaOrden = {
+            'emergencia': 4,
+            'urgencia': 3,
+            'leve': 2,
+            'prequirurgico': 1.5,
+            'consulta': 1
+        };
+        filteredTickets.sort((a, b) => {
+            const aUrg = urgenciaOrden[a.urgencia] || 0;
+            const bUrg = urgenciaOrden[b.urgencia] || 0;
+            if (bUrg !== aUrg) {
+                return bUrg - aUrg;
+            }
+            // Si tienen la misma urgencia, ordenar por fecha descendente
+            return new Date(b.fecha) - new Date(a.fecha);
+        });
+    }
     
     if (filteredTickets.length === 0) {
         ticketContainer.innerHTML = `
@@ -1379,9 +1389,10 @@ function renderTickets(filter = 'todos', date = null) {
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
                     <p><i class="fas fa-stethoscope"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>
-                    ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
+                    ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
+                    ${ticket.horaFinalizacion ? `<p><i class="fas fa-check-circle"></i> Finalización: ${ticket.horaFinalizacion}</p>` : ''}
                     <p class="${urgenciaClass}"><strong>Categorización de paciente:</strong> ${getUrgenciaLabel(ticket.urgencia)}</p>
                     ${ticket.urgencia === 'emergencia' ? `<div class="ticket-emergencia-anim" style='position:absolute;top:10px;right:10px;z-index:2;'><span style='background:#d32f2f;color:#fff;padding:4px 10px;border-radius:6px;font-weight:bold;font-size:0.95em;box-shadow:0 2px 8px rgba(0,0,0,0.12);letter-spacing:1px;'>Emergencia</span></div>` : ''}
                     <div class="estado-badge ${estadoClass}">
@@ -1468,11 +1479,12 @@ function renderTickets(filter = 'todos', date = null) {
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
                     <p><i class="fas fa-stethoscope"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>
-                    <p><i class='fas fa-notes-medical'></i> Motivo de consulta: ${ticket.motivo}</p>
+                    <p><i class='fas fa-notes-medical'></i> Motivo: ${ticket.motivo}</p>
                     ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-day"></i> Fecha: ${formatDate(ticket.fechaConsulta)}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
+                    ${ticket.horaFinalizacion ? `<p><i class="fas fa-check-circle"></i> Finalización: ${ticket.horaFinalizacion}</p>` : ''}
                     <p class="${urgenciaClass}"><strong>Categorización de paciente:</strong> ${getUrgenciaLabel(ticket.urgencia)}</p>
                     ${ticket.urgencia === 'emergencia' ? `<div class="ticket-emergencia-anim" style='position:absolute;top:10px;right:10px;z-index:2;'><span style='background:#d32f2f;color:#fff;padding:4px 10px;border-radius:6px;font-weight:bold;font-size:0.95em;box-shadow:0 2px 8px rgba(0,0,0,0.12);letter-spacing:1px;'>Emergencia</span></div>` : ''}
                     <div class="estado-badge ${estadoClass}">
@@ -1497,6 +1509,7 @@ function renderTickets(filter = 'todos', date = null) {
 
         // Quitar los botones de editar y cambiar estado
         let actionButtons = '';
+        // Botón de eliminar solo para admin (hover)
         if (hasPermission('canDeleteTickets')) {
             actionButtons += `
                 <button class="action-btn btn-eliminar" onclick="event.stopPropagation(); deleteTicketByRandomId('${ticket.randomId}')">
@@ -1504,13 +1517,44 @@ function renderTickets(filter = 'todos', date = null) {
                 </button>
             `;
         }
-        
+        // Botón Terminar consulta para admin o consulta_externa y si el ticket no está terminado
+        if (sessionStorage.getItem('userRole') === 'consulta_externa' && ticket.estado !== 'terminado') {
+            actionButtons += `
+                <button class="btn-terminar-consulta-grande" style="display:flex;align-items:center;justify-content:center;gap:7px;background:#43a047;color:#fff;font-size:0.98em;padding:7px 16px;margin:8px 0 0 0;border-radius:7px;width:135px;font-weight:500;flex-direction:row;box-shadow:0 2px 8px rgba(67,160,71,0.08);border:none;cursor:pointer;transition:background 0.2s;" onclick=\"event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')\">
+                    <span style='font-size:1.1em;display:flex;align-items:center;'><i class=\"fas fa-check\"></i></span>
+                    <span style='display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;'>Terminar<br>consulta</span>
+                </button>
+            `;
+        } else if (sessionStorage.getItem('userRole') === 'admin' && ticket.estado !== 'terminado') {
+            actionButtons += `
+                <button class="action-btn btn-terminar-consulta" style="background:#43a047;color:#fff;font-size:0.85em;padding:3px 8px;margin-left:6px;border-radius:4px;" onclick=\"event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')\">
+                    <i class=\"fas fa-check\"></i> Terminar consulta
+                </button>
+            `;
+        }
         // Only add action buttons container if there are buttons
         if (actionButtons) {
             ticketContent += `<div class="ticket-actions">${actionButtons}</div>`;
         }
         
         ticketElement.innerHTML = ticketContent;
+        // --- Agregar event listener manual al botón de terminar consulta para evitar conflicto con el click del ticket ---
+        const btnTerminarGrande = ticketElement.querySelector('.btn-terminar-consulta-grande');
+        if (btnTerminarGrande) {
+            btnTerminarGrande.addEventListener('click', function(event) {
+                event.stopPropagation();
+                event.preventDefault();
+                terminarConsultaDirecto(ticket.randomId);
+            });
+        }
+        const btnTerminar = ticketElement.querySelector('.btn-terminar-consulta');
+        if (btnTerminar) {
+            btnTerminar.addEventListener('click', function(event) {
+                event.stopPropagation();
+                event.preventDefault();
+                terminarConsultaDirecto(ticket.randomId);
+            });
+        }
         
         // Abrir modal de edición solo al hacer click, excepto para visitas
         if (sessionStorage.getItem('userRole') !== 'visitas') {
@@ -1633,7 +1677,7 @@ function mostrarHorario() {
     if (ticketsDelDia.length === 0) {
         horarioBody.innerHTML = `
             <tr>
-                <td colspan="11" class="no-data">
+                <td colspan="12" class="no-data">
                     <i class="fas fa-calendar-times"></i>
                     No hay consultas programadas para esta fecha
                 </td>
@@ -1717,7 +1761,7 @@ function mostrarHorario() {
             <td>${ticket.medicoAtiende || '-'}</td>
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
-            <td>${ticket.horaFinalizacion || '-'}</td>
+            <td>${ticket.horaAtencion || '-'}</td>
             <td>${ticket.porCobrar || '-'}</td>
             <td>
                 <button class="btn-edit" onclick="editTicket('${ticket.randomId}')">
@@ -2150,7 +2194,7 @@ function editTicket(randomId) {
                 </div>
                 
                 <div class="form-group">
-                    <label for="editMotivo">Motivo de Consulta</label>
+                    <label for="editMotivo">Motivo</label>
                     <textarea id="editMotivo">${safeTicket.motivo}</textarea>
                 </div>
                 
@@ -2479,6 +2523,11 @@ function saveEditedTicket(ticket) {
         };
     }
     
+    // CAMBIO: Asegurarse de que la hora de atención se mantenga cuando cambia a terminado
+    if (diff.estado && ticketToSave.estado === 'terminado' && oldTicket.horaAtencion) {
+        ticketToSave.horaAtencion = oldTicket.horaAtencion;
+    }
+    
     // Si hay cambios, registrar la edición
     if (Object.keys(diff).length > 0) {
         const userName = sessionStorage.getItem('userName') || 'Desconocido';
@@ -2600,6 +2649,10 @@ function changeStatus(randomId) {
         // Si el ticket pasa a terminado, registrar hora de finalización
         if (nuevoEstado === 'terminado') {
             const ahora = new Date();
+            // CAMBIO: Conservar la hora de atención existente si existe
+            if (!ticket.horaAtencion) {
+                ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            }
             ticket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             // Guardar en Firebase inmediatamente
             const ticketToSave = {...ticket};
@@ -2614,6 +2667,7 @@ function changeStatus(randomId) {
                         mostrarHorario();
                     }
                 });
+            return; // Evitar doble guardado
         }
         
         // Mostrar indicador de carga
@@ -3270,9 +3324,7 @@ function renderizarGraficoDistribucionServicios(conteoServicios) {
         maintainAspectRatio: false,
         plugins: {
           legend: { position: 'right' },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
+          tooltip: { callbacks: { label: function(context) {
                 const label = context.label || '';
                 const value = context.raw || 0;
                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
@@ -3920,3 +3972,28 @@ window.openLabSheetModal = function(randomId) {
 const scriptLab = document.createElement('script');
 scriptLab.src = 'lab.js';
 document.body.appendChild(scriptLab);
+
+// Al final del archivo, agregar la función global para terminar consulta directo
+window.terminarConsultaDirecto = function(randomId) {
+    const ticket = tickets.find(t => t.randomId === randomId);
+    if (!ticket || ticket.estado === 'terminado') return;
+    // Cambiar estado y hora de finalización
+    ticket.estado = 'terminado';
+    const ahora = new Date();
+    if (!ticket.horaAtencion) {
+        ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+    ticket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    // Guardar en Firebase
+    const ticketToSave = { ...ticket };
+    delete ticketToSave.firebaseKey;
+    ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+        .then(() => {
+            showNotification('Consulta terminada correctamente', 'success');
+            renderTickets();
+            updateStatsGlobal();
+        })
+        .catch(error => {
+            showNotification('Error al terminar la consulta: ' + error.message, 'error');
+        });
+}
