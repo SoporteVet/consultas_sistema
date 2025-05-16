@@ -1600,7 +1600,7 @@ section h2 i {
   border-collapse: collapse;
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
 }
 
 .wait-time-table .stats-table th {
@@ -2195,4 +2195,113 @@ body.visitas-role .main-container {
 }
 .ticket-emergencia-anim {
   animation: heartbeat-emergencia 6s infinite cubic-bezier(0.4, 0.1, 0.6, 0.9);
+}
+
+.estado-rayosx {
+  background-color: rgba(123, 104, 238, 0.12); /* MediumSlateBlue */
+  color: #7b68ee;
+}
+.estado-quirofano {
+  background-color: rgba(255, 99, 132, 0.12); /* Soft red */
+  color: #ff6384;
+}
+.estado-cliente-se-fue {
+  background-color: rgba(120, 144, 156, 0.12); /* Blue Grey */
+  color: #78909c;
+}
+
+.excel-estado-rayosx {
+  background-color: rgba(123, 104, 238, 0.10);
+  color: #7b68ee;
+}
+.excel-estado-quirofano {
+  background-color: rgba(255, 99, 132, 0.10);
+  color: #ff6384;
+}
+.excel-estado-cliente-se-fue {
+  background-color: rgba(120, 144, 156, 0.10);
+  color: #78909c;
+}
+
+/* Estilos para el botón de terminar consulta */
+.btn-terminar-consulta-grande {
+  display: flex;
+  align-items: left;
+  justify-content: left;
+  background: #43a047;
+  color: #fff;
+  font-size: 0.98em;
+  padding: 7px 16px;
+  margin: 8px 0 0 0;
+  border-radius: 7px;
+  width: 70px;
+  font-weight: 500;
+  flex-direction: row;
+  box-shadow: 0 2px 8px rgba(67,160,71,0.08);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-terminar-consulta-grande:hover {
+  background: #2e7d32;
+  transform: translateY(-1px);
+}
+
+.btn-terminar-consulta-grande span:first-child {
+  font-size: 1.1em;
+  display: flex;
+  align-items: center;
+}
+
+.btn-terminar-consulta-grande span:last-child {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+
+/* Ocultar el botón para roles que no sean admin o consulta_externa */
+body:not(.admin-role):not(.consulta_externa-role) .btn-terminar-consulta-grande,
+body:not(.admin-role):not(.consulta_externa-role) .btn-terminar-consulta {
+  display: none !important;
+}
+
+/* Botón grande y centrado para consulta_externa */
+body.consulta_externa-role .btn-terminar-consulta-grande {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 3px;
+  background: #43a047;
+  color: #fff;
+  font-size: 0.98em;
+  font-weight: 500;
+  padding: 7px 10px;
+  margin: 8px 0 0 0;
+  border-radius: 6px;
+  width: auto;
+  min-width: unset;
+  max-width: unset;
+  box-shadow: 0 2px 8px rgba(67,160,71,0.08);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+body.consulta_externa-role .btn-terminar-consulta-grande i {
+  font-size: 1.1em;
+  margin-right: 4px;
+}
+body.consulta_externa-role .btn-terminar-consulta-grande span {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.1;
+}
+body.consulta_externa-role .btn-terminar-consulta-grande:hover {
+  background: #2e7d32;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(67,160,71,0.15);
 }

@@ -272,6 +272,9 @@ function applyRoleBasedUI(role) {
     
     // Add role-specific class to body element for CSS targeting
     document.body.classList.add(`${role}-role`);
+    if (role === 'consulta_externa') {
+        document.body.classList.add('consulta_externa-role');
+    }
     console.log(`Added ${role}-role class to body`);
     
     // Check explicitly for admin role with string comparison
@@ -1518,16 +1521,25 @@ function renderTickets(filter = 'todos', date = null) {
             `;
         }
         // Botón Terminar consulta para admin o consulta_externa y si el ticket no está terminado
-        if (sessionStorage.getItem('userRole') === 'consulta_externa' && ticket.estado !== 'terminado') {
-            actionButtons += `
-                <button class="btn-terminar-consulta-grande" style="display:flex;align-items:center;justify-content:center;gap:7px;background:#43a047;color:#fff;font-size:0.98em;padding:7px 16px;margin:8px 0 0 0;border-radius:7px;width:135px;font-weight:500;flex-direction:row;box-shadow:0 2px 8px rgba(67,160,71,0.08);border:none;cursor:pointer;transition:background 0.2s;" onclick=\"event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')\">
-                    <span style='font-size:1.1em;display:flex;align-items:center;'><i class=\"fas fa-check\"></i></span>
-                    <span style='display:flex;flex-direction:column;align-items:flex-start;line-height:1.1;'>Terminar<br>consulta</span>
-                </button>
-            `;
+        const userRole = sessionStorage.getItem('userRole');
+        if ((userRole === 'admin' || userRole === 'consulta_externa') && ticket.estado !== 'terminado' && (ticket.estado.includes('consultorio') || ticket.estado === 'espera')) {
+            if (userRole === 'consulta_externa') {
+                actionButtons += `
+                    <button class="action-btn btn-terminar-consulta-grande" onclick="event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')">
+                        <i class='fas fa-check'></i>
+                        <span>Terminar<br>consulta</span>
+                    </button>
+                `;
+            } else {
+                actionButtons += `
+                    <button class="action-btn btn-terminar-consulta-grande" onclick="event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')">
+                        <i class='fas fa-check'></i> Terminar consulta
+                    </button>
+                `;
+            }
         } else if (sessionStorage.getItem('userRole') === 'admin' && ticket.estado !== 'terminado') {
             actionButtons += `
-                <button class="action-btn btn-terminar-consulta" style="background:#43a047;color:#fff;font-size:0.85em;padding:3px 8px;margin-left:6px;border-radius:4px;" onclick=\"event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')\">
+                <button class="action-btn btn-terminar-consulta" onclick=\"event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')\">
                     <i class=\"fas fa-check\"></i> Terminar consulta
                 </button>
             `;
@@ -1538,7 +1550,7 @@ function renderTickets(filter = 'todos', date = null) {
         }
         
         ticketElement.innerHTML = ticketContent;
-        // --- Agregar event listener manual al botón de terminar consulta para evitar conflicto con el click del ticket ---
+        // --- Refuerzo: asegurar que el botón de terminar consulta no abra el modal de edición ---
         const btnTerminarGrande = ticketElement.querySelector('.btn-terminar-consulta-grande');
         if (btnTerminarGrande) {
             btnTerminarGrande.addEventListener('click', function(event) {
@@ -3977,16 +3989,22 @@ document.body.appendChild(scriptLab);
 window.terminarConsultaDirecto = function(randomId) {
     const ticket = tickets.find(t => t.randomId === randomId);
     if (!ticket || ticket.estado === 'terminado') return;
+    
     // Cambiar estado y hora de finalización
     ticket.estado = 'terminado';
     const ahora = new Date();
-    if (!ticket.horaAtencion) {
+    
+    // Si no hay hora de atención y el ticket está en consultorio, usar la hora actual
+    if (!ticket.horaAtencion && ticket.estado.includes('consultorio')) {
         ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     }
+    
     ticket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    
     // Guardar en Firebase
     const ticketToSave = { ...ticket };
     delete ticketToSave.firebaseKey;
+    
     ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
         .then(() => {
             showNotification('Consulta terminada correctamente', 'success');
