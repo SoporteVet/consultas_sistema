@@ -1179,11 +1179,17 @@ function renderTickets(filter = 'todos', date = null) {
         );
     } else if (filter === 'terminado') {
         filteredTickets = tickets.filter(ticket => (ticket.estado === 'terminado' || ticket.estado === 'cliente_se_fue') && ticket.fechaConsulta === selectedDate);
+    } else if (filter === 'porFacturar') {
+        // Tickets que no tienen número de factura asignado
+        filteredTickets = tickets.filter(ticket => (!ticket.numFactura || ticket.numFactura.trim() === '') && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'urgentes') {
         filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta' && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
         // Filtro lista: igual que 'todos' pero en formato tabla
         filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate);
+    } else if (filter === 'porFacturarLista' && sessionStorage.getItem('userRole') !== 'visitas') {
+        // Filtro lista: solo tickets sin número de factura
+        filteredTickets = tickets.filter(t => (!t.numFactura || t.numFactura.trim() === '') && t.fechaConsulta === selectedDate);
     } else {
         filteredTickets = tickets.filter(ticket => ticket.fechaConsulta === selectedDate);
     }
