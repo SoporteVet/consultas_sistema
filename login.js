@@ -246,7 +246,7 @@ function createTestUsers() {
   const testUsers = [
     { email: 'admin@veterinaria.com', password: 'Adm!n#Vet_2025$Xy', role: 'admin', name: 'Administrador' },
     { email: 'recepcion@veterinaria.com', password: 'Rec3pC!on$2025@Lp', role: 'recepcion', name: 'Recepción' },
-    { email: 'visitas@veterinaria.com', password: 'V1s!t@s*2025#Qw', role: 'visitas', name: 'Visitas' },
+    { email: 'visitas@veterinaria.com', password: 'Visitas123', role: 'visitas', name: 'Visitas' },
     { email: 'consultaexterna@veterinaria.com', password: 'C0nsuLt@Ext!2025%Zz', role: 'consultaexterna', name: 'Consulta Externa' },
     { email: 'internos@veterinaria.com', password: '1nt3rn0s@2025!Uv', role: 'internos', name: 'Internos' },
     { email: 'quirofano@veterinaria.com', password: 'Qu!r0f@n0%2025*Rt', role: 'quirofano', name: 'Quirófano' },
