@@ -1517,7 +1517,10 @@ function renderTickets(filter = 'todos', date = null) {
         }
         
         // Add end consultation button for admin and external consultation roles
-        if (hasPermission('canDeleteTickets') || sessionStorage.getItem('userRole') === 'consulta_externa') {
+        if (
+            (hasPermission('canDeleteTickets') || sessionStorage.getItem('userRole') === 'consulta_externa') &&
+            ticket.estado !== 'terminado' && ticket.estado !== 'cliente_se_fue'
+        ) {
             actionButtons += `
                 <button class="action-btn btn-terminar" onclick="event.stopPropagation(); endConsultationByRandomId('${ticket.randomId}')">
                     <i class="fas fa-check-circle"></i> Terminar Consulta
