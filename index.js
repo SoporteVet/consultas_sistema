@@ -272,9 +272,6 @@ function applyRoleBasedUI(role) {
     
     // Add role-specific class to body element for CSS targeting
     document.body.classList.add(`${role}-role`);
-    if (role === 'consulta_externa') {
-        document.body.classList.add('consulta_externa-role');
-    }
     console.log(`Added ${role}-role class to body`);
     
     // Check explicitly for admin role with string comparison
@@ -1179,17 +1176,11 @@ function renderTickets(filter = 'todos', date = null) {
         );
     } else if (filter === 'terminado') {
         filteredTickets = tickets.filter(ticket => (ticket.estado === 'terminado' || ticket.estado === 'cliente_se_fue') && ticket.fechaConsulta === selectedDate);
-    } else if (filter === 'porFacturar') {
-        // Tickets que no tienen número de factura asignado
-        filteredTickets = tickets.filter(ticket => (!ticket.numFactura || ticket.numFactura.trim() === '') && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'urgentes') {
         filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta' && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
         // Filtro lista: igual que 'todos' pero en formato tabla
         filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate);
-    } else if (filter === 'porFacturarLista' && sessionStorage.getItem('userRole') !== 'visitas') {
-        // Filtro lista: solo tickets sin número de factura
-        filteredTickets = tickets.filter(t => (!t.numFactura || t.numFactura.trim() === '') && t.fechaConsulta === selectedDate);
     } else {
         filteredTickets = tickets.filter(ticket => ticket.fechaConsulta === selectedDate);
     }
@@ -1256,10 +1247,9 @@ function renderTickets(filter = 'todos', date = null) {
     
     // Ordenar según el filtro
     if (filter === 'terminado') {
-        // Ordenar por número de ticket DESCENDENTE para tickets terminados
-        filteredTickets.sort((a, b) => b.id - a.id);
+        // Ordenar por número de ticket (id) descendente
+        filteredTickets.sort((a, b) => (b.id || 0) - (a.id || 0));
     } else {
-        // Ordenar por urgencia para otros filtros
         const urgenciaOrden = {
             'emergencia': 4,
             'urgencia': 3,
@@ -1398,7 +1388,7 @@ function renderTickets(filter = 'todos', date = null) {
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
                     <p><i class="fas fa-stethoscope"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>
-                    ${(ticket.fechaConsulta && ticket.horaConsulta) ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
+                    ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
                     ${ticket.horaFinalizacion ? `<p><i class="fas fa-check-circle"></i> Finalización: ${ticket.horaFinalizacion}</p>` : ''}
@@ -1488,7 +1478,7 @@ function renderTickets(filter = 'todos', date = null) {
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
                     <p><i class="fas fa-stethoscope"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>
-                    <p><i class='fas fa-notes-medical'></i> Motivo: ${ticket.motivo}</p>
+                    <p><i class='fas fa-notes-medical'></i> Motivo de consulta: ${ticket.motivo}</p>
                     ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-day"></i> Fecha: ${formatDate(ticket.fechaConsulta)}</p>` : ''}
                     ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
                     ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
@@ -1518,7 +1508,6 @@ function renderTickets(filter = 'todos', date = null) {
 
         // Quitar los botones de editar y cambiar estado
         let actionButtons = '';
-        // Botón de eliminar solo para admin (hover)
         if (hasPermission('canDeleteTickets')) {
             actionButtons += `
                 <button class="action-btn btn-eliminar" onclick="event.stopPropagation(); deleteTicketByRandomId('${ticket.randomId}')">
@@ -1526,53 +1515,13 @@ function renderTickets(filter = 'todos', date = null) {
                 </button>
             `;
         }
-        // Botón Terminar consulta para admin o consulta_externa y si el ticket no está terminado
-        const userRole = sessionStorage.getItem('userRole');
-        if ((userRole === 'admin' || userRole === 'consulta_externa') && ticket.estado !== 'terminado' && (ticket.estado.includes('consultorio') || ticket.estado === 'espera')) {
-            if (userRole === 'consulta_externa') {
-                actionButtons += `
-                    <button class="action-btn btn-terminar-consulta-grande" onclick="event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')">
-                        <i class='fas fa-check'></i>
-                        <span>Terminar<br>consulta</span>
-                    </button>
-                `;
-            } else {
-                actionButtons += `
-                    <button class="action-btn btn-terminar-consulta-grande" onclick="event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')">
-                        <i class='fas fa-check'></i> Terminar consulta
-                    </button>
-                `;
-            }
-        } else if (sessionStorage.getItem('userRole') === 'admin' && ticket.estado !== 'terminado') {
-            actionButtons += `
-                <button class="action-btn btn-terminar-consulta" onclick=\"event.stopPropagation();event.preventDefault();terminarConsultaDirecto('${ticket.randomId}')\">
-                    <i class=\"fas fa-check\"></i> Terminar consulta
-                </button>
-            `;
-        }
+        
         // Only add action buttons container if there are buttons
         if (actionButtons) {
             ticketContent += `<div class="ticket-actions">${actionButtons}</div>`;
         }
         
         ticketElement.innerHTML = ticketContent;
-        // --- Refuerzo: asegurar que el botón de terminar consulta no abra el modal de edición ---
-        const btnTerminarGrande = ticketElement.querySelector('.btn-terminar-consulta-grande');
-        if (btnTerminarGrande) {
-            btnTerminarGrande.addEventListener('click', function(event) {
-                event.stopPropagation();
-                event.preventDefault();
-                terminarConsultaDirecto(ticket.randomId);
-            });
-        }
-        const btnTerminar = ticketElement.querySelector('.btn-terminar-consulta');
-        if (btnTerminar) {
-            btnTerminar.addEventListener('click', function(event) {
-                event.stopPropagation();
-                event.preventDefault();
-                terminarConsultaDirecto(ticket.randomId);
-            });
-        }
         
         // Abrir modal de edición solo al hacer click, excepto para visitas
         if (sessionStorage.getItem('userRole') !== 'visitas') {
@@ -2178,11 +2127,11 @@ function editTicket(randomId) {
                             <option value="Dr. Randall Azofeifa" ${doctorSeleccionado === "Dr. Randall Azofeifa" ? 'selected' : ''}>Dr. Randall Azofeifa</option>
                             <option value="Dr. Gustavo González" ${doctorSeleccionado === "Dr. Gustavo González" ? 'selected' : ''}>Dr. Gustavo González</option>
                             <option value="Dra. Daniela Sancho" ${doctorSeleccionado === "Dra. Daniela Sancho" ? 'selected' : ''}>Dra. Daniela Sancho</option>
+                            <option value="Dra. Francinny Nuñez" ${doctorSeleccionado === "Dra. Francinny Nuñez" ? 'selected' : ''}>Dra. Francinny Nuñez</option>
                             <option value="Dra. Kharen Moreno" ${doctorSeleccionado === "Dra. Kharen Moreno" ? 'selected' : ''}>Dra. Kharen Moreno</option>
                             <option value="Dra. Karina Madrigal" ${doctorSeleccionado === "Dra. Karina Madrigal" ? 'selected' : ''}>Dra. Karina Madrigal</option>
                             <option value="Dra. Lourdes Chacón" ${doctorSeleccionado === "Dra. Lourdes Chacón" ? 'selected' : ''}>Dra. Lourdes Chacón</option>
                             <option value="Dra. Sofia Carrillo" ${doctorSeleccionado === "Dra. Sofia Carrillo" ? 'selected' : ''}>Dra. Sofia Carrillo</option>
-                            <option value="Dra. Francinny Nuñez" ${doctorSeleccionado === "Dra. Francinny Nuñez" ? 'selected' : ''}>Dra. Francinny Nuñez</option>
                             <option value="Dra. Karla Quesada" ${doctorSeleccionado === "Dra. Karla Quesada" ? 'selected' : ''}>Dra. Karla Quesada</option>
                             <option value="Dra. Natalia Alvarado" ${doctorSeleccionado === "Dra. Natalia Alvarado" ? 'selected' : ''}>Dra. Natalia Alvarado</option>
                         </select>
@@ -2202,7 +2151,6 @@ function editTicket(randomId) {
                             <option value="Tec. Maria Fernanda"${asistenteSeleccionado === "Tec. Maria Fernanda" ? 'selected' : ''}>Tec. Maria Fernanda</option>
                             <option value="Tec. Maria José Gutierrez"${asistenteSeleccionado === "Tec. Maria José Gutierrez" ? 'selected' : ''}>Tec. Maria José Gutierrez</option>
                             <option value="Tec. Jimena Urtecho"${asistenteSeleccionado === "Tec.  Jimena Urtecho" ? 'selected' : ''}>Tec.  Jimena Urtecho</option>
-                            <option value="Tec. Nicole Gamboa"${asistenteSeleccionado === "Tec. Nicole Gamboa" ? 'selected' : ''}>Tec. Nicole Gamboa</option>
                         </select>
                     </div>
                 </div>
@@ -2213,7 +2161,7 @@ function editTicket(randomId) {
                 </div>
                 
                 <div class="form-group">
-                    <label for="editMotivo">Motivo</label>
+                    <label for="editMotivo">Motivo de Consulta</label>
                     <textarea id="editMotivo">${safeTicket.motivo}</textarea>
                 </div>
                 
@@ -2352,7 +2300,7 @@ function editTicket(randomId) {
             cedula: document.getElementById('editCedula').value,
             idPaciente: document.getElementById('editIdPaciente').value,
             fechaConsulta: document.getElementById('editFecha').value,
-            horaAtencion: horaAtencionValue,
+            horaAtencion: ticket.horaAtencion || '', // Preservar la hora de atención existente
             medicoAtiende: medicoAtiende,
             motivo: document.getElementById('editMotivo').value,
             motivoLlegada: document.getElementById('editMotivoLlegada').value,
@@ -2365,8 +2313,8 @@ function editTicket(randomId) {
             porCobrar: porCobrarValue
         };
         
-        // Si el estado cambia a terminado, registrar hora de finalización si no existe
-        if (updatedTicket.estado === 'terminado' && !ticket.horaFinalizacion) {
+        // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
+        if ((updatedTicket.estado === 'terminado' || updatedTicket.estado === 'cliente_se_fue') && !ticket.horaFinalizacion) {
             const ahora = new Date();
             updatedTicket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         }
@@ -2665,10 +2613,10 @@ function changeStatus(randomId) {
             const ahora = new Date();
             ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         }
-        // Si el ticket pasa a terminado, registrar hora de finalización
-        if (nuevoEstado === 'terminado') {
+        // Si el ticket pasa a terminado o cliente se fue, registrar hora de finalización
+        if (nuevoEstado === 'terminado' || nuevoEstado === 'cliente_se_fue') {
             const ahora = new Date();
-            // CAMBIO: Conservar la hora de atención existente si existe
+            // Conservar la hora de atención existente si existe
             if (!ticket.horaAtencion) {
                 ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             }
@@ -2931,6 +2879,10 @@ function updateStatsGlobal() {
     t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3' || t.estado === 'consultorio4' || t.estado === 'consultorio5'
   ).length;
   document.getElementById('pacientesAtendidos').textContent = filtered.filter(t => t.estado === 'terminado').length;
+  // Nuevo: clientes que se fueron
+  if (document.getElementById('clientesSeFueron')) {
+    document.getElementById('clientesSeFueron').textContent = filtered.filter(t => t.estado === 'cliente_se_fue').length;
+  }
   
   // Generar todos los gráficos
   renderizarGraficosTiempoEspera(filtered);
@@ -3991,34 +3943,3 @@ window.openLabSheetModal = function(randomId) {
 const scriptLab = document.createElement('script');
 scriptLab.src = 'lab.js';
 document.body.appendChild(scriptLab);
-
-// Al final del archivo, agregar la función global para terminar consulta directo
-window.terminarConsultaDirecto = function(randomId) {
-    const ticket = tickets.find(t => t.randomId === randomId);
-    if (!ticket || ticket.estado === 'terminado') return;
-    
-    // Cambiar estado y hora de finalización
-    ticket.estado = 'terminado';
-    const ahora = new Date();
-    
-    // Si no hay hora de atención y el ticket está en consultorio, usar la hora actual
-    if (!ticket.horaAtencion && ticket.estado.includes('consultorio')) {
-        ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    }
-    
-    ticket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    
-    // Guardar en Firebase
-    const ticketToSave = { ...ticket };
-    delete ticketToSave.firebaseKey;
-    
-    ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
-        .then(() => {
-            showNotification('Consulta terminada correctamente', 'success');
-            renderTickets();
-            updateStatsGlobal();
-        })
-        .catch(error => {
-            showNotification('Error al terminar la consulta: ' + error.message, 'error');
-        });
-}
