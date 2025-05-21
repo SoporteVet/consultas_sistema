@@ -1516,6 +1516,15 @@ function renderTickets(filter = 'todos', date = null) {
             `;
         }
         
+        // Add end consultation button for admin and external consultation roles
+        if (hasPermission('canDeleteTickets') || sessionStorage.getItem('userRole') === 'consulta_externa') {
+            actionButtons += `
+                <button class="action-btn btn-terminar" onclick="event.stopPropagation(); endConsultationByRandomId('${ticket.randomId}')">
+                    <i class="fas fa-check-circle"></i> Terminar Consulta
+                </button>
+            `;
+        }
+        
         // Only add action buttons container if there are buttons
         if (actionButtons) {
             ticketContent += `<div class="ticket-actions">${actionButtons}</div>`;
@@ -3943,3 +3952,114 @@ window.openLabSheetModal = function(randomId) {
 const scriptLab = document.createElement('script');
 scriptLab.src = 'lab.js';
 document.body.appendChild(scriptLab);
+
+// Nueva función para terminar consulta por randomId
+function endConsultationByRandomId(randomId) {
+    const ticket = tickets.find(t => t.randomId === randomId);
+    if (!ticket) return;
+    endConsultationByFirebaseKey(ticket.firebaseKey);
+}
+
+// Nueva función para terminar consulta por firebaseKey
+function endConsultationByFirebaseKey(firebaseKey) {
+    const ticket = tickets.find(t => t.firebaseKey === firebaseKey);
+    if (!ticket) return;
+    
+    // Confirmar antes de terminar la consulta
+    let animalIcon = '';
+    switch(ticket.tipoMascota) {
+        case 'perro':
+            animalIcon = '<i class="fas fa-dog" style="font-size: 1.5rem; margin-right: 10px;"></i>';
+            break;
+        case 'gato':
+            animalIcon = '<i class="fas fa-cat" style="font-size: 1.5rem; margin-right: 10px;"></i>';
+            break;
+        case 'conejo':
+            animalIcon = '<i class="fas fa-dove" style="font-size: 1.5rem; margin-right: 10px;"></i>';
+            break;
+        default:
+            animalIcon = '<i class="fas fa-paw" style="font-size: 1.5rem; margin-right: 10px;"></i>';
+    }
+    
+    const modal = document.createElement('div');
+    modal.className = 'edit-modal';
+    modal.innerHTML = `
+        <div class="modal-content animate-scale">
+            <h3><i class="fas fa-check-circle" style="color: var(--accent-color);"></i> Terminar Consulta</h3>
+            <div style="text-align: center; margin: 25px 0;">
+                <div style="margin-bottom: 15px;">
+                    ${animalIcon}
+                    <span style="font-size: 1.2rem;">${ticket.mascota}</span>
+                </div>
+                <p>¿Estás seguro que deseas terminar la consulta #${ticket.id}?</p>
+            </div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                <button class="btn-save" onclick="confirmEndConsultationByFirebaseKey('${firebaseKey}')">
+                    <i class="fas fa-check"></i> Terminar Consulta
+                </button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+}
+
+function confirmEndConsultationByFirebaseKey(firebaseKey) {
+    const ticket = tickets.find(t => t.firebaseKey === firebaseKey);
+    if (!ticket || !ticket.firebaseKey) {
+        showNotification('Error al terminar la consulta', 'error');
+        return;
+    }
+
+    const currentSection = document.querySelector('.content section.active');
+    const currentFilterBtn = document.querySelector('.filter-btn.active');
+    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+    const endButton = document.querySelector('.btn-save');
+    
+    if (endButton) {
+        showLoadingButton(endButton);
+    }
+
+    // Actualizar el estado y la hora de finalización
+    const ahora = new Date();
+    const ticketToSave = {
+        ...ticket,
+        estado: 'terminado',
+        horaFinalizacion: ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+    };
+    
+    // Si no tiene hora de atención, establecerla
+    if (!ticketToSave.horaAtencion) {
+        ticketToSave.horaAtencion = ticketToSave.horaFinalizacion;
+    }
+
+    delete ticketToSave.firebaseKey;
+
+    ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+        .then(() => {
+            showNotification('Consulta terminada correctamente', 'success');
+            closeModal();
+            if (currentSection) {
+                if (currentSection.id === 'verTicketsSection') {
+                    renderTickets(currentFilter);
+                    if (currentFilterBtn) {
+                        document.querySelectorAll('.filter-btn').forEach(btn => {
+                            btn.classList.remove('active');
+                        });
+                        currentFilterBtn.classList.add('active');
+                    }
+                    setActiveButton(verTicketsBtn);
+                } else if (currentSection.id === 'horarioSection') {
+                    mostrarHorario();
+                }
+            }
+            updateStatsGlobal();
+        })
+        .catch(error => {
+            console.error("Error terminando consulta:", error);
+            if (endButton) {
+                hideLoadingButton(endButton);
+            }
+            showNotification('Error al terminar la consulta', 'error');
+        });
+}
