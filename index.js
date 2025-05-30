@@ -1181,6 +1181,16 @@ function renderTickets(filter = 'todos', date = null) {
     } else if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
         // Filtro lista: igual que 'todos' pero en formato tabla
         filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate);
+    } else if (filter === 'porFacturar') {
+        filteredTickets = tickets.filter(ticket => {
+            // Solo mostrar tickets que:
+            // 1. No tengan número de factura (numFactura es undefined, null, o string vacío)
+            // 2. No estén marcados como "sin costo"
+            // 3. Sean de la fecha seleccionada
+            return ticket.fechaConsulta === selectedDate && 
+                   (!ticket.numFactura || ticket.numFactura.trim() === '') && 
+                   (!ticket.sinCosto || ticket.sinCosto !== true);
+        });
     } else {
         filteredTickets = tickets.filter(ticket => ticket.fechaConsulta === selectedDate);
     }
