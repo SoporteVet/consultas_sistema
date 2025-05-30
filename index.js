@@ -2070,7 +2070,20 @@ function editTicket(randomId) {
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
-            <input type="text" id="editPorCobrar" value="${ticket.porCobrar || ''}" placeholder="Introduzca lo que hay que cobrar al cliente">
+            <input type="text" id="editPorCobrar" 
+                   value="${ticket.porCobrar || ''}" 
+                   data-original="${ticket.porCobrar || ''}"
+                   placeholder="Introduzca lo que hay que cobrar al cliente"
+                   onkeydown="if(event.key === 'Backspace' || event.key === 'Delete') { 
+                       const original = this.getAttribute('data-original') || '';
+                       if(this.value.length <= original.length) {
+                           event.preventDefault();
+                           return false;
+                       }
+                   }"
+                   oninput="if(this.value.length < this.getAttribute('data-original').length) { 
+                       this.value = this.getAttribute('data-original');
+                   }">
         </div>`
       : `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
@@ -2164,7 +2177,6 @@ function editTicket(randomId) {
                             <option value="Tec. Maria José Gutierrez"${asistenteSeleccionado === "Tec. Maria José Gutierrez" ? 'selected' : ''}>Tec. Maria José Gutierrez</option>
                             <option value="Tec. Jimena Urtecho"${asistenteSeleccionado === "Tec.  Jimena Urtecho" ? 'selected' : ''}>Tec.  Jimena Urtecho</option>
                             <option value="Tec. Nicole Gamboa" ${asistenteSeleccionado === "Tec. Nicole Gamboa" ? 'selected' : ''}>Tec. Nicole Gamboa</option>
-                            <option value="Tec. Paola López" ${asistenteSeleccionado === "Tec. Paola López" ? 'selected' : ''}>Tec. Paola López</option>
                         </select>
                     </div>
                 </div>
@@ -2306,7 +2318,9 @@ function editTicket(randomId) {
         const editHoraAtencion = document.getElementById('editHoraAtencion');
         const horaAtencionValue = editHoraAtencion ? editHoraAtencion.value : '';
         const editPorCobrar = document.getElementById('editPorCobrar');
-        const porCobrarValue = editPorCobrar ? editPorCobrar.value : '';
+        // Mantener el valor original sin modificaciones
+        const updatedPorCobrar = editPorCobrar ? editPorCobrar.value.trim() : '';
+        
         const updatedTicket = {
             id: safeTicket.id,
             nombre: document.getElementById('editNombre').value,
@@ -2314,7 +2328,7 @@ function editTicket(randomId) {
             cedula: document.getElementById('editCedula').value,
             idPaciente: document.getElementById('editIdPaciente').value,
             fechaConsulta: document.getElementById('editFecha').value,
-            horaAtencion: ticket.horaAtencion || '', // Preservar la hora de atención existente
+            horaAtencion: ticket.horaAtencion || '',
             medicoAtiende: medicoAtiende,
             motivo: document.getElementById('editMotivo').value,
             motivoLlegada: document.getElementById('editMotivoLlegada').value,
@@ -2324,7 +2338,7 @@ function editTicket(randomId) {
             numFactura: document.getElementById('editNumFactura').value,
             tipoServicio: document.getElementById('editTipoServicio').value,
             firebaseKey: safeTicket.firebaseKey,
-            porCobrar: porCobrarValue
+            porCobrar: updatedPorCobrar
         };
         
         // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
