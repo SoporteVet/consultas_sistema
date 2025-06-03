@@ -2080,24 +2080,31 @@ function editTicket(randomId) {
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
-            <input type="text" id="editPorCobrar" 
-                   value="${ticket.porCobrar || ''}" 
-                   data-original="${ticket.porCobrar || ''}"
+            <textarea id="editPorCobrar" 
                    placeholder="Introduzca lo que hay que cobrar al cliente"
-                   onkeydown="if(event.key === 'Backspace' || event.key === 'Delete') { 
-                       const original = this.getAttribute('data-original') || '';
-                       if(this.value.length <= original.length) {
-                           event.preventDefault();
-                           return false;
-                       }
-                   }"
-                   oninput="if(this.value.length < this.getAttribute('data-original').length) { 
-                       this.value = this.getAttribute('data-original');
-                   }">
+                   style="width: 100%; 
+                          min-height: 120px; 
+                          resize: vertical; 
+                          font-size: 14px; 
+                          line-height: 1.5;
+                          padding: 12px;
+                          white-space: pre-wrap;
+                          word-wrap: break-word;">${ticket.porCobrar || ''}</textarea>
         </div>`
       : `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
-            <input type="text" id="editPorCobrar" value="${ticket.porCobrar || ''}" readonly style="background:#f5f5f5; color:#888; cursor:not-allowed;">
+            <textarea id="editPorCobrar" readonly 
+                   style="width: 100%; 
+                          min-height: 120px; 
+                          resize: vertical; 
+                          font-size: 14px; 
+                          line-height: 1.5;
+                          padding: 12px;
+                          white-space: pre-wrap;
+                          word-wrap: break-word;
+                          background:#f5f5f5; 
+                          color:#888; 
+                          cursor:not-allowed;">${ticket.porCobrar || ''}</textarea>
         </div>`;
     
     // Mostrar/ocultar campo Hora de Cita según el rol en edición
