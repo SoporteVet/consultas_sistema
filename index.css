@@ -540,6 +540,24 @@ section h2 i {
   color: var(--terminado-color);
 }
 
+.expediente-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 8px;
+  background-color: rgba(76, 175, 80, 0.12);
+  color: #2e7d32;
+  border: 1px solid rgba(76, 175, 80, 0.2);
+}
+
+.expediente-badge i {
+  margin-right: 5px;
+  font-size: 0.9rem;
+}
+
 .ticket-actions {
   display: flex;
   gap: 8px;
@@ -1825,6 +1843,11 @@ body.visitas-role .estado-badge i {
   margin-right: 8px;
 }
 
+/* Hide expediente badge from visitas role */
+body.visitas-role .expediente-badge {
+  display: none;
+}
+
 /* More emphasized status colors for visitas role */
 body.visitas-role .estado-espera {
   background-color: rgba(255, 167, 38, 0.2);
@@ -1839,12 +1862,6 @@ body.visitas-role .estado-consultorio {
 body.visitas-role .estado-terminado {
   background-color: rgba(102, 187, 106, 0.2);
   border: 2px solid var(--terminado-color);
-}
-
-@keyframes pulse-estado {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.02); }
-  100% { transform: scale(1); }
 }
 
 /* Admin Panel Styles */

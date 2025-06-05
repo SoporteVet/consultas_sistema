@@ -1032,7 +1032,8 @@ function addTicket() {
         const fechaConsulta = document.getElementById('fecha')?.value;
         const horaCita = document.getElementById('hora')?.value;
         const horaAtencion = document.getElementById('horaAtencion')?.value;
-        console.log("Datos recopilados:", { nombre, mascota, fechaConsulta, horaCita, horaAtencion, tipoServicio });
+        const expediente = document.getElementById('expediente')?.checked || false;
+        console.log("Datos recopilados:", { nombre, mascota, fechaConsulta, horaCita, horaAtencion, tipoServicio, expediente });
         const fecha = new Date();
         // --- Calcular el número de ticket visual justo antes de guardar ---
         const hoy = fechaConsulta || getLocalDateString();
@@ -1057,6 +1058,7 @@ function addTicket() {
             fecha: fecha.toISOString(),
             horaCreacion: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
             porCobrar,
+            expediente,
             // Asignar hora de llegada automáticamente
             horaLlegada: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
         };
@@ -1260,21 +1262,23 @@ function renderTickets(filter = 'todos', date = null) {
         // Ordenar por número de ticket (id) descendente
         filteredTickets.sort((a, b) => (b.id || 0) - (a.id || 0));
     } else {
-        const urgenciaOrden = {
-            'emergencia': 4,
-            'urgencia': 3,
-            'leve': 2,
-            'prequirurgico': 1.5,
-            'consulta': 1
-        };
+        // Ordenar por hora de llegada (orden cronológico)
         filteredTickets.sort((a, b) => {
-            const aUrg = urgenciaOrden[a.urgencia] || 0;
-            const bUrg = urgenciaOrden[b.urgencia] || 0;
-            if (bUrg !== aUrg) {
-                return bUrg - aUrg;
+            // Si ambos tienen hora de llegada, ordenar por hora
+            if (a.horaLlegada && b.horaLlegada) {
+                return a.horaLlegada.localeCompare(b.horaLlegada);
             }
-            // Si tienen la misma urgencia, ordenar por fecha descendente
-            return new Date(b.fecha) - new Date(a.fecha);
+            // Si solo uno tiene hora de llegada, el que la tiene va primero
+            if (a.horaLlegada && !b.horaLlegada) return -1;
+            if (!a.horaLlegada && b.horaLlegada) return 1;
+            
+            // Si ninguno tiene hora de llegada, ordenar por hora de creación como respaldo
+            if (a.horaCreacion && b.horaCreacion) {
+                return a.horaCreacion.localeCompare(b.horaCreacion);
+            }
+            
+            // Como último recurso, ordenar por ID
+            return (a.id || 0) - (b.id || 0);
         });
     }
     
@@ -1501,6 +1505,7 @@ function renderTickets(filter = 'todos', date = null) {
                                      typeof ticket.estado === 'string' && ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
                         ${estadoText}
                     </div>
+                    ${ticket.expediente ? `<div class="expediente-badge"><i class="fas fa-file-medical"></i> <strong>Expediente médico:</strong> Registrado</div>` : ''}
                     ${ticket.porCobrar ? `<p><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong> ${ticket.porCobrar}</p>` : ''}
                 </div>
             `;
@@ -2051,7 +2056,8 @@ function editTicket(randomId) {
         firebaseKey: ticket.firebaseKey,
         horaLlegada: ticket.horaLlegada || '',
         horaAtencion: ticket.horaAtencion || '',
-        tipoServicio: ticket.tipoServicio || 'consulta'
+        tipoServicio: ticket.tipoServicio || 'consulta',
+        expediente: ticket.expediente || false
     };
     
     // Separar el médico y asistente si existe
@@ -2301,6 +2307,20 @@ function editTicket(randomId) {
                 
                 ${porCobrarField}
                 
+                ${userRole !== 'visitas' ? `
+                <div class="form-group" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50;">
+                        <input type="checkbox" id="editExpediente" ${safeTicket.expediente ? 'checked' : ''} 
+                               style="width: 18px; height: 18px; cursor: pointer;">
+                        <i class="fas fa-clipboard-list" style="color: #27ae60;"></i>
+                        Paciente ingresado al expediente médico
+                    </label>
+                    <small style="display: block; margin-top: 5px; color: #7f8c8d; font-style: italic;">
+                        Marcar cuando el paciente haya sido registrado en el sistema Argus
+                    </small>
+                </div>
+                ` : ''}
+                
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
                     <button type="submit" class="btn-save">Guardar Cambios</button>
@@ -2314,6 +2334,109 @@ function editTicket(randomId) {
     `;
     
     document.body.appendChild(modal);
+    
+    // Implementar funcionalidad de no eliminación para el campo "por cobrar"
+    const porCobrarTextarea = document.getElementById('editPorCobrar');
+    if (porCobrarTextarea && canEditPorCobrar) {
+        let originalContent = porCobrarTextarea.value;
+        let lastKnownContent = originalContent;
+        
+        // Guardar la posición inicial del cursor al final del texto
+        porCobrarTextarea.addEventListener('focus', function() {
+            // Posicionar el cursor al final del texto existente
+            this.setSelectionRange(this.value.length, this.value.length);
+        });
+        
+        // Prevenir eliminación de texto existente
+        porCobrarTextarea.addEventListener('keydown', function(e) {
+            const currentContent = this.value;
+            const cursorPosition = this.selectionStart;
+            const selectionLength = this.selectionEnd - this.selectionStart;
+            
+            // Permitir solo teclas que no eliminen contenido existente
+            if (e.key === 'Backspace' || e.key === 'Delete') {
+                // Si hay selección y incluye contenido original, prevenir
+                if (selectionLength > 0 && this.selectionStart < originalContent.length) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Si backspace y el cursor está dentro del contenido original, prevenir
+                if (e.key === 'Backspace' && cursorPosition <= originalContent.length) {
+                    e.preventDefault();
+                    return;
+                }
+                
+                // Si delete y el cursor está antes del final del contenido original, prevenir
+                if (e.key === 'Delete' && cursorPosition < originalContent.length) {
+                    e.preventDefault();
+                    return;
+                }
+            }
+            
+            // Permitir Ctrl+A pero prevenir eliminación del contenido original después
+            if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
+                // Permitir Ctrl+A pero interceptaremos la escritura posterior
+                return;
+            }
+        });
+        
+        // Verificar cambios en el contenido para prevenir eliminación
+        porCobrarTextarea.addEventListener('input', function(e) {
+            const currentContent = this.value;
+            
+            // Si el contenido actual es más corto que el original y no contiene todo el texto original
+            if (currentContent.length < originalContent.length || 
+                !currentContent.startsWith(originalContent)) {
+                
+                // Restaurar el contenido y agregar solo el nuevo texto
+                const newText = currentContent.replace(originalContent, '');
+                this.value = originalContent + newText;
+                
+                // Posicionar el cursor al final
+                this.setSelectionRange(this.value.length, this.value.length);
+            }
+            
+            lastKnownContent = this.value;
+        });
+        
+        // Manejar pegado de texto
+        porCobrarTextarea.addEventListener('paste', function(e) {
+            e.preventDefault();
+            
+            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
+            const cursorPosition = this.selectionStart;
+            
+            // Solo permitir pegar al final del contenido original
+            if (cursorPosition >= originalContent.length) {
+                const currentContent = this.value;
+                const beforeCursor = currentContent.substring(0, cursorPosition);
+                const afterCursor = currentContent.substring(this.selectionEnd);
+                
+                this.value = beforeCursor + pastedText + afterCursor;
+                
+                // Posicionar el cursor después del texto pegado
+                const newPosition = cursorPosition + pastedText.length;
+                this.setSelectionRange(newPosition, newPosition);
+            }
+        });
+        
+        // Prevenir arrastrar texto fuera del área permitida
+        porCobrarTextarea.addEventListener('dragstart', function(e) {
+            const selection = window.getSelection().toString();
+            if (this.selectionStart < originalContent.length) {
+                e.preventDefault();
+            }
+        });
+        
+        // Manejar cortar texto
+        porCobrarTextarea.addEventListener('cut', function(e) {
+            if (this.selectionStart < originalContent.length || 
+                this.selectionEnd <= originalContent.length) {
+                e.preventDefault();
+            }
+        });
+    }
     
     // Añadir event listener al formulario para guardar los cambios
     document.getElementById('editTicketForm').addEventListener('submit', function(e) {
@@ -2338,6 +2461,8 @@ function editTicket(randomId) {
         const editPorCobrar = document.getElementById('editPorCobrar');
         // Mantener el valor original sin modificaciones
         const updatedPorCobrar = editPorCobrar ? editPorCobrar.value.trim() : '';
+        const editExpediente = document.getElementById('editExpediente');
+        const expedienteValue = editExpediente ? editExpediente.checked : false;
         
         const updatedTicket = {
             id: safeTicket.id,
@@ -2356,7 +2481,8 @@ function editTicket(randomId) {
             numFactura: document.getElementById('editNumFactura').value,
             tipoServicio: document.getElementById('editTipoServicio').value,
             firebaseKey: safeTicket.firebaseKey,
-            porCobrar: updatedPorCobrar
+            porCobrar: updatedPorCobrar,
+            expediente: expedienteValue
         };
         
         // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
