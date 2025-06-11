@@ -1947,7 +1947,7 @@ function exportToCSV(data, filename) {
         getTipoMascotaLabel(ticket.tipoMascota),
         ticket.cedula,
         ticket.idPaciente || '',
-        ticket.medicoAtiene || '',
+        ticket.medicoAtiende || '',
         ticket.fechaConsulta || new Date(ticket.fecha).toISOString().split('T')[0],
         ticket.horaConsulta || ticket.horaCreacion,
         getEstadoLabel(ticket.estado),
