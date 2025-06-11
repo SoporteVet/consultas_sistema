@@ -1562,7 +1562,7 @@ function renderTickets(filter = 'todos', date = null) {
                     <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
                     <p><i class="fas fa-id-card"></i> ${ticket.cedula}</p>
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
-                    ${ticket.medicoAtiene ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiene}</p>` : ''}
+                    ${ticket.medicoAtiene ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
                     <p><i class="fas fa-stethoscope"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>
                     <p><i class='fas fa-notes-medical'></i> Motivo: ${ticket.motivo}</p>
