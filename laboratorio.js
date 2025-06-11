@@ -961,18 +961,17 @@ function validateLabTicketData(data) {
             return false;
         }
     }
-    
-    // Validar cédula (formato básico)
+      // Validar cédula (formato básico)
     if (!/^\d{8,12}$/.test(data.cedula.replace(/[-\s]/g, ''))) {
         showNotification('Formato de cédula inválido', 'error');
         return false;
     }
     
-    // Validar correo si se proporciona
-    if (data.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.correo)) {
-        showNotification('Formato de correo electrónico inválido', 'error');
-        return false;
-    }
+    // Validación de correo eliminada - permite cualquier texto
+    // if (data.correo && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(data.correo)) {
+    //     showNotification('Formato de correo electrónico inválido', 'error');
+    //     return false;
+    // }
     
     return true;
 }
@@ -1406,11 +1405,10 @@ function editLabTicket(randomId) {
                         </select>
                     </div>
                 </div>
-                
-                <div class="form-row">
+                  <div class="form-row">
                     <div class="form-group">
                         <label>Correo Electrónico</label>
-                        <input type="email" id="editLabCorreo" value="${ticket.correo || ''}" placeholder="correo@ejemplo.com">
+                        <input type="text" id="editLabCorreo" value="${ticket.correo || ''}" placeholder="Ejemplo: correo@ejemplo.com o cualquier texto">
                     </div>
                     <div class="form-group">
                         <label>Teléfono de Contacto</label>
