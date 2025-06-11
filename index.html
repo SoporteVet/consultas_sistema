@@ -6,6 +6,7 @@
   <title>Sistema de Consultas - Veterinaria</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="index.css">
+  <link rel="stylesheet" href="laboratorio.css">
   <link rel="icon" href="empresa.jpg" type="image/x-icon">
 </head>
 <body>
@@ -37,10 +38,53 @@
       </div>
       
       <nav>
-        <button id="crearTicketBtn"><i class="fas fa-plus-circle"></i> Crear Consulta</button>
-        <button id="verTicketsBtn"><i class="fas fa-list-alt"></i> Ver Consultas</button>
-        <button id="horarioBtn"><i class="fas fa-calendar-alt"></i> Horario</button>
-        <button id="estadisticasBtn"><i class="fas fa-chart-pie"></i> Estadísticas</button>
+        <!-- Consultas -->
+        <div class="nav-category">
+          <button id="consultasBtn" class="nav-category-btn" onclick="toggleSubmenuHTML('consultasBtn', 'consultasSubmenu');">
+            <i class="fas fa-stethoscope"></i> Consultas
+            <i class="fas fa-chevron-down category-arrow"></i>
+          </button>
+          <div id="consultasSubmenu" class="nav-submenu">
+            <button id="crearTicketBtn" class="submenu-btn" onclick="navigateToSection('crearTicketSection', 'crearTicketBtn');">
+              <i class="fas fa-plus-circle"></i> Crear Consulta
+            </button>
+            <button id="verTicketsBtn" class="submenu-btn" onclick="navigateToConsultas();">
+              <i class="fas fa-list-alt"></i> Ver Consultas
+            </button>
+          </div>
+        </div>
+
+        <!-- Laboratorio -->
+        <div class="nav-category">
+          <button id="laboratorioBtn" class="nav-category-btn" onclick="toggleSubmenuHTML('laboratorioBtn', 'laboratorioSubmenu');">
+            <i class="fas fa-microscope"></i> Laboratorio
+            <i class="fas fa-chevron-down category-arrow"></i>
+          </button>
+          <div id="laboratorioSubmenu" class="nav-submenu">
+            <button id="crearLabBtn" class="submenu-btn" onclick="navigateToLab('crearLabSection', 'crearLabBtn');">
+              <i class="fas fa-vials"></i> Crear Ticket Lab
+            </button>
+            <button id="verLabBtn" class="submenu-btn" onclick="navigateToLab('verLabSection', 'verLabBtn');">
+              <i class="fas fa-microscope"></i> Ver Tickets Lab
+            </button>
+          </div>
+        </div>
+
+        <!-- Administrativo (solo para admin) -->
+        <div id="administrativoCategory" class="nav-category admin-only" style="display: none;">
+          <button id="administrativoBtn" class="nav-category-btn" onclick="toggleSubmenuHTML('administrativoBtn', 'administrativoSubmenu');">
+            <i class="fas fa-cogs"></i> Administrativo
+            <i class="fas fa-chevron-down category-arrow"></i>
+          </button>
+          <div id="administrativoSubmenu" class="nav-submenu">
+            <button id="horarioBtn" class="submenu-btn" onclick="navigateToSection('horarioSection', 'horarioBtn');">
+              <i class="fas fa-calendar-alt"></i> Horario
+            </button>
+            <button id="estadisticasBtn" class="submenu-btn" onclick="navigateToEstadisticas();">
+              <i class="fas fa-chart-pie"></i> Estadísticas
+            </button>
+          </div>
+        </div>
       </nav>
       
       <!-- Añadir botón de cerrar sesión -->
@@ -229,8 +273,12 @@
             </div>
             <div class="form-group">
               <label for="porCobrar">Por Cobrar</label>
+              <div style="background: #e3f2fd; border: 1px solid #2196f3; border-radius: 4px; padding: 6px; margin-bottom: 6px; font-size: 12px; color: #1976d2;">
+                <i class="fas fa-info-circle" style="margin-right: 4px;"></i>
+                Esta información se preservará y acumulará durante las ediciones del ticket.
+              </div>
               <textarea id="porCobrar" 
-                placeholder="Introduzca lo que hay que cobrar al cliente" 
+                placeholder="Introduzca información sobre cobros, procedimientos adicionales, medicamentos, etc." 
                 style="width: 100%; 
                        min-height: 120px; 
                        resize: vertical; 
@@ -280,6 +328,259 @@
         </div>
         
         <div id="ticketContainer" class="ticket-container"></div>
+      </section>
+      
+      <!-- Sección para crear tickets de laboratorio -->
+      <section id="crearLabSection" class="hidden">
+        <h2><i class="fas fa-vials"></i> Crear Ticket de Laboratorio</h2>
+        <div class="form-container">
+          <form id="labTicketForm">
+            <!-- Búsqueda de Cliente -->
+            <div class="form-row">
+              <div class="form-group" style="position: relative;">
+                <label for="labClienteSearch"><i class="fas fa-search"></i> Buscar Cliente</label>
+                <input type="text" id="labClienteSearch" placeholder="Escriba nombre, cédula o ID del paciente..." autocomplete="off">
+                <i class="fas fa-search search-icon"></i>
+                <div id="labClienteResults" class="cliente-search-results"></div>
+              </div>
+              <div class="form-group">
+                <label for="labFechaFiltro"><i class="fas fa-calendar-alt"></i> Filtrar por Fecha de Consulta</label>
+                <input type="date" id="labFechaFiltro" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="labNombre">Nombre del Cliente</label>
+                <input type="text" id="labNombre" required>
+              </div>
+              <div class="form-group">
+                <label for="labCedula">Cédula</label>
+                <input type="text" id="labCedula" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="labMascota">Nombre de la Mascota</label>
+                <input type="text" id="labMascota" required>
+              </div>
+              <div class="form-group">
+                <label for="labTipoMascota">Tipo de Mascota</label>
+                <select id="labTipoMascota" required>
+                  <option value="perro">Perro</option>
+                  <option value="gato">Gato</option>
+                  <option value="conejo">Conejo</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="labIdPaciente">Número ID del paciente</label>
+                <input type="text" id="labIdPaciente" placeholder="ID del paciente" required>
+              </div>
+              <div class="form-group">
+                <label for="labFecha">Fecha de Servicio</label>
+                <input type="date" id="labFecha" required>
+              </div>
+            </div>
+
+            <!-- Sección de Servicios de Laboratorio -->
+            <div class="form-group full-width">
+              <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50; margin-bottom: 15px;">
+                <i class="fas fa-vials"></i>
+                Servicios de Laboratorio a Realizar
+              </label>
+              
+              <!-- Filtro por categoría -->
+              <div class="services-filter" style="margin-bottom: 15px;">
+                <label for="categoryFilter" style="font-weight: normal; margin-right: 10px;">Filtrar por categoría:</label>
+                <select id="categoryFilter" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                  <option value="">Todos los servicios</option>
+                </select>
+              </div>
+
+              <!-- Buscador de servicios -->
+              <div class="services-search" style="position: relative; margin-bottom: 15px;">
+                <input type="text" id="servicesSearch" placeholder="Buscar servicios por nombre..." 
+                       style="width: 100%; padding: 10px 40px 10px 12px; border: 1px solid #ddd; border-radius: 4px;">
+                <i class="fas fa-search" style="position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #999;"></i>
+              </div>
+
+              <!-- Lista de servicios disponibles -->
+              <div class="services-container" style="max-height: 400px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 8px; background: #f9f9f9;">
+                <div id="servicesList" class="services-list">
+                  <!-- Los servicios se cargarán aquí dinámicamente -->
+                </div>
+              </div>
+
+              <!-- Servicios seleccionados -->
+              <div class="selected-services" style="margin-top: 15px;">
+                <h4 style="margin-bottom: 10px; color: #2c3e50;">
+                  <i class="fas fa-check-circle" style="color: #42a5f5;"></i>
+                  Servicios Seleccionados
+                </h4>
+                <div id="selectedServicesList" class="selected-services-list" style="min-height: 60px; border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; background: white;">
+                  <p style="color: #999; text-align: center; margin: 20px 0;">No hay servicios seleccionados</p>
+                </div>
+                <div class="total-price" style="margin-top: 10px; text-align: right;">
+                  <span style="font-weight: bold; font-size: 1.1em; color: #2c3e50;">
+                    Total: <span id="totalPrice">₡0</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="labPrioridad">Prioridad</label>
+                <select id="labPrioridad" required>
+                  <option value="rutina">🟢 Normal</option>
+                  <option value="urgente">🟠 Urgente</option>
+                  <option value="emergencia">🔴 Emergencia</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <!-- Espacio para balance de layout -->
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="labMedicoSolicita"><i class="fas fa-user-md"></i> Médico que Solicita</label>
+                <select id="labMedicoSolicita" name="labMedicoSolicita" required>
+                  <option value="">Seleccione un médico</option>
+                  <option value="Dr. Luis Coto">Dr. Luis Coto</option>
+                  <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
+                  <option value="Dr. Gustavo Gonzalez">Dr. Gustavo Gonzalez</option>
+                  <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
+                  <option value="Dra. Francinny Nuñez">Dra. Francinny Nuñez</option>
+                  <option value="Dra. Kharen Moreno">Dra. Kharen Moreno</option>
+                  <option value="Dra. Karina Madrigal">Dra. Karina Madrigal</option>
+                  <option value="Dra. Lourdes Chacón">Dra. Lourdes Chacón</option>
+                  <option value="Dra. Sofia Carrillo">Dra. Sofia Carrillo</option>
+                  <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
+                  <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
+                  <option value="Medico Externo">Médico Externo</option>
+                  <option value="Medico Internista">Médico Internista</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="labObservaciones">Observaciones</label>
+                <textarea id="labObservaciones" placeholder="Observaciones adicionales, síntomas, etc." rows="3"></textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="labEstado">Estado del Ticket</label>
+                <select id="labEstado" required>
+                  <option value="pendiente">Pendiente</option>
+                  <option value="procesando">En proceso</option>
+                  <option value="completado">Completado</option>
+                  <option value="reportado">Reportado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="labCorreo">Correo Electrónico</label>
+                <input type="email" id="labCorreo" placeholder="correo@ejemplo.com">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="labTelefono">Teléfono de Contacto</label>
+                <input type="tel" id="labTelefono" placeholder="Número de teléfono">
+              </div>
+              <div class="form-group">
+                <label for="labFactura">Número de Factura</label>
+                <input type="text" id="labFactura" placeholder="Número de factura">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="labDepartamento">Departamento que Solicita</label>
+                <select id="labDepartamento" required>
+                  <option value="consulta_externa">Consulta Externa</option>
+                  <option value="internos">Internos</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <!-- Empty group for layout balance -->
+              </div>
+            </div>
+
+            <button type="submit" class="btn-submit"><i class="fas fa-vials"></i> Crear Ticket de Laboratorio</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Sección para visualizar tickets de laboratorio -->
+      <section id="verLabSection" class="hidden">
+        <h2><i class="fas fa-microscope"></i> Tickets de Laboratorio</h2>
+        
+        <!-- Barra de búsqueda para laboratorio -->
+        <div class="search-bar" style="margin-bottom: 15px;">
+          <input type="text" id="labSearchInput" placeholder="Buscar por cliente, mascota, ID paciente o tipo de examen..." autocomplete="off">
+          <i class="fas fa-search"></i>
+        </div>
+        
+        <!-- Filtro de fecha para laboratorio -->
+        <div class="date-filter" style="margin-bottom: 15px;">
+          <label for="labFilterDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
+          <input type="date" id="labFilterDate">
+        </div>
+
+        <!-- Filtros para laboratorio -->
+        <div class="filter-container">
+          <button class="lab-filter-btn active" data-filter="todos">Todos</button>
+          <button class="lab-filter-btn" data-filter="pendiente">Pendiente</button>
+          <button class="lab-filter-btn" data-filter="procesando">En Proceso</button>
+          <button class="lab-filter-btn" data-filter="completado">Completados</button>
+          <button class="lab-filter-btn" data-filter="reportado">Reportados</button>
+        </div>
+        
+        <!-- Contenedor de tickets de laboratorio -->
+        <div id="labTicketContainer" class="ticket-container">
+          <!-- Aquí se mostrarán los tickets de laboratorio -->
+        </div>
+
+        <!-- Estadísticas rápidas de laboratorio -->
+        <div class="lab-stats" style="margin-top: 20px;">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <i class="fas fa-vials"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="totalLabTickets">0</span>
+                <span class="stat-label">Total Tickets</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-clock"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="pendientesLab">0</span>
+                <span class="stat-label">Pendientes</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-microscope"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="procesandoLab">0</span>
+                <span class="stat-label">En Proceso</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-check-circle"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="completadosLab">0</span>
+                <span class="stat-label">Completados</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </section>
       
       <!-- Sección de estadísticas -->
@@ -592,10 +893,15 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
   <script src="firebase-config.js"></script>
+  <script src="services-data.js"></script>
   <script src="auth.js"></script>
+  <script src="laboratorio.js"></script>
   <script src="index.js"></script>
   <script src="fix-wait-time.js"></script>
-<script src="admin-users.js"></script>
+  <script src="admin-users.js"></script>
+  <script src="debug-lab-search.js"></script>
+  <script src="fix-lab-search.js"></script>
+  <script src="test-lab-functionality.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
   const tipoMascota = document.getElementById('tipoMascota');
@@ -649,7 +955,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 });
 
-// Navegación con flechas en el formulario de tickets
+// Navegación with flechas en el formulario de tickets
 (function() {
   const form = document.getElementById('ticketForm');
   if (!form) return;

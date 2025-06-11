@@ -1,5 +1,55 @@
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;700&display=swap');
 
+/* Por Cobrar field styles */
+.por-cobrar-info {
+  margin-top: 8px;
+  padding: 8px;
+  background: #fff8e1;
+  border-left: 4px solid #ffc107;
+  border-radius: 4px;
+}
+
+.por-cobrar-info i {
+  color: #ff9800;
+}
+
+.form-group .por-cobrar-notice {
+  background: #e8f5e8;
+  border: 1px solid #4caf50;
+  border-radius: 4px;
+  padding: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.form-group .por-cobrar-notice i {
+  color: #4caf50;
+}
+
+/* Por Cobrar accumulative entries styling */
+textarea#editPorCobrar {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  line-height: 1.6 !important;
+}
+
+/* Highlight original content differently */
+.por-cobrar-original {
+  background: #f0f8ff;
+  border-left: 3px solid #2196f3;
+  padding: 4px 8px;
+  margin: 2px 0;
+}
+
+.por-cobrar-addition {
+  background: #f0fff0;
+  border-left: 3px solid #4caf50;
+  padding: 4px 8px;
+  margin: 2px 0;
+}
+
 :root {
   --primary-color: #4285f4;
   --secondary-color: #34a853;
@@ -120,6 +170,106 @@ nav button:hover {
 nav button.active {
   background: rgba(255, 255, 255, 0.3);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
+
+/* Navigation Category Styles */
+.nav-category {
+  margin-bottom: 8px;
+}
+
+.nav-category-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+  border: none !important;
+  color: white !important;
+  padding: 14px 15px !important;
+  border-radius: 8px !important;
+  cursor: pointer !important;
+  font-size: 1rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  transition: var(--transition) !important;
+  width: 100% !important;
+  font-weight: 500 !important;
+}
+
+.nav-category-btn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
+  transform: translateX(5px) !important;
+}
+
+.nav-category-btn.active {
+  background: rgba(255, 255, 255, 0.3) !important;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1) !important;
+}
+
+.category-arrow {
+  transition: transform 0.3s ease !important;
+  font-size: 0.9rem !important;
+}
+
+.nav-category-btn.active .category-arrow {
+  transform: rotate(180deg) !important;
+}
+
+.nav-submenu {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease, padding 0.3s ease;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 0 0 8px 8px;
+  margin-top: 2px;
+}
+
+.nav-submenu.active {
+  max-height: 200px;
+  padding: 8px 0;
+}
+
+.submenu-btn {
+  background: transparent !important;
+  border: none !important;
+  color: rgba(255, 255, 255, 0.9) !important;
+  padding: 10px 25px !important;
+  cursor: pointer !important;
+  font-size: 0.95rem !important;
+  display: flex !important;
+  align-items: center !important;
+  transition: var(--transition) !important;
+  width: 100% !important;
+  border-radius: 6px !important;
+  margin: 2px 0 !important;
+}
+
+.submenu-btn:hover {
+  background: rgba(255, 255, 255, 0.15) !important;
+  transform: translateX(10px) !important;
+  color: white !important;
+}
+
+.submenu-btn.active {
+  background: rgba(255, 255, 255, 0.25) !important;
+  color: white !important;
+  font-weight: 600 !important;
+}
+
+.submenu-btn i {
+  margin-right: 10px !important;
+  font-size: 1rem !important;
+  width: 16px !important;
+}
+
+/* Admin-only categories */
+.nav-category.admin-only {
+  opacity: 1;
+}
+
+.nav-category.admin-only .nav-category-btn {
+  background: rgba(255, 255, 255, 0.15) !important;
+}
+
+.nav-category.admin-only .nav-category-btn:hover {
+  background: rgba(255, 255, 255, 0.25) !important;
 }
 
 .sidebar-footer {
@@ -2098,6 +2248,7 @@ body.visitas-role .main-container {
   border: 1px solid #e0e4ea;
   max-width: 400px;
   margin-bottom: 18px;
+  position: relative;
 }
 
 .search-bar input[type="text"] {
@@ -2108,6 +2259,16 @@ body.visitas-role .main-container {
   padding: 8px 0;
   outline: none;
   color: #222;
+  width: 100%;
+  z-index: 2;
+  position: relative;
+  cursor: text;
+}
+
+.search-bar input[type="text"]:focus {
+  background: transparent;
+  outline: none;
+  border: none;
 }
 
 .search-bar input[type="text"]::placeholder {
@@ -2119,6 +2280,10 @@ body.visitas-role .main-container {
   color: #4285f4;
   font-size: 1.2rem;
   margin-left: 6px;
+  pointer-events: none;
+  z-index: 1;
+  position: relative;
+  flex-shrink: 0;
 }
 
 @media (max-width: 600px) {

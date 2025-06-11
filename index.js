@@ -131,6 +131,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (esperaBtn) esperaBtn.classList.add('active');
                 }
                 updateStatsGlobal();
+                
+                // Inicializar sistema de laboratorio
+                if (typeof initLaboratorioSystem === 'function') {
+                    console.log('Inicializando sistema de laboratorio desde index.js');
+                    initLaboratorioSystem();
+                    window.laboratorioInitialized = true;
+                } else {
+                    console.warn('Sistema de laboratorio no disponible');
+                }
+                
             }).catch(err => {
                 console.error("Error cargando tickets:", err);
                 hideLoading();
@@ -335,6 +345,21 @@ function applyRoleBasedUI(role) {
         adminElements.forEach(el => {
             el.style.display = 'none';
         });
+    }
+    
+    // Control de visibilidad del botón de laboratorio basado en roles
+    const laboratorioBtn = document.getElementById('laboratorioBtn');
+    const laboratorioCategory = laboratorioBtn ? laboratorioBtn.closest('.nav-category') : null;
+    const allowedLabRoles = ['admin', 'consulta_externa', 'internos', 'quirofano', 'laboratorio'];
+    
+    if (laboratorioCategory) {
+        if (allowedLabRoles.includes(role)) {
+            laboratorioCategory.style.display = 'block';
+            console.log(`Módulo de laboratorio mostrado para rol: ${role}`);
+        } else {
+            laboratorioCategory.style.display = 'none';
+            console.log(`Módulo de laboratorio ocultado para rol: ${role}`);
+        }
     }
     
     // Add logout button event listener
@@ -914,6 +939,54 @@ function setActiveButton(button) {
     button.classList.add('active');
 }
 
+// Función auxiliar para formatear el contenido de Por Cobrar
+function formatPorCobrarDisplay(porCobrarText) {
+    if (!porCobrarText) return '';
+    
+    // Dividir por las líneas de separación con timestamp
+    const lines = porCobrarText.split('\n');
+    let formattedContent = '';
+    let currentSection = '';
+    
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+        
+        // Detectar líneas de separación con timestamp
+        if (line.match(/^--- \d{2}\/\d{2}\/\d{4}.*---$/)) {
+            // Si hay contenido previo, agregarlo como sección
+            if (currentSection.trim()) {
+                if (formattedContent === '') {
+                    // Primera sección (contenido original)
+                    formattedContent += `<div class="por-cobrar-original">${currentSection.trim()}</div>`;
+                } else {
+                    // Secciones adicionales
+                    formattedContent += `<div class="por-cobrar-addition">${currentSection.trim()}</div>`;
+                }
+                currentSection = '';
+            }
+            
+            // Agregar el header de la sección
+            formattedContent += `<div style="font-weight: bold; color: #666; font-size: 11px; margin: 8px 0 4px 0;">${line.replace(/^---\s*/, '').replace(/\s*---$/, '')}</div>`;
+        } else {
+            // Agregar línea normal al contenido de la sección actual
+            currentSection += (currentSection ? '\n' : '') + line;
+        }
+    }
+    
+    // Agregar la última sección si existe
+    if (currentSection.trim()) {
+        if (formattedContent === '') {
+            // Solo hay contenido original
+            formattedContent += currentSection.trim();
+        } else {
+            // Última sección adicional
+            formattedContent += `<div class="por-cobrar-addition">${currentSection.trim()}</div>`;
+        }
+    }
+    
+    return formattedContent || porCobrarText;
+}
+
 // Función para cargar tickets desde Firebase
 function loadTickets() {
     return new Promise((resolve, reject) => {
@@ -1023,9 +1096,9 @@ function addTicket() {
         if (doctorAtiende && asistenteAtiende) {
             medicoAtiende = `${doctorAtiende}, ${asistenteAtiende}`;
         } else if (doctorAtiende) {
-            medicoAtiende = doctorAtiende;
+            medicoAtiende = doctorAtiene;
         } else if (asistenteAtiende) {
-            medicoAtiende = asistenteAtiende;
+            medicoAtiene = asistenteAtiene;
         }
         const numFactura = document.getElementById('numFactura')?.value || '';
         const tipoServicio = document.getElementById('tipoServicio').value;
@@ -1489,7 +1562,7 @@ function renderTickets(filter = 'todos', date = null) {
                     <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
                     <p><i class="fas fa-id-card"></i> ${ticket.cedula}</p>
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
-                    ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
+                    ${ticket.medicoAtiene ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiene}</p>` : ''}
                     ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
                     <p><i class="fas fa-stethoscope"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>
                     <p><i class='fas fa-notes-medical'></i> Motivo: ${ticket.motivo}</p>
@@ -1506,7 +1579,7 @@ function renderTickets(filter = 'todos', date = null) {
                         ${estadoText}
                     </div>
                     ${ticket.expediente ? `<div class="expediente-badge"><i class="fas fa-file-medical"></i> <strong>Expediente médico:</strong> Registrado</div>` : ''}
-                    ${ticket.porCobrar ? `<p><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong> ${ticket.porCobrar}</p>` : ''}
+                    ${ticket.porCobrar ? `<div class="por-cobrar-info"><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(ticket.porCobrar)}</div></div>` : ''}
                 </div>
             `;
         }
@@ -1752,7 +1825,7 @@ function mostrarHorario() {
             <td>${tipoLabel}</td>
             <td>${estadoLabel}</td>
             <td class="${urgenciaClass}">${(ticket.urgencia || '').toUpperCase()}</td>
-            <td>${ticket.medicoAtiende || '-'}</td>
+            <td>${ticket.medicoAtiene || '-'}</td>
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
             <td>${ticket.horaAtencion || '-'}</td>
@@ -1874,7 +1947,7 @@ function exportToCSV(data, filename) {
         getTipoMascotaLabel(ticket.tipoMascota),
         ticket.cedula,
         ticket.idPaciente || '',
-        ticket.medicoAtiende || '',
+        ticket.medicoAtiene || '',
         ticket.fechaConsulta || new Date(ticket.fecha).toISOString().split('T')[0],
         ticket.horaConsulta || ticket.horaCreacion,
         getEstadoLabel(ticket.estado),
@@ -1941,6 +2014,7 @@ function backupData() {
     showNotification('Respaldo generado correctamente', 'success');
 }
 
+// --- LIMPIEZA DE DATOS ANTIGUOS ---
 function cleanOldData() {
     if (!confirm('¿Estás seguro de limpiar las consultas terminadas con más de 3 meses de antigüedad? Esta acción no se puede deshacer.')) {
         return;
@@ -2081,13 +2155,17 @@ function editTicket(randomId) {
     const userRole = sessionStorage.getItem('userRole');
     // Contador de ediciones para consulta externa
     if (!ticket.editCount) ticket.editCount = 0;
-    // Solo puede editar "porCobrar" si NO es recepcion y (si no es consultaexterna o no ha alcanzado el límite)
-    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consultaexterna' || ticket.editCount < 7);
+    // Solo puede editar "porCobrar" si NO es recepcion y (si no es consulta_externa o no ha alcanzado el límite)
+    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consulta_externa' || ticket.editCount < 7);
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
+            <div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; padding: 8px; margin-bottom: 8px; font-size: 13px;">
+                <i class="fas fa-info-circle" style="color: #4caf50; margin-right: 5px;"></i>
+                <strong>Modo Acumulativo:</strong> El contenido existente se preservará. Solo agregue nueva información al final.
+            </div>
             <textarea id="editPorCobrar" 
-                   placeholder="Introduzca lo que hay que cobrar al cliente"
+                   placeholder="Introduzca nueva información que hay que cobrar al cliente..."
                    style="width: 100%; 
                           min-height: 120px; 
                           resize: vertical; 
@@ -2335,72 +2413,74 @@ function editTicket(randomId) {
     
     document.body.appendChild(modal);
     
-    // Implementar funcionalidad de no eliminación para el campo "por cobrar"
+    // Implementar funcionalidad de acumulación para el campo "por cobrar"
     const porCobrarTextarea = document.getElementById('editPorCobrar');
     if (porCobrarTextarea && canEditPorCobrar) {
         let originalContent = porCobrarTextarea.value;
-        let lastKnownContent = originalContent;
         
-        // Guardar la posición inicial del cursor al final del texto
+        // Agregar texto de ayuda si el campo está vacío
+        if (!originalContent) {
+            porCobrarTextarea.placeholder = "Escriba aquí la información que hay que cobrar al cliente...";
+        } else {
+            porCobrarTextarea.placeholder = "Agregue nueva información al final...";
+        }
+        
+        // Posicionar cursor al final cuando se enfoca
         porCobrarTextarea.addEventListener('focus', function() {
-            // Posicionar el cursor al final del texto existente
             this.setSelectionRange(this.value.length, this.value.length);
         });
         
-        // Prevenir eliminación de texto existente
+        // Mejorar la funcionalidad de protección para ser más intuitiva
         porCobrarTextarea.addEventListener('keydown', function(e) {
-            const currentContent = this.value;
             const cursorPosition = this.selectionStart;
             const selectionLength = this.selectionEnd - this.selectionStart;
             
-            // Permitir solo teclas que no eliminen contenido existente
-            if (e.key === 'Backspace' || e.key === 'Delete') {
-                // Si hay selección y incluye contenido original, prevenir
+            // Prevenir eliminación solo si se intenta eliminar contenido original
+            if ((e.key === 'Backspace' || e.key === 'Delete') && originalContent) {
+                // Si hay selección que incluye contenido original, prevenir
                 if (selectionLength > 0 && this.selectionStart < originalContent.length) {
                     e.preventDefault();
+                    // Mover cursor al final del contenido original
+                    this.setSelectionRange(originalContent.length, originalContent.length);
                     return;
                 }
                 
-                // Si backspace y el cursor está dentro del contenido original, prevenir
+                // Si backspace desde dentro del contenido original, prevenir
                 if (e.key === 'Backspace' && cursorPosition <= originalContent.length) {
                     e.preventDefault();
+                    // Mover cursor al final del contenido original
+                    this.setSelectionRange(originalContent.length, originalContent.length);
                     return;
                 }
                 
-                // Si delete y el cursor está antes del final del contenido original, prevenir
+                // Si delete desde antes del final del contenido original, prevenir
                 if (e.key === 'Delete' && cursorPosition < originalContent.length) {
                     e.preventDefault();
+                    // Mover cursor al final del contenido original
+                    this.setSelectionRange(originalContent.length, originalContent.length);
                     return;
                 }
-            }
-            
-            // Permitir Ctrl+A pero prevenir eliminación del contenido original después
-            if (e.key === 'a' && (e.ctrlKey || e.metaKey)) {
-                // Permitir Ctrl+A pero interceptaremos la escritura posterior
-                return;
             }
         });
         
-        // Verificar cambios en el contenido para prevenir eliminación
+        // Verificar cambios en tiempo real para mantener contenido original
         porCobrarTextarea.addEventListener('input', function(e) {
             const currentContent = this.value;
             
-            // Si el contenido actual es más corto que el original y no contiene todo el texto original
-            if (currentContent.length < originalContent.length || 
-                !currentContent.startsWith(originalContent)) {
+            // Si se eliminó contenido original, restaurarlo
+            if (originalContent && !currentContent.startsWith(originalContent)) {
+                // Encontrar la parte nueva que se quiere agregar
+                const newPart = currentContent.replace(originalContent, '');
                 
-                // Restaurar el contenido y agregar solo el nuevo texto
-                const newText = currentContent.replace(originalContent, '');
-                this.value = originalContent + newText;
+                // Restaurar contenido original y agregar solo la parte nueva
+                this.value = originalContent + newPart;
                 
-                // Posicionar el cursor al final
+                // Posicionar cursor al final
                 this.setSelectionRange(this.value.length, this.value.length);
             }
-            
-            lastKnownContent = this.value;
         });
         
-        // Manejar pegado de texto
+        // Manejar pegado para asegurar que se agregue al final del contenido original
         porCobrarTextarea.addEventListener('paste', function(e) {
             e.preventDefault();
             
@@ -2408,32 +2488,21 @@ function editTicket(randomId) {
             const cursorPosition = this.selectionStart;
             
             // Solo permitir pegar al final del contenido original
-            if (cursorPosition >= originalContent.length) {
+            if (!originalContent || cursorPosition >= originalContent.length) {
                 const currentContent = this.value;
                 const beforeCursor = currentContent.substring(0, cursorPosition);
                 const afterCursor = currentContent.substring(this.selectionEnd);
                 
                 this.value = beforeCursor + pastedText + afterCursor;
                 
-                // Posicionar el cursor después del texto pegado
+                // Posicionar cursor después del texto pegado
                 const newPosition = cursorPosition + pastedText.length;
                 this.setSelectionRange(newPosition, newPosition);
-            }
-        });
-        
-        // Prevenir arrastrar texto fuera del área permitida
-        porCobrarTextarea.addEventListener('dragstart', function(e) {
-            const selection = window.getSelection().toString();
-            if (this.selectionStart < originalContent.length) {
-                e.preventDefault();
-            }
-        });
-        
-        // Manejar cortar texto
-        porCobrarTextarea.addEventListener('cut', function(e) {
-            if (this.selectionStart < originalContent.length || 
-                this.selectionEnd <= originalContent.length) {
-                e.preventDefault();
+            } else {
+                // Si se intenta pegar en el contenido original, mover al final
+                this.setSelectionRange(originalContent.length, originalContent.length);
+                this.value = originalContent + pastedText;
+                this.setSelectionRange(this.value.length, this.value.length);
             }
         });
     }
@@ -2459,8 +2528,46 @@ function editTicket(randomId) {
         const editHoraAtencion = document.getElementById('editHoraAtencion');
         const horaAtencionValue = editHoraAtencion ? editHoraAtencion.value : '';
         const editPorCobrar = document.getElementById('editPorCobrar');
-        // Mantener el valor original sin modificaciones
-        const updatedPorCobrar = editPorCobrar ? editPorCobrar.value.trim() : '';
+        
+        // NUEVA LÓGICA: Acumular información en "Por Cobrar" en lugar de reemplazar
+        let updatedPorCobrar = '';
+        if (editPorCobrar && canEditPorCobrar) {
+            const currentValue = editPorCobrar.value.trim();
+            const originalValue = ticket.porCobrar || '';
+            
+            // Si hay contenido nuevo después del contenido original
+            if (currentValue.length > originalValue.length && currentValue.startsWith(originalValue)) {
+                const newContent = currentValue.substring(originalValue.length).trim();
+                
+                if (newContent) {
+                    // Agregar nueva entrada con timestamp y usuario
+                    const now = new Date();
+                    const timestamp = now.toLocaleString('es-ES', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                    const userName = sessionStorage.getItem('userName') || 'Usuario';
+                    
+                    const separator = originalValue ? '\n\n' : '';
+                    const newEntry = `${separator}--- ${timestamp} (${userName}) ---\n${newContent}`;
+                    
+                    updatedPorCobrar = originalValue + newEntry;
+                } else {
+                    // No hay contenido nuevo, mantener el original
+                    updatedPorCobrar = originalValue;
+                }
+            } else {
+                // Mantener el valor original si no hay cambios válidos
+                updatedPorCobrar = originalValue;
+            }
+        } else {
+            // Si no se puede editar o no hay campo, mantener el valor original
+            updatedPorCobrar = ticket.porCobrar || '';
+        }
+        
         const editExpediente = document.getElementById('editExpediente');
         const expedienteValue = editExpediente ? editExpediente.checked : false;
         
@@ -2491,8 +2598,8 @@ function editTicket(randomId) {
             updatedTicket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         }
         
-        // Si el usuario es consultaexterna, incrementar el contador de ediciones
-        if (userRole === 'consultaexterna') {
+        // Si el usuario es consulta_externa, incrementar el contador de ediciones
+        if (userRole === 'consulta_externa') {
             ticket.editCount = (ticket.editCount || 0) + 1;
             updatedTicket.editCount = ticket.editCount;
         }
@@ -2502,7 +2609,7 @@ function editTicket(randomId) {
     });
     
     // Deshabilitar el botón de guardar si se alcanzó el límite de ediciones
-    if (userRole === 'consultaexterna' && ticket.editCount >= 7) {
+    if (userRole === 'consulta_externa' && ticket.editCount >= 7) {
         const saveBtn = modal.querySelector('.btn-save');
         if (saveBtn) {
             saveBtn.disabled = true;
@@ -3540,13 +3647,7 @@ document.addEventListener('DOMContentLoaded', function() {
   if (filtroServicio) filtroServicio.addEventListener('change', updateStatsGlobal);
   
   // Actualizar estadísticas al entrar a la sección
-  const estadisticasBtn = document.getElementById('estadisticasBtn');
-  if (estadisticasBtn) {
-    estadisticasBtn.addEventListener('click', function() {
-      // Inicializar al acceder a la sección
-      setTimeout(updateStatsGlobal, 300);
-    });
-  }
+  // NOTA: Event listener para estadisticasBtn se maneja en setupCategorizedNavigation()
 });
 
 // --- FUNCIONES FALTANTES PARA ERRORES DE REFERENCIA ---
@@ -4225,4 +4326,158 @@ function confirmEndConsultationByFirebaseKey(firebaseKey) {
             }
             showNotification('Error al terminar la consulta', 'error');
         });
+}
+
+// ===== SISTEMA DE MENÚ CATEGORIZADO =====
+
+// Funciones de navegación para onclick en HTML
+function toggleSubmenuHTML(categoryBtnId, submenuId) {
+    console.log('🔥 Toggle submenu:', categoryBtnId, submenuId);
+    
+    const categoryBtn = document.getElementById(categoryBtnId);
+    const submenu = document.getElementById(submenuId);
+    
+    if (!categoryBtn || !submenu) {
+        console.error('❌ Elementos no encontrados:', { categoryBtn: !!categoryBtn, submenu: !!submenu });
+        return;
+    }
+    
+    // Cerrar otros submenús
+    const allSubmenus = document.querySelectorAll('.nav-submenu');
+    const allCategoryBtns = document.querySelectorAll('.nav-category-btn');
+    
+    allSubmenus.forEach(menu => {
+        if (menu !== submenu && menu.classList.contains('active')) {
+            menu.classList.remove('active');
+        }
+    });
+    
+    allCategoryBtns.forEach(btn => {
+        if (btn !== categoryBtn && btn.classList.contains('active')) {
+            btn.classList.remove('active');
+        }
+    });
+    
+    // Toggle el submenú actual
+    const wasActive = submenu.classList.contains('active');
+    
+    if (wasActive) {
+        submenu.classList.remove('active');
+        categoryBtn.classList.remove('active');
+        console.log('📉 Submenu cerrado');
+    } else {
+        submenu.classList.add('active');
+        categoryBtn.classList.add('active');
+        console.log('📈 Submenu abierto');
+    }
+}
+
+function navigateToSection(sectionId, buttonId) {
+    console.log('🎯 Navegando a sección:', sectionId);
+    
+    const section = document.getElementById(sectionId);
+    if (!section) {
+        console.error('❌ Sección no encontrada:', sectionId);
+        return;
+    }
+    
+    // Usar la función showSection existente
+    if (typeof showSection === 'function') {
+        showSection(section);
+        setActiveSubmenuButtonHTML(buttonId);
+        
+        // Configuraciones específicas por sección
+        if (sectionId === 'horarioSection') {
+            const fechaHorario = document.getElementById('fechaHorario');
+            if (fechaHorario) {
+                fechaHorario.value = getLocalDateString();
+            }
+            if (typeof mostrarHorario === 'function') {
+                mostrarHorario();
+            }
+        }
+    } else {
+        console.error('❌ Función showSection no disponible');
+    }
+}
+
+function navigateToConsultas() {
+    console.log('🎯 Navegando a Ver Consultas');
+    
+    // Inicializar filtro de fecha
+    const filterDateInput = document.getElementById('filterDate');
+    if (filterDateInput && !filterDateInput.value) {
+        filterDateInput.value = getLocalDateString();
+    }
+    
+    // Configurar filtro por defecto según rol
+    const userRole = sessionStorage.getItem('userRole');
+    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+    
+    if (userRole === 'admin') {
+        if (typeof renderTickets === 'function') {
+            renderTickets('todos');
+        }
+        const todosBtn = document.querySelector('.filter-btn[data-filter="todos"]');
+        if (todosBtn) todosBtn.classList.add('active');
+    } else {
+        if (typeof renderTickets === 'function') {
+            renderTickets('espera');
+        }
+        const esperaBtn = document.querySelector('.filter-btn[data-filter="espera"]');
+        if (esperaBtn) esperaBtn.classList.add('active');
+    }
+    
+    navigateToSection('verTicketsSection', 'verTicketsBtn');
+}
+
+function navigateToLab(sectionId, buttonId) {
+    console.log('🎯 Navegando a laboratorio:', sectionId);
+    
+    if (typeof showLabSection === 'function') {
+        showLabSection(sectionId);
+        setActiveSubmenuButtonHTML(buttonId);
+    } else {
+        console.warn('⚠️ Función showLabSection no disponible');
+    }
+}
+
+function navigateToEstadisticas() {
+    console.log('🎯 Navegando a Estadísticas');
+    
+    const section = document.getElementById('estadisticasSection');
+    if (section) {
+        if (typeof showSection === 'function') {
+            showSection(section);
+            setActiveSubmenuButtonHTML('estadisticasBtn');
+            
+            // Actualizar estadísticas
+            if (typeof updateStatsGlobal === 'function') {
+                updateStatsGlobal();
+            }
+            
+            // Asegurar que se muestre la sección de tiempo de espera
+            const waitTimeSection = document.querySelector('.wait-time-statistics');
+            if (waitTimeSection) {
+                waitTimeSection.style.display = 'block';
+            }
+        } else {
+            console.error('❌ Función showSection no disponible');
+        }
+    } else {
+        console.error('❌ Sección estadisticasSection no encontrada');
+    }
+}
+
+function setActiveSubmenuButtonHTML(buttonId) {
+    // Quitar clase active de todos los botones de submenú
+    const submenuButtons = document.querySelectorAll('.submenu-btn');
+    submenuButtons.forEach(btn => btn.classList.remove('active'));
+    
+    // Agregar clase active al botón seleccionado
+    const button = document.getElementById(buttonId);
+    if (button) {
+        button.classList.add('active');
+        console.log('🔥 Botón activo:', buttonId);
+    }
 }
