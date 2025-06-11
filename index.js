@@ -1096,9 +1096,9 @@ function addTicket() {
         if (doctorAtiende && asistenteAtiende) {
             medicoAtiende = `${doctorAtiende}, ${asistenteAtiende}`;
         } else if (doctorAtiende) {
-            medicoAtiende = doctorAtiene;
+            medicoAtiende = doctorAtiende;
         } else if (asistenteAtiende) {
-            medicoAtiene = asistenteAtiene;
+            medicoAtiende = asistenteAtiende;
         }
         const numFactura = document.getElementById('numFactura')?.value || '';
         const tipoServicio = document.getElementById('tipoServicio').value;
