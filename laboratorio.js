@@ -12,6 +12,36 @@ let selectedServices = [];
 let currentFilterCategory = '';
 let currentSearchTerm = '';
 
+// Listas de razas por tipo de mascota
+const razasCaninas = [
+    "Ainu", "Airedale terrier", "Akita", "Akita Inu", "Alaskan Malamute",
+    "American Black and Tan Coonhound", "American Bull Terrier", "American Pit Bull Terrier",
+    "American Staffordshire terrier", "American Water Spaniel", "Apso Tibetano", "Barzoi", 
+    "Basenji", "Basset Hound", "Beagle", "Bichon Frise", "Bloodhound", "Bobtail", 
+    "Border Collie", "Boston Terrier", "Bouvier des Flandres", "Boxer", "Bull terrier", 
+    "Bull Terrier Miniatura", "Bulldog Americano", "Bulldog Francés", "Bulldog Inglés", 
+    "Bullmastiff", "Cavalier King Charles Spaniel", "Chihuahua", "Chow Chow", 
+    "Cocker Spaniel Americano", "Cocker Spaniel Inglés", "Collie", "Collie Escocés", 
+    "Dachshund", "Dálmata", "Doberman", "Doberman Pincher", "Dogo Alemán", 
+    "Dogo Argentino", "Dogo de Burdeos", "French Poodle", "Galgo Español", 
+    "Galgo Inglés-español", "Golden Retriever", "Gran Danés", "Greyhound", 
+    "Husky Siberiano", "Jack Russell Terrier", "Labrador Retriever", "Maltés", 
+    "Pastor Alemán", "Pequinés", "Pomerania", "Pug", "Rottweiler", "Samoyedo", 
+    "San Bernardo", "Schnauzer", "Shih Tzu", "SRD", "Yorkshire Terrier", "Weimaraner", "Fila Brasileiro"
+];
+
+const razasFelinas = [
+    "Abisinio", "American Bobtail", "Angora Turco", "Azul Ruso", "Balinés", 
+    "Bengalí", "Bobtail japonés", "Bombay", "British Shorthair", "Burmés", 
+    "Carey", "Común Europeo", "Exótico", "Himalayo", "Javanés", 
+    "Oriental", "Persa", "Sagrado de Birmania", "Siamés", "Siberiano", 
+    "Silvestre", "SRD"
+];
+
+const razasOtras = [
+    "SRD", "Mestizo", "Común", "Otra"
+];
+
 // Inicializar el sistema de laboratorio
 function initLaboratorioSystem() {
     console.log('Inicializando sistema de laboratorio...');
@@ -297,6 +327,50 @@ function hasLabAccess() {
     return allowedRoles.includes(userRole);
 }
 
+// Función para actualizar las razas según el tipo de mascota seleccionado
+function updateRazasSelect() {
+    const tipoMascota = document.getElementById('labTipoMascota').value;
+    const razaSelect = document.getElementById('labRaza');
+    
+    if (!razaSelect) return;
+    
+    // Limpiar opciones existentes
+    razaSelect.innerHTML = '';
+    
+    let razas = [];
+    
+    switch (tipoMascota) {
+        case 'perro':
+            razas = razasCaninas;
+            break;
+        case 'gato':
+            razas = razasFelinas;
+            break;
+        case 'conejo':
+        case 'otro':
+            razas = razasOtras;
+            break;
+        default:
+            razas = ['SRD'];
+    }
+    
+    // Agregar opción por defecto
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = 'Seleccionar raza';
+    razaSelect.appendChild(defaultOption);
+    
+    // Agregar las razas correspondientes
+    razas.forEach(raza => {
+        const option = document.createElement('option');
+        option.value = raza;
+        option.textContent = raza;
+        razaSelect.appendChild(option);
+    });
+    
+    console.log(`Razas actualizadas para ${tipoMascota}: ${razas.length} opciones`);
+}
+
 // Configurar event listeners del sistema de laboratorio
 function setupLabEventListeners() {
     console.log('Configurando event listeners de laboratorio...');
@@ -312,14 +386,24 @@ function setupLabEventListeners() {
     } else {
         console.warn('Input labClienteSearch no encontrado');
     }
-    
-    // Formulario de creación
+      // Formulario de creación
     const labTicketForm = document.getElementById('labTicketForm');
     if (labTicketForm) {
         console.log('Configurando formulario de laboratorio');
         labTicketForm.addEventListener('submit', handleLabTicketSubmit);
     } else {
         console.warn('Formulario labTicketForm no encontrado');
+    }
+    
+    // Configurar listener para cambio de tipo de mascota
+    const labTipoMascota = document.getElementById('labTipoMascota');
+    if (labTipoMascota) {
+        console.log('Configurando selector de tipo de mascota');
+        labTipoMascota.addEventListener('change', updateRazasSelect);
+        // Inicializar las razas con el valor por defecto
+        updateRazasSelect();
+    } else {
+        console.warn('Select labTipoMascota no encontrado');
     }
     
     // Filtros de laboratorio
@@ -914,8 +998,7 @@ function handleLabTicketSubmit(e) {
     
     // Obtener datos de servicios seleccionados
     const serviciosData = getSelectedServicesData();
-    
-    // Recopilar datos del formulario
+      // Recopilar datos del formulario
     const formData = {
         id: currentLabTicketId,
         randomId: generateRandomId(),
@@ -923,6 +1006,11 @@ function handleLabTicketSubmit(e) {
         cedula: document.getElementById('labCedula').value.trim(),
         mascota: document.getElementById('labMascota').value.trim(),
         tipoMascota: document.getElementById('labTipoMascota').value,
+        // Nuevos campos agregados
+        edad: document.getElementById('labEdad').value.trim(),
+        raza: document.getElementById('labRaza').value,
+        peso: document.getElementById('labPeso').value.trim(),
+        sexo: document.getElementById('labSexo').value,
         idPaciente: document.getElementById('labIdPaciente').value.trim(),
         fecha: document.getElementById('labFecha').value,
         // Reemplazar tipoExamen con los servicios seleccionados
@@ -953,7 +1041,7 @@ function handleLabTicketSubmit(e) {
 
 // Validar datos del ticket de laboratorio
 function validateLabTicketData(data) {
-    const requiredFields = ['nombre', 'cedula', 'mascota', 'idPaciente', 'medicoSolicita', 'departamento'];
+    const requiredFields = ['nombre', 'cedula', 'mascota', 'raza', 'sexo', 'idPaciente', 'medicoSolicita', 'departamento'];
     
     for (const field of requiredFields) {
         if (!data[field] || data[field].trim() === '') {
@@ -982,6 +1070,10 @@ function getLabFieldName(field) {
         'nombre': 'Nombre del Cliente',
         'cedula': 'Cédula',
         'mascota': 'Nombre de la Mascota',
+        'edad': 'Edad',
+        'raza': 'Raza',
+        'peso': 'Peso',
+        'sexo': 'Sexo',
         'idPaciente': 'ID del Paciente',
         'medicoSolicita': 'Médico que Solicita',
         'departamento': 'Departamento que Solicita',
@@ -1028,6 +1120,9 @@ function resetLabForm() {
     if (form) {
         form.reset();
         setDefaultLabDate();
+        
+        // Resetear el selector de razas al valor por defecto
+        updateRazasSelect();
         
         // Limpiar servicios seleccionados
         selectedServices = [];
@@ -1129,11 +1224,34 @@ function createLabTicketElement(ticket) {
                     <div class="lab-ticket-detail">
                         <i class="fas fa-user"></i>
                         <span><strong>Cliente:</strong> ${ticket.nombre}</span>
-                    </div>
-                    <div class="lab-ticket-detail">
+                    </div>                    <div class="lab-ticket-detail">
                         <i class="fas fa-id-card"></i>
                         <span><strong>ID Paciente:</strong> ${ticket.idPaciente}</span>
                     </div>
+                    ${ticket.edad ? `
+                        <div class="lab-ticket-detail">
+                            <i class="fas fa-birthday-cake"></i>
+                            <span><strong>Edad:</strong> ${ticket.edad}</span>
+                        </div>
+                    ` : ''}
+                    ${ticket.raza ? `
+                        <div class="lab-ticket-detail">
+                            <i class="fas fa-paw"></i>
+                            <span><strong>Raza:</strong> ${ticket.raza}</span>
+                        </div>
+                    ` : ''}
+                    ${ticket.peso ? `
+                        <div class="lab-ticket-detail">
+                            <i class="fas fa-weight"></i>
+                            <span><strong>Peso:</strong> ${ticket.peso}</span>
+                        </div>
+                    ` : ''}
+                    ${ticket.sexo ? `
+                        <div class="lab-ticket-detail">
+                            <i class="fas fa-venus-mars"></i>
+                            <span><strong>Sexo:</strong> ${ticket.sexo.charAt(0).toUpperCase() + ticket.sexo.slice(1)}</span>
+                        </div>
+                    ` : ''}
                     <div class="lab-ticket-detail">
                         <i class="fas fa-calendar"></i>
                         <span><strong>Fecha:</strong> ${formatDate(ticket.fecha)}</span>
@@ -1346,17 +1464,59 @@ function editLabTicket(randomId) {
                     <div class="form-group">
                         <label>Cédula</label>
                         <input type="text" id="editLabCedula" value="${ticket.cedula}" required>
-                    </div>
-                </div>                <div class="form-row">
+                    </div>                </div>                <div class="form-row">
                     <div class="form-group">
                         <label>Mascota</label>
                         <input type="text" id="editLabMascota" value="${ticket.mascota}" required>
                     </div>
                     <div class="form-group">
+                        <label>Tipo de Mascota</label>
+                        <select id="editLabTipoMascota" required>
+                            <option value="perro" ${ticket.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
+                            <option value="gato" ${ticket.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
+                            <option value="conejo" ${ticket.tipoMascota === 'conejo' ? 'selected' : ''}>Conejo</option>
+                            <option value="otro" ${ticket.tipoMascota === 'otro' ? 'selected' : ''}>Otro</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Edad</label>
+                        <input type="text" id="editLabEdad" value="${ticket.edad || ''}" placeholder="Ej: 2 años, 6 meses">
+                    </div>
+                    <div class="form-group">
+                        <label>Raza</label>
+                        <select id="editLabRaza" required>
+                            <option value="">Seleccionar raza</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Peso</label>
+                        <input type="text" id="editLabPeso" value="${ticket.peso || ''}" placeholder="Ej: 5.2 kg, 3 libras">
+                    </div>
+                    <div class="form-group">
+                        <label>Sexo</label>
+                        <select id="editLabSexo" required>
+                            <option value="">Seleccionar</option>
+                            <option value="macho" ${ticket.sexo === 'macho' ? 'selected' : ''}>Macho</option>
+                            <option value="hembra" ${ticket.sexo === 'hembra' ? 'selected' : ''}>Hembra</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
                         <label>ID del Paciente</label>
                         <input type="text" id="editLabIdPaciente" value="${ticket.idPaciente || ''}" required>
                     </div>
-                </div>                
+                    <div class="form-group">
+                        <!-- Espacio vacío para balance del layout -->
+                    </div>
+                </div>
                 <!-- Servicios de Laboratorio -->
                 <div class="form-group full-width">
                     <label>Servicios de Laboratorio</label>
@@ -1453,12 +1613,16 @@ function editLabTicket(randomId) {
             showNotification('Debe seleccionar al menos un servicio', 'error');
             return;
         }
-        
-        const updatedData = {
+          const updatedData = {
             ...ticket,
             nombre: document.getElementById('editLabNombre').value.trim(),
             cedula: document.getElementById('editLabCedula').value.trim(),
             mascota: document.getElementById('editLabMascota').value.trim(),
+            tipoMascota: document.getElementById('editLabTipoMascota').value,
+            edad: document.getElementById('editLabEdad').value.trim(),
+            raza: document.getElementById('editLabRaza').value,
+            peso: document.getElementById('editLabPeso').value.trim(),
+            sexo: document.getElementById('editLabSexo').value,
             idPaciente: document.getElementById('editLabIdPaciente').value.trim(),
             serviciosSeleccionados: [...selectedServices],
             estado: document.getElementById('editLabEstado').value,
@@ -1478,9 +1642,68 @@ function editLabTicket(randomId) {
         
         saveEditedLabTicket(updatedData);
     });
-    
-    // Inicializar el sistema de servicios para edición
+      // Inicializar el sistema de servicios para edición
     initEditServiceSelection(ticket);
+    
+    // Configurar el selector de razas para edición
+    setupEditRazasSelector(ticket);
+}
+
+// Función para configurar el selector de razas en el modal de edición
+function setupEditRazasSelector(ticket) {
+    const editTipoMascota = document.getElementById('editLabTipoMascota');
+    const editRazaSelect = document.getElementById('editLabRaza');
+    
+    if (!editTipoMascota || !editRazaSelect) return;
+    
+    // Función para actualizar las razas en el modal de edición
+    function updateEditRazasSelect() {
+        const tipoMascota = editTipoMascota.value;
+        
+        // Limpiar opciones existentes
+        editRazaSelect.innerHTML = '';
+        
+        let razas = [];
+        
+        switch (tipoMascota) {
+            case 'perro':
+                razas = razasCaninas;
+                break;
+            case 'gato':
+                razas = razasFelinas;
+                break;
+            case 'conejo':
+            case 'otro':
+                razas = razasOtras;
+                break;
+            default:
+                razas = ['SRD'];
+        }
+        
+        // Agregar opción por defecto
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = 'Seleccionar raza';
+        editRazaSelect.appendChild(defaultOption);
+        
+        // Agregar las razas correspondientes
+        razas.forEach(raza => {
+            const option = document.createElement('option');
+            option.value = raza;
+            option.textContent = raza;
+            // Seleccionar la raza actual del ticket si coincide
+            if (ticket.raza === raza) {
+                option.selected = true;
+            }
+            editRazaSelect.appendChild(option);
+        });
+    }
+    
+    // Configurar listener para cambio de tipo de mascota
+    editTipoMascota.addEventListener('change', updateEditRazasSelect);
+    
+    // Inicializar las razas con el tipo actual
+    updateEditRazasSelect();
 }
 
 // Funciones de sincronización de facturas para laboratorio
