@@ -494,6 +494,7 @@
                   <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
                   <option value="Medico Externo">Médico Externo</option>
                   <option value="Medico Internista">Médico Internista</option>
+                  <option value="N/A">N/A</option>
                 </select>
               </div>
               <div class="form-group">
@@ -597,6 +598,7 @@
             <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
             <option value="Medico Externo">Médico Externo</option>
             <option value="Medico Internista">Médico Internista</option>
+            <option value="N/A">N/A</option>
           </select>
         </div>
 
@@ -605,8 +607,8 @@
           <button class="lab-filter-btn active" data-filter="todos">Todos</button>
           <button class="lab-filter-btn" data-filter="pendiente">Pendiente</button>
           <button class="lab-filter-btn" data-filter="procesando">En Proceso</button>
-          <button class="lab-filter-btn" data-filter="completado">Completados</button>
-          <button class="lab-filter-btn" data-filter="reportado">Reportados</button>
+          <button class="lab-filter-btn" data-filter="reportado">Reportado de Laboratorio</button>
+          <button class="lab-filter-btn" data-filter="reportado_cliente">Reportado al Cliente<br>(para consulta externa/internos)</button>
         </div>
         
         <!-- Contenedor de tickets de laboratorio -->
@@ -639,11 +641,21 @@
               </div>
             </div>
             <div class="stat-card">
-              <i class="fas fa-check-circle"></i>
+              <i class="fas fa-flask"></i>
               <div class="stat-info">
-                <span class="stat-number" id="completadosLab">0</span>
-                <span class="stat-label">Completados</span>
+                <span class="stat-number" id="reportadosLab">0</span>
+                <span class="stat-label">Reportado Lab</span>
               </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-user-check"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="reportadosClienteLab">0</span>
+                <span class="stat-label">Reportado Cliente</span>
+              </div>
+            </div>
+
+            </div>
             </div>
           </div>
         </div>

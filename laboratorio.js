@@ -167,7 +167,7 @@ function updateClientesDataFromSnapshot(snapshot) {
                             fecha: fechaConsulta,
                             randomId: ticket.randomId,
                             estado: ticket.estado,
-                            medicoAtiende: ticket.medicoAtiene,
+                            medicoAtiende: ticket.medicoAtiende,
                             motivoLlegada: ticket.motivoLlegada,
                             tipoServicio: ticket.tipoServicio,
                             horaLlegada: ticket.horaLlegada,
@@ -414,9 +414,7 @@ function setupLabEventListeners() {
     
     // Filtros de laboratorio
     const labFilterBtns = document.querySelectorAll('.lab-filter-btn');
-    console.log('Filtros de laboratorio encontrados:', labFilterBtns.length);
-    
-    // Ocultar filtro "Todos" para usuarios que no sean admin
+    console.log('Filtros de laboratorio encontrados:', labFilterBtns.length);    // Ocultar filtro "Todos" para usuarios que no sean admin
     const userRole = sessionStorage.getItem('userRole');
     if (userRole !== 'admin') {
         const todosLabBtn = document.querySelector('.lab-filter-btn[data-filter="todos"]');
@@ -1234,6 +1232,8 @@ function filterLabTickets(tickets, filter) {
                 return ticket.estado === 'completado';
             case 'reportado':
                 return ticket.estado === 'reportado';
+            case 'reportado_cliente':
+                return ticket.estado === 'reportado_cliente';
             default:
                 return true;
         }
@@ -1263,11 +1263,16 @@ function createLabTicketElement(ticket) {
           <div class="lab-ticket-content">
             <div class="lab-ticket-info">
                 <h4>${animalIcon} ${ticket.mascota}</h4>
-                <div class="lab-ticket-details">
-                    <div class="lab-ticket-detail">
+                <div class="lab-ticket-details">                    <div class="lab-ticket-detail">
                         <i class="fas fa-user"></i>
                         <span><strong>Cliente:</strong> ${ticket.nombre}</span>
                     </div>
+                    ${ticket.cedula ? `
+                        <div class="lab-ticket-detail">
+                            <i class="fas fa-id-card-alt"></i>
+                            <span><strong>Cédula:</strong> ${ticket.cedula}</span>
+                        </div>
+                    ` : ''}
                     <div class="lab-ticket-detail">
                         <i class="fas fa-id-card"></i>
                         <span><strong>ID Paciente:</strong> ${ticket.idPaciente}</span>
@@ -1536,7 +1541,8 @@ function getLabStatusDisplay(estado) {
         'pendiente': 'Pendiente',
         'procesando': 'En proceso',
         'completado': 'Completado',
-        'reportado': 'Reportado'
+        'reportado': 'Reportado de Laboratorio',
+        'reportado_cliente': 'Reportado al Cliente'
     };
     return statuses[estado] || estado;
 }
@@ -1708,16 +1714,13 @@ function editLabTicket(randomId) {
                             <div id="editServicesList" class="services-list"></div>
                         </div>
                     </div>
-                </div>
-                
-                <div class="form-row">
+                </div>                <div class="form-row">
                     <div class="form-group">
                         <label>Estado del Ticket</label>
                         <select id="editLabEstado" required>
                             <option value="pendiente" ${ticket.estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
                             <option value="procesando" ${ticket.estado === 'procesando' ? 'selected' : ''}>En proceso</option>
-                            <option value="completado" ${ticket.estado === 'completado' ? 'selected' : ''}>Completado</option>
-                            <option value="reportado" ${ticket.estado === 'reportado' ? 'selected' : ''}>Reportado</option>
+                            ${getUserReportOption(ticket)}
                         </select>
                     </div>
                 </div><div class="form-row">
@@ -1752,7 +1755,7 @@ function editLabTicket(randomId) {
                     <div class="form-group">                        <label>Departamento que Solicita</label>
                         <select id="editLabDepartamento" required>
                             <option value="consulta_externa" ${ticket.departamento === 'consulta_externa' ? 'selected' : ''}>Consulta Externa</option>
-                            <option value="internos" ${ticket.departamento === 'internos' ? 'selected' : ''}>Pacientes Internos</option>
+                            <option value="internos" ${ticket.departamento === 'internos' ? 'selected' : ''}>Internos</option>
                         </select>
                     </div>
                 </div>                <div class="form-group">
@@ -2007,10 +2010,9 @@ function saveEditedLabTicket(ticket) {
 // Cambiar estado del ticket de laboratorio
 function changeLabStatus(randomId) {
     const ticket = labTickets.find(t => t.randomId === randomId);
-    if (!ticket) return;
-    
-    const modal = document.createElement('div');
-    modal.className = 'edit-modal';    modal.innerHTML = `
+    if (!ticket) return;    const modal = document.createElement('div');
+    modal.className = 'edit-modal';
+    modal.innerHTML = `
         <div class="modal-content animate-scale">
             <h3>Cambiar Estado - Lab #${ticket.id}</h3>
             <form id="labStatusForm">
@@ -2019,8 +2021,7 @@ function changeLabStatus(randomId) {
                     <select id="changeLabEstado" required>
                         <option value="pendiente" ${ticket.estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
                         <option value="procesando" ${ticket.estado === 'procesando' ? 'selected' : ''}>En proceso</option>
-                        <option value="completado" ${ticket.estado === 'completado' ? 'selected' : ''}>Completado</option>
-                            <option value="reportado" ${ticket.estado === 'reportado' ? 'selected' : ''}>Reportado</option>
+                        ${getUserReportOption(ticket)}
                     </select>
                 </div>
                 <div class="modal-actions">
@@ -2036,21 +2037,21 @@ function changeLabStatus(randomId) {
         e.preventDefault();
         
         const nuevoEstado = document.getElementById('changeLabEstado').value;
-        
-        const updatedTicket = {
+          const updatedTicket = {
             ...ticket,
             estado: nuevoEstado
         };
         
-        // Si se marca como completado, agregar fecha y hora
-        if (nuevoEstado === 'completado' && ticket.estado !== 'completado') {
-            updatedTicket.fechaCompletado = getLocalDateString();
-            updatedTicket.horaCompletado = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        }
-          // Si se marca como reportado, agregar fecha y hora
+        // Si se marca como reportado (laboratorio), agregar fecha y hora
         if (nuevoEstado === 'reportado' && ticket.estado !== 'reportado') {
             updatedTicket.fechaReportado = getLocalDateString();
             updatedTicket.horaReportado = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
+        
+        // Si se marca como reportado al cliente, agregar fecha y hora
+        if (nuevoEstado === 'reportado_cliente' && ticket.estado !== 'reportado_cliente') {
+            updatedTicket.fechaReportadoCliente = getLocalDateString();
+            updatedTicket.horaReportadoCliente = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         }
         
         saveEditedLabTicket(updatedTicket);
@@ -2170,19 +2171,22 @@ function updateLabStats() {
         total: labTickets.length,
         pendientes: labTickets.filter(t => t.estado === 'pendiente').length,
         procesando: labTickets.filter(t => t.estado === 'procesando').length,
-        completados: labTickets.filter(t => t.estado === 'completado').length
+        reportados: labTickets.filter(t => t.estado === 'reportado').length,
+        reportadosCliente: labTickets.filter(t => t.estado === 'reportado_cliente').length
     };
     
     // Actualizar elementos del DOM
     const totalElement = document.getElementById('totalLabTickets');
     const pendientesElement = document.getElementById('pendientesLab');
     const procesandoElement = document.getElementById('procesandoLab');
-    const completadosElement = document.getElementById('completadosLab');
+    const reportadosElement = document.getElementById('reportadosLab');
+    const reportadosClienteElement = document.getElementById('reportadosClienteLab');
     
     if (totalElement) totalElement.textContent = stats.total;
     if (pendientesElement) pendientesElement.textContent = stats.pendientes;
     if (procesandoElement) procesandoElement.textContent = stats.procesando;
-    if (completadosElement) completadosElement.textContent = stats.completados;
+    if (reportadosElement) reportadosElement.textContent = stats.reportados;
+    if (reportadosClienteElement) reportadosClienteElement.textContent = stats.reportadosCliente;
 }
 
 // Obtener nombre del departamento
@@ -2815,10 +2819,19 @@ function toggleMedicoFilter(filter) {
     const medicoFilterContainer = document.getElementById('labMedicoFilterContainer');
     if (!medicoFilterContainer) return;
     
-    // Mostrar el filtro solo para tickets completados
-    if (filter === 'completado') {
+    // Mostrar el filtro para tickets reportados (ambos tipos)
+    if (filter === 'reportado' || filter === 'reportado_cliente') {
         medicoFilterContainer.style.display = 'block';
     } else {
         medicoFilterContainer.style.display = 'none';
     }
+}
+
+// Obtener opción de reporte según el rol del usuario
+function getUserReportOption(ticket) {
+    // Mostrar ambas opciones para todos los usuarios
+    return `
+        <option value="reportado" ${ticket.estado === 'reportado' ? 'selected' : ''}>Reportado de Laboratorio</option>
+        <option value="reportado_cliente" ${ticket.estado === 'reportado_cliente' ? 'selected' : ''}>Reportado al Cliente</option>
+    `;
 }
