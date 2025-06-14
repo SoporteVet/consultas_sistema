@@ -8,8 +8,6 @@ function safeAddEventListener(elementId, eventType, handler) {
   const element = document.getElementById(elementId);
   if (element) {
     element.addEventListener(eventType, handler);
-  } else {
-    console.warn(`Element with ID '${elementId}' not found for event listener`);
   }
 }
 
@@ -69,7 +67,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show the UI elements based on user role
         applyRoleBasedUI(userData.role);
         
-        console.log("Successfully authenticated as", userData.role);
+        // Successfully authenticated
         
         // Continue with loading data
         showLoading();
@@ -81,7 +79,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const estadisticasSection = document.getElementById('estadisticasSection');
         
         if (!crearTicketSection || !verTicketsSection) {
-            console.error("Critical sections missing in the DOM. Check your HTML structure.");
+            // Critical sections missing in the DOM
             hideLoading();
             showNotification('Error: Estructura HTML incompleta', 'error');
             return;
@@ -134,20 +132,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Inicializar sistema de laboratorio
                 if (typeof initLaboratorioSystem === 'function') {
-                    console.log('Inicializando sistema de laboratorio desde index.js');
+                    // Inicializando sistema de laboratorio
                     initLaboratorioSystem();
                     window.laboratorioInitialized = true;
                 } else {
-                    console.warn('Sistema de laboratorio no disponible');
+                    
                 }
                 
             }).catch(err => {
-                console.error("Error cargando tickets:", err);
+                
                 hideLoading();
                 showNotification('Error al cargar los datos', 'error');
             });
         }).catch(err => {
-            console.error("Error en autenticación:", err);
+            
             hideLoading();
             showNotification('Error al conectar con el servidor', 'error');
         });
@@ -156,7 +154,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.location.pathname.toLowerCase().includes('home.html')) {
             return;
         }
-        console.error("Authentication error:", err);
+        
         hideLoading();
         showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
         // Add a login button instead of auto-redirect
@@ -262,7 +260,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Improved version of applyRoleBasedUI with better debugging and role detection
 function applyRoleBasedUI(role) {
-    console.log(`Applying UI for role: ${role}`);
+    
     
     // Set user info in UI
     const userNameElement = document.getElementById('userName');
@@ -276,49 +274,49 @@ function applyRoleBasedUI(role) {
     }
     
     // Debug info to console
-    console.log("User role from sessionStorage:", sessionStorage.getItem('userRole'));
-    console.log("User name from sessionStorage:", sessionStorage.getItem('userName'));
-    console.log("Admin permissions:", JSON.stringify(PERMISSIONS.admin));
+    
+    
+    
     
     // Add role-specific class to body element for CSS targeting
     document.body.classList.add(`${role}-role`);
-    console.log(`Added ${role}-role class to body`);
+    
     
     // Check explicitly for admin role with string comparison
     if (role === 'admin') {
-        console.log("ADMIN ROLE DETECTED - enabling all admin features");
+        
         
         // Show all admin-specific buttons
         const adminElements = document.querySelectorAll('.admin-only');
-        console.log(`Found ${adminElements.length} admin-only elements`);
+        
         adminElements.forEach(el => {
             el.style.display = 'block';
-            console.log(`Showing admin element:`, el);
+            
         });
 
         // Enable export buttons for admin
         const exportButtons = document.querySelectorAll('.export-controls button');
         if (exportButtons && exportButtons.length > 0) {
-            console.log(`Found ${exportButtons.length} export buttons`);
+            
             exportButtons.forEach(btn => {
                 btn.style.display = 'inline-flex';
             });
         } else {
-            console.log("No export buttons found");
+            
         }
         
         // Enable backup buttons for admin
         const backupButtons = document.querySelectorAll('.backup-controls button');
         if (backupButtons && backupButtons.length > 0) {
-            console.log(`Found ${backupButtons.length} backup buttons`);
+            
             backupButtons.forEach(btn => {
                 btn.style.display = 'inline-flex';
             });
         } else {
-            console.log("No backup buttons found");
+            
         }
     } else {
-        console.log(`Non-admin role detected: ${role}`);
+        
         // For non-admin roles, hide features based on permissions
         if (!hasPermission('canCreateTickets')) {
             document.getElementById('crearTicketBtn').style.display = 'none';
@@ -355,10 +353,10 @@ function applyRoleBasedUI(role) {
     if (laboratorioCategory) {
         if (allowedLabRoles.includes(role)) {
             laboratorioCategory.style.display = 'block';
-            console.log(`Módulo de laboratorio mostrado para rol: ${role}`);
+            
         } else {
             laboratorioCategory.style.display = 'none';
-            console.log(`Módulo de laboratorio ocultado para rol: ${role}`);
+            
         }
     }
     
@@ -368,7 +366,7 @@ function applyRoleBasedUI(role) {
         logoutBtn.addEventListener('click', signOut);
     }
     
-    console.log("UI permissions applied successfully for role:", role);
+    
 }
 
 // Mostrar/ocultar sidebar para visitas
@@ -403,7 +401,7 @@ safeAddEventListener('crearTicketBtn', 'click', () => {
         showSection(section);
         setActiveButton(document.getElementById('crearTicketBtn'));
     } else {
-        console.error("Section 'crearTicketSection' not found");
+        
     }
 });
 function setDefaultFilterDate() {
@@ -441,7 +439,7 @@ safeAddEventListener('verTicketsBtn', 'click', () => {
         showSection(section);
         setActiveButton(document.getElementById('verTicketsBtn'));
     } else {
-        console.error("Section 'verTicketsSection' not found");
+        
     }
 });
 
@@ -459,7 +457,7 @@ safeAddEventListener('horarioBtn', 'click', () => {
         // Optionally load today's schedule automatically
         mostrarHorario();
     } else {
-        console.error("Section 'horarioSection' not found");
+        
     }
 });
 
@@ -485,7 +483,7 @@ safeAddEventListener('estadisticasBtn', 'click', () => {
             renderizarGraficosTiempoEspera(tickets);
         }, 200);
     } else {
-        console.error("Section 'estadisticasSection' not found");
+        
     }
 });
 
@@ -900,7 +898,6 @@ filterBtns.forEach(btn => {
 function showSection(section) {
     // Check if section exists
     if (!section) {
-        console.error("Error: Attempted to show a section that doesn't exist");
         return; // Exit the function early
     }
     
@@ -914,6 +911,12 @@ function showSection(section) {
     // Mostrar la sección solicitada con animación
     section.classList.remove('hidden');
     
+    // Scroll to top of content area
+    const contentArea = document.querySelector('.content');
+    if (contentArea) {
+        contentArea.scrollTop = 0;
+    }
+    
     // Aplicar un pequeño retraso para la animación
     setTimeout(() => {
         section.classList.add('active');
@@ -926,7 +929,7 @@ function showSectionById(sectionId) {
     if (section) {
         showSection(section);
     } else {
-        console.error(`Section with ID '${sectionId}' not found`);
+        
     }
 }
 
@@ -1020,7 +1023,7 @@ function loadTickets() {
                 resolve();
             })
             .catch(error => {
-                console.error("Error cargando datos:", error);
+                
                 reject(error);
             });
         // --- Escuchas en tiempo real ---
@@ -1077,7 +1080,7 @@ function loadTickets() {
 // Reemplaza la función addTicket() actual con esta versión corregida
 function addTicket() {
     try {
-        console.log("addTicket function called");
+        
         // 1. Obtener valores del formulario
         const nombre = document.getElementById('nombre').value;
         const mascota = document.getElementById('mascota').value;
@@ -1106,7 +1109,7 @@ function addTicket() {
         const horaCita = document.getElementById('hora')?.value;
         const horaAtencion = document.getElementById('horaAtencion')?.value;
         const expediente = document.getElementById('expediente')?.checked || false;
-        console.log("Datos recopilados:", { nombre, mascota, fechaConsulta, horaCita, horaAtencion, tipoServicio, expediente });
+        
         const fecha = new Date();
         // --- Calcular el número de ticket visual justo antes de guardar ---
         const hoy = fechaConsulta || getLocalDateString();
@@ -1144,14 +1147,14 @@ function addTicket() {
         if (horaAtencion) nuevoTicket.horaAtencion = horaAtencion;
         showLoadingButton(document.querySelector('.btn-submit'));
         if (!ticketsRef) {
-            console.error("Error: ticketsRef no está definido");
+            
             showNotification('Error con la base de datos. Por favor recarga la página.', 'error');
             hideLoadingButton(document.querySelector('.btn-submit'));
             return;
         }
         ticketsRef.push(nuevoTicket)
             .then(() => {
-                console.log("Ticket guardado exitosamente");
+                
                 ticketForm.reset();
                 if (document.getElementById('fecha')) {
                     document.getElementById('fecha').value = getLocalDateString();
@@ -1164,12 +1167,12 @@ function addTicket() {
                 }, 1500);
             })
             .catch(error => {
-                console.error("Error guardando ticket:", error);
+                
                 hideLoadingButton(document.querySelector('.btn-submit'));
                 showNotification('Error al guardar la consulta: ' + error.message, 'error');
             });
     } catch (error) {
-        console.error("Error en la función addTicket:", error);
+        
         hideLoadingButton(document.querySelector('.btn-submit'));
         showNotification('Error en el proceso de creación: ' + error.message, 'error');
     }
@@ -1204,7 +1207,7 @@ async function fixDuplicateTicketIds() {
     });
 
     if (updates.length === 0) {
-        console.log('No hay IDs duplicados.');
+        
         showNotification('No se encontraron tickets duplicados.', 'success');
         return;
     }
@@ -1212,7 +1215,7 @@ async function fixDuplicateTicketIds() {
     // Actualizar en Firebase
     for (const upd of updates) {
         await ticketsRef.child(upd.firebaseKey).update({ id: upd.newId });
-        console.log(`Ticket con firebaseKey ${upd.firebaseKey}: ID cambiado de ${upd.oldId} a ${upd.newId}`);
+        
     }
     showNotification('IDs de tickets duplicados corregidos.', 'success');
 }
@@ -1580,6 +1583,7 @@ function renderTickets(filter = 'todos', date = null) {
                     </div>
                     ${ticket.expediente ? `<div class="expediente-badge"><i class="fas fa-file-medical"></i> <strong>Expediente médico:</strong> Registrado</div>` : ''}
                     ${ticket.porCobrar ? `<div class="por-cobrar-info"><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(ticket.porCobrar)}</div></div>` : ''}
+                    ${ticket.listoParaFacturar ? `<div class="listo-facturar-badge"><i class="fas fa-receipt"></i> <strong>Listo para facturar</strong></div>` : ''}
                 </div>
             `;
         }
@@ -2066,7 +2070,7 @@ function cleanOldData() {
                 }
             })
             .catch(error => {
-                console.error("Error eliminando ticket antiguo:", error);
+                
                 pendingOperations--;
                 if (pendingOperations === 0) {
                     hideLoading();
@@ -2080,13 +2084,13 @@ function editTicket(randomId) {
     const ticket = tickets.find(t => t.randomId === randomId);
     
     if (!ticket) {
-        console.error("Ticket no encontrado con randomId:", randomId);
+        
         showNotification('Error: Ticket no encontrado', 'error');
         return;
     }
     
-    console.log("Ticket encontrado:", ticket);
-    console.log("Firebase Key:", ticket.firebaseKey);
+    
+    
     
     // Cerrar cualquier modal existente primero
     closeModal();
@@ -2131,7 +2135,8 @@ function editTicket(randomId) {
         horaLlegada: ticket.horaLlegada || '',
         horaAtencion: ticket.horaAtencion || '',
         tipoServicio: ticket.tipoServicio || 'consulta',
-        expediente: ticket.expediente || false
+        expediente: ticket.expediente || false,
+        listoParaFacturar: ticket.listoParaFacturar || false
     };
     
     // Separar el médico y asistente si existe
@@ -2399,6 +2404,20 @@ function editTicket(randomId) {
                 </div>
                 ` : ''}
                 
+                ${userRole === 'consulta_externa' || userRole === 'admin' ? `
+                <div class="form-group" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50;">
+                        <input type="checkbox" id="editListoParaFacturar" ${safeTicket.listoParaFacturar ? 'checked' : ''} 
+                               style="width: 18px; height: 18px; cursor: pointer;">
+                        <i class="fas fa-receipt" style="color: #f39c12;"></i>
+                        Listo para facturar
+                    </label>
+                    <small style="display: block; margin-top: 5px; color: #7f8c8d; font-style: italic;">
+                        Marcar cuando la consulta esté lista para ser facturada
+                    </small>
+                </div>
+                ` : ''}
+                
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
                     <button type="submit" class="btn-save">Guardar Cambios</button>
@@ -2571,6 +2590,10 @@ function editTicket(randomId) {
         const editExpediente = document.getElementById('editExpediente');
         const expedienteValue = editExpediente ? editExpediente.checked : false;
         
+        const editListoParaFacturar = document.getElementById('editListoParaFacturar');
+        // Si el checkbox no existe (usuario sin permisos), mantener el valor original
+        const listoParaFacturarValue = editListoParaFacturar ? editListoParaFacturar.checked : (ticket.listoParaFacturar || false);
+        
         const updatedTicket = {
             id: safeTicket.id,
             nombre: document.getElementById('editNombre').value,
@@ -2589,7 +2612,8 @@ function editTicket(randomId) {
             tipoServicio: document.getElementById('editTipoServicio').value,
             firebaseKey: safeTicket.firebaseKey,
             porCobrar: updatedPorCobrar,
-            expediente: expedienteValue
+            expediente: expedienteValue,
+            listoParaFacturar: listoParaFacturarValue
         };
         
         // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
@@ -2722,10 +2746,10 @@ function getTicketDiff(oldTicket, newTicket) {
 }
 
 function saveEditedTicket(ticket) {
-    console.log("Guardando ticket actualizado:", ticket);
+    
     
     if (!ticket.firebaseKey) {
-        console.error("Error: No hay clave de Firebase para el ticket", ticket);
+        
         showNotification('Error al guardar los cambios: falta identificador', 'error');
         return;
     }
@@ -2836,7 +2860,7 @@ function saveEditedTicket(ticket) {
             updateStatsGlobal();
         })
         .catch(error => {
-            console.error("Error actualizando ticket:", error);
+            
             if (saveButton) {
                 hideLoadingButton(saveButton);
             }
@@ -2949,7 +2973,7 @@ function changeStatus(randomId) {
                 }
             })
             .catch(error => {
-                console.error("Error actualizando estado:", error);
+                
                 if (saveButton) {
                     hideLoadingButton(saveButton);
                 }
@@ -3047,7 +3071,7 @@ function confirmDeleteByFirebaseKey(firebaseKey) {
             updateStatsGlobal();
         })
         .catch(error => {
-            console.error("Error eliminando ticket:", error);
+            
             if (deleteButton) {
                 hideLoadingButton(deleteButton);
             }
@@ -3071,11 +3095,11 @@ let userCredential = null;
 // Iniciar sesión o crear cuenta anónima
 function initAuth() {
   return new Promise((resolve, reject) => {
-    console.log("Initializing auth...");
+    
     
     firebase.auth().onAuthStateChanged((user) => {
       if (user) {
-        console.log("User already authenticated:", user.uid);
+        
         resolve(user);
       } else {
         // Redirigir al login si no hay usuario autenticado
@@ -3149,7 +3173,7 @@ function showNotification(message, type = 'info') {
 // --- Actualizar estadísticas usando el filtro global ---
 function updateStatsGlobal() {
   const filtered = filtrarTicketsPorPeriodoGlobal(tickets);
-  console.log('[DEBUG] Tickets filtrados:', filtered.length, filtered.map(t => t.fechaConsulta));
+  
   
   // Actualizar contadores
   document.getElementById('totalPacientes').textContent = filtered.length;
@@ -3223,7 +3247,7 @@ function renderizarGraficosTiempoEspera(ticketsFiltrados) {
     try {
       window.waitTimeChart.destroy();
     } catch (error) {
-      console.log('Error al destruir gráfico anterior:', error);
+      
     }
   }
   
@@ -3303,7 +3327,7 @@ function renderizarGraficosTiempoEspera(ticketsFiltrados) {
       }
     });
   } catch (error) {
-    console.error("Error al crear gráfico de tiempos de espera:", error);
+    
   }
 }
 
@@ -3322,7 +3346,7 @@ function renderizarGraficosPersonalServicios(ticketsFiltrados) {
     });
   }
   
-  console.log('[DEBUG] Tickets para gráficos después de filtro servicio:', ticketsAGraficar.length);
+  
   
   // Conteo de servicios por personal y servicios totales
   const conteoPersonalServicio = {};
@@ -3367,8 +3391,8 @@ function renderizarGraficosPersonalServicios(ticketsFiltrados) {
     });
   });
   
-  console.log('[DEBUG] Conteo personal/servicio:', conteoPersonalServicio);
-  console.log('[DEBUG] Conteo servicios:', conteoServicios);
+  
+  
   
   // Actualizar tabla de estadísticas
   actualizarTablaEstadisticas(conteoPersonalServicio, conteoServicios, totalServicios);
@@ -3438,7 +3462,7 @@ function renderizarGraficoPersonalPorServicio(conteoPersonalServicio) {
     try {
       window.chartServiciosPersonal.destroy();
     } catch (error) {
-      console.log('Error al destruir gráfico anterior:', error);
+      
     }
     window.chartServiciosPersonal = null;
   }
@@ -3508,7 +3532,7 @@ function renderizarGraficoPersonalPorServicio(conteoPersonalServicio) {
       }
     });
   } catch (error) {
-    console.error('Error al crear gráfico de servicios por personal:', error);
+    
     ctx.font = '16px Arial';
     ctx.fillStyle = '#f00';
     ctx.textAlign = 'center';
@@ -3528,7 +3552,7 @@ function renderizarGraficoDistribucionServicios(conteoServicios) {
     try {
       window.chartDistribucionServicios.destroy();
     } catch (error) {
-      console.log('Error al destruir gráfico anterior:', error);
+      
     }
     window.chartDistribucionServicios = null;
   }
@@ -3587,7 +3611,7 @@ function renderizarGraficoDistribucionServicios(conteoServicios) {
       }
     });
   } catch (error) {
-    console.error('Error al crear gráfico de distribución de servicios:', error);
+    
     ctx.font = '16px Arial';
     ctx.fillStyle = '#f00';
     ctx.textAlign = 'center';
@@ -4320,7 +4344,7 @@ function confirmEndConsultationByFirebaseKey(firebaseKey) {
             updateStatsGlobal();
         })
         .catch(error => {
-            console.error("Error terminando consulta:", error);
+            
             if (endButton) {
                 hideLoadingButton(endButton);
             }
@@ -4332,13 +4356,13 @@ function confirmEndConsultationByFirebaseKey(firebaseKey) {
 
 // Funciones de navegación para onclick en HTML
 function toggleSubmenuHTML(categoryBtnId, submenuId) {
-    console.log('🔥 Toggle submenu:', categoryBtnId, submenuId);
+    
     
     const categoryBtn = document.getElementById(categoryBtnId);
     const submenu = document.getElementById(submenuId);
     
     if (!categoryBtn || !submenu) {
-        console.error('❌ Elementos no encontrados:', { categoryBtn: !!categoryBtn, submenu: !!submenu });
+        
         return;
     }
     
@@ -4364,20 +4388,20 @@ function toggleSubmenuHTML(categoryBtnId, submenuId) {
     if (wasActive) {
         submenu.classList.remove('active');
         categoryBtn.classList.remove('active');
-        console.log('📉 Submenu cerrado');
+        
     } else {
         submenu.classList.add('active');
         categoryBtn.classList.add('active');
-        console.log('📈 Submenu abierto');
+        
     }
 }
 
 function navigateToSection(sectionId, buttonId) {
-    console.log('🎯 Navegando a sección:', sectionId);
+    
     
     const section = document.getElementById(sectionId);
     if (!section) {
-        console.error('❌ Sección no encontrada:', sectionId);
+        
         return;
     }
     
@@ -4397,12 +4421,12 @@ function navigateToSection(sectionId, buttonId) {
             }
         }
     } else {
-        console.error('❌ Función showSection no disponible');
+        
     }
 }
 
 function navigateToConsultas() {
-    console.log('🎯 Navegando a Ver Consultas');
+    
     
     // Inicializar filtro de fecha
     const filterDateInput = document.getElementById('filterDate');
@@ -4432,18 +4456,18 @@ function navigateToConsultas() {
 }
 
 function navigateToLab(sectionId, buttonId) {
-    console.log('🎯 Navegando a laboratorio:', sectionId);
+    
     
     if (typeof showLabSection === 'function') {
         showLabSection(sectionId);
         setActiveSubmenuButtonHTML(buttonId);
     } else {
-        console.warn('⚠️ Función showLabSection no disponible');
+        
     }
 }
 
 function navigateToEstadisticas() {
-    console.log('🎯 Navegando a Estadísticas');
+    
     
     const section = document.getElementById('estadisticasSection');
     if (section) {
@@ -4462,10 +4486,10 @@ function navigateToEstadisticas() {
                 waitTimeSection.style.display = 'block';
             }
         } else {
-            console.error('❌ Función showSection no disponible');
+            
         }
     } else {
-        console.error('❌ Sección estadisticasSection no encontrada');
+        
     }
 }
 
@@ -4478,6 +4502,7 @@ function setActiveSubmenuButtonHTML(buttonId) {
     const button = document.getElementById(buttonId);
     if (button) {
         button.classList.add('active');
-        console.log('🔥 Botón activo:', buttonId);
+        
     }
 }
+

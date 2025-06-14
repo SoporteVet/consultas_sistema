@@ -708,6 +708,24 @@ section h2 i {
   font-size: 0.9rem;
 }
 
+.listo-facturar-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 10px;
+  border-radius: 15px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 8px;
+  background-color: rgba(243, 156, 18, 0.12);
+  color: #d68910;
+  border: 1px solid rgba(243, 156, 18, 0.2);
+}
+
+.listo-facturar-badge i {
+  margin-right: 5px;
+  font-size: 0.9rem;
+}
+
 .ticket-actions {
   display: flex;
   gap: 8px;
