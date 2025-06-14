@@ -8,6 +8,8 @@ function safeAddEventListener(elementId, eventType, handler) {
   const element = document.getElementById(elementId);
   if (element) {
     element.addEventListener(eventType, handler);
+  } else {
+    console.warn(`Element with ID '${elementId}' not found for event listener`);
   }
 }
 
@@ -67,7 +69,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show the UI elements based on user role
         applyRoleBasedUI(userData.role);
         
-        // Successfully authenticated
+        console.log("Successfully authenticated as", userData.role);
         
         // Continue with loading data
         showLoading();
@@ -79,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const estadisticasSection = document.getElementById('estadisticasSection');
         
         if (!crearTicketSection || !verTicketsSection) {
-            // Critical sections missing in the DOM
+            console.error("Critical sections missing in the DOM. Check your HTML structure.");
             hideLoading();
             showNotification('Error: Estructura HTML incompleta', 'error');
             return;
@@ -132,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Inicializar sistema de laboratorio
                 if (typeof initLaboratorioSystem === 'function') {
-                    // Inicializando sistema de laboratorio
+                    console.log('Inicializando sistema de laboratorio desde index.js');
                     initLaboratorioSystem();
                     window.laboratorioInitialized = true;
                 } else {
@@ -898,6 +900,7 @@ filterBtns.forEach(btn => {
 function showSection(section) {
     // Check if section exists
     if (!section) {
+        
         return; // Exit the function early
     }
     
@@ -910,12 +913,6 @@ function showSection(section) {
     
     // Mostrar la sección solicitada con animación
     section.classList.remove('hidden');
-    
-    // Scroll to top of content area
-    const contentArea = document.querySelector('.content');
-    if (contentArea) {
-        contentArea.scrollTop = 0;
-    }
     
     // Aplicar un pequeño retraso para la animación
     setTimeout(() => {
@@ -942,12 +939,97 @@ function setActiveButton(button) {
     button.classList.add('active');
 }
 
-// Función auxiliar para formatear el contenido de Por Cobrar
-function formatPorCobrarDisplay(porCobrarText) {
-    if (!porCobrarText) return '';
+// Función para generar string legacy de por cobrar (solo contenido marcado como listo)
+function generateLegacyPorCobrarString(porCobrarData) {
+    if (!porCobrarData || typeof porCobrarData !== 'object') return '';
     
-    // Dividir por las líneas de separación con timestamp
-    const lines = porCobrarText.split('\n');
+    let result = '';
+    Object.keys(porCobrarData).forEach(userRole => {
+        const userData = porCobrarData[userRole];
+        if (userData && userData.listoParaFacturar && userData.content) {
+            if (result) result += '\n\n';
+            
+            const timestamp = userData.lastUpdated ? 
+                new Date(userData.lastUpdated).toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) : '';
+            
+            const userName = userData.userName || userRole;
+            result += `--- ${timestamp} (${userName}) ---\n${userData.content}`;
+        }
+    });
+    
+    return result;
+}
+
+// Función para obtener contenido de por cobrar visible para el usuario actual
+function getVisiblePorCobrarContent(ticket) {
+    const currentUserRole = sessionStorage.getItem('userRole') || 'recepcion';
+    
+    if (!ticket.porCobrarData || typeof ticket.porCobrarData !== 'object') {
+        // Estructura antigua, usar lógica legacy
+        return ticket.porCobrar || '';
+    }
+    
+    let visibleContent = '';
+    
+    Object.keys(ticket.porCobrarData).forEach(userRole => {
+        const userData = ticket.porCobrarData[userRole];
+        if (userData && userData.content) {
+            // El usuario puede ver su propio contenido siempre
+            // Los demás usuarios solo ven contenido marcado como listo para facturar
+            if (userRole === currentUserRole || userData.listoParaFacturar) {
+                if (visibleContent) visibleContent += '\n\n';
+                
+                const timestamp = userData.lastUpdated ? 
+                    new Date(userData.lastUpdated).toLocaleString('es-ES', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : '';
+                
+                const userName = userData.userName || userRole;
+                
+                // Usar el formato original con líneas ---
+                visibleContent += `--- ${timestamp} (${userName}) ---\n${userData.content}`;
+            }
+        }
+    });
+    
+    return visibleContent;
+}
+
+// Función para obtener contenido editable para el usuario actual
+function getEditablePorCobrarContent(ticket) {
+    const currentUserRole = sessionStorage.getItem('userRole') || 'recepcion';
+    
+    if (!ticket.porCobrarData || typeof ticket.porCobrarData !== 'object') {
+        // Estructura antigua, devolver contenido completo
+        return ticket.porCobrar || '';
+    }
+    
+    // Devolver solo el contenido del usuario actual
+    if (ticket.porCobrarData[currentUserRole] && ticket.porCobrarData[currentUserRole].content) {
+        return ticket.porCobrarData[currentUserRole].content;
+    }
+    
+    return '';
+}
+
+// Función auxiliar para formatear el contenido de Por Cobrar
+function formatPorCobrarDisplay(ticket) {
+    const currentUserRole = sessionStorage.getItem('userRole') || 'recepcion';
+    const visibleContent = getVisiblePorCobrarContent(ticket);
+    if (!visibleContent) return '';
+    
+    // Usar siempre el formato de estructura antigua para mantener diseño original
+    const lines = visibleContent.split('\n');
     let formattedContent = '';
     let currentSection = '';
     
@@ -987,7 +1069,7 @@ function formatPorCobrarDisplay(porCobrarText) {
         }
     }
     
-    return formattedContent || porCobrarText;
+    return formattedContent || visibleContent;
 }
 
 // Función para cargar tickets desde Firebase
@@ -1001,10 +1083,22 @@ function loadTickets() {
                 Object.keys(data).forEach(key => {
                     const entry = data[key];
                     if (entry && entry.id != null && entry.mascota) {
-                        tickets.push({
-                            ...entry,
-                            firebaseKey: key
-                        });
+                        // Migrar estructura antigua de porCobrar si es necesario
+                        let migratedEntry = { ...entry, firebaseKey: key };
+                        
+                        if (entry.porCobrar && typeof entry.porCobrar === 'string' && !entry.porCobrarData) {
+                            // Migrar estructura antigua a nueva estructura
+                            migratedEntry.porCobrarData = {
+                                admin: {
+                                    content: entry.porCobrar,
+                                    listoParaFacturar: entry.listoParaFacturar || true, // Asumir que datos existentes están listos
+                                    lastUpdated: new Date().toISOString(),
+                                    userName: 'Sistema'
+                                }
+                            };
+                        }
+                        
+                        tickets.push(migratedEntry);
                         if (entry.id >= currentTicketId) currentTicketId = entry.id + 1;
                     } else {
                         ticketsRef.child(key).remove();
@@ -1092,6 +1186,7 @@ function addTicket() {
         let urgencia = document.getElementById('urgencia')?.value || 'consulta';
         urgencia = urgencia.toLowerCase();
         const porCobrar = document.getElementById('porCobrar')?.value || '';
+        const listoParaFacturar = document.getElementById('listoParaFacturar')?.checked || false;
         const idPaciente = document.getElementById('idPaciente')?.value || '';
         const doctorAtiende = document.getElementById('doctorAtiende')?.value || '';
         const asistenteAtiende = document.getElementById('asistenteAtiende')?.value || '';
@@ -1134,6 +1229,14 @@ function addTicket() {
             fecha: fecha.toISOString(),
             horaCreacion: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
             porCobrar,
+            listoParaFacturar,
+            porCobrarData: listoParaFacturar && porCobrar ? 
+                { [sessionStorage.getItem('userRole') || 'recepcion']: {
+                    content: porCobrar,
+                    listoParaFacturar: listoParaFacturar,
+                    lastUpdated: new Date().toISOString(),
+                    userName: sessionStorage.getItem('userName') || 'Usuario'
+                }} : {},
             expediente,
             // Asignar hora de llegada automáticamente
             horaLlegada: fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
@@ -1582,8 +1685,7 @@ function renderTickets(filter = 'todos', date = null) {
                         ${estadoText}
                     </div>
                     ${ticket.expediente ? `<div class="expediente-badge"><i class="fas fa-file-medical"></i> <strong>Expediente médico:</strong> Registrado</div>` : ''}
-                    ${ticket.porCobrar ? `<div class="por-cobrar-info"><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(ticket.porCobrar)}</div></div>` : ''}
-                    ${ticket.listoParaFacturar ? `<div class="listo-facturar-badge"><i class="fas fa-receipt"></i> <strong>Listo para facturar</strong></div>` : ''}
+                    ${ticket.porCobrar || getVisiblePorCobrarContent(ticket) ? `<div class="por-cobrar-info"><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(ticket)}</div></div>` : ''}
                 </div>
             `;
         }
@@ -2135,8 +2237,7 @@ function editTicket(randomId) {
         horaLlegada: ticket.horaLlegada || '',
         horaAtencion: ticket.horaAtencion || '',
         tipoServicio: ticket.tipoServicio || 'consulta',
-        expediente: ticket.expediente || false,
-        listoParaFacturar: ticket.listoParaFacturar || false
+        expediente: ticket.expediente || false
     };
     
     // Separar el médico y asistente si existe
@@ -2167,10 +2268,10 @@ function editTicket(randomId) {
             <label for="editPorCobrar">Por Cobrar</label>
             <div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; padding: 8px; margin-bottom: 8px; font-size: 13px;">
                 <i class="fas fa-info-circle" style="color: #4caf50; margin-right: 5px;"></i>
-                <strong>Modo Acumulativo:</strong> El contenido existente se preservará. Solo agregue nueva información al final.
+                <strong>Contenido individual:</strong> Solo usted puede ver este contenido hasta marcarlo como "Listo para facturar".
             </div>
             <textarea id="editPorCobrar" 
-                   placeholder="Introduzca nueva información que hay que cobrar al cliente..."
+                   placeholder="Introduzca información que hay que cobrar al cliente..."
                    style="width: 100%; 
                           min-height: 120px; 
                           resize: vertical; 
@@ -2178,7 +2279,19 @@ function editTicket(randomId) {
                           line-height: 1.5;
                           padding: 12px;
                           white-space: pre-wrap;
-                          word-wrap: break-word;">${ticket.porCobrar || ''}</textarea>
+                          word-wrap: break-word;">${getEditablePorCobrarContent(ticket)}</textarea>
+            
+            <!-- Campo para marcar como listo para facturar -->
+            <div class="form-group" style="margin-top: 10px;">
+                <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50;">
+                  <input type="checkbox" id="editListoParaFacturar" ${(ticket.porCobrarData && ticket.porCobrarData[sessionStorage.getItem('userRole')] && ticket.porCobrarData[sessionStorage.getItem('userRole')].listoParaFacturar) ? 'checked' : ''} style="width: 18px; height: 18px; cursor: pointer;">
+                  <i class="fas fa-money-check-alt" style="color: #f39c12;"></i>
+                  Listo para facturar
+                </label>
+                <small style="display: block; margin-top: 5px; color: #7f8c8d; font-style: italic;">
+                  Marcar cuando su información de "Por Cobrar" esté lista para ser visible a todos los usuarios
+                </small>
+            </div>
         </div>`
       : `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
@@ -2193,7 +2306,7 @@ function editTicket(randomId) {
                           word-wrap: break-word;
                           background:#f5f5f5; 
                           color:#888; 
-                          cursor:not-allowed;">${ticket.porCobrar || ''}</textarea>
+                          cursor:not-allowed;">${getVisiblePorCobrarContent(ticket)}</textarea>
         </div>`;
     
     // Mostrar/ocultar campo Hora de Cita según el rol en edición
@@ -2404,20 +2517,6 @@ function editTicket(randomId) {
                 </div>
                 ` : ''}
                 
-                ${userRole === 'consulta_externa' || userRole === 'admin' ? `
-                <div class="form-group" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
-                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50;">
-                        <input type="checkbox" id="editListoParaFacturar" ${safeTicket.listoParaFacturar ? 'checked' : ''} 
-                               style="width: 18px; height: 18px; cursor: pointer;">
-                        <i class="fas fa-receipt" style="color: #f39c12;"></i>
-                        Listo para facturar
-                    </label>
-                    <small style="display: block; margin-top: 5px; color: #7f8c8d; font-style: italic;">
-                        Marcar cuando la consulta esté lista para ser facturada
-                    </small>
-                </div>
-                ` : ''}
-                
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
                     <button type="submit" class="btn-save">Guardar Cambios</button>
@@ -2548,51 +2647,49 @@ function editTicket(randomId) {
         const horaAtencionValue = editHoraAtencion ? editHoraAtencion.value : '';
         const editPorCobrar = document.getElementById('editPorCobrar');
         
-        // NUEVA LÓGICA: Acumular información en "Por Cobrar" en lugar de reemplazar
-        let updatedPorCobrar = '';
+        // NUEVA LÓGICA: Manejar "Por Cobrar" específico por usuario
+        let updatedPorCobrar = ticket.porCobrar || '';
+        let updatedPorCobrarData = {};
+        
+        // Si existe estructura antigua (string), convertir a nueva estructura
+        if (typeof ticket.porCobrar === 'string') {
+            updatedPorCobrarData = { admin: { content: ticket.porCobrar, listoParaFacturar: ticket.listoParaFacturar || false } };
+        } else if (ticket.porCobrarData && typeof ticket.porCobrarData === 'object') {
+            updatedPorCobrarData = { ...ticket.porCobrarData };
+        }
+        
+        const currentUserRole = sessionStorage.getItem('userRole') || 'recepcion';
+        const currentUserName = sessionStorage.getItem('userName') || 'Usuario';
+        
+        // Obtener valor del checkbox antes de usarlo
+        const editListoParaFacturar = document.getElementById('editListoParaFacturar');
+        const listoParaFacturarValue = editListoParaFacturar ? editListoParaFacturar.checked : false;
+        
         if (editPorCobrar && canEditPorCobrar) {
-            const currentValue = editPorCobrar.value.trim();
-            const originalValue = ticket.porCobrar || '';
+            const newContent = editPorCobrar.value.trim();
             
-            // Si hay contenido nuevo después del contenido original
-            if (currentValue.length > originalValue.length && currentValue.startsWith(originalValue)) {
-                const newContent = currentValue.substring(originalValue.length).trim();
-                
-                if (newContent) {
-                    // Agregar nueva entrada con timestamp y usuario
-                    const now = new Date();
-                    const timestamp = now.toLocaleString('es-ES', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    const userName = sessionStorage.getItem('userName') || 'Usuario';
-                    
-                    const separator = originalValue ? '\n\n' : '';
-                    const newEntry = `${separator}--- ${timestamp} (${userName}) ---\n${newContent}`;
-                    
-                    updatedPorCobrar = originalValue + newEntry;
-                } else {
-                    // No hay contenido nuevo, mantener el original
-                    updatedPorCobrar = originalValue;
-                }
-            } else {
-                // Mantener el valor original si no hay cambios válidos
-                updatedPorCobrar = originalValue;
+            // Actualizar contenido específico del usuario actual
+            if (!updatedPorCobrarData[currentUserRole]) {
+                updatedPorCobrarData[currentUserRole] = {};
             }
+            
+            updatedPorCobrarData[currentUserRole].content = newContent;
+            updatedPorCobrarData[currentUserRole].listoParaFacturar = listoParaFacturarValue;
+            updatedPorCobrarData[currentUserRole].lastUpdated = new Date().toISOString();
+            updatedPorCobrarData[currentUserRole].userName = currentUserName;
+            
+            // Generar string legacy para compatibilidad (solo contenido marcado como listo)
+            updatedPorCobrar = generateLegacyPorCobrarString(updatedPorCobrarData);
         } else {
-            // Si no se puede editar o no hay campo, mantener el valor original
+            // Si no se puede editar, mantener valores originales
             updatedPorCobrar = ticket.porCobrar || '';
+            if (ticket.porCobrarData) {
+                updatedPorCobrarData = { ...ticket.porCobrarData };
+            }
         }
         
         const editExpediente = document.getElementById('editExpediente');
         const expedienteValue = editExpediente ? editExpediente.checked : false;
-        
-        const editListoParaFacturar = document.getElementById('editListoParaFacturar');
-        // Si el checkbox no existe (usuario sin permisos), mantener el valor original
-        const listoParaFacturarValue = editListoParaFacturar ? editListoParaFacturar.checked : (ticket.listoParaFacturar || false);
         
         const updatedTicket = {
             id: safeTicket.id,
@@ -2612,8 +2709,9 @@ function editTicket(randomId) {
             tipoServicio: document.getElementById('editTipoServicio').value,
             firebaseKey: safeTicket.firebaseKey,
             porCobrar: updatedPorCobrar,
-            expediente: expedienteValue,
-            listoParaFacturar: listoParaFacturarValue
+            porCobrarData: updatedPorCobrarData,
+            listoParaFacturar: listoParaFacturarValue,
+            expediente: expedienteValue
         };
         
         // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
