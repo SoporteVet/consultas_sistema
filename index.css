@@ -2095,12 +2095,6 @@ body.admin-role .backup-controls button {
   padding: 0;
 }
 
-/* Remove any default margin or padding from the section */
-#estadisticasSection {
-  margin: 0;
-  padding: 0;
-}
-
 /* estilos selector de fecha */
 .date-filter {
   display: flex;

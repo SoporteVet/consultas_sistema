@@ -287,18 +287,6 @@
                        padding: 12px;
                        white-space: pre-wrap;
                        word-wrap: break-word;"></textarea>
-              
-              <!-- Campo para marcar como listo para facturar -->
-              <div class="form-group" style="margin-top: 10px;">
-                <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50;">
-                  <input type="checkbox" id="listoParaFacturar" style="width: 18px; height: 18px; cursor: pointer;">
-                  <i class="fas fa-money-check-alt" style="color: #f39c12;"></i>
-                  Listo para facturar
-                </label>
-                <small style="display: block; margin-top: 5px; color: #7f8c8d; font-style: italic;">
-                  Marcar cuando la información de "Por Cobrar" esté lista para ser visible a todos los usuarios
-                </small>
-              </div>
             </div>
             <div class="form-group expediente-field" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
               <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50;">
@@ -506,7 +494,6 @@
                   <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
                   <option value="Medico Externo">Médico Externo</option>
                   <option value="Medico Internista">Médico Internista</option>
-                  <option value="N/A">N/A</option>
                 </select>
               </div>
               <div class="form-group">
@@ -527,19 +514,7 @@
                   <option value="no_aplica">No Aplica</option>
                   <option value="castracion">Paquete de Castración</option>
                   <option value="limpieza">Paquete de Limpieza</option>
-                  <option value="regalia">Regalía</option>
                 </select>
-              </div>
-              
-              <!-- Campo de firma electrónica (solo visible para admin + Dr. Randall + regalía) -->
-              <div class="form-group" id="labFirmaElectronicaContainer" style="display: none;">
-                <label for="labFirmaElectronica">Firma Electrónica</label>
-                <div class="firma-electronica-wrapper">
-                  <canvas id="labFirmaElectronica" width="400" height="150" style="border: 2px solid #ddd; border-radius: 5px; background: white; cursor: crosshair;"></canvas>
-                  <div class="firma-controls">
-                    <button type="button" class="btn-clear-firma" onclick="clearSignature()">Limpiar Firma</button>
-                  </div>
-                </div>
               </div>
             </div>
 
@@ -622,7 +597,6 @@
             <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
             <option value="Medico Externo">Médico Externo</option>
             <option value="Medico Internista">Médico Internista</option>
-            <option value="N/A">N/A</option>
           </select>
         </div>
 
@@ -631,8 +605,8 @@
           <button class="lab-filter-btn active" data-filter="todos">Todos</button>
           <button class="lab-filter-btn" data-filter="pendiente">Pendiente</button>
           <button class="lab-filter-btn" data-filter="procesando">En Proceso</button>
-          <button class="lab-filter-btn" data-filter="reportado">Reportado de Laboratorio</button>
-          <button class="lab-filter-btn" data-filter="reportado_cliente">Reportado al Cliente<br>(para consulta externa/internos)</button>
+          <button class="lab-filter-btn" data-filter="completado">Completados</button>
+          <button class="lab-filter-btn" data-filter="reportado">Reportados</button>
         </div>
         
         <!-- Contenedor de tickets de laboratorio -->
@@ -665,21 +639,11 @@
               </div>
             </div>
             <div class="stat-card">
-              <i class="fas fa-flask"></i>
+              <i class="fas fa-check-circle"></i>
               <div class="stat-info">
-                <span class="stat-number" id="reportadosLab">0</span>
-                <span class="stat-label">Reportado Lab</span>
+                <span class="stat-number" id="completadosLab">0</span>
+                <span class="stat-label">Completados</span>
               </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-user-check"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="reportadosClienteLab">0</span>
-                <span class="stat-label">Reportado Cliente</span>
-              </div>
-            </div>
-
-            </div>
             </div>
           </div>
         </div>
