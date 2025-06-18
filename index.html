@@ -459,6 +459,11 @@
                     Total: <span id="totalPrice">₡0</span>
                   </span>
                 </div>
+                <!-- Nota sobre precios -->
+                <div class="price-disclaimer" style="margin-top: 10px; padding: 8px 12px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; font-size: 0.85em; color: #856404; text-align: center;">
+                  <i class="fas fa-exclamation-triangle" style="margin-right: 5px; color: #f39c12;"></i>
+                  <strong>Nota:</strong> Los precios de servicios pueden ser no exactos, consultar siempre en sistema.
+                </div>
               </div>
             </div>
 
@@ -524,8 +529,8 @@
                 <select id="labEstado" required>
                   <option value="pendiente">Pendiente</option>
                   <option value="procesando">En proceso</option>
-                  <option value="completado">Completado</option>
-                  <option value="reportado">Reportado</option>
+                  <option value="reportado">Reportado Lab</option>
+                  <option value="reportado_cliente">Reportado al Cliente</option>
                 </select>
               </div>
               <div class="form-group">
@@ -605,8 +610,8 @@
           <button class="lab-filter-btn active" data-filter="todos">Todos</button>
           <button class="lab-filter-btn" data-filter="pendiente">Pendiente</button>
           <button class="lab-filter-btn" data-filter="procesando">En Proceso</button>
-          <button class="lab-filter-btn" data-filter="completado">Completados</button>
-          <button class="lab-filter-btn" data-filter="reportado">Reportados</button>
+          <button class="lab-filter-btn" data-filter="reportado">Reportados Lab</button>
+          <button class="lab-filter-btn" data-filter="reportado_cliente">Por reportar al cliente <br> consulta externa/internos</button>
         </div>
         
         <!-- Contenedor de tickets de laboratorio -->
@@ -639,10 +644,17 @@
               </div>
             </div>
             <div class="stat-card">
-              <i class="fas fa-check-circle"></i>
+              <i class="fas fa-flask"></i>
               <div class="stat-info">
-                <span class="stat-number" id="completadosLab">0</span>
-                <span class="stat-label">Completados</span>
+                <span class="stat-number" id="reportadosLab">0</span>
+                <span class="stat-label">Reportados Lab</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-paper-plane"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="reportadosClienteLab">0</span>
+                <span class="stat-label">Por reportar al cliente</span>
               </div>
             </div>
           </div>

@@ -1225,11 +1225,8 @@ function filterLabTickets(tickets, filter) {
     }
       return tickets.filter(ticket => {        switch (filter) {
             case 'pendiente':
-                return ticket.estado === 'pendiente';
-            case 'procesando':
+                return ticket.estado === 'pendiente';            case 'procesando':
                 return ticket.estado === 'procesando';
-            case 'completado':
-                return ticket.estado === 'completado';
             case 'reportado':
                 return ticket.estado === 'reportado';
             case 'reportado_cliente':
@@ -1540,8 +1537,7 @@ function getLabStatusDisplay(estado) {
     const statuses = {
         'pendiente': 'Pendiente',
         'procesando': 'En proceso',
-        'completado': 'Completado',
-        'reportado': 'Reportado de Laboratorio',
+        'reportado': 'Reportado Lab',
         'reportado_cliente': 'Reportado al Cliente'
     };
     return statuses[estado] || estado;

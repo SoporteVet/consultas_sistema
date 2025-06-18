@@ -201,6 +201,13 @@ const SERVICIOS_LABORATORIO = {
         precio: 0,
         ubicacion: "Lab/Recep"
       },
+        {
+        id: "test_parvovirus",
+        nombre: "Test Parvovirus",
+        descripcion: "Prueba rápida para detección de antígeno de parvovirus canino.",
+        precio: 0,
+        ubicacion: "Lab/Recep"
+      },
       {
         id: "parvovirus_corona_giardia",
         nombre: "ParvoVirus+corona+giardia",
@@ -448,7 +455,7 @@ const SERVICIOS_LABORATORIO = {
         id: "combo_renal",
         nombre: "Combo (Crea+Bun+Urea+RelaciónBun/Crea+P)",
         descripcion: "",
-        precio: 10000
+        precio: 18000
       },
       {
         id: "acido_urico",
