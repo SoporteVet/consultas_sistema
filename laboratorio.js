@@ -1052,18 +1052,19 @@ function handleLabTicketSubmit(e) {
         cedula: document.getElementById('labCedula').value.trim(),
         mascota: document.getElementById('labMascota').value.trim(),
         tipoMascota: document.getElementById('labTipoMascota').value,
+        // Nuevos campos agregados
         edad: document.getElementById('labEdad').value.trim(),
         raza: document.getElementById('labRaza').value,
         peso: document.getElementById('labPeso').value.trim(),
         sexo: document.getElementById('labSexo').value,
         idPaciente: document.getElementById('labIdPaciente').value.trim(),
         fecha: document.getElementById('labFecha').value,
+        // Reemplazar tipoExamen con los servicios seleccionados
         serviciosSeleccionados: serviciosData.servicios,
         serviciosIds: serviciosData.serviciosIds,
         serviciosNombres: serviciosData.serviciosNombres,
         totalServicios: serviciosData.total,
-        prioridad: document.getElementById('labPrioridad').value,
-        medicoSolicita: document.getElementById('labMedicoSolicita').value.trim(),
+        prioridad: document.getElementById('labPrioridad').value,        medicoSolicita: document.getElementById('labMedicoSolicita').value.trim(),
         observaciones: document.getElementById('labObservaciones').value.trim(),
         notasLaboratorio: document.getElementById('labNotasLaboratorio').value.trim(),
         paquete: document.getElementById('labPaquete').value,
@@ -1073,8 +1074,7 @@ function handleLabTicketSubmit(e) {
         departamento: document.getElementById('labDepartamento').value,
         fechaCreacion: getLocalDateString(),
         horaCreacion: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-        estado: document.getElementById('labEstado').value,
-        firmaElectronica: document.getElementById('firmaBase64').value
+        estado: document.getElementById('labEstado').value
     };
     
     // Validar datos requeridos
@@ -1197,9 +1197,13 @@ function renderLabTickets(filter = 'todos', medicoFilter = '') {
     
     // Filtrar tickets por estado
     let filteredTickets = filterLabTickets(labTickets, filter);
-      // Aplicar filtro de fecha si está especificado
+
+    // Solo aplicar filtro de fecha para reportado y reportado_cliente
     const fechaFilter = document.getElementById('labFilterDate');
-    if (fechaFilter && fechaFilter.value) {
+    if (
+        (filter === 'reportado' || filter === 'reportado_cliente') &&
+        fechaFilter && fechaFilter.value
+    ) {
         const selectedDate = fechaFilter.value;
         filteredTickets = filteredTickets.filter(ticket => {
             // Verificar múltiples campos de fecha para mayor compatibilidad
@@ -1209,9 +1213,12 @@ function renderLabTickets(filter = 'todos', medicoFilter = '') {
                    (ticket.fechaReportadoCliente && ticket.fechaReportadoCliente === selectedDate);
         });
     }
-    
-    // Aplicar filtro de médico si está especificado
-    if (medicoFilter && medicoFilter.trim() !== '') {
+    // Para pendiente y procesando, NO filtrar por fecha
+    // Aplicar filtro de médico solo si corresponde
+    if (
+        (filter === 'reportado' || filter === 'reportado_cliente') &&
+        medicoFilter && medicoFilter.trim() !== ''
+    ) {
         filteredTickets = filteredTickets.filter(ticket => {
             return ticket.medicoSolicita && 
                    ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase());
@@ -1773,7 +1780,6 @@ function editLabTicket(randomId) {
                         </select>
                     </div>
                 </div>
-                ${ticket.firmaElectronica ? `<div class='firma-electronica-preview' style='margin-bottom:16px;'><label>Firma Electrónica:</label><br><img src='${ticket.firmaElectronica}' alt='Firma Electrónica' style='max-width:320px;max-height:120px;border:1px solid #aaa;border-radius:6px;background:#fafafa;margin-top:8px;'></div>` : ''}
                   <div class="form-row">
                     <div class="form-group">
                         <label>Correo Electrónico</label>
@@ -2873,77 +2879,3 @@ function getUserReportOption(ticket) {
         <option value="reportado_cliente" ${ticket.estado === 'reportado_cliente' ? 'selected' : ''}>Reportado al Cliente</option>
     `;
 }
-
-// Mostrar/ocultar el campo de firma electrónica según el médico seleccionado
-function setupFirmaElectronicaLab() {
-  const medicoSelect = document.getElementById('labMedicoSolicita');
-  const firmaContainer = document.getElementById('firmaContainer');
-  const firmaCanvas = document.getElementById('firmaCanvas');
-  const limpiarFirmaBtn = document.getElementById('limpiarFirmaBtn');
-  const firmaBase64Input = document.getElementById('firmaBase64');
-
-  if (!medicoSelect || !firmaContainer || !firmaCanvas || !firmaBase64Input) return;
-
-  function checkShowFirma() {
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole === 'admin' && medicoSelect.value === 'Dr. Randall Azofeifa') {
-      firmaContainer.style.display = '';
-    } else {
-      firmaContainer.style.display = 'none';
-      firmaBase64Input.value = '';
-      const ctx = firmaCanvas.getContext('2d');
-      ctx.clearRect(0, 0, firmaCanvas.width, firmaCanvas.height);
-    }
-  }
-  medicoSelect.addEventListener('change', checkShowFirma);
-  checkShowFirma();
-
-  // Lógica de dibujo en canvas
-  let drawing = false;
-  let lastX = 0, lastY = 0;
-  firmaCanvas.addEventListener('mousedown', function(e) {
-    drawing = true;
-    [lastX, lastY] = [e.offsetX, e.offsetY];
-  });
-  firmaCanvas.addEventListener('mousemove', function(e) {
-    if (!drawing) return;
-    const ctx = firmaCanvas.getContext('2d');
-    ctx.strokeStyle = '#222';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(lastX, lastY);
-    ctx.lineTo(e.offsetX, e.offsetY);
-    ctx.stroke();
-    [lastX, lastY] = [e.offsetX, e.offsetY];
-  });
-  firmaCanvas.addEventListener('mouseup', function() { drawing = false; });
-  firmaCanvas.addEventListener('mouseleave', function() { drawing = false; });
-
-  // Limpiar firma
-  limpiarFirmaBtn.addEventListener('click', function() {
-    const ctx = firmaCanvas.getContext('2d');
-    ctx.clearRect(0, 0, firmaCanvas.width, firmaCanvas.height);
-    firmaBase64Input.value = '';
-  });
-
-  // Guardar la firma en base64 al enviar el formulario
-  const labForm = document.getElementById('labTicketForm');
-  if (labForm) {
-    labForm.addEventListener('submit', function() {
-      if (firmaContainer.style.display !== 'none') {
-        firmaBase64Input.value = firmaCanvas.toDataURL('image/png');
-      } else {
-        firmaBase64Input.value = '';
-      }
-    });
-  }
-}
-
-document.addEventListener('DOMContentLoaded', setupFirmaElectronicaLab);
-
-// Al guardar el ticket, incluir la firma si existe
-// (En handleLabTicketSubmit, agregar:)
-// ...
-// firmaElectronica: document.getElementById('firmaBase64').value,
-// ...
