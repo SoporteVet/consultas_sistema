@@ -1579,6 +1579,7 @@ function renderTickets(filter = 'todos', date = null) {
                         ${estadoText}
                     </div>
                     ${ticket.expediente ? `<div class="expediente-badge"><i class="fas fa-file-medical"></i> <strong>Expediente médico:</strong> Registrado</div>` : ''}
+                    ${ticket.listoParaFacturar ? `<div class="listo-para-facturar-badge"><i class="fas fa-file-invoice-dollar"></i> <strong>Listo para facturar ✓</strong></div>` : ''}
                     ${ticket.porCobrar ? `<div class="por-cobrar-info"><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(ticket.porCobrar)}</div></div>` : ''}
                 </div>
             `;
@@ -1690,6 +1691,23 @@ function renderTickets(filter = 'todos', date = null) {
                 border: 2px solid #b47ddb;
                 box-shadow: 0 2px 12px 0 rgba(142,36,170,0.08);
             }
+            .listo-para-facturar-badge {
+                background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+                color: white;
+                padding: 6px 12px;
+                border-radius: 20px;
+                font-size: 0.9em;
+                font-weight: 600;
+                display: inline-block;
+                margin: 5px 0;
+                box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+                animation: pulseGreen 2s infinite;
+            }
+            @keyframes pulseGreen {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.05); }
+                100% { transform: scale(1); }
+            }
             @keyframes pulseUrgent {
                 0% { transform: scale(1); }
                 50% { transform: scale(1.07); }
@@ -1742,6 +1760,7 @@ function mostrarHorario() {
     horarioBody.innerHTML = '';
     
     if (ticketsDelDia.length === 0) {
+
         horarioBody.innerHTML = `
             <tr>
                 <td colspan="12" class="no-data">
@@ -1825,7 +1844,7 @@ function mostrarHorario() {
             <td>${tipoLabel}</td>
             <td>${estadoLabel}</td>
             <td class="${urgenciaClass}">${(ticket.urgencia || '').toUpperCase()}</td>
-            <td>${ticket.medicoAtiene || '-'}</td>
+            <td>${ticket.medicoAtiende || '-'}</td>
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
             <td>${ticket.horaAtencion || '-'}</td>
@@ -2131,7 +2150,8 @@ function editTicket(randomId) {
         horaLlegada: ticket.horaLlegada || '',
         horaAtencion: ticket.horaAtencion || '',
         tipoServicio: ticket.tipoServicio || 'consulta',
-        expediente: ticket.expediente || false
+        expediente: ticket.expediente || false,
+        listoParaFacturar: ticket.listoParaFacturar || false
     };
     
     // Separar el médico y asistente si existe
@@ -2157,29 +2177,35 @@ function editTicket(randomId) {
     if (!ticket.editCount) ticket.editCount = 0;
     // Solo puede editar "porCobrar" si NO es recepcion y (si no es consulta_externa o no ha alcanzado el límite)
     const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consulta_externa' || ticket.editCount < 7);
+    
+    // Mostrar historial de Por Cobrar arriba (solo lectura)
+    let porCobrarHistorial = '';
+    if (ticket.porCobrar) {
+      porCobrarHistorial = `<div class='por-cobrar-historial' style='background:#fffbe6;border:1px solid #ffe082;border-radius:4px;padding:8px 12px;margin-bottom:10px;'>${formatPorCobrarDisplay(ticket.porCobrar)}</div>`;
+    }
+    // Textarea vacío para nueva entrada
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
-            <div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; padding: 8px; margin-bottom: 8px; font-size: 13px;">
-                <i class="fas fa-info-circle" style="color: #4caf50; margin-right: 5px;"></i>
-                <strong>Modo Acumulativo:</strong> El contenido existente se preservará. Solo agregue nueva información al final.
-            </div>
+            ${porCobrarHistorial}
             <textarea id="editPorCobrar" 
-                   placeholder="Introduzca nueva información que hay que cobrar al cliente..."
+                   placeholder="Agregue nueva información que hay que cobrar al cliente..."
                    style="width: 100%; 
-                          min-height: 120px; 
+                          min-height: 80px; 
                           resize: vertical; 
                           font-size: 14px; 
                           line-height: 1.5;
                           padding: 12px;
                           white-space: pre-wrap;
-                          word-wrap: break-word;">${ticket.porCobrar || ''}</textarea>
+                          word-wrap: break-word;
+                          border: 1px solid #ddd;"></textarea>
         </div>`
       : `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
+            ${porCobrarHistorial}
             <textarea id="editPorCobrar" readonly 
                    style="width: 100%; 
-                          min-height: 120px; 
+                          min-height: 80px; 
                           resize: vertical; 
                           font-size: 14px; 
                           line-height: 1.5;
@@ -2188,8 +2214,59 @@ function editTicket(randomId) {
                           word-wrap: break-word;
                           background:#f5f5f5; 
                           color:#888; 
-                          cursor:not-allowed;">${ticket.porCobrar || ''}</textarea>
+                          cursor:not-allowed;"></textarea>
         </div>`;
+
+    // Protección en el textarea para evitar borrar contenido existente
+    setTimeout(() => {
+      const porCobrarTextarea = document.getElementById('editPorCobrar');
+      if (porCobrarTextarea && canEditPorCobrar) {
+        const originalLength = porCobrarTextarea.value.length;
+        porCobrarTextarea.addEventListener('keydown', function(e) {
+          // Permitir solo agregar al final
+          if ((e.key === 'Backspace' || e.key === 'Delete') && this.selectionStart <= originalLength) {
+            e.preventDefault();
+          }
+          // Evitar escribir en medio del texto original
+          if (this.selectionStart < originalLength) {
+            this.setSelectionRange(originalLength, originalLength);
+          }
+        });
+        porCobrarTextarea.addEventListener('paste', function(e) {
+          // Solo permitir pegar al final
+          if (this.selectionStart < originalLength) {
+            this.setSelectionRange(originalLength, originalLength);
+          }
+        });
+        // Forzar el cursor al final al enfocar
+        porCobrarTextarea.addEventListener('focus', function() {
+          this.setSelectionRange(this.value.length, this.value.length);
+        });
+      }
+    }, 0);
+
+    // Botón "Listo para facturar" - visible para todos menos visitas, color naranja sin animación
+    const listoParaFacturarButton = userRole !== 'visitas' 
+      ? `<div class="form-group" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+            <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50;">
+                <input type="checkbox" id="editListoParaFacturar" ${safeTicket.listoParaFacturar ? 'checked' : ''} 
+                       style="width: 18px; height: 18px; cursor: pointer;">
+                <i class="fas fa-file-invoice-dollar" style="color: #ff9800;"></i>
+                <span id="listoParaFacturarText" style="color: #ff9800;">
+                    Listo para facturar
+                </span>
+            </label>
+            <small style="display: block; margin-top: 5px; color: #7f8c8d; font-style: italic;">
+                Marcar cuando el paciente esté listo para ser facturado
+            </small>
+        </div>`
+      : '';
+
+    // Eliminar animación de badge en CSS si existe
+    const styleTag = document.getElementById('urgencia-styles');
+    if (styleTag) {
+      styleTag.textContent = styleTag.textContent.replace(/\.listo-para-facturar-badge\s*\{[^}]*animation:[^;]+;[^}]*\}/g, '.listo-para-facturar-badge { background: #ff9800; color: white; padding: 6px 12px; border-radius: 20px; font-size: 0.9em; font-weight: 600; display: inline-block; margin: 5px 0; box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3); }');
+    }
     
     // Mostrar/ocultar campo Hora de Cita según el rol en edición
     const canShowHoraCita = ["admin", "recepción", "quirofano"].includes(userRole);
@@ -2399,6 +2476,8 @@ function editTicket(randomId) {
                 </div>
                 ` : ''}
                 
+                ${listoParaFacturarButton}
+                
                 <div class="modal-actions">
                     <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
                     <button type="submit" class="btn-save">Guardar Cambios</button>
@@ -2413,97 +2492,29 @@ function editTicket(randomId) {
     
     document.body.appendChild(modal);
     
-    // Implementar funcionalidad de acumulación para el campo "por cobrar"
-    const porCobrarTextarea = document.getElementById('editPorCobrar');
-    if (porCobrarTextarea && canEditPorCobrar) {
-        let originalContent = porCobrarTextarea.value;
-        
-        // Agregar texto de ayuda si el campo está vacío
-        if (!originalContent) {
-            porCobrarTextarea.placeholder = "Escriba aquí la información que hay que cobrar al cliente...";
-        } else {
-            porCobrarTextarea.placeholder = "Agregue nueva información al final...";
-        }
-        
-        // Posicionar cursor al final cuando se enfoca
-        porCobrarTextarea.addEventListener('focus', function() {
-            this.setSelectionRange(this.value.length, this.value.length);
-        });
-        
-        // Mejorar la funcionalidad de protección para ser más intuitiva
-        porCobrarTextarea.addEventListener('keydown', function(e) {
-            const cursorPosition = this.selectionStart;
-            const selectionLength = this.selectionEnd - this.selectionStart;
+    // Event listener para el checkbox "Listo para facturar" - disponible para todos excepto visitas
+    const listoParaFacturarCheckbox = document.getElementById('editListoParaFacturar');
+    if (listoParaFacturarCheckbox && userRole !== 'visitas') {
+        listoParaFacturarCheckbox.addEventListener('change', function() {
+            // Guardar inmediatamente el estado
+            const ticketToUpdate = {
+                listoParaFacturar: this.checked
+            };
             
-            // Prevenir eliminación solo si se intenta eliminar contenido original
-            if ((e.key === 'Backspace' || e.key === 'Delete') && originalContent) {
-                // Si hay selección que incluye contenido original, prevenir
-                if (selectionLength > 0 && this.selectionStart < originalContent.length) {
-                    e.preventDefault();
-                    // Mover cursor al final del contenido original
-                    this.setSelectionRange(originalContent.length, originalContent.length);
-                    return;
-                }
-                
-                // Si backspace desde dentro del contenido original, prevenir
-                if (e.key === 'Backspace' && cursorPosition <= originalContent.length) {
-                    e.preventDefault();
-                    // Mover cursor al final del contenido original
-                    this.setSelectionRange(originalContent.length, originalContent.length);
-                    return;
-                }
-                
-                // Si delete desde antes del final del contenido original, prevenir
-                if (e.key === 'Delete' && cursorPosition < originalContent.length) {
-                    e.preventDefault();
-                    // Mover cursor al final del contenido original
-                    this.setSelectionRange(originalContent.length, originalContent.length);
-                    return;
-                }
-            }
-        });
-        
-        // Verificar cambios en tiempo real para mantener contenido original
-        porCobrarTextarea.addEventListener('input', function(e) {
-            const currentContent = this.value;
+            // Referencia a Firebase
+            const ticketsRef = firebase.database().ref('tickets');
             
-            // Si se eliminó contenido original, restaurarlo
-            if (originalContent && !currentContent.startsWith(originalContent)) {
-                // Encontrar la parte nueva que se quiere agregar
-                const newPart = currentContent.replace(originalContent, '');
-                
-                // Restaurar contenido original y agregar solo la parte nueva
-                this.value = originalContent + newPart;
-                
-                // Posicionar cursor al final
-                this.setSelectionRange(this.value.length, this.value.length);
-            }
-        });
-        
-        // Manejar pegado para asegurar que se agregue al final del contenido original
-        porCobrarTextarea.addEventListener('paste', function(e) {
-            e.preventDefault();
-            
-            const pastedText = (e.clipboardData || window.clipboardData).getData('text');
-            const cursorPosition = this.selectionStart;
-            
-            // Solo permitir pegar al final del contenido original
-            if (!originalContent || cursorPosition >= originalContent.length) {
-                const currentContent = this.value;
-                const beforeCursor = currentContent.substring(0, cursorPosition);
-                const afterCursor = currentContent.substring(this.selectionEnd);
-                
-                this.value = beforeCursor + pastedText + afterCursor;
-                
-                // Posicionar cursor después del texto pegado
-                const newPosition = cursorPosition + pastedText.length;
-                this.setSelectionRange(newPosition, newPosition);
-            } else {
-                // Si se intenta pegar en el contenido original, mover al final
-                this.setSelectionRange(originalContent.length, originalContent.length);
-                this.value = originalContent + pastedText;
-                this.setSelectionRange(this.value.length, this.value.length);
-            }
+            ticketsRef.child(ticket.firebaseKey).update(ticketToUpdate)
+                .then(() => {
+                    const statusMessage = this.checked ? 'Marcado como listo para facturar' : 'Desmarcado como listo para facturar';
+                    showNotification(statusMessage, 'success');
+                })
+                .catch(error => {
+                    console.error('Error actualizando estado de facturación:', error);
+                    showNotification('Error al actualizar estado de facturación', 'error');
+                    // Revertir el cambio en caso de error
+                    this.checked = !this.checked;
+                });
         });
     }
     
@@ -2525,51 +2536,32 @@ function editTicket(randomId) {
         }
         
         // Recoger todos los datos del formulario
-        const editHoraAtencion = document.getElementById('editHoraAtencion');
-        const horaAtencionValue = editHoraAtencion ? editHoraAtencion.value : '';
-        const editPorCobrar = document.getElementById('editPorCobrar');
-        
-        // NUEVA LÓGICA: Acumular información en "Por Cobrar" en lugar de reemplazar
-        let updatedPorCobrar = '';
-        if (editPorCobrar && canEditPorCobrar) {
-            const currentValue = editPorCobrar.value.trim();
-            const originalValue = ticket.porCobrar || '';
-            
-            // Si hay contenido nuevo después del contenido original
-            if (currentValue.length > originalValue.length && currentValue.startsWith(originalValue)) {
-                const newContent = currentValue.substring(originalValue.length).trim();
-                
-                if (newContent) {
-                    // Agregar nueva entrada con timestamp y usuario
-                    const now = new Date();
-                    const timestamp = now.toLocaleString('es-ES', {
-                        year: 'numeric',
-                        month: '2-digit',
-                        day: '2-digit',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
-                    const userName = sessionStorage.getItem('userName') || 'Usuario';
-                    
-                    const separator = originalValue ? '\n\n' : '';
-                    const newEntry = `${separator}--- ${timestamp} (${userName}) ---\n${newContent}`;
-                    
-                    updatedPorCobrar = originalValue + newEntry;
-                } else {
-                    // No hay contenido nuevo, mantener el original
-                    updatedPorCobrar = originalValue;
-                }
-            } else {
-                // Mantener el valor original si no hay cambios válidos
-                updatedPorCobrar = originalValue;
-            }
-        } else {
-            // Si no se puede editar o no hay campo, mantener el valor original
-            updatedPorCobrar = ticket.porCobrar || '';
-        }
-        
         const editExpediente = document.getElementById('editExpediente');
         const expedienteValue = editExpediente ? editExpediente.checked : false;
+        
+        const editListoParaFacturar = document.getElementById('editListoParaFacturar');
+        const listoParaFacturarValue = editListoParaFacturar ? editListoParaFacturar.checked : false;
+        
+        // Procesar el campo porCobrar
+        let updatedPorCobrar = ticket.porCobrar || '';
+        const editPorCobrar = document.getElementById('editPorCobrar');
+        if (editPorCobrar && canEditPorCobrar) {
+            const newContent = editPorCobrar.value.trim();
+            if (newContent.length > 0) {
+                const timestamp = new Date().toLocaleString('es-ES', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                const userName = sessionStorage.getItem('userName') || 'Usuario';
+                const separator = updatedPorCobrar ? '\n\n' : '';
+                const newEntry = `${separator}--- ${timestamp} (${userName}) ---\n${newContent}`;
+                updatedPorCobrar = updatedPorCobrar + newEntry;
+            }
+            // Si no hay texto nuevo, no se agrega nada
+        }
         
         const updatedTicket = {
             id: safeTicket.id,
@@ -2589,7 +2581,8 @@ function editTicket(randomId) {
             tipoServicio: document.getElementById('editTipoServicio').value,
             firebaseKey: safeTicket.firebaseKey,
             porCobrar: updatedPorCobrar,
-            expediente: expedienteValue
+            expediente: expedienteValue,
+            listoParaFacturar: listoParaFacturarValue
         };
         
         // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
