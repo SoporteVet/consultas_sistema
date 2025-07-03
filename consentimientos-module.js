@@ -9,42 +9,42 @@ let consentimientos = [];
 const CONSENT_TEMPLATES = {
     anestesia: {
         name: 'Autorización para Anestesia',
-        file: 'plantilla/consentimiento_anestesia.html',
+        file: 'consentimiento_anestesia.html',
         description: 'Consentimiento para procedimientos bajo anestesia'
     },
     cirugia: {
         name: 'Consentimiento Cirugía',
-        file: 'plantilla/consentimiento_cirugia.html',
+        file: 'consentimiento_cirugia.html',
         description: 'Autorización para procedimientos quirúrgicos'
     },
     emergencias: {
         name: 'Emergencias',
-        file: 'plantilla/Emergencias_Plantilla.html',
+        file: 'Emergencias_Plantilla.html',
         description: 'Consentimiento para atención de emergencias'
     },
     internamiento: {
         name: 'Internamiento',
-        file: 'plantilla/internamiento.html',
+        file: 'internamiento.html',
         description: 'Autorización para internamiento hospitalario'
     },
     transfusion: {
         name: 'Transfusión',
-        file: 'plantilla/transfusion.html',
+        file: 'transfusion.html',
         description: 'Consentimiento para transfusión sanguínea'
     },
     cesarea: {
         name: 'Consentimiento Cesárea',
-        file: 'plantilla/consentimiento_cesarea.html',
+        file: 'consentimiento_cesarea.html',
         description: 'Autorización para cesárea'
     },
     eutanasia: {
         name: 'Consentimiento Eutanasia',
-        file: 'plantilla/consentimiento_eutanasia.html',
+        file: 'consentimiento_eutanasia.html',
         description: 'Autorización para eutanasia humanitaria'
     },
     alta_voluntaria: {
         name: 'Alta Voluntaria',
-        file: 'plantilla/consentimiento_alta_voluntaria.html',
+        file: 'consentimiento_alta_voluntaria.html',
         description: 'Consentimiento informado por alta voluntaria'
     }
 };
