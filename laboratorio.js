@@ -167,7 +167,7 @@ function updateClientesDataFromSnapshot(snapshot) {
                             fecha: fechaConsulta,
                             randomId: ticket.randomId,
                             estado: ticket.estado,
-                            medicoAtiende: ticket.medicoAtiende,
+                            medicoAtiene: ticket.medicoAtiene,
                             motivoLlegada: ticket.motivoLlegada,
                             tipoServicio: ticket.tipoServicio,
                             horaLlegada: ticket.horaLlegada,
@@ -328,7 +328,7 @@ function setupLabFirebaseListeners() {
 // Verificar si el usuario tiene acceso al módulo de laboratorio
 function hasLabAccess() {
     const userRole = sessionStorage.getItem('userRole');
-    const allowedRoles = ['admin', 'internos', 'consulta_externa', 'laboratorio'];
+    const allowedRoles = ['admin', 'internos', 'consulta_externa', 'laboratorio', 'quirofano'];
     return allowedRoles.includes(userRole);
 }
 
@@ -412,6 +412,17 @@ function setupLabEventListeners() {
         console.warn('Select labTipoMascota no encontrado');
     }
     
+    // Configurar listener para el médico que solicita (para controlar examen de regalía)
+    const labMedicoSolicita = document.getElementById('labMedicoSolicita');
+    if (labMedicoSolicita) {
+        console.log('Configurando selector de médico que solicita');
+        labMedicoSolicita.addEventListener('change', toggleExamenRegaliaVisibility);
+        // Inicializar la visibilidad del campo
+        toggleExamenRegaliaVisibility();
+    } else {
+        console.warn('Select labMedicoSolicita no encontrado');
+    }
+    
     // Filtros de laboratorio
     const labFilterBtns = document.querySelectorAll('.lab-filter-btn');
     console.log('Filtros de laboratorio encontrados:', labFilterBtns.length);    // Ocultar filtro "Todos" para usuarios que no sean admin
@@ -441,6 +452,9 @@ function setupLabEventListeners() {
             
             // Mostrar/ocultar filtro de médicos según el estado
             toggleMedicoFilter(filter);
+            
+            // Mostrar/ocultar filtro de fecha según el estado
+            toggleDateFilter(filter);
             
             // Reset del filtro de médicos al cambiar de estado
             const medicoFilter = document.getElementById('labMedicoFilter');
@@ -517,7 +531,37 @@ function setupLabEventListeners() {
         console.warn('Input labFechaFiltro no encontrado');
     }
     
+    // Event listeners para examen de regalía y firma digital
+    setupExamenRegaliaAndFirma();
+    
     console.log('Event listeners de laboratorio configurados');
+}
+
+// Controlar la visibilidad del campo de examen de regalía
+function toggleExamenRegaliaVisibility() {
+    const medicoSelect = document.getElementById('labMedicoSolicita');
+    const examenRegaliaGroup = document.getElementById('labExamenRegalia')?.closest('.form-group');
+    
+    if (!medicoSelect || !examenRegaliaGroup) return;
+    
+    const medico = medicoSelect.value;
+    const medicosRegalia = ['Dr. Luis Coto', 'Dr. Randall Azofeifa'];
+    
+    if (medicosRegalia.includes(medico)) {
+        examenRegaliaGroup.style.display = 'block';
+        // Auto-seleccionar "Sí" para examen de regalía si es uno de estos médicos
+        const examenRegaliaSelect = document.getElementById('labExamenRegalia');
+        if (examenRegaliaSelect && examenRegaliaSelect.value === 'no') {
+            examenRegaliaSelect.value = 'si';
+        }
+    } else {
+        examenRegaliaGroup.style.display = 'none';
+        // Auto-seleccionar "No" para otros médicos
+        const examenRegaliaSelect = document.getElementById('labExamenRegalia');
+        if (examenRegaliaSelect) {
+            examenRegaliaSelect.value = 'no';
+        }
+    }
 }
 
 // Configurar búsqueda de clientes con actualizaciones en tiempo real
@@ -1003,6 +1047,11 @@ function showLabSection(sectionId) {
             // Determinar el filtro por defecto según el rol del usuario
             const userRole = sessionStorage.getItem('userRole');
             const defaultFilter = userRole === 'admin' ? 'todos' : 'pendiente';
+            
+            // Configurar visibilidad de filtros según el filtro por defecto
+            toggleMedicoFilter(defaultFilter);
+            toggleDateFilter(defaultFilter);
+            
             renderLabTickets(defaultFilter);
             updateLabStats();
         }
@@ -1064,7 +1113,9 @@ function handleLabTicketSubmit(e) {
         serviciosIds: serviciosData.serviciosIds,
         serviciosNombres: serviciosData.serviciosNombres,
         totalServicios: serviciosData.total,
-        prioridad: document.getElementById('labPrioridad').value,        medicoSolicita: document.getElementById('labMedicoSolicita').value.trim(),
+        prioridad: document.getElementById('labPrioridad').value,
+        medicoSolicita: document.getElementById('labMedicoSolicita').value.trim(),
+        examenRegalia: document.getElementById('labExamenRegalia').value,
         observaciones: document.getElementById('labObservaciones').value.trim(),
         notasLaboratorio: document.getElementById('labNotasLaboratorio').value.trim(),
         paquete: document.getElementById('labPaquete').value,
@@ -1198,10 +1249,11 @@ function renderLabTickets(filter = 'todos', medicoFilter = '') {
     // Filtrar tickets por estado
     let filteredTickets = filterLabTickets(labTickets, filter);
 
-    // Solo aplicar filtro de fecha para reportado y reportado_cliente
+    // Solo aplicar filtro de fecha para reportado_cliente y cliente_no_contesta
+    // Para "reportado" (Reportado Lab), NO aplicar filtro de fecha - mostrar todos
     const fechaFilter = document.getElementById('labFilterDate');
     if (
-        (filter === 'reportado' || filter === 'reportado_cliente') &&
+        (filter === 'reportado_cliente' || filter === 'cliente_no_contesta') &&
         fechaFilter && fechaFilter.value
     ) {
         const selectedDate = fechaFilter.value;
@@ -1213,16 +1265,23 @@ function renderLabTickets(filter = 'todos', medicoFilter = '') {
                    (ticket.fechaReportadoCliente && ticket.fechaReportadoCliente === selectedDate);
         });
     }
-    // Para pendiente y procesando, NO filtrar por fecha
-    // Aplicar filtro de médico solo si corresponde
-    if (
-        (filter === 'reportado' || filter === 'reportado_cliente') &&
-        medicoFilter && medicoFilter.trim() !== ''
-    ) {
-        filteredTickets = filteredTickets.filter(ticket => {
-            return ticket.medicoSolicita && 
-                   ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase());
-        });
+    // Para pendiente, procesando, laboratorio_externo, internos y reportado, NO filtrar por fecha
+    
+    // Aplicar filtro de médico - para "reportado" no aplicar restricción de fecha
+    if (medicoFilter && medicoFilter.trim() !== '') {
+        if (filter === 'reportado') {
+            // Para "Reportado Lab", filtrar por médico sin restricción de fecha
+            filteredTickets = filteredTickets.filter(ticket => {
+                return ticket.medicoSolicita && 
+                       ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase());
+            });
+        } else if (filter === 'reportado_cliente' || filter === 'cliente_no_contesta') {
+            // Para otros estados reportados, aplicar filtro de médico normalmente
+            filteredTickets = filteredTickets.filter(ticket => {
+                return ticket.medicoSolicita && 
+                       ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase());
+            });
+        }
     }
     
     if (filteredTickets.length === 0) {
@@ -1263,6 +1322,12 @@ function filterLabTickets(tickets, filter) {
                 return ticket.estado === 'reportado';
             case 'reportado_cliente':
                 return ticket.estado === 'reportado_cliente';
+            case 'laboratorio_externo':
+                return ticket.estado === 'laboratorio_externo';
+            case 'cliente_no_contesta':
+                return ticket.estado === 'cliente_no_contesta';
+            case 'internos':
+                return ticket.departamento === 'internos';
             default:
                 return true;
         }
@@ -1344,6 +1409,18 @@ function createLabTicketElement(ticket) {
                         <i class="fas fa-user-md"></i>
                         <span><strong>Médico:</strong> ${formatMedicoWithLineBreak(ticket.medicoSolicita)}</span>
                     </div>
+                    ${ticket.examenRegalia === 'si' ? `
+                        <div class="lab-ticket-detail examen-regalia">
+                            <i class="fas fa-crown" style="color: #f1c40f;"></i>
+                            <span><strong>Examen de Regalía</strong></span>
+                            ${ticket.firmaDigital ? `
+                                <div class="firma-digital" style="margin-top: 5px;">
+                                    <i class="fas fa-signature" style="color: #27ae60;"></i>
+                                    <small style="color: #27ae60;">Firmado digitalmente</small>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
                     <div class="lab-ticket-detail">
                         <i class="fas fa-building"></i>
                         <span><strong>Departamento:</strong> ${departamentoNombre}</span>
@@ -1569,7 +1646,9 @@ function getLabStatusDisplay(estado, ticket = null) {
         'pendiente': 'Pendiente',
         'procesando': 'En proceso',
         'reportado': 'Reportado Lab',
-        'reportado_cliente': 'Reportado al Cliente'
+        'reportado_cliente': 'Reportado al Cliente',
+        'laboratorio_externo': 'Laboratorio Externo',
+        'cliente_no_contesta': 'Cliente no contesta'
     };
     
     let statusText = statuses[estado] || estado;
@@ -1802,7 +1881,35 @@ function editLabTicket(randomId) {
                             <option value="internos" ${ticket.departamento === 'internos' ? 'selected' : ''}>Internos</option>
                         </select>
                     </div>
-                </div>                <div class="form-group">
+                </div>
+                
+                <!-- Campo de examen de regalía y firma digital -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editLabExamenRegalia" style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-crown" style="color: #f1c40f;"></i>
+                            Examen de Regalía
+                        </label>
+                        <select id="editLabExamenRegalia" required>
+                            <option value="no" ${(ticket.examenRegalia || 'no') === 'no' ? 'selected' : ''}>No</option>
+                            <option value="si" ${ticket.examenRegalia === 'si' ? 'selected' : ''}>Sí</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="editFirmaContainer" style="display: ${ticket.examenRegalia === 'si' && sessionStorage.getItem('userRole') === 'admin' ? 'block' : 'none'};">
+                        <label>Firma Digital del Administrador</label>
+                        <div style="border: 1px solid #ccc; border-radius: 8px; background: #fff; padding: 10px;">
+                            <canvas id="editFirmaCanvas" width="300" height="100" style="border: 1px solid #aaa; border-radius: 6px; background: #fafafa; cursor: crosshair;"></canvas>
+                            <div style="margin-top: 8px;">
+                                <button type="button" id="editLimpiarFirmaBtn" style="margin-right: 10px;">Limpiar Firma</button>
+                                ${ticket.firmaDigital ? '<span style="color: #27ae60;"><i class="fas fa-check"></i> Ya firmado</span>' : ''}
+                            </div>
+                        </div>
+                        <input type="hidden" id="editFirmaBase64" name="editFirmaBase64" value="${ticket.firmaDigital || ''}">
+                        <small style="color: #888;">Solo disponible para administradores en exámenes de regalía.</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
                     <label>Observaciones</label>
                     <textarea id="editLabObservaciones" rows="3">${ticket.observaciones || ''}</textarea>
                 </div>
@@ -1857,6 +1964,8 @@ function editLabTicket(randomId) {
             serviciosSeleccionados: [...selectedServices],
             estado: document.getElementById('editLabEstado').value,
             medicoSolicita: document.getElementById('editLabMedico').value.trim(),
+            examenRegalia: document.getElementById('editLabExamenRegalia').value,
+            firmaDigital: document.getElementById('editFirmaBase64').value,
             prioridad: document.getElementById('editLabPrioridad').value,            correo: document.getElementById('editLabCorreo').value.trim(),
             telefono: document.getElementById('editLabTelefono').value.trim(),
             factura: document.getElementById('editLabFactura').value.trim(),
@@ -1873,7 +1982,11 @@ function editLabTicket(randomId) {
         
         saveEditedLabTicket(updatedData);
     });
-      // Inicializar el sistema de servicios para edición
+    
+    // Configurar event listeners para examen de regalía y firma digital
+    setupEditExamenRegaliaAndFirma(ticket);
+      
+    // Inicializar el sistema de servicios para edición
     initEditServiceSelection(ticket);
     
     // Configurar el selector de razas para edición
@@ -2216,7 +2329,10 @@ function updateLabStats() {
         pendientes: labTickets.filter(t => t.estado === 'pendiente').length,
         procesando: labTickets.filter(t => t.estado === 'procesando').length,
         reportados: labTickets.filter(t => t.estado === 'reportado').length,
-        reportadosCliente: labTickets.filter(t => t.estado === 'reportado_cliente').length
+        reportadosCliente: labTickets.filter(t => t.estado === 'reportado_cliente').length,
+        laboratorioExterno: labTickets.filter(t => t.estado === 'laboratorio_externo').length,
+        clienteNoContesta: labTickets.filter(t => t.estado === 'cliente_no_contesta').length,
+        internos: labTickets.filter(t => t.departamento === 'internos').length
     };
     
     // Actualizar elementos del DOM
@@ -2225,11 +2341,18 @@ function updateLabStats() {
     const procesandoElement = document.getElementById('procesandoLab');
     const reportadosElement = document.getElementById('reportadosLab');
     const reportadosClienteElement = document.getElementById('reportadosClienteLab');
+    const laboratorioExternoElement = document.getElementById('laboratorioExternoLab');
+    const clienteNoContestaElement = document.getElementById('clienteNoContestaLab');
+    const internosElement = document.getElementById('internosLab');
     
     if (totalElement) totalElement.textContent = stats.total;
     if (pendientesElement) pendientesElement.textContent = stats.pendientes;
     if (procesandoElement) procesandoElement.textContent = stats.procesando;
     if (reportadosElement) reportadosElement.textContent = stats.reportados;
+    if (reportadosClienteElement) reportadosClienteElement.textContent = stats.reportadosCliente;
+    if (laboratorioExternoElement) laboratorioExternoElement.textContent = stats.laboratorioExterno;
+    if (clienteNoContestaElement) clienteNoContestaElement.textContent = stats.clienteNoContesta;
+    if (internosElement) internosElement.textContent = stats.internos;
     if (reportadosClienteElement) reportadosClienteElement.textContent = stats.reportadosCliente;
 }
 
@@ -2863,19 +2986,35 @@ function toggleMedicoFilter(filter) {
     const medicoFilterContainer = document.getElementById('labMedicoFilterContainer');
     if (!medicoFilterContainer) return;
     
-    // Mostrar el filtro para tickets reportados (ambos tipos)
-    if (filter === 'reportado' || filter === 'reportado_cliente') {
+    // Mostrar el filtro para tickets reportados y cliente no contesta
+    if (filter === 'reportado' || filter === 'reportado_cliente' || filter === 'cliente_no_contesta') {
         medicoFilterContainer.style.display = 'block';
     } else {
         medicoFilterContainer.style.display = 'none';
     }
 }
 
+// Mostrar/ocultar filtro de fecha según el estado
+function toggleDateFilter(filter) {
+    const dateFilterContainer = document.getElementById('labDateFilterContainer');
+    if (!dateFilterContainer) return;
+    
+    // Ocultar el filtro de fecha para "Reportado Lab" (reportado) - mostrar todos sin restricción de fecha
+    // Solo mostrar para reportado_cliente y cliente_no_contesta
+    if (filter === 'reportado_cliente' || filter === 'cliente_no_contesta') {
+        dateFilterContainer.style.display = 'block';
+    } else {
+        dateFilterContainer.style.display = 'none';
+    }
+}
+
 // Obtener opción de reporte según el rol del usuario
 function getUserReportOption(ticket) {
-    // Mostrar ambas opciones para todos los usuarios
+    // Mostrar todas las opciones de estado para todos los usuarios
     return `
         <option value="reportado" ${ticket.estado === 'reportado' ? 'selected' : ''}>Reportado de Laboratorio</option>
         <option value="reportado_cliente" ${ticket.estado === 'reportado_cliente' ? 'selected' : ''}>Reportado al Cliente</option>
+        <option value="laboratorio_externo" ${ticket.estado === 'laboratorio_externo' ? 'selected' : ''}>Laboratorio Externo</option>
+        <option value="cliente_no_contesta" ${ticket.estado === 'cliente_no_contesta' ? 'selected' : ''}>Cliente no contesta</option>
     `;
 }

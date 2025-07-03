@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consentimiento Informado por Alta Voluntaria</title>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3a7ca5;
+            --secondary-color: #f8f9fa;
+            --accent-color: #63c5da;
+            --text-color: #2c3e50;
+            --border-color: #d1e7f0;
+            --highlight-color: #e3f2fd;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --input-bg: #f0f7fa;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: var(--text-color);
+            background-color: #f5f7fa;
+            background-image: linear-gradient(135deg, #f5f7fa 0%, #e4eff5 100%);
+            min-height: 100vh;
+        }
+        .container {
+            width: 800px;
+            margin: 0 auto 40px;
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background-color: white;
+            box-shadow: 0 5px 20px var(--shadow-color);
+            transition: box-shadow 0.3s ease;
+            page-break-after: always;
+        }
+        .container:last-child {
+            page-break-after: auto;
+        }
+        .container:hover { box-shadow: 0 8px 25px var(--shadow-color); }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid var(--accent-color);
+            padding-bottom: 15px;
+            justify-content: space-between;
+        }
+        .logo { max-width: 80px; margin-right: 15px; border-radius: 10px; box-shadow: 0 2px 5px var(--shadow-color); }
+        h1 { text-align: center; margin-bottom: 30px; color: var(--primary-color); flex-grow: 1; font-size: 1.6rem; text-shadow: 1px 1px 2px var(--shadow-color); }
+        p { margin-bottom: 20px; text-align: justify; color: var(--text-color); line-height: 1.8; }
+        input[type="text"], input[type="email"], input[type="date"], input[type="tel"] {
+            border: none;
+            background-color: transparent;
+            padding: 8px 12px;
+            margin: 0;
+            font-weight: bold;
+            min-height: 35px;
+            min-width: 200px;
+        }
+        input[type="text"]:focus, input[type="email"]:focus, input[type="date"]:focus, input[type="tel"]:focus {
+            outline: none;
+            border-bottom-color: var(--primary-color);
+            background-color: var(--highlight-color);
+            box-shadow: 0 3px 8px var(--shadow-color);
+        }
+        .auto-data-indicator {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .auto-data-indicator i {
+            font-size: 1.1em;
+        }
+        .form-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+        .checkbox-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: var(--secondary-color);
+            border-radius: 8px;
+        }
+        .checkbox-section label {
+            display: block;
+            margin: 10px 0;
+            font-size: 1rem;
+        }
+        .checkbox-section input[type="checkbox"] {
+            margin-right: 10px;
+            transform: scale(1.2);
+        }
+        .procedures-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 15px 0;
+        }
+        .procedure-item {
+            padding: 10px;
+            background: var(--secondary-color);
+            border-radius: 4px;
+            border-left: 3px solid var(--primary-color);
+        }
+        .signature-area {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .firma-container { 
+            flex: 1 1 300px; 
+            display: flex; 
+            flex-direction: column; 
+            align-items: center; 
+        }
+        .signature-box { 
+            width: 100%; 
+            padding: 10px; 
+            text-align: center; 
+            margin-bottom: 10px; 
+            border-radius: 5px; 
+            background-color: var(--secondary-color); 
+            color: var(--text-color); 
+            font-weight: 500; 
+        }
+        .signature-pad-container { width: 100%; }
+        .signature-pad { 
+            border: 2px dashed var(--border-color); 
+            border-radius: 8px; 
+            width: 100%; 
+            height: 250px; 
+            background-color: white; 
+            touch-action: none; 
+            user-select: none; 
+            box-shadow: 0 2px 8px var(--shadow-color); 
+            transition: border 0.3s ease; 
+        }
+        .signature-pad:hover { border-color: var(--accent-color); }
+        .signature-buttons { 
+            display: flex; 
+            margin-top: 10px; 
+            gap: 10px; 
+            justify-content: center; 
+        }
+        .pdf-button-container { 
+            text-align: center; 
+            margin-top: 30px; 
+            padding-top: 20px; 
+            border-top: 1px dashed var(--border-color); 
+        }
+        .pdf-button { 
+            padding: 12px 25px; 
+            background-color: #4CAF50; 
+            color: white; 
+            border: none; 
+            border-radius: 6px; 
+            cursor: pointer; 
+            font-size: 16px; 
+            font-weight: bold; 
+            transition: all 0.3s ease; 
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15); 
+        }
+        .pdf-button:hover { 
+            background-color: #45a049; 
+            transform: translateY(-2px); 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2); 
+        }
+        .pdf-button:active { transform: translateY(0); }
+        .date-short {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+        .large-textarea {
+            width: 100%;
+            min-height: 100px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+        }
+        .large-textarea:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: var(--highlight-color);
+        }
+        @media print {
+            body { background-color: white; margin: 0; padding: 0; }
+            .container { box-shadow: none; border: none; padding: 10px; }
+            .signature-buttons, .pdf-button-container { display: none; }
+            .auto-data-indicator { display: none !important; }
+        }
+        @media (max-width: 600px) {
+            .header { flex-direction: column; text-align: center; }
+            .signature-area { flex-direction: column; }
+            .firma-container { width: 100%; }
+            .form-row { flex-direction: column; }
+            .procedures-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- PÁGINA 1 -->
+    <div class="container">
+        <div class="header">
+            <img src="logo.jpg" alt="Veterinaria San Martin de Porres" class="logo">
+            <h1>CONSENTIMIENTO INFORMADO POR ALTA VOLUNTARIA</h1>
+            <div id="shortDate" class="date-short"></div>
+        </div>
+        
+        <div class="form-section">
+            <!-- Indicador de datos autocompletados -->
+            <div id="autoDataIndicator" class="auto-data-indicator" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <span>Datos cargados automáticamente desde la base de datos</span>
+            </div>
+            
+            <p>Yo, <input type="text" id="ownerName" placeholder="Nombre del cliente" required style="width: 300px;"> con número de cédula <input type="text" id="ownerCedula" placeholder="Cédula" style="width: 200px;"> propietario de la mascota llamada <input type="text" id="petName" placeholder="Nombre de la mascota" required style="width: 250px;"> después de la revisión <input type="checkbox" id="revision" style="transform: scale(1.2);"> y/o internamiento <input type="checkbox" id="internamiento" style="transform: scale(1.2);">, es mi decisión realizar el alta voluntaria por el siguiente motivo:</p>
+            
+            <div class="checkbox-section">
+                <label><input type="checkbox" id="motivoEconomicas"> económicas</label>
+                <label><input type="checkbox" id="motivoIdeologicas"> ideológicas</label>
+                <label><input type="checkbox" id="motivoSegundaOpinion"> segunda opinión</label>
+                <label><input type="checkbox" id="motivoPersonal"> algo personal</label>
+            </div>
+            
+            <p><strong>Decido no realizar a mi mascota el procedimiento denominado:</strong><br>
+            <input type="text" id="procedimiento" placeholder="Nombre del procedimiento" style="width: 100%; max-width: 600px;"></p>
+            
+            <div class="procedures-grid">
+                <div class="procedure-item">
+                    <label>Tomas RX: <input type="radio" name="rx" value="si"> Sí <input type="radio" name="rx" value="no"> No</label> </br>
+                    <label>Uriánalisis: <input type="radio" name="urianalisis" value="si"> Sí <input type="radio" name="urianalisis" value="no"> No</label></br>
+                    <label>Ultrasonidos con reporte: <input type="radio" name="ultrasonidos" value="si"> Sí <input type="radio" name="ultrasonidos" value="no"> No</label></br>
+                    <label>Cirugía: <input type="checkbox" id="cirugia"></label>
+                </div>
+                <div class="procedure-item">
+                    <label>Exámenes generales: <input type="radio" name="examenes" value="si"> Sí <input type="radio" name="examenes" value="no"> No</label></br>
+                    <label>Transfusión sanguínea: <input type="radio" name="transfusion" value="si"> Sí <input type="radio" name="transfusion" value="no"> No</label></br>
+                    <label>Exámenes de heces: <input type="radio" name="heces" value="si"> Sí <input type="radio" name="heces" value="no"> No</label></br>
+                </div>
+            </div>
+            
+            <p>Recomendado por el Médico Veterinario y lo retiro del cuidado de la clínica Veterinaria San Martín de Porres.</p>
+            
+            <p>Hago constar que comprendo y se me ha explicado los posibles riesgos y complicaciones que esta decisión conlleva para mi mascota, por ejemplo: <strong>abscesos, necrosis tisular, sepsis, fallo multiorgánico, gangrena, daño neurológico, vómito, diarrea, deshidratación, fallo hepático, muerte</strong>, entre otros, derivados de su condición, y por ende libero de responsabilidad tanto al Médico Veterinaria como a la Clínica Veterinaria San Martin de Porres.</p>
+        </div>
+    </div>
+
+    <!-- PÁGINA 2 -->
+    <div class="container">
+        <div class="header">
+            <img src="logo.jpg" alt="Veterinaria San Martin de Porres" class="logo">
+            <h1>USO EXCLUSIVO DE LA VETERINARIA</h1>
+            <div id="shortDate2" class="date-short"></div>
+        </div>
+
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+
+        <p><strong>Condiciones de la mascota al retirarla:</strong></p>
+        <textarea class="large-textarea" id="condicionesMascota" placeholder="Descripción detallada de las condiciones de la mascota al momento del retiro..."></textarea>
+
+        <div style="margin: 30px 0;">
+            <p><strong>Lleva receta:</strong> 
+            <input type="radio" name="receta" value="si" style="margin: 0 5px;"> Sí 
+            <input type="radio" name="receta" value="no" style="margin: 0 5px 0 15px;"> No
+            <span style="margin: 0 30px;"></span>
+            <strong>Lleva medicación:</strong> 
+            <input type="radio" name="medicacion" value="si" style="margin: 0 5px;"> Sí 
+            <input type="radio" name="medicacion" value="no" style="margin: 0 5px 0 15px;"> No</p>
+        </div>
+
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+
+        <p>Firmo en pleno uso de mis facultades mentales, afirmo que he leído y comprendo todo lo descrito en este documento a las <input type="text" id="hora" placeholder="HH:MM" style="width: 80px;"> del <input type="text" id="fecha" placeholder="dd/mm/aaaa" style="width: 120px;"></p>
+
+        <div class="signature-area">
+            <div class="firma-container">
+                <div class="signature-box">Firma del propietario</div>
+                <div class="signature-pad-container">
+                    <canvas class="signature-pad" id="ownerSignaturePad"></canvas>
+                    <div class="signature-buttons">
+                        <button type="button" onclick="clearSignature('ownerSignaturePad')">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style="border-top: 2px solid var(--accent-color); margin: 40px 0 20px 0;"></div>
+
+        <div style="background: var(--secondary-color); padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>NOTA ADICIONAL:</strong> Como profesional en Medicina Veterinaria, informo sobre la importancia de realizar exámenes complementarios para un diagnóstico preciso, realizar y seguir al pie de la letra las recomendaciones, para el mejor cuidado de su mascota. La colaboración en este proceso beneficia al paciente y facilita el tratamiento adecuado, recuerde que estamos a su servicio y estamos disponibles a aclarar cualquier inquietud sobre estos exámenes y para brindar la mejor atención posible.</p>
+        </div>
+
+        <div class="pdf-button-container">
+            <button class="pdf-button" onclick="generatePDF()">Generar PDF</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Leer parámetros URL y completar campos automáticamente
+            const urlParams = new URLSearchParams(window.location.search);
+            
+            // Completar campos con datos de la base de datos
+            let autoFilledCount = 0;
+            
+            if (urlParams.get('clienteNombre')) {
+                const field = document.getElementById('ownerName');
+                field.value = urlParams.get('clienteNombre');
+                autoFilledCount++;
+            }
+            if (urlParams.get('clienteCedula')) {
+                const field = document.getElementById('ownerCedula');
+                field.value = urlParams.get('clienteCedula');
+                autoFilledCount++;
+            }
+            if (urlParams.get('mascotaNombre')) {
+                const field = document.getElementById('petName');
+                field.value = urlParams.get('mascotaNombre');
+                autoFilledCount++;
+            }
+            
+            // Mostrar indicador si se autocompletaron campos
+            if (autoFilledCount > 0) {
+                const indicator = document.getElementById('autoDataIndicator');
+                if (indicator) {
+                    indicator.style.display = 'flex';
+                    indicator.querySelector('span').textContent = 
+                        `${autoFilledCount} campos cargados automáticamente desde la base de datos`;
+                }
+            }
+            
+            // Set the current date and time once DOM is ready
+            const now = new Date();
+            document.getElementById('shortDate').textContent = now.toLocaleDateString('es-ES');
+            document.getElementById('shortDate2').textContent = now.toLocaleDateString('es-ES');
+            
+            // Set default time and date
+            document.getElementById('hora').value = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('fecha').value = now.toLocaleDateString('es-ES');
+
+            // Initialize signature pads and handle resizing
+            const canvasElements = document.querySelectorAll('.signature-pad');
+            window.signaturePads = {};
+            function resizeCanvas(canvas) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 2);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(ratio, ratio);
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                return ratio;
+            }
+            canvasElements.forEach(canvas => {
+                const pixelRatio = resizeCanvas(canvas);
+                window.signaturePads[canvas.id] = new SignaturePad(canvas, {
+                    backgroundColor: 'rgba(255,255,255,0)',
+                    penColor: 'rgb(0,0,100)',
+                    velocityFilterWeight: 0.5,
+                    minWidth: 0.3,
+                    maxWidth: 1.5 * pixelRatio,
+                    throttle: 8,
+                    minDistance: 1.0
+                });
+                ['touchstart','touchmove','touchend'].forEach(eventName => {
+                    canvas.addEventListener(eventName, e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
+                });
+            });
+            window.addEventListener('resize', function() {
+                canvasElements.forEach(canvas => {
+                    const pad = window.signaturePads[canvas.id];
+                    if (pad) {
+                        const data = pad.isEmpty() ? null : pad.toData();
+                        const ratio = resizeCanvas(canvas);
+                        pad.clear();
+                        if (data) pad.fromData(data);
+                    }
+                });
+            });
+        });
+
+        // Clear a specific signature pad by ID
+        function clearSignature(canvasId) {
+            if (window.signaturePads && window.signaturePads[canvasId]) {
+                window.signaturePads[canvasId].clear();
+            }
+        }
+
+        // Generate a multi-page A4 PDF with all content
+        async function generatePDF() {
+            const ownerName = document.getElementById('ownerName').value;
+            const petName = document.getElementById('petName').value;
+            if (!ownerName || !petName) {
+                alert('Complete nombre del propietario y de la mascota');
+                return;
+            }
+            let ownerLastName = '';
+            if (ownerName && ownerName.trim().split(' ').length > 1) {
+                const parts = ownerName.trim().split(' ');
+                ownerLastName = parts.length > 2 ? parts[parts.length - 1] : parts[1];
+            }
+            const pdfBtn = document.querySelector('.pdf-button-container');
+            const sigBtns = document.querySelectorAll('.signature-buttons');
+            const autoIndicator = document.getElementById('autoDataIndicator');
+            
+            const originalPdfDisplay = pdfBtn.style.display;
+            const originalSigDisplays = Array.from(sigBtns).map(b => b.style.display);
+            const originalIndicatorDisplay = autoIndicator ? autoIndicator.style.display : '';
+            
+            // Ocultar elementos durante la generación del PDF
+            pdfBtn.style.display = 'none';
+            sigBtns.forEach(b => b.style.display = 'none');
+            if (autoIndicator) autoIndicator.style.display = 'none';
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+                const containers = document.querySelectorAll('.container');
+                
+                for (let i = 0; i < containers.length; i++) {
+                    const cont = containers[i];
+                    const canvas = await html2canvas(cont, {
+                        scale: 1.3,
+                        useCORS: true,
+                        logging: false,
+                        allowTaint: true,
+                        backgroundColor: '#ffffff'
+                    });
+                    
+                    const imgData = canvas.toDataURL('image/jpeg', 0.8);
+                    const imgWidth = 190;
+                    const pageHeight = 297;
+                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                    const pageWidth = pdf.internal.pageSize.getWidth();
+                    const x = (pageWidth - imgWidth) / 2;
+                    
+                    let y = 10;
+                    if (imgHeight > pageHeight - 20) {
+                        const maxHeight = pageHeight - 20;
+                        const adjustedWidth = (canvas.width * maxHeight) / canvas.height;
+                        y = 10;
+                        pdf.addImage(imgData, 'JPEG', (pageWidth - adjustedWidth) / 2, y, adjustedWidth, maxHeight);
+                    } else {
+                        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+                    }
+                    
+                    if (i < containers.length - 1) pdf.addPage();
+                }
+                
+                const fileName = `Consentimiento_Alta_Voluntaria_${petName}_${ownerLastName}.pdf`;
+                pdf.save(fileName);
+            } catch (err) {
+                console.error('Error generando PDF:', err);
+                alert('Hubo un problema al generar el PDF.');
+            } finally {
+                // Restaurar elementos ocultos
+                pdfBtn.style.display = originalPdfDisplay;
+                sigBtns.forEach((b, i) => b.style.display = originalSigDisplays[i]);
+                if (autoIndicator) autoIndicator.style.display = originalIndicatorDisplay;
+            }
+        }
+    </script>
+</body>
+</html>

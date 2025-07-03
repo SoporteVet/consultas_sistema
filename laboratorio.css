@@ -461,6 +461,30 @@ nav button#verLabBtn:hover::before {
   border: 2px solid #6c757d;
 }
 
+.lab-ticket-status.reportado_cliente {
+  background: #20c997;
+  color: white;
+  border: 2px solid #20c997;
+}
+
+.lab-ticket-status.laboratorio_externo {
+  background: #fd7e14;
+  color: white;
+  border: 2px solid #fd7e14;
+}
+
+.lab-ticket-status.cliente_no_contesta {
+  background: #dc3545;
+  color: white;
+  border: 2px solid #dc3545;
+  animation: attention 2s infinite;
+}
+
+@keyframes attention {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+
 .lab-ticket-actions {
   display: flex;
   gap: 10px;

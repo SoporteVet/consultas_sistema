@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
   <link rel="stylesheet" href="index.css">
   <link rel="stylesheet" href="laboratorio.css">
+  <link rel="stylesheet" href="consentimientos.css">
   <link rel="icon" href="empresa.jpg" type="image/x-icon">
 </head>
 <body>
@@ -50,6 +51,19 @@
             </button>
             <button id="verTicketsBtn" class="submenu-btn" onclick="navigateToConsultas();">
               <i class="fas fa-list-alt"></i> Ver Consultas
+            </button>
+          </div>
+        </div>
+
+        <!-- Consentimientos -->
+        <div class="nav-category">
+          <button id="consentimientosBtn" class="nav-category-btn" onclick="toggleSubmenuHTML('consentimientosBtn', 'consentimientosSubmenu');">
+            <i class="fas fa-file-contract"></i> Consentimientos
+            <i class="fas fa-chevron-down category-arrow"></i>
+          </button>
+          <div id="consentimientosSubmenu" class="nav-submenu">
+            <button id="crearConsentimientoBtn" class="submenu-btn" onclick="navigateToSection('consentimientosSection', 'crearConsentimientoBtn');">
+              <i class="fas fa-file-plus"></i> Crear Consentimiento
             </button>
           </div>
         </div>
@@ -501,14 +515,17 @@
                   <option value="Medico Internista">Médico Internista</option>
                 </select>
               </div>
-              <div class="form-group" id="firmaContainer" style="display:none;">
-                <label>Firma Electrónica del Médico</label>
-                <div style="border:1px solid #ccc; border-radius:8px; background:#fff; padding:10px;">
-                  <canvas id="firmaCanvas" width="320" height="120" style="border:1px solid #aaa; border-radius:6px; background:#fafafa; cursor:crosshair;"></canvas>
-                  <button type="button" id="limpiarFirmaBtn" style="margin-top:8px;">Limpiar Firma</button>
-                </div>
-                <input type="hidden" id="firmaBase64" name="firmaBase64">
-                <small style="color:#888;">Firme aquí si es necesario para exámenes de regalía.</small>
+              <div class="form-group">
+                <label for="labExamenRegalia" style="display: flex; align-items: center; gap: 8px;">
+                  Examen de Regalía
+                </label>
+                <select id="labExamenRegalia" required>
+                  <option value="no">No</option>
+                  <option value="si">Sí</option>
+                </select>
+                <small style="color: #7f8c8d; font-style: italic; display: block; margin-top: 5px;">
+                  Firme aquí si es necesario realizar un examen de regalía.
+                </small>
               </div>
             </div>
 
@@ -543,6 +560,8 @@
                   <option value="procesando">En proceso</option>
                   <option value="reportado">Reportado Lab</option>
                   <option value="reportado_cliente">Reportado al Cliente</option>
+                  <option value="laboratorio_externo">Laboratorio Externo</option>
+                  <option value="cliente_no_contesta">Cliente no contesta</option>
                 </select>
               </div>
               <div class="form-group">
@@ -591,7 +610,7 @@
         </div>
         
         <!-- Filtro de fecha para laboratorio -->
-        <div class="date-filter" style="margin-bottom: 15px;">
+        <div class="date-filter" style="margin-bottom: 15px;" id="labDateFilterContainer">
           <label for="labFilterDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
           <input type="date" id="labFilterDate">
         </div>
@@ -622,8 +641,11 @@
           <button class="lab-filter-btn active" data-filter="todos">Todos</button>
           <button class="lab-filter-btn" data-filter="pendiente">Pendiente</button>
           <button class="lab-filter-btn" data-filter="procesando">En Proceso</button>
+          <button class="lab-filter-btn" data-filter="laboratorio_externo">Laboratorio Externo</button>
           <button class="lab-filter-btn" data-filter="reportado">Reportados Lab</button>
           <button class="lab-filter-btn" data-filter="reportado_cliente">Por reportar al cliente <br> consulta externa/internos</button>
+          <button class="lab-filter-btn" data-filter="internos">Internos</button>
+          <button class="lab-filter-btn" data-filter="cliente_no_contesta">Cliente no contesta</button>
         </div>
         
         <!-- Contenedor de tickets de laboratorio -->
@@ -667,6 +689,27 @@
               <div class="stat-info">
                 <span class="stat-number" id="reportadosClienteLab">0</span>
                 <span class="stat-label">Por reportar al cliente</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-external-link-alt"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="laboratorioExternoLab">0</span>
+                <span class="stat-label">Laboratorio Externo</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-phone-slash"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="clienteNoContestaLab">0</span>
+                <span class="stat-label">Cliente no contesta</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-home"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="internosLab">0</span>
+                <span class="stat-label">Internos</span>
               </div>
             </div>
           </div>
@@ -909,6 +952,75 @@
         </div>
       </section>
 
+      <!-- Sección de Consentimientos -->
+      <section id="consentimientosSection" class="hidden">
+        <h2><i class="fas fa-file-contract"></i> Formularios de Consentimiento</h2>
+        
+        <!-- Buscador de clientes -->
+        <div class="client-search-section">
+          <h3><i class="fas fa-search"></i> Buscar Cliente</h3>
+          <div class="search-container">
+            <div class="search-input-container">
+              <input type="text" id="consentClientSearch" placeholder="Buscar por nombre, cédula o nombre de mascota..." class="search-input">
+              <button id="searchClientBtn" class="search-btn">
+                <i class="fas fa-search"></i> Buscar
+              </button>
+            </div>
+            <div id="clientSearchResults" class="search-results"></div>
+          </div>
+        </div>
+
+        <!-- Selector de plantilla de consentimiento -->
+        <div class="consent-template-section">
+          <h3><i class="fas fa-file-medical"></i> Seleccionar Plantilla de Consentimiento</h3>
+          <div class="template-grid">
+            <div class="template-card" data-template="anestesia">
+              <h4>Autorización para Anestesia</h4>
+              <p>Consentimiento para procedimientos bajo anestesia</p>
+            </div>
+            <div class="template-card" data-template="cirugia">
+              <h4>Consentimiento Cirugía</h4>
+              <p>Autorización para procedimientos quirúrgicos</p>
+            </div>
+            <div class="template-card" data-template="emergencias">
+              <h4>Emergencias</h4>
+              <p>Consentimiento para atención de emergencias</p>
+            </div>
+            <div class="template-card" data-template="internamiento">
+              <h4>Internamiento</h4>
+              <p>Autorización para internamiento hospitalario</p>
+            </div>
+            <div class="template-card" data-template="transfusion">
+              <h4>Transfusión</h4>
+              <p>Consentimiento para transfusión sanguínea</p>
+            </div>
+            <div class="template-card" data-template="cesarea">
+              <h4>Consentimiento Cesárea</h4>
+              <p>Autorización para cesárea</p>
+            </div>
+            <div class="template-card" data-template="eutanasia">
+              <h4>Consentimiento Eutanasia</h4>
+              <p>Autorización para eutanasia humanitaria</p>
+            </div>
+            <div class="template-card" data-template="alta_voluntaria">
+              <h4>Alta Voluntaria</h4>
+              <p>Consentimiento informado por alta voluntaria</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Iframe para mostrar el formulario seleccionado -->
+        <div id="consentFormContainer" class="consent-form-container" style="display:none;">
+          <div class="form-header">
+            <h3 id="selectedFormTitle">Formulario Seleccionado</h3>
+            <button id="closeFormBtn" class="close-btn">
+              <i class="fas fa-times"></i> Cerrar
+            </button>
+          </div>
+          <iframe id="consentFormIframe" src="" frameborder="0"></iframe>
+        </div>
+      </section>
+
   <!-- Plantillas para notificaciones y modales -->
   <div id="notificationContainer"></div>
   
@@ -986,6 +1098,8 @@
   <script src="services-data.js"></script>
   <script src="auth.js"></script>
   <script src="laboratorio.js"></script>
+  <script src="consentimientos-module.js"></script>
+  <script src="debug-consentimientos.js"></script>
   <script src="index.js"></script>
   <script src="fix-wait-time.js"></script>
   <script src="admin-users.js"></script>
