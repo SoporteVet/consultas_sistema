@@ -658,6 +658,18 @@ const SERVICIOS_LABORATORIO = {
         precio: 8000
       }
     ]
+  },
+  laboratorio_externo: {
+    titulo: "Laboratorio Externo",
+    servicios: [
+      {
+        id: "laboratorio_externo",
+        nombre: "Laboratorio Externo",
+        descripcion: "En los comentarios del ticket especifique el exámen que se le va a realizar al paciente",
+        precio: 0,
+        ubicacion: "Externo"
+      }
+    ]
   }
 };
 

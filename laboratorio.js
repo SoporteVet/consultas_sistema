@@ -141,13 +141,17 @@ function updateClientesDataFromSnapshot(snapshot) {
         Object.values(ticketsData).forEach(ticket => {
             if (ticket.nombre && (ticket.cedula || ticket.idPaciente)) {
                 const clienteId = ticket.cedula || ticket.idPaciente;
+                // Crear clave única por cliente+mascota para permitir múltiples mascotas por cliente
+                // Normalizar el nombre de la mascota para evitar conflictos con espacios/casos vacíos
+                const mascotaNombre = (ticket.mascota || '').trim();
+                const claveUnica = `${clienteId}_${mascotaNombre}`;
                 
                 // Si el cliente ya existe, actualizar con nueva información
-                let clienteInfo = clientesMap.get(clienteId) || {
+                let clienteInfo = clientesMap.get(claveUnica) || {
                     Id: ticket.idPaciente || clienteId,
                     Nombre: ticket.nombre,
                     Identificacion: ticket.cedula || '',
-                    'nombre mascota': ticket.mascota || '',
+                    'nombre mascota': mascotaNombre,
                     Especie: ticket.tipoMascota === 'perro' ? 'Canino' : 
                             ticket.tipoMascota === 'gato' ? 'Felino' : 
                             ticket.tipoMascota === 'conejo' ? 'Conejo' : 'Otro',
@@ -167,7 +171,7 @@ function updateClientesDataFromSnapshot(snapshot) {
                             fecha: fechaConsulta,
                             randomId: ticket.randomId,
                             estado: ticket.estado,
-                            medicoAtiende: ticket.medicoAtiende,
+                            medicoAtiene: ticket.medicoAtiene,
                             motivoLlegada: ticket.motivoLlegada,
                             tipoServicio: ticket.tipoServicio,
                             horaLlegada: ticket.horaLlegada,
@@ -181,7 +185,7 @@ function updateClientesDataFromSnapshot(snapshot) {
                 if (ticket.mascota) clienteInfo['nombre mascota'] = ticket.mascota;
                 if (ticket.cedula) clienteInfo.Identificacion = ticket.cedula;
                 
-                clientesMap.set(clienteId, clienteInfo);
+                clientesMap.set(claveUnica, clienteInfo);
             }
         });
         
@@ -206,17 +210,19 @@ function addClienteFromTicket(ticket) {
         }
         
         const clienteId = ticket.cedula || ticket.idPaciente;
+        const mascotaNombre = (ticket.mascota || '').trim();
         
-        // Verificar si el cliente ya existe
+        // Verificar si el cliente+mascota ya existe
         const existingClienteIndex = clientesData.findIndex(c => 
-            c.Identificacion === ticket.cedula || c.Id === ticket.idPaciente
+            (c.Identificacion === ticket.cedula || c.Id === ticket.idPaciente) &&
+            c['nombre mascota'] === mascotaNombre
         );
         
         const nuevoCliente = {
             Id: ticket.idPaciente || clienteId,
             Nombre: ticket.nombre,
             Identificacion: ticket.cedula || '',
-            'nombre mascota': ticket.mascota || '',
+            'nombre mascota': mascotaNombre,
             Especie: ticket.tipoMascota === 'perro' ? 'Canino' : 
                     ticket.tipoMascota === 'gato' ? 'Felino' : 
                     ticket.tipoMascota === 'conejo' ? 'Conejo' : 'Otro',
@@ -224,13 +230,13 @@ function addClienteFromTicket(ticket) {
         };
         
         if (existingClienteIndex === -1) {
-            // Cliente nuevo
+            // Cliente+mascota nuevo
             clientesData.push(nuevoCliente);
-            console.log(`Nuevo cliente añadido: ${nuevoCliente.Nombre}`);
+            console.log(`Nuevo cliente+mascota añadido: ${nuevoCliente.Nombre} - ${mascotaNombre}`);
         } else {
-            // Actualizar cliente existente
+            // Actualizar cliente+mascota existente
             clientesData[existingClienteIndex] = nuevoCliente;
-            console.log(`Cliente actualizado: ${nuevoCliente.Nombre}`);
+            console.log(`Cliente+mascota actualizado: ${nuevoCliente.Nombre} - ${mascotaNombre}`);
         }
         
         notifyClientesDataUpdated();
@@ -328,7 +334,7 @@ function setupLabFirebaseListeners() {
 // Verificar si el usuario tiene acceso al módulo de laboratorio
 function hasLabAccess() {
     const userRole = sessionStorage.getItem('userRole');
-    const allowedRoles = ['admin', 'internos', 'consulta_externa', 'laboratorio'];
+    const allowedRoles = ['admin', 'internos', 'consulta_externa', 'laboratorio', 'quirofano'];
     return allowedRoles.includes(userRole);
 }
 
@@ -337,7 +343,12 @@ function updateRazasSelect() {
     const tipoMascota = document.getElementById('labTipoMascota').value;
     const razaSelect = document.getElementById('labRaza');
     
-    if (!razaSelect) return;
+    console.log(`updateRazasSelect - Tipo de mascota: ${tipoMascota}`);
+    
+    if (!razaSelect) {
+        console.warn('Select de raza no encontrado');
+        return;
+    }
     
     // Limpiar opciones existentes
     razaSelect.innerHTML = '';
@@ -358,6 +369,8 @@ function updateRazasSelect() {
         default:
             razas = ['SRD'];
     }
+    
+    console.log(`Razas disponibles para ${tipoMascota}:`, razas.length);
     
     // Agregar opción por defecto
     const defaultOption = document.createElement('option');
@@ -412,6 +425,17 @@ function setupLabEventListeners() {
         console.warn('Select labTipoMascota no encontrado');
     }
     
+    // Configurar listener para el médico que solicita (para controlar examen de regalía)
+    const labMedicoSolicita = document.getElementById('labMedicoSolicita');
+    if (labMedicoSolicita) {
+        console.log('Configurando selector de médico que solicita');
+        labMedicoSolicita.addEventListener('change', toggleExamenRegaliaVisibility);
+        // Inicializar la visibilidad del campo
+        toggleExamenRegaliaVisibility();
+    } else {
+        console.warn('Select labMedicoSolicita no encontrado');
+    }
+    
     // Filtros de laboratorio
     const labFilterBtns = document.querySelectorAll('.lab-filter-btn');
     console.log('Filtros de laboratorio encontrados:', labFilterBtns.length);    // Ocultar filtro "Todos" para usuarios que no sean admin
@@ -430,6 +454,22 @@ function setupLabEventListeners() {
             }
         }
     }
+    
+    // Ocultar filtro "Internos" para usuarios de consulta externa
+    if (userRole === 'consulta_externa') {
+        const internosLabBtn = document.querySelector('.lab-filter-btn[data-filter="internos"]');
+        if (internosLabBtn) {
+            internosLabBtn.style.display = 'none';
+            // Si el botón "Internos" está activo, cambiar a "Pendiente" por defecto
+            if (internosLabBtn.classList.contains('active')) {
+                internosLabBtn.classList.remove('active');
+                const pendienteBtn = document.querySelector('.lab-filter-btn[data-filter="pendiente"]');
+                if (pendienteBtn) {
+                    pendienteBtn.classList.add('active');
+                }
+            }
+        }
+    }
       labFilterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             // Actualizar botón activo
@@ -441,6 +481,9 @@ function setupLabEventListeners() {
             
             // Mostrar/ocultar filtro de médicos según el estado
             toggleMedicoFilter(filter);
+            
+            // Mostrar/ocultar filtro de fecha según el estado
+            toggleDateFilter(filter);
             
             // Reset del filtro de médicos al cambiar de estado
             const medicoFilter = document.getElementById('labMedicoFilter');
@@ -518,6 +561,33 @@ function setupLabEventListeners() {
     }
     
     console.log('Event listeners de laboratorio configurados');
+}
+
+// Controlar la visibilidad del campo de examen de regalía
+function toggleExamenRegaliaVisibility() {
+    const medicoSelect = document.getElementById('labMedicoSolicita');
+    const examenRegaliaGroup = document.getElementById('labExamenRegalia')?.closest('.form-group');
+    
+    if (!medicoSelect || !examenRegaliaGroup) return;
+    
+    const medico = medicoSelect.value;
+    const medicosRegalia = ['Dr. Luis Coto', 'Dr. Randall Azofeifa'];
+    
+    if (medicosRegalia.includes(medico)) {
+        examenRegaliaGroup.style.display = 'block';
+        // Auto-seleccionar "Sí" para examen de regalía si es uno de estos médicos
+        const examenRegaliaSelect = document.getElementById('labExamenRegalia');
+        if (examenRegaliaSelect && examenRegaliaSelect.value === 'no') {
+            examenRegaliaSelect.value = 'si';
+        }
+    } else {
+        examenRegaliaGroup.style.display = 'none';
+        // Auto-seleccionar "No" para otros médicos
+        const examenRegaliaSelect = document.getElementById('labExamenRegalia');
+        if (examenRegaliaSelect) {
+            examenRegaliaSelect.value = 'no';
+        }
+    }
 }
 
 // Configurar búsqueda de clientes con actualizaciones en tiempo real
@@ -924,6 +994,11 @@ function selectCliente(itemElement) {
             else if (clienteData.Especie === 'Conejo') tipoMascota = 'conejo';
             
             tipoMascotaSelect.value = tipoMascota;
+            
+            console.log(`Tipo de mascota determinado: ${tipoMascota} (Especie: ${clienteData.Especie})`);
+            
+            // Actualizar las razas según el tipo de mascota seleccionado
+            updateRazasSelect();
         }
         
         // Ocultar resultados
@@ -981,9 +1056,11 @@ function showLabSection(sectionId) {
             }
             
             // Inicializar sistema de servicios cuando se muestra la sección de crear
-            if (typeof initServiceSelection === 'function') {
-                initServiceSelection();
-            }        } else if (sectionId === 'verLabSection') {
+            setTimeout(() => {
+                if (typeof initServiceSelection === 'function') {
+                    initServiceSelection();
+                }
+            }, 100);        } else if (sectionId === 'verLabSection') {
             const verBtn = document.getElementById('verLabBtn');
             if (verBtn) {
                 verBtn.classList.add('active');
@@ -1003,6 +1080,11 @@ function showLabSection(sectionId) {
             // Determinar el filtro por defecto según el rol del usuario
             const userRole = sessionStorage.getItem('userRole');
             const defaultFilter = userRole === 'admin' ? 'todos' : 'pendiente';
+            
+            // Configurar visibilidad de filtros según el filtro por defecto
+            toggleMedicoFilter(defaultFilter);
+            toggleDateFilter(defaultFilter);
+            
             renderLabTickets(defaultFilter);
             updateLabStats();
         }
@@ -1064,7 +1146,9 @@ function handleLabTicketSubmit(e) {
         serviciosIds: serviciosData.serviciosIds,
         serviciosNombres: serviciosData.serviciosNombres,
         totalServicios: serviciosData.total,
-        prioridad: document.getElementById('labPrioridad').value,        medicoSolicita: document.getElementById('labMedicoSolicita').value.trim(),
+        prioridad: document.getElementById('labPrioridad').value,
+        medicoSolicita: document.getElementById('labMedicoSolicita').value.trim(),
+        examenRegalia: document.getElementById('labExamenRegalia').value,
         observaciones: document.getElementById('labObservaciones').value.trim(),
         notasLaboratorio: document.getElementById('labNotasLaboratorio').value.trim(),
         paquete: document.getElementById('labPaquete').value,
@@ -1188,6 +1272,21 @@ function resetLabForm() {
     }
 }
 
+// Función auxiliar para filtrar tickets según el rol del usuario
+function filterTicketsByUserRole(tickets) {
+    const userRole = sessionStorage.getItem('userRole');
+    
+    if (userRole === 'consulta_externa') {
+        // Los usuarios de consulta externa solo ven tickets de consulta externa
+        return tickets.filter(ticket => {
+            return ticket.departamento === 'consulta_externa';
+        });
+    }
+    
+    // Otros roles (admin, internos, laboratorio) ven todos los tickets
+    return tickets;
+}
+
 // Renderizar tickets de laboratorio
 function renderLabTickets(filter = 'todos', medicoFilter = '') {
     const container = document.getElementById('labTicketContainer');
@@ -1197,11 +1296,15 @@ function renderLabTickets(filter = 'todos', medicoFilter = '') {
     
     // Filtrar tickets por estado
     let filteredTickets = filterLabTickets(labTickets, filter);
+    
+    // Aplicar filtro por departamento según el rol del usuario
+    filteredTickets = filterTicketsByUserRole(filteredTickets);
 
-    // Solo aplicar filtro de fecha para reportado, reportado_cliente y cliente_no_contesta
+    // Solo aplicar filtro de fecha para reportado_cliente
+    // Para "reportado" y "cliente_no_contesta", NO aplicar filtro de fecha - mostrar todos
     const fechaFilter = document.getElementById('labFilterDate');
     if (
-        (filter === 'reportado' || filter === 'reportado_cliente' || filter === 'cliente_no_contesta') &&
+        filter === 'reportado_cliente' &&
         fechaFilter && fechaFilter.value
     ) {
         const selectedDate = fechaFilter.value;
@@ -1213,16 +1316,23 @@ function renderLabTickets(filter = 'todos', medicoFilter = '') {
                    (ticket.fechaReportadoCliente && ticket.fechaReportadoCliente === selectedDate);
         });
     }
-    // Para pendiente, procesando, laboratorio_externo e internos, NO filtrar por fecha
-    // Aplicar filtro de médico solo si corresponde
-    if (
-        (filter === 'reportado' || filter === 'reportado_cliente' || filter === 'cliente_no_contesta') &&
-        medicoFilter && medicoFilter.trim() !== ''
-    ) {
-        filteredTickets = filteredTickets.filter(ticket => {
-            return ticket.medicoSolicita && 
-                   ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase());
-        });
+    // Para pendiente, procesando, internos, reportado y cliente_no_contesta, NO filtrar por fecha
+    
+    // Aplicar filtro de médico - para "reportado" no aplicar restricción de fecha
+    if (medicoFilter && medicoFilter.trim() !== '') {
+        if (filter === 'reportado') {
+            // Para "Reportado Lab", filtrar por médico sin restricción de fecha
+            filteredTickets = filteredTickets.filter(ticket => {
+                return ticket.medicoSolicita && 
+                       ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase());
+            });
+        } else if (filter === 'reportado_cliente' || filter === 'cliente_no_contesta') {
+            // Para otros estados reportados, aplicar filtro de médico normalmente
+            filteredTickets = filteredTickets.filter(ticket => {
+                return ticket.medicoSolicita && 
+                       ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase());
+            });
+        }
     }
     
     if (filteredTickets.length === 0) {
@@ -1263,8 +1373,6 @@ function filterLabTickets(tickets, filter) {
                 return ticket.estado === 'reportado';
             case 'reportado_cliente':
                 return ticket.estado === 'reportado_cliente';
-            case 'laboratorio_externo':
-                return ticket.estado === 'laboratorio_externo';
             case 'cliente_no_contesta':
                 return ticket.estado === 'cliente_no_contesta';
             case 'internos':
@@ -1350,6 +1458,18 @@ function createLabTicketElement(ticket) {
                         <i class="fas fa-user-md"></i>
                         <span><strong>Médico:</strong> ${formatMedicoWithLineBreak(ticket.medicoSolicita)}</span>
                     </div>
+                    ${ticket.examenRegalia === 'si' ? `
+                        <div class="lab-ticket-detail examen-regalia">
+                            <i class="fas fa-crown" style="color: #f1c40f;"></i>
+                            <span><strong>Examen de Regalía</strong></span>
+                            ${ticket.firmaDigital ? `
+                                <div class="firma-digital" style="margin-top: 5px;">
+                                    <i class="fas fa-signature" style="color: #27ae60;"></i>
+                                    <small style="color: #27ae60;">Firmado digitalmente</small>
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
                     <div class="lab-ticket-detail">
                         <i class="fas fa-building"></i>
                         <span><strong>Departamento:</strong> ${departamentoNombre}</span>
@@ -1576,7 +1696,6 @@ function getLabStatusDisplay(estado, ticket = null) {
         'procesando': 'En proceso',
         'reportado': 'Reportado Lab',
         'reportado_cliente': 'Reportado al Cliente',
-        'laboratorio_externo': 'Laboratorio Externo',
         'cliente_no_contesta': 'Cliente no contesta'
     };
     
@@ -1775,10 +1894,26 @@ function editLabTicket(randomId) {
                             ${getUserReportOption(ticket)}
                         </select>
                     </div>
-                </div><div class="form-row">
+                </div>                <div class="form-row">
                     <div class="form-group">
                         <label>Médico que Solicita</label>
-                        <input type="text" id="editLabMedico" value="${ticket.medicoSolicita}" required>
+                        <select id="editLabMedico" required>
+                            <option value="">Seleccione un médico</option>
+                            <option value="Dr. Luis Coto" ${ticket.medicoSolicita === 'Dr. Luis Coto' ? 'selected' : ''}>Dr. Luis Coto</option>
+                            <option value="Dr. Randall Azofeifa" ${ticket.medicoSolicita === 'Dr. Randall Azofeifa' ? 'selected' : ''}>Dr. Randall Azofeifa</option>
+                            <option value="Dr. Gustavo Gonzalez" ${ticket.medicoSolicita === 'Dr. Gustavo Gonzalez' ? 'selected' : ''}>Dr. Gustavo Gonzalez</option>
+                            <option value="Dra. Daniela Sancho" ${ticket.medicoSolicita === 'Dra. Daniela Sancho' ? 'selected' : ''}>Dra. Daniela Sancho</option>
+                            <option value="Dra. Francinny Nuñez" ${ticket.medicoSolicita === 'Dra. Francinny Nuñez' ? 'selected' : ''}>Dra. Francinny Nuñez</option>
+                            <option value="Dra. Kharen Moreno" ${ticket.medicoSolicita === 'Dra. Kharen Moreno' ? 'selected' : ''}>Dra. Kharen Moreno</option>
+                            <option value="Dra. Karina Madrigal" ${ticket.medicoSolicita === 'Dra. Karina Madrigal' ? 'selected' : ''}>Dra. Karina Madrigal</option>
+                            <option value="Dra. Lourdes Chacón" ${ticket.medicoSolicita === 'Dra. Lourdes Chacón' ? 'selected' : ''}>Dra. Lourdes Chacón</option>
+                            <option value="Dra. Sofia Carrillo" ${ticket.medicoSolicita === 'Dra. Sofia Carrillo' ? 'selected' : ''}>Dra. Sofia Carrillo</option>
+                            <option value="Dra. Karla Quesada" ${ticket.medicoSolicita === 'Dra. Karla Quesada' ? 'selected' : ''}>Dra. Karla Quesada</option>
+                            <option value="Dra. Natalia Alvarado" ${ticket.medicoSolicita === 'Dra. Natalia Alvarado' ? 'selected' : ''}>Dra. Natalia Alvarado</option>
+                            <option value="Medico Externo" ${ticket.medicoSolicita === 'Medico Externo' ? 'selected' : ''}>Médico Externo</option>
+                            <option value="Medico Internista" ${ticket.medicoSolicita === 'Medico Internista' ? 'selected' : ''}>Médico Internista</option>
+                            <option value="N.A" ${ticket.medicoSolicita === 'N.A' ? 'selected' : ''}>N.A</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Prioridad</label>                        <select id="editLabPrioridad" required>
@@ -1810,7 +1945,34 @@ function editLabTicket(randomId) {
                             <option value="internos" ${ticket.departamento === 'internos' ? 'selected' : ''}>Internos</option>
                         </select>
                     </div>
-                </div>                <div class="form-group">
+                </div>
+                
+                <!-- Campo de examen de regalía y firma digital -->
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editLabExamenRegalia" style="display: flex; align-items: center; gap: 8px;">
+                            Examen de Regalía
+                        </label>
+                        <select id="editLabExamenRegalia" required>
+                            <option value="no" ${(ticket.examenRegalia || 'no') === 'no' ? 'selected' : ''}>No</option>
+                            <option value="si" ${ticket.examenRegalia === 'si' ? 'selected' : ''}>Sí</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="editFirmaContainer" style="display: ${ticket.examenRegalia === 'si' && sessionStorage.getItem('userRole') === 'admin' ? 'block' : 'none'};">
+                        <label>Firma Digital del Administrador</label>
+                        <div style="border: 1px solid #ccc; border-radius: 8px; background: #fff; padding: 10px;">
+                            <canvas id="editFirmaCanvas" width="300" height="100" style="border: 1px solid #aaa; border-radius: 6px; background: #fafafa; cursor: crosshair;"></canvas>
+                            <div style="margin-top: 8px;">
+                                <button type="button" id="editLimpiarFirmaBtn" style="margin-right: 10px;">Limpiar Firma</button>
+                                ${ticket.firmaDigital ? '<span style="color: #27ae60;"><i class="fas fa-check"></i> Ya firmado</span>' : ''}
+                            </div>
+                        </div>
+                        <input type="hidden" id="editFirmaBase64" name="editFirmaBase64" value="${ticket.firmaDigital || ''}">
+                        <small style="color: #888;">Solo disponible para administradores en exámenes de regalía.</small>
+                    </div>
+                </div>
+                
+                <div class="form-group">
                     <label>Observaciones</label>
                     <textarea id="editLabObservaciones" rows="3">${ticket.observaciones || ''}</textarea>
                 </div>
@@ -1865,6 +2027,8 @@ function editLabTicket(randomId) {
             serviciosSeleccionados: [...selectedServices],
             estado: document.getElementById('editLabEstado').value,
             medicoSolicita: document.getElementById('editLabMedico').value.trim(),
+            examenRegalia: document.getElementById('editLabExamenRegalia').value,
+            firmaDigital: document.getElementById('editFirmaBase64').value,
             prioridad: document.getElementById('editLabPrioridad').value,            correo: document.getElementById('editLabCorreo').value.trim(),
             telefono: document.getElementById('editLabTelefono').value.trim(),
             factura: document.getElementById('editLabFactura').value.trim(),
@@ -1881,11 +2045,18 @@ function editLabTicket(randomId) {
         
         saveEditedLabTicket(updatedData);
     });
-      // Inicializar el sistema de servicios para edición
-    initEditServiceSelection(ticket);
     
-    // Configurar el selector de razas para edición
-    setupEditRazasSelector(ticket);
+    // Usar setTimeout para asegurar que el modal esté completamente en el DOM
+    setTimeout(() => {
+        // Inicializar el sistema de servicios para edición
+        initEditServiceSelection(ticket);
+        
+        // Configurar el selector de razas para edición
+        setupEditRazasSelector(ticket);
+        
+        // Configurar el examen de regalía y firma digital en edición
+        setupEditExamenRegaliaAndFirma(ticket);
+    }, 50);
 }
 
 // Función para configurar el selector de razas en el modal de edición
@@ -1893,11 +2064,31 @@ function setupEditRazasSelector(ticket) {
     const editTipoMascota = document.getElementById('editLabTipoMascota');
     const editRazaSelect = document.getElementById('editLabRaza');
     
-    if (!editTipoMascota || !editRazaSelect) return;
+    console.log('setupEditRazasSelector - Estado inicial:', {
+        editTipoMascota: !!editTipoMascota,
+        editRazaSelect: !!editRazaSelect,
+        tipoMascotaValue: editTipoMascota?.value,
+        ticketTipoMascota: ticket.tipoMascota,
+        ticketRaza: ticket.raza
+    });
+    
+    if (!editTipoMascota || !editRazaSelect) {
+        console.error('No se encontraron los elementos de tipo de mascota o raza para edición');
+        return;
+    }
+    
+    // Asegurar que el valor del select de tipo de mascota sea correcto
+    if (editTipoMascota.value !== ticket.tipoMascota) {
+        editTipoMascota.value = ticket.tipoMascota;
+        console.log(`Corrigiendo valor del select tipo mascota: ${ticket.tipoMascota}`);
+    }
     
     // Función para actualizar las razas en el modal de edición
-    function updateEditRazasSelect() {
-        const tipoMascota = editTipoMascota.value;
+    function updateEditRazasSelect(tipoMascotaParam = null) {
+        // Usar el parámetro proporcionado o el valor actual del select
+        const tipoMascota = tipoMascotaParam || editTipoMascota.value;
+        
+        console.log(`Actualizando razas - Tipo de mascota: ${tipoMascota}, Raza del ticket: ${ticket.raza}`);
         
         // Limpiar opciones existentes
         editRazaSelect.innerHTML = '';
@@ -1919,6 +2110,8 @@ function setupEditRazasSelector(ticket) {
                 razas = ['SRD'];
         }
         
+        console.log(`Razas encontradas para ${tipoMascota}:`, razas.length);
+        
         // Agregar opción por defecto
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
@@ -1933,16 +2126,178 @@ function setupEditRazasSelector(ticket) {
             // Seleccionar la raza actual del ticket si coincide
             if (ticket.raza === raza) {
                 option.selected = true;
+                console.log(`Raza seleccionada: ${raza}`);
             }
             editRazaSelect.appendChild(option);
         });
+        
+        console.log(`Razas actualizadas para edición - ${tipoMascota}: ${razas.length} opciones`);
     }
     
     // Configurar listener para cambio de tipo de mascota
-    editTipoMascota.addEventListener('change', updateEditRazasSelect);
+    editTipoMascota.addEventListener('change', () => updateEditRazasSelect());
     
-    // Inicializar las razas con el tipo actual
-    updateEditRazasSelect();
+    // Inicializar las razas con el tipo actual del ticket
+    // Usar un pequeño delay adicional para asegurar que el DOM esté completamente procesado
+    setTimeout(() => {
+        updateEditRazasSelect(ticket.tipoMascota);
+    }, 50);
+}
+
+// Función para configurar el examen de regalía y firma digital en edición
+function setupEditExamenRegaliaAndFirma(ticket) {
+    const examenRegaliaSelect = document.getElementById('editLabExamenRegalia');
+    const firmaContainer = document.getElementById('editFirmaContainer');
+    const firmaCanvas = document.getElementById('editFirmaCanvas');
+    const limpiarFirmaBtn = document.getElementById('editLimpiarFirmaBtn');
+    const firmaBase64Input = document.getElementById('editFirmaBase64');
+    
+    if (!examenRegaliaSelect || !firmaContainer) return;
+    
+    const userRole = sessionStorage.getItem('userRole');
+    let ctx = null;
+    let isDrawing = false;
+    
+    // Inicializar canvas si existe
+    if (firmaCanvas && userRole === 'admin') {
+        ctx = firmaCanvas.getContext('2d');
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        
+        // Cargar firma existente si la hay
+        if (ticket.firmaDigital) {
+            const img = new Image();
+            img.onload = function() {
+                ctx.clearRect(0, 0, firmaCanvas.width, firmaCanvas.height);
+                ctx.drawImage(img, 0, 0);
+            };
+            img.src = ticket.firmaDigital;
+        }
+        
+        // Event listeners para el canvas
+        firmaCanvas.addEventListener('mousedown', startDrawing);
+        firmaCanvas.addEventListener('mousemove', draw);
+        firmaCanvas.addEventListener('mouseup', stopDrawing);
+        firmaCanvas.addEventListener('mouseout', stopDrawing);
+        
+        // Touch events para móviles
+        firmaCanvas.addEventListener('touchstart', function(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousedown', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            firmaCanvas.dispatchEvent(mouseEvent);
+        });
+        
+        firmaCanvas.addEventListener('touchmove', function(e) {
+            e.preventDefault();
+            const touch = e.touches[0];
+            const mouseEvent = new MouseEvent('mousemove', {
+                clientX: touch.clientX,
+                clientY: touch.clientY
+            });
+            firmaCanvas.dispatchEvent(mouseEvent);
+        });
+        
+        firmaCanvas.addEventListener('touchend', function(e) {
+            e.preventDefault();
+            const mouseEvent = new MouseEvent('mouseup', {});
+            firmaCanvas.dispatchEvent(mouseEvent);
+        });
+    }
+    
+    function startDrawing(e) {
+        isDrawing = true;
+        const rect = firmaCanvas.getBoundingClientRect();
+        ctx.beginPath();
+        ctx.moveTo(e.clientX - rect.left, e.clientY - rect.top);
+    }
+    
+    function draw(e) {
+        if (!isDrawing) return;
+        const rect = firmaCanvas.getBoundingClientRect();
+        ctx.lineTo(e.clientX - rect.left, e.clientY - rect.top);
+        ctx.stroke();
+    }
+    
+    function stopDrawing() {
+        if (isDrawing) {
+            isDrawing = false;
+            // Guardar firma en base64
+            if (firmaBase64Input) {
+                firmaBase64Input.value = firmaCanvas.toDataURL();
+            }
+        }
+    }
+    
+    // Event listener para cambio de examen de regalía
+    examenRegaliaSelect.addEventListener('change', function() {
+        const isRegalia = this.value === 'si';
+        const shouldShowFirma = isRegalia && userRole === 'admin';
+        
+        firmaContainer.style.display = shouldShowFirma ? 'block' : 'none';
+        
+        if (!isRegalia && firmaBase64Input) {
+            firmaBase64Input.value = '';
+            if (ctx) {
+                ctx.clearRect(0, 0, firmaCanvas.width, firmaCanvas.height);
+            }
+        }
+    });
+    
+    // Event listener para limpiar firma
+    if (limpiarFirmaBtn && ctx) {
+        limpiarFirmaBtn.addEventListener('click', function() {
+            ctx.clearRect(0, 0, firmaCanvas.width, firmaCanvas.height);
+            if (firmaBase64Input) {
+                firmaBase64Input.value = '';
+            }
+        });
+    }
+    
+    // Configurar listener para el médico que solicita (para controlar examen de regalía automáticamente)
+    const editMedicoSelect = document.getElementById('editLabMedico');
+    if (editMedicoSelect) {
+        editMedicoSelect.addEventListener('change', function() {
+            toggleEditExamenRegaliaVisibility();
+        });
+        
+        // Inicializar la visibilidad del campo
+        toggleEditExamenRegaliaVisibility();
+    }
+    
+    function toggleEditExamenRegaliaVisibility() {
+        const medicoSelect = document.getElementById('editLabMedico');
+        const examenRegaliaGroup = document.getElementById('editLabExamenRegalia')?.closest('.form-group');
+        
+        if (!medicoSelect || !examenRegaliaGroup) return;
+        
+        const medico = medicoSelect.value;
+        const medicosRegalia = ['Dr. Luis Coto', 'Dr. Randall Azofeifa'];
+        
+        if (medicosRegalia.includes(medico)) {
+            examenRegaliaGroup.style.display = 'block';
+            // Auto-seleccionar "Sí" para examen de regalía si es uno de estos médicos
+            const examenRegaliaSelect = document.getElementById('editLabExamenRegalia');
+            if (examenRegaliaSelect && examenRegaliaSelect.value === 'no') {
+                examenRegaliaSelect.value = 'si';
+                // Disparar evento change para actualizar la visibilidad de la firma
+                examenRegaliaSelect.dispatchEvent(new Event('change'));
+            }
+        } else {
+            examenRegaliaGroup.style.display = 'none';
+            // Auto-seleccionar "No" para otros médicos
+            const examenRegaliaSelect = document.getElementById('editLabExamenRegalia');
+            if (examenRegaliaSelect) {
+                examenRegaliaSelect.value = 'no';
+                // Disparar evento change para actualizar la visibilidad de la firma
+                examenRegaliaSelect.dispatchEvent(new Event('change'));
+            }
+        }
+    }
 }
 
 // Funciones de sincronización de facturas para laboratorio
@@ -2065,62 +2420,6 @@ function changeLabStatus(randomId) {
     if (!ticket) return;    const modal = document.createElement('div');
     modal.className = 'edit-modal';
     modal.innerHTML = `
-        <div class="modal-content animate-scale">
-            <h3>Cambiar Estado - Lab #${ticket.id}</h3>
-            <form id="labStatusForm">
-                <div class="form-group">
-                    <label for="changeLabEstado">Estado del Ticket</label>
-                    <select id="changeLabEstado" required>
-                        <option value="pendiente" ${ticket.estado === 'pendiente' ? 'selected' : ''}>Pendiente</option>
-                        <option value="procesando" ${ticket.estado === 'procesando' ? 'selected' : ''}>En proceso</option>
-                        ${getUserReportOption(ticket)}
-                    </select>
-                </div>
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-save">Guardar Estado</button>
-                </div>
-            </form>
-        </div>
-    `;
-    
-    document.body.appendChild(modal);
-      document.getElementById('labStatusForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const nuevoEstado = document.getElementById('changeLabEstado').value;
-          const updatedTicket = {
-            ...ticket,
-            estado: nuevoEstado
-        };
-        
-        // Si se marca como reportado (laboratorio), agregar fecha y hora
-        if (nuevoEstado === 'reportado' && ticket.estado !== 'reportado') {
-            updatedTicket.fechaReportado = getLocalDateString();
-            updatedTicket.horaReportado = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        }
-        
-        // Si se marca como reportado al cliente, agregar fecha y hora
-        if (nuevoEstado === 'reportado_cliente' && ticket.estado !== 'reportado_cliente') {
-            updatedTicket.fechaReportadoCliente = getLocalDateString();
-            updatedTicket.horaReportadoCliente = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        }
-        
-        saveEditedLabTicket(updatedTicket);
-    });
-}
-
-// Imprimir ticket de laboratorio
-// Eliminar ticket de laboratorio
-function deleteLabTicket(randomId) {
-    const ticket = labTickets.find(t => t.randomId === randomId);
-    if (!ticket) return;
-    
-    const animalIcon = getAnimalIcon(ticket.tipoMascota);
-    
-    const modal = document.createElement('div');
-    modal.className = 'edit-modal';
-    modal.innerHTML = `
         <div class="modal-content animate-scale">            <h3><i class="fas fa-exclamation-triangle" style="color: var(--accent-color);"></i> Eliminar ticket de laboratorio</h3>
             <div style="text-align: center; margin: 25px 0;">
                 <div style="margin-bottom: 15px;">
@@ -2175,10 +2474,20 @@ function confirmDeleteLabTicket(firebaseKey) {
 // Filtrar tickets por búsqueda
 function filterLabTicketsBySearch(searchTerm) {
     const tickets = document.querySelectorAll('.lab-ticket');
+    const userRole = sessionStorage.getItem('userRole');
     
     tickets.forEach(ticket => {
         const ticketText = ticket.textContent.toLowerCase();
-        if (ticketText.includes(searchTerm)) {
+        const shouldShowBySearch = ticketText.includes(searchTerm);
+        
+        // Para usuarios de consulta externa, verificar además que el ticket sea de consulta externa
+        let shouldShowByDepartment = true;
+        if (userRole === 'consulta_externa') {
+            // Buscar si el ticket muestra "Consulta Externa" en el texto (que viene del departamento)
+            shouldShowByDepartment = ticketText.includes('consulta externa');
+        }
+        
+        if (shouldShowBySearch && shouldShowByDepartment) {
             ticket.style.display = 'block';
         } else {
             ticket.style.display = 'none';
@@ -2193,7 +2502,10 @@ function filterLabTicketsByDate(selectedDate) {
         return;
     }
     
-    const filteredTickets = labTickets.filter(ticket => ticket.fecha === selectedDate);
+    let filteredTickets = labTickets.filter(ticket => ticket.fecha === selectedDate);
+    
+    // Aplicar filtro por departamento según el rol del usuario
+    filteredTickets = filterTicketsByUserRole(filteredTickets);
     
     const container = document.getElementById('labTicketContainer');
     if (!container) return;
@@ -2219,15 +2531,17 @@ function filterLabTicketsByDate(selectedDate) {
 
 // Actualizar estadísticas de laboratorio
 function updateLabStats() {
+    // Aplicar filtro por departamento según el rol del usuario
+    const visibleTickets = filterTicketsByUserRole(labTickets);
+    
     const stats = {
-        total: labTickets.length,
-        pendientes: labTickets.filter(t => t.estado === 'pendiente').length,
-        procesando: labTickets.filter(t => t.estado === 'procesando').length,
-        reportados: labTickets.filter(t => t.estado === 'reportado').length,
-        reportadosCliente: labTickets.filter(t => t.estado === 'reportado_cliente').length,
-        laboratorioExterno: labTickets.filter(t => t.estado === 'laboratorio_externo').length,
-        clienteNoContesta: labTickets.filter(t => t.estado === 'cliente_no_contesta').length,
-        internos: labTickets.filter(t => t.departamento === 'internos').length
+        total: visibleTickets.length,
+        pendientes: visibleTickets.filter(t => t.estado === 'pendiente').length,
+        procesando: visibleTickets.filter(t => t.estado === 'procesando').length,
+        reportados: visibleTickets.filter(t => t.estado === 'reportado').length,
+        reportadosCliente: visibleTickets.filter(t => t.estado === 'reportado_cliente').length,
+        clienteNoContesta: visibleTickets.filter(t => t.estado === 'cliente_no_contesta').length,
+        internos: visibleTickets.filter(t => t.departamento === 'internos').length
     };
     
     // Actualizar elementos del DOM
@@ -2236,7 +2550,6 @@ function updateLabStats() {
     const procesandoElement = document.getElementById('procesandoLab');
     const reportadosElement = document.getElementById('reportadosLab');
     const reportadosClienteElement = document.getElementById('reportadosClienteLab');
-    const laboratorioExternoElement = document.getElementById('laboratorioExternoLab');
     const clienteNoContestaElement = document.getElementById('clienteNoContestaLab');
     const internosElement = document.getElementById('internosLab');
     
@@ -2245,7 +2558,6 @@ function updateLabStats() {
     if (procesandoElement) procesandoElement.textContent = stats.procesando;
     if (reportadosElement) reportadosElement.textContent = stats.reportados;
     if (reportadosClienteElement) reportadosClienteElement.textContent = stats.reportadosCliente;
-    if (laboratorioExternoElement) laboratorioExternoElement.textContent = stats.laboratorioExterno;
     if (clienteNoContestaElement) clienteNoContestaElement.textContent = stats.clienteNoContesta;
     if (internosElement) internosElement.textContent = stats.internos;
     if (reportadosClienteElement) reportadosClienteElement.textContent = stats.reportadosCliente;
@@ -2699,42 +3011,17 @@ function displayEditServices(services) {
             ${category.titulo}
         `;
         categoryDiv.appendChild(categoryHeader);
-        
-        // Servicios de la categoría
+          // Servicios de la categoría
         category.servicios.forEach(service => {
-            const serviceDiv = createEditServiceItem(service);
+            const serviceDiv = createServiceItem(service);
             categoryDiv.appendChild(serviceDiv);
         });
         
-        servicesList.appendChild(categoryDiv);
-    });
-}
-
-// Crear elemento de servicio para edición
-function createEditServiceItem(service) {
-    const isSelected = selectedServices.some(s => s.id === service.id);
-    
-    const serviceDiv = document.createElement('div');
-    serviceDiv.className = `service-item ${isSelected ? 'selected' : ''}`;
-    serviceDiv.setAttribute('data-service-id', service.id);
-    
-    serviceDiv.innerHTML = `
-        <div class="service-checkbox-container">
-            <input type="checkbox" class="service-checkbox" ${isSelected ? 'checked' : ''} 
-                   onchange="toggleEditServiceSelection('${service.id}')">
-        </div>
-        <div class="service-info">
-            <div class="service-name">${service.nombre}</div>
-            <div class="service-description">${service.descripcion}</div>
-            <div class="service-price">₡${service.precio.toLocaleString()}</div>
-        </div>
-    `;
-    
-    return serviceDiv;
+        servicesList.appendChild(categoryDiv);    });
 }
 
 // Toggle selección de servicio en edición
-function toggleEditServiceSelection(serviceId) {
+function toggleServiceSelection(serviceId) {
     const service = getServiceById(serviceId);
     if (!service) return;
     
@@ -2754,7 +3041,7 @@ function toggleEditServiceSelection(serviceId) {
     updateEditTotalPrice();
 }
 
-// Actualizar UI de selección en edición
+// Actualizar UI de selección de un servicio específico en edición
 function updateEditServiceSelectionUI(serviceId) {
     const serviceElement = document.querySelector(`[data-service-id="${serviceId}"]`);
     if (!serviceElement) return;
@@ -2889,13 +3176,26 @@ function toggleMedicoFilter(filter) {
     }
 }
 
+// Mostrar/ocultar filtro de fecha según el estado
+function toggleDateFilter(filter) {
+    const dateFilterContainer = document.getElementById('labDateFilterContainer');
+    if (!dateFilterContainer) return;
+    
+    // Solo mostrar el filtro de fecha para "Reportado al Cliente" (reportado_cliente)
+    // Ocultar para todos los demás estados ya que no necesitan filtro de fecha
+    if (filter === 'reportado_cliente') {
+        dateFilterContainer.style.display = 'block';
+    } else {
+        dateFilterContainer.style.display = 'none';
+    }
+}
+
 // Obtener opción de reporte según el rol del usuario
 function getUserReportOption(ticket) {
     // Mostrar todas las opciones de estado para todos los usuarios
     return `
         <option value="reportado" ${ticket.estado === 'reportado' ? 'selected' : ''}>Reportado de Laboratorio</option>
         <option value="reportado_cliente" ${ticket.estado === 'reportado_cliente' ? 'selected' : ''}>Reportado al Cliente</option>
-        <option value="laboratorio_externo" ${ticket.estado === 'laboratorio_externo' ? 'selected' : ''}>Laboratorio Externo</option>
         <option value="cliente_no_contesta" ${ticket.estado === 'cliente_no_contesta' ? 'selected' : ''}>Cliente no contesta</option>
     `;
 }
