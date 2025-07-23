@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control anestésico y medicamentoso</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="control_anestesico.css">
+    <style>
+        @media print {
+            .print-button {
+                display: none;
+            }
+            body {
+                padding: 0;
+                margin: 0;
+            }
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <img src="empresa.jpg" alt="Logo Veterinaria">
+        <h1>Control anestésico y medicamentoso</h1>
+    </div>
+
+    <div class="patient-info">
+        <div>
+            <label><i class="fas fa-user"></i> Cliente:</label>
+            <input type="text" id="nombreCliente" placeholder="Nombre del cliente" style="width: 180px;">
+        </div>
+        <div>
+            <label><i class="fas fa-paw"></i> Mascota:</label>
+            <input type="text" id="nombreMascota" placeholder="Nombre de la mascota" style="width: 180px;">
+        </div>
+        <div>
+            <label><i class="fas fa-cat"></i> Tipo:</label>
+            <input type="text" id="tipoMascota" placeholder="Tipo de mascota" style="width: 120px;">
+        </div>
+        <div>
+            <label><i class="fas fa-user-md"></i> Doctor:</label>
+            <input type="text" id="doctorAtiende" placeholder="Nombre del doctor" style="width: 180px;">
+        </div>
+        <div>
+            <label><i class="fas fa-calendar-alt"></i> Fecha:</label>
+            <span id="fechaActual">-</span>
+        </div>
+    </div>
+
+    <h3 class="section-title"><i class="fas fa-heartbeat"></i> Parámetros Vitales</h3>
+    <table>
+        <tr>
+            <td><i class="fas fa-weight"></i> Peso</td>
+            <td><input type="text" id="peso" placeholder="Ingrese el peso"></td>
+        </tr>
+        <tr>
+            <td><i class="fas fa-thermometer-half"></i> Temperatura</td>
+            <td><input type="text" id="temperatura" placeholder="Ingrese la temperatura"></td>
+        </tr>
+        <tr>
+            <td><i class="fas fa-tint"></i> Llenado capilar</td>
+            <td><input type="text" id="llenadoCapilar" placeholder="Tiempo de llenado capilar"></td>
+        </tr>
+        <tr>
+            <td><i class="fas fa-film"></i> Mucosas</td>
+            <td><input type="text" id="mucosas" placeholder="Estado de las mucosas"></td>
+        </tr>
+        <tr>
+            <td><i class="fas fa-heartbeat"></i> Frecuencia cardíaca</td>
+            <td><input type="text" id="frecuenciaCardiaca" placeholder="Latidos por minuto"></td>
+        </tr>
+        <tr>
+            <td><i class="fas fa-lungs"></i> Frecuencia respiratoria</td>
+            <td><input type="text" id="frecuenciaRespiratoria" placeholder="Respiraciones por minuto"></td>
+        </tr>
+    </table>
+
+    <h3 class="section-title"><i class="fas fa-pills"></i> Medicamento Prequirúrgico</h3>
+    <table>
+        <tr>
+            <th><i class="fas fa-prescription-bottle-alt"></i> Medicamento</th>
+            <th><i class="fas fa-syringe"></i> Dosis</th>
+            <th><i class="fas fa-signature"></i> Firma quien médica</th>
+        </tr>
+        <tr>
+            <td><input type="text" class="med-prequirurgico-nombre" placeholder="Nombre del medicamento"></td>
+            <td><input type="text" class="med-prequirurgico-dosis" placeholder="Dosis administrada"></td>
+            <td><input type="text" class="med-prequirurgico-firma" placeholder="Nombre del médico"></td>
+        </tr>
+        <tr>
+            <td><input type="text" class="med-prequirurgico-nombre" placeholder="Nombre del medicamento"></td>
+            <td><input type="text" class="med-prequirurgico-dosis" placeholder="Dosis administrada"></td>
+            <td><input type="text" class="med-prequirurgico-firma" placeholder="Nombre del médico"></td>
+        </tr>
+        <tr>
+            <td><input type="text" class="med-prequirurgico-nombre" placeholder="Nombre del medicamento"></td>
+            <td><input type="text" class="med-prequirurgico-dosis" placeholder="Dosis administrada"></td>
+            <td><input type="text" class="med-prequirurgico-firma" placeholder="Nombre del médico"></td>
+        </tr>
+    </table>
+
+    <h3 class="section-title">Medicamento postquirúrgico</h3>
+    <table>
+        <tr>
+            <th>Medicamento</th>
+            <th>Dosis</th>
+            <th>Firma quien médica</th>
+        </tr>
+        <tr>
+            <td><input type="text" class="med-postquirurgico-nombre"></td>
+            <td><input type="text" class="med-postquirurgico-dosis"></td>
+            <td><input type="text" class="med-postquirurgico-firma"></td>
+        </tr>
+        <tr>
+            <td><input type="text" class="med-postquirurgico-nombre"></td>
+            <td><input type="text" class="med-postquirurgico-dosis"></td>
+            <td><input type="text" class="med-postquirurgico-firma"></td>
+        </tr>
+        <tr>
+            <td><input type="text" class="med-postquirurgico-nombre"></td>
+            <td><input type="text" class="med-postquirurgico-dosis"></td>
+            <td><input type="text" class="med-postquirurgico-firma"></td>
+        </tr>
+    </table>
+
+    <div class="observations">
+        <label for="observaciones">Observaciones:</label>
+        <textarea id="observaciones"></textarea>
+    </div>
+
+    <div class="form-footer">
+        <p>Veterinaria San Martin de Porres - Control anestésico y medicamentoso</p>
+        <p>Teléfonos: 4000 1365 | WhatsApp:  8612 3030 </p>
+        <p>Email: info@veterinariasanmartindeporres.com</p>
+        <p>Veterinaria San Martin de Porres</p>
+    </div>
+
+<div class="pdf-button-container" style="text-align:center; margin-top:24px;">
+    <button class="consent-btn consent-btn-success" onclick="generatePDF()" style="padding:14px 32px; font-size:1.1rem; border-radius:10px; background:linear-gradient(135deg,#10b981,#059669);color:white;border:none;box-shadow:0 4px 16px rgba(16,185,129,0.15);cursor:pointer;">
+        <i class="fas fa-file-pdf"></i> Descargar PDF
+    </button>
+</div>
+
+    <script>
+        // Llenar datos del paciente desde parámetros de URL
+        document.addEventListener('DOMContentLoaded', function() {
+            const params = new URLSearchParams(window.location.search);
+            // Llenar datos del paciente en los inputs si vienen en la URL
+            const nombreCliente = document.getElementById('nombreCliente');
+            const nombreMascota = document.getElementById('nombreMascota');
+            const tipoMascota = document.getElementById('tipoMascota');
+            const doctorAtiende = document.getElementById('doctorAtiende');
+            if (params.get('cliente')) nombreCliente.value = params.get('cliente');
+            if (params.get('mascota')) nombreMascota.value = params.get('mascota');
+            if (params.get('tipo')) tipoMascota.value = params.get('tipo');
+            if (params.get('doctor')) doctorAtiende.value = params.get('doctor');
+            // Establecer fecha actual
+            const today = new Date();
+            const formattedDate = today.toLocaleDateString('es-MX');
+            document.getElementById('fechaActual').textContent = formattedDate;
+        });
+        async function generatePDF() {
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF('p', 'mm', 'a4');
+    const form = document.body;
+    // Ocultar botones antes de capturar
+    const printBtn = document.querySelector('.print-button');
+    const pdfBtn = document.querySelector('.pdf-button-container');
+    if (printBtn) printBtn.style.display = 'none';
+    if (pdfBtn) pdfBtn.style.display = 'none';
+    // Capturar solo el contenido principal
+    await html2canvas(form, { backgroundColor: '#fff', scale: 2 }).then(canvas => {
+        const imgData = canvas.toDataURL('image/jpeg', 0.98);
+        const imgWidth = 160;
+        const pageHeight = 297;
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+        let position = 10;
+        pdf.addImage(imgData, 'JPEG', 10, position, imgWidth, imgHeight);
+    });
+    if (printBtn) printBtn.style.display = '';
+    if (pdfBtn) pdfBtn.style.display = '';
+    // Nombre sugerido para el archivo (usar el valor del input)
+    const paciente = document.getElementById('nombreMascota').value || 'Paciente';
+    const fecha = document.getElementById('fechaActual').textContent || '';
+    pdf.save(`Control_Anestesico_${paciente}_${fecha}.pdf`);
+}
+    </script>
+</body>
+</html>

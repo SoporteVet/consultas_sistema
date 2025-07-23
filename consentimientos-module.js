@@ -46,6 +46,11 @@ const CONSENT_TEMPLATES = {
         name: 'Alta Voluntaria',
         file: 'consentimiento_alta_voluntaria.html',
         description: 'Consentimiento informado por alta voluntaria'
+    },
+    control_anestesico: {
+        name: 'Control Anestésico y Medicamentoso',
+        file: 'control_anestesico.html',
+        description: 'Control de anestesia y medicamentos administrados durante cirugía'
     }
 };
 
@@ -70,21 +75,21 @@ function initConsentimientos() {
     // Habilitar plantillas desde el inicio
     enableTemplateSelection();
     
-    // Verificar si los datos están disponibles y esperar si es necesario
-    waitForTicketsData();
+    // Verificar si los datos de quirófano están disponibles y esperar si es necesario
+    waitForQuirofanoTicketsData();
     
     console.log('Módulo de consentimientos inicializado correctamente');
 }
 
-// Función para esperar a que los datos estén disponibles
-function waitForTicketsData() {
+// Función para esperar a que los datos de quirófano estén disponibles
+function waitForQuirofanoTicketsData() {
     const maxWait = 10000; // 10 segundos máximo
     const interval = 500; // verificar cada 500ms
     let elapsed = 0;
     
     const checkData = () => {
-        if (window.tickets && Array.isArray(window.tickets)) {
-            console.log('Datos de tickets disponibles:', window.tickets.length, 'tickets cargados');
+        if (window.quirofanoTickets && Array.isArray(window.quirofanoTickets)) {
+            console.log('Datos de tickets de quirófano disponibles:', window.quirofanoTickets.length, 'tickets cargados');
             return;
         }
         
@@ -92,7 +97,7 @@ function waitForTicketsData() {
         if (elapsed < maxWait) {
             setTimeout(checkData, interval);
         } else {
-            console.warn('Timeout esperando datos de tickets');
+            console.warn('Timeout esperando datos de tickets de quirófano');
         }
     };
     
@@ -155,53 +160,53 @@ function searchClients() {
     }
     
     console.log('Buscando clientes:', searchTerm);
-    console.log('window.tickets disponible:', !!window.tickets);
-    console.log('Cantidad de tickets:', window.tickets ? window.tickets.length : 'N/A');
+    console.log('window.quirofanoTickets disponible:', !!window.quirofanoTickets);
+    console.log('Cantidad de tickets de quirófano:', window.quirofanoTickets ? window.quirofanoTickets.length : 'N/A');
     
     // Mostrar indicador de carga
     resultsContainer.innerHTML = '<div class="loading-consent"><i class="fas fa-spinner fa-spin"></i> Buscando clientes...</div>';
     resultsContainer.classList.add('active');
     
-    // Verificar si los datos están disponibles
-    if (!window.tickets) {
-        console.warn('window.tickets no está disponible todavía');
+    // Verificar si los datos de quirófano están disponibles
+    if (!window.quirofanoTickets) {
+        console.warn('window.quirofanoTickets no está disponible todavía');
         resultsContainer.innerHTML = `
             <div class="no-clients-found">
                 <i class="fas fa-clock"></i>
                 <h4>Cargando datos del sistema</h4>
-                <p>Por favor espere mientras se cargan los datos...</p>
+                <p>Por favor espere mientras se cargan los datos de quirófano...</p>
                 <button onclick="searchClients()" class="btn-retry">Reintentar búsqueda</button>
             </div>
         `;
         return;
     }
     
-    // Buscar en tickets existentes
-    if (window.tickets && window.tickets.length > 0) {
-        const filteredClients = filterClientsFromTickets(searchTerm);
+    // Buscar en tickets de quirófano existentes
+    if (window.quirofanoTickets && window.quirofanoTickets.length > 0) {
+        const filteredClients = filterClientsFromQuirofanoTickets(searchTerm);
         console.log('Clientes filtrados:', filteredClients.length);
         displayClientResults(filteredClients);
     } else {
-        // Si no hay tickets, mostrar mensaje más descriptivo
-        console.log('No hay tickets disponibles o el array está vacío');
+        // Si no hay tickets de quirófano, mostrar mensaje más descriptivo
+        console.log('No hay tickets de quirófano disponibles o el array está vacío');
         resultsContainer.innerHTML = `
             <div class="no-clients-found">
                 <i class="fas fa-database"></i>
                 <h4>No hay datos disponibles</h4>
-                <p>No se encontraron registros de clientes en el sistema.</p>
-                <p><small>Asegúrese de que haya consultas registradas antes de buscar clientes.</small></p>
+                <p>No se encontraron registros de clientes en el sistema de quirófano.</p>
+                <p><small>Asegúrese de que haya tickets de quirófano registrados antes de buscar clientes.</small></p>
                 <button onclick="debugConsentimientos()" class="btn-retry">Ver información de debug</button>
             </div>
         `;
     }
 }
 
-function filterClientsFromTickets(searchTerm) {
+function filterClientsFromQuirofanoTickets(searchTerm) {
     const term = searchTerm.toLowerCase();
     const clientsMap = new Map();
     
-    // Filtrar tickets que coincidan con el término de búsqueda
-    const matchingTickets = window.tickets.filter(ticket => {
+    // Filtrar tickets de quirófano que coincidan con el término de búsqueda
+    const matchingTickets = window.quirofanoTickets.filter(ticket => {
         return (
             (ticket.nombre && ticket.nombre.toLowerCase().includes(term)) ||
             (ticket.cedula && ticket.cedula.toLowerCase().includes(term)) ||
@@ -219,11 +224,17 @@ function filterClientsFromTickets(searchTerm) {
                 nombre: ticket.nombre || 'Sin nombre',
                 cedula: ticket.cedula || 'Sin cédula',
                 telefono: ticket.telefono || 'Sin teléfono',
-                direccion: ticket.direccion || 'Sin dirección',
+                correo: ticket.correo || 'Sin correo',
                 mascota: ticket.mascota || 'Sin mascota',
                 tipoMascota: ticket.tipoMascota || 'otro',
+                raza: ticket.raza || 'Sin raza',
+                edad: ticket.edad || 'Sin edad',
+                peso: ticket.peso || 'Sin peso',
                 ticketId: ticket.randomId,
-                fechaUltimaConsulta: ticket.fechaConsulta
+                fechaCirugia: ticket.fechaCirugia,
+                procedimiento: ticket.procedimiento || 'Sin procedimiento',
+                doctorAtiende: ticket.doctorAtiende || 'Sin doctor asignado',
+                urgencia: ticket.urgencia || 'normal'
             });
         }
     });
@@ -263,8 +274,16 @@ function displayClientResults(clients) {
                         <span>${client.mascota} (${getMascotaIcon(client.tipoMascota)})</span>
                     </div>
                     <div class="client-detail">
+                        <i class="fas fa-cut"></i>
+                        <span>${client.procedimiento}</span>
+                    </div>
+                    <div class="client-detail">
                         <i class="fas fa-calendar"></i>
-                        <span>Última consulta: ${client.fechaUltimaConsulta || 'N/A'}</span>
+                        <span>Fecha cirugía: ${client.fechaCirugia || 'N/A'}</span>
+                    </div>
+                    <div class="client-detail">
+                        <i class="fas fa-user-md"></i>
+                        <span>${client.doctorAtiende}</span>
                     </div>
                 </div>
             </div>
@@ -361,14 +380,26 @@ function openConsentForm(templateKey) {
             clienteNombre: selectedClient.nombre,
             clienteCedula: selectedClient.cedula,
             clienteTelefono: selectedClient.telefono,
-            clienteDireccion: selectedClient.direccion || '',
+            clienteCorreo: selectedClient.correo || '',
             mascotaNombre: selectedClient.mascota,
             mascotaTipo: selectedClient.tipoMascota,
+            mascotaRaza: selectedClient.raza || '',
+            mascotaEdad: selectedClient.edad || '',
+            mascotaPeso: selectedClient.peso || '',
+            procedimiento: selectedClient.procedimiento || '',
+            doctorAtiende: selectedClient.doctorAtiende || '',
+            fechaCirugia: selectedClient.fechaCirugia || '',
+            urgencia: selectedClient.urgencia || 'normal',
             fecha: new Date().toLocaleDateString('es-ES'),
             hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
         });
         
         templateUrl = template.file + '?' + params.toString();
+        
+        console.log('=== DATOS ENVIADOS A PLANTILLA ===');
+        console.log('Cliente seleccionado:', selectedClient);
+        console.log('Parámetros URL:', params.toString());
+        console.log('URL completa:', templateUrl);
     }
     
     // Cargar plantilla en iframe
@@ -491,9 +522,36 @@ function printConsentForm() {
     }
 }
 
+// Función de debug para verificar datos disponibles
+function debugConsentimientos() {
+    console.log('=== DEBUG CONSENTIMIENTOS ===');
+    console.log('window.quirofanoTickets:', window.quirofanoTickets);
+    console.log('Cantidad de tickets de quirófano:', window.quirofanoTickets ? window.quirofanoTickets.length : 'No disponible');
+    
+    if (window.quirofanoTickets && window.quirofanoTickets.length > 0) {
+        console.log('Ejemplo de ticket de quirófano:', window.quirofanoTickets[0]);
+    }
+    
+    const resultsContainer = document.getElementById('clientSearchResults');
+    if (resultsContainer) {
+        resultsContainer.innerHTML = `
+            <div class="debug-info">
+                <h4>Información de Debug</h4>
+                <p><strong>Tickets de quirófano disponibles:</strong> ${window.quirofanoTickets ? window.quirofanoTickets.length : 'No disponible'}</p>
+                <p><strong>Estado de la variable global:</strong> ${window.quirofanoTickets ? 'Disponible' : 'No disponible'}</p>
+                <div style="margin-top: 15px;">
+                    <button onclick="location.reload()" class="btn-retry">Recargar página</button>
+                    <button onclick="searchClients()" class="btn-retry" style="margin-left: 10px;">Reintentar búsqueda</button>
+                </div>
+            </div>
+        `;
+    }
+}
+
 // Exponer funciones globalmente para uso en HTML
 window.selectClientByIndex = selectClientByIndex;
 window.selectTemplate = selectTemplate;
+window.debugConsentimientos = debugConsentimientos;
 window.closeConsentForm = closeConsentForm;
 window.clearClientSearch = clearClientSearch;
 window.printConsentForm = printConsentForm;
