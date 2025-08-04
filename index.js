@@ -143,6 +143,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     console.warn('Sistema de laboratorio no disponible');
                 }
                 
+                // Inicializar sistema de quirófano
+                if (typeof initQuirofanoSystem === 'function') {
+                    console.log('Inicializando sistema de quirófano desde index.js');
+                    initQuirofanoSystem();
+                    window.quirofanoInitialized = true;
+                } else {
+                    console.warn('Sistema de quirófano no disponible');
+                }
+                
             }).catch(err => {
                 console.error("Error cargando tickets:", err);
                 hideLoading();
@@ -364,6 +373,21 @@ function applyRoleBasedUI(role) {
         }
     }
     
+    // Control de visibilidad del botón de quirófano basado en roles
+    const quirofanoBtn = document.getElementById('quirofanoBtn');
+    const quirofanoCategory = document.getElementById('quirofanoCategory');
+    const allowedQuirofanoRoles = ['admin', 'recepcion', 'consulta_externa', 'quirofano', 'internos'];
+    
+    if (quirofanoCategory) {
+        if (allowedQuirofanoRoles.includes(role)) {
+            quirofanoCategory.style.display = 'block';
+            console.log(`Módulo de quirófano mostrado para rol: ${role}`);
+        } else {
+            quirofanoCategory.style.display = 'none';
+            console.log(`Módulo de quirófano ocultado para rol: ${role}`);
+        }
+    }
+    
     // Control de visibilidad del botón de consentimientos basado en roles
     const consentimientosBtn = document.getElementById('consentimientosBtn');
     const consentimientosCategory = consentimientosBtn ? consentimientosBtn.closest('.nav-category') : null;
@@ -382,6 +406,11 @@ function applyRoleBasedUI(role) {
     const logoutBtn = document.getElementById('logoutBtn');
     if (logoutBtn) {
         logoutBtn.addEventListener('click', signOut);
+    }
+    
+    // Actualizar controles de filtro de quirófano según el rol
+    if (typeof setupQuirofanoFilterVisibility === 'function') {
+        setupQuirofanoFilterVisibility();
     }
     
     console.log("UI permissions applied successfully for role:", role);
@@ -1756,7 +1785,7 @@ function formatDate(dateString) {
 function mostrarHorario() {
     const fecha = fechaHorario.value;
     
-    // Filtrar tickets por fecha de consulta
+    // Filtrar tickets de consulta por fecha
     const ticketsDelDia = tickets.filter(ticket => {
         // Si el ticket tiene los campos nuevos de fecha y hora
         if (ticket.fechaConsulta) {
@@ -1769,12 +1798,18 @@ function mostrarHorario() {
         return parsedDate.toISOString().split('T')[0] === fecha;
     });
     
-    // Ordenar por hora
-    ticketsDelDia.sort((a, b) => {
-        if (a.horaConsulta && b.horaConsulta) {
-            return a.horaConsulta.localeCompare(b.horaConsulta);
-        }
-        return 0;
+    // Agregar tickets de quirófano si están disponibles
+    let ticketsQuirofano = [];
+    if (typeof window.getQuirofanoTicketsForDate === 'function') {
+        ticketsQuirofano = window.getQuirofanoTicketsForDate(fecha);
+    }
+    
+    // Combinar todos los tickets y ordenar por hora
+    const todosTickets = [...ticketsDelDia, ...ticketsQuirofano];
+    todosTickets.sort((a, b) => {
+        const horaA = a.horaConsulta || a.horaCirugia || a.horaCreacion || '00:00';
+        const horaB = b.horaConsulta || b.horaCirugia || b.horaCreacion || '00:00';
+        return horaA.localeCompare(horaB);
     });
     
     // Mostrar los tickets en la tabla
@@ -1783,60 +1818,89 @@ function mostrarHorario() {
     
     horarioBody.innerHTML = '';
     
-    if (ticketsDelDia.length === 0) {
-
+    if (todosTickets.length === 0) {
         horarioBody.innerHTML = `
             <tr>
-                <td colspan="12" class="no-data">
+                <td colspan="13" class="no-data">
                     <i class="fas fa-calendar-times"></i>
-                    No hay consultas programadas para esta fecha
+                    No hay consultas o cirugías programadas para esta fecha
                 </td>
             </tr>
         `;
         return;
     }
     
-    ticketsDelDia.forEach((ticket, index) => {
+    todosTickets.forEach((ticket, index) => {
         const row = document.createElement('tr');
         
+        // Determinar si es ticket de quirófano o consulta
+        const esQuirofano = ticket.fechaCirugia !== undefined;
+        
         // Determinar la hora a mostrar
-        const hora = ticket.horaConsulta || ticket.horaCreacion || '-';
+        const hora = ticket.horaConsulta || ticket.horaCirugia || ticket.horaCreacion || '-';
         
         // Determinar el estado
         let estadoLabel = '';
-        switch(ticket.estado) {
-            case 'espera':
-                estadoLabel = 'En Sala de Espera';
-                break;
-            case 'consultorio1':
-                estadoLabel = 'Consultorio 1';
-                break;
-            case 'consultorio2':
-                estadoLabel = 'Consultorio 2';
-                break;
-            case 'consultorio3':
-                estadoLabel = 'Consultorio 3';
-                break;
-                case 'consultorio4':
-                    estadoLabel = 'Consultorio 4'
+        if (esQuirofano) {
+            // Estados de quirófano
+            switch(ticket.estado) {
+                case 'programado':
+                    estadoLabel = 'Cirugía Programada';
                     break;
-                    case 'consultorio5':
-                        estadoLabel = 'Consultorio 5';
-                        break;
-            case 'rayosx':
-                estadoLabel = 'En Rayos X';
-                break;
-            case 'quirofano':
-                estadoLabel = 'En Quirófano';
-                break;
-            case 'cliente_se_fue':
-                estadoLabel = 'Cliente se fue';
-                break;
-            case 'terminado':
-                estadoLabel = 'Terminado';
-                break;
-            default:
-                estadoLabel = ticket.estado;
+                case 'en_preparacion':
+                    estadoLabel = 'En Preparación';
+                    break;
+                case 'en_cirugia':
+                    estadoLabel = 'En Cirugía';
+                    break;
+                case 'post_cirugia':
+                    estadoLabel = 'Post-Cirugía';
+                    break;
+                case 'completado':
+                    estadoLabel = 'Cirugía Completada';
+                    break;
+                case 'cancelado':
+                    estadoLabel = 'Cirugía Cancelada';
+                    break;
+                default:
+                    estadoLabel = ticket.estado;
+            }
+        } else {
+            // Estados de consulta
+            switch(ticket.estado) {
+                case 'espera':
+                    estadoLabel = 'En Sala de Espera';
+                    break;
+                case 'consultorio1':
+                    estadoLabel = 'Consultorio 1';
+                    break;
+                case 'consultorio2':
+                    estadoLabel = 'Consultorio 2';
+                    break;
+                case 'consultorio3':
+                    estadoLabel = 'Consultorio 3';
+                    break;
+                case 'consultorio4':
+                    estadoLabel = 'Consultorio 4';
+                    break;
+                case 'consultorio5':
+                    estadoLabel = 'Consultorio 5';
+                    break;
+                case 'rayosx':
+                    estadoLabel = 'En Rayos X';
+                    break;
+                case 'quirofano':
+                    estadoLabel = 'En Quirófano';
+                    break;
+                case 'cliente_se_fue':
+                    estadoLabel = 'Cliente se fue';
+                    break;
+                case 'terminado':
+                    estadoLabel = 'Terminado';
+                    break;
+                default:
+                    estadoLabel = ticket.estado;
+            }
         }
         
         // Determinar el tipo de mascota
@@ -1858,8 +1922,18 @@ function mostrarHorario() {
         // Clase de urgencia
         const urgenciaClass = `urgencia-${ticket.urgencia}`;
         
+        // Clase para distinguir quirófano
+        const tipoTicketClass = esQuirofano ? 'ticket-quirofano' : 'ticket-consulta';
+        row.classList.add(tipoTicketClass);
+        
         // Setear el índice para la animación
         row.style.setProperty('--index', index);
+        
+        // Mostrar información adicional para quirófano
+        const tipoTicket = esQuirofano ? 'QUIRÓFANO' : 'CONSULTA';
+        const procedimiento = esQuirofano && ticket.procedimiento ? ticket.procedimiento : '-';
+        const raza = ticket.raza || '-';
+        const peso = ticket.peso ? `${ticket.peso} kg` : '-';
         
         row.innerHTML = `
             <td>${hora}</td>
@@ -1868,16 +1942,17 @@ function mostrarHorario() {
             <td>${tipoLabel}</td>
             <td>${estadoLabel}</td>
             <td class="${urgenciaClass}">${(ticket.urgencia || '').toUpperCase()}</td>
-            <td>${ticket.medicoAtiende || '-'}</td>
+            <td>${ticket.medicoAtiende || ticket.doctorAtiende || '-'}</td>
             <td>${ticket.idPaciente || '-'}</td>
             <td>${ticket.numFactura || '-'}</td>
             <td>${ticket.horaAtencion || '-'}</td>
             <td>${ticket.porCobrar || '-'}</td>
+            <td><span class="tipo-ticket ${tipoTicketClass}">${tipoTicket}</span></td>
             <td>
-                <button class="btn-edit" onclick="editTicket('${ticket.randomId}')">
+                <button class="btn-edit" onclick="${esQuirofano ? 'editQuirofanoTicket' : 'editTicket'}('${ticket.randomId}')">
                     <i class="fas fa-edit"></i>
                 </button>
-                <button class="btn-delete" onclick="deleteTicketByRandomId('${ticket.randomId}')">
+                <button class="btn-delete" onclick="${esQuirofano ? 'deleteQuirofanoTicket' : 'deleteTicketByRandomId'}('${ticket.randomId}')">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -2293,7 +2368,7 @@ function editTicket(randomId) {
     }
     
     // Mostrar/ocultar campo Hora de Cita según el rol en edición
-    const canShowHoraCita = ["admin", "recepción", "quirofano"].includes(userRole);
+    const canShowHoraCita = ["admin", "recepcion", "consulta_externa", "quirofano", "internos"].includes(userRole);
     
     // Crear el contenido del modal con el formulario
     modal.innerHTML = `
@@ -3929,7 +4004,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const userRole = sessionStorage.getItem('userRole');
   const horaCitaGroup = document.querySelector('input#hora')?.closest('.form-group');
   if (horaCitaGroup) {
-    if (!["admin", "recepción", "quirofano"].includes(userRole)) {
+    if (!["admin", "recepcion", "consulta_externa", "quirofano", "internos"].includes(userRole)) {
       horaCitaGroup.style.display = 'none';
     } else {
       horaCitaGroup.style.display = '';
@@ -4418,6 +4493,9 @@ function navigateToSection(sectionId, buttonId) {
     }
 }
 
+// Exportar función globalmente
+window.navigateToSection = navigateToSection;
+
 function navigateToConsultas() {
     console.log('🎯 Navegando a Ver Consultas');
     
@@ -4499,6 +4577,58 @@ function setActiveSubmenuButtonHTML(buttonId) {
     }
 }
 
+// Función para navegar al módulo de quirófano
+function navigateToQuirofano(sectionId, buttonId) {
+    // Ocultar todas las secciones
+    const sections = document.querySelectorAll('.content section');
+    sections.forEach(section => {
+        section.classList.add('hidden');
+        section.classList.remove('active');
+    });
+    
+    // Mostrar la sección solicitada
+    const targetSection = document.getElementById(sectionId);
+    if (targetSection) {
+        targetSection.classList.remove('hidden');
+        setTimeout(() => {
+            targetSection.classList.add('active');
+        }, 50);
+    }
+    
+    // Establecer el botón activo
+    setActiveSubmenuButtonHTML(buttonId);
+    
+    // Configurar fecha actual si es la sección de crear
+    if (sectionId === 'crearQuirofanoSection') {
+        const fechaInput = document.getElementById('quirofanoFecha');
+        if (fechaInput && !fechaInput.value) {
+            fechaInput.value = getLocalDateString();
+        }
+    }
+    
+    // Si es la sección de ver tickets, renderizar los tickets
+    if (sectionId === 'verQuirofanoSection') {
+        // Configurar visibilidad de filtros según el rol del usuario
+        if (typeof setupQuirofanoFilterVisibility === 'function') {
+            setupQuirofanoFilterVisibility();
+        }
+        
+        // Configurar fecha de filtro
+        const filterDateInput = document.getElementById('quirofanoFilterDate');
+        if (filterDateInput && !filterDateInput.value) {
+            filterDateInput.value = getLocalDateString();
+        }
+        
+        // Renderizar tickets si el módulo está inicializado
+        if (typeof renderQuirofanoTickets === 'function') {
+            renderQuirofanoTickets();
+        }
+    }
+}
+
+// Exponer la función globalmente
+window.navigateToQuirofano = navigateToQuirofano;
+
 window.addEventListener('DOMContentLoaded', function() {
   // ... existing code ...
   // Mostrar botón de Consentimientos solo si el usuario no es 'visitas'
@@ -4512,4 +4642,9 @@ window.addEventListener('DOMContentLoaded', function() {
       navigateToSection('consentimientosSection', 'crearConsentimientoBtn');
     });
   }
+  
+  // Cargar el módulo de quirófano
+  const scriptQuirofano = document.createElement('script');
+  scriptQuirofano.src = 'quirofano-module.js';
+  document.body.appendChild(scriptQuirofano);
 });

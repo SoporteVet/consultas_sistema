@@ -75,8 +75,17 @@ function initConsentimientos() {
     // Habilitar plantillas desde el inicio
     enableTemplateSelection();
     
-    // Verificar si los datos de quirófano están disponibles y esperar si es necesario
-    waitForQuirofanoTicketsData();
+    // Verificar datos de quirófano inmediatamente
+    console.log('Estado inicial de datos de quirófano:');
+    console.log('window.quirofanoTickets:', !!window.quirofanoTickets);
+    
+    if (window.quirofanoTickets) {
+        console.log('✅ Datos de quirófano ya disponibles:', window.quirofanoTickets.length, 'tickets');
+    } else {
+        console.log('⏳ Esperando datos de quirófano...');
+        // Verificar si los datos de quirófano están disponibles y esperar si es necesario
+        waitForQuirofanoTicketsData();
+    }
     
     console.log('Módulo de consentimientos inicializado correctamente');
 }
@@ -144,6 +153,84 @@ function setupTemplateCardListeners() {
     });
 }
 
+// Función para verificar y esperar datos de quirófano
+function ensureQuirofanoDataAvailable() {
+    return new Promise((resolve, reject) => {
+        const maxWait = 15000; // 15 segundos máximo
+        const interval = 500; // verificar cada 500ms
+        let elapsed = 0;
+        
+        const checkData = () => {
+            console.log('Verificando disponibilidad de datos de quirófano...');
+            console.log('window.quirofanoTickets:', !!window.quirofanoTickets);
+            console.log('Cantidad de tickets:', window.quirofanoTickets ? window.quirofanoTickets.length : 'N/A');
+            
+            if (window.quirofanoTickets && Array.isArray(window.quirofanoTickets)) {
+                console.log('✅ Datos de quirófano disponibles:', window.quirofanoTickets.length, 'tickets');
+                resolve(window.quirofanoTickets);
+                return;
+            }
+            
+            elapsed += interval;
+            if (elapsed < maxWait) {
+                setTimeout(checkData, interval);
+            } else {
+                console.warn('❌ Timeout esperando datos de quirófano');
+                reject(new Error('Timeout esperando datos de quirófano'));
+            }
+        };
+        
+        checkData();
+    });
+}
+
+// Función de debug para verificar estado del sistema
+function debugConsentimientos() {
+    console.log('=== DEBUG CONSENTIMIENTOS ===');
+    console.log('window.quirofanoTickets existe:', !!window.quirofanoTickets);
+    console.log('Tipo de dato:', typeof window.quirofanoTickets);
+    
+    if (window.quirofanoTickets) {
+        console.log('Es array:', Array.isArray(window.quirofanoTickets));
+        console.log('Cantidad de tickets:', window.quirofanoTickets.length);
+        
+        if (window.quirofanoTickets.length > 0) {
+            console.log('Primer ticket:', window.quirofanoTickets[0]);
+            console.log('Campos disponibles:', Object.keys(window.quirofanoTickets[0] || {}));
+        }
+    }
+    
+    // Mostrar información en pantalla
+    const resultsContainer = document.getElementById('clientSearchResults');
+    if (resultsContainer) {
+        resultsContainer.innerHTML = `
+            <div class="debug-info" style="background: #f0f8ff; border: 1px solid #bee5eb; padding: 15px; border-radius: 5px; margin: 10px 0;">
+                <h4>Información de Debug</h4>
+                <p><strong>window.quirofanoTickets existe:</strong> ${!!window.quirofanoTickets ? '✅ Sí' : '❌ No'}</p>
+                <p><strong>Tipo de dato:</strong> ${typeof window.quirofanoTickets}</p>
+                ${window.quirofanoTickets ? `
+                    <p><strong>Es array:</strong> ${Array.isArray(window.quirofanoTickets) ? '✅ Sí' : '❌ No'}</p>
+                    <p><strong>Cantidad de tickets:</strong> ${window.quirofanoTickets.length}</p>
+                    ${window.quirofanoTickets.length > 0 ? `
+                        <p><strong>Campos del primer ticket:</strong> ${Object.keys(window.quirofanoTickets[0] || {}).join(', ')}</p>
+                        <details style="margin-top: 10px;">
+                            <summary>Ver primer ticket completo</summary>
+                            <pre style="background: #fff; padding: 10px; margin-top: 5px; border-radius: 3px; overflow: auto; max-height: 200px;">${JSON.stringify(window.quirofanoTickets[0], null, 2)}</pre>
+                        </details>
+                    ` : '<p><em>No hay tickets disponibles</em></p>'}
+                ` : '<p><em>No hay datos disponibles</em></p>'}
+                <button onclick="location.reload()" style="margin-top: 10px;" class="btn btn-secondary">Recargar página</button>
+            </div>
+        `;
+        resultsContainer.classList.add('active');
+    }
+    
+    return window.quirofanoTickets;
+}
+
+// Exponer función globalmente para testing
+window.debugConsentimientos = debugConsentimientos;
+
 // Función para buscar clientes
 function searchClients() {
     const searchTerm = document.getElementById('consentClientSearch').value.trim();
@@ -205,36 +292,47 @@ function filterClientsFromQuirofanoTickets(searchTerm) {
     const term = searchTerm.toLowerCase();
     const clientsMap = new Map();
     
+    console.log('Buscando en tickets de quirófano:', window.quirofanoTickets.length, 'tickets disponibles');
+    console.log('Ejemplo de ticket:', window.quirofanoTickets[0]);
+    
     // Filtrar tickets de quirófano que coincidan con el término de búsqueda
     const matchingTickets = window.quirofanoTickets.filter(ticket => {
         return (
-            (ticket.nombre && ticket.nombre.toLowerCase().includes(term)) ||
+            (ticket.nombrePropietario && ticket.nombrePropietario.toLowerCase().includes(term)) ||
             (ticket.cedula && ticket.cedula.toLowerCase().includes(term)) ||
-            (ticket.mascota && ticket.mascota.toLowerCase().includes(term)) ||
-            (ticket.telefono && ticket.telefono.includes(term))
+            (ticket.nombreMascota && ticket.nombreMascota.toLowerCase().includes(term)) ||
+            (ticket.telefono && ticket.telefono.includes(term)) ||
+            (ticket.correo && ticket.correo.toLowerCase().includes(term))
         );
     });
     
+    console.log('Tickets que coinciden con la búsqueda:', matchingTickets.length);
+    
     // Agrupar por cliente único
     matchingTickets.forEach(ticket => {
-        const clientKey = ticket.cedula || ticket.nombre || 'sin-cedula-' + ticket.randomId;
-        
+        const clientKey = ticket.cedula || ticket.nombrePropietario || 'sin-cedula-' + ticket.randomId;
         if (!clientsMap.has(clientKey)) {
             clientsMap.set(clientKey, {
-                nombre: ticket.nombre || 'Sin nombre',
+                nombre: ticket.nombrePropietario || 'Sin nombre',
                 cedula: ticket.cedula || 'Sin cédula',
                 telefono: ticket.telefono || 'Sin teléfono',
                 correo: ticket.correo || 'Sin correo',
-                mascota: ticket.mascota || 'Sin mascota',
+                mascota: ticket.nombreMascota || 'Sin mascota',
                 tipoMascota: ticket.tipoMascota || 'otro',
                 raza: ticket.raza || 'Sin raza',
                 edad: ticket.edad || 'Sin edad',
                 peso: ticket.peso || 'Sin peso',
+                sexo: ticket.sexo || ticket.mascotaSexo || '',
                 ticketId: ticket.randomId,
-                fechaCirugia: ticket.fechaCirugia,
+                fechaCirugia: ticket.fechaProgramada || ticket.fechaCreacion,
+                horaCirugia: ticket.horaProgramada || '',
                 procedimiento: ticket.procedimiento || 'Sin procedimiento',
-                doctorAtiende: ticket.doctorAtiende || 'Sin doctor asignado',
-                urgencia: ticket.urgencia || 'normal'
+                doctorAtiende: ticket.medicoAtiende || ticket.veterinario || ticket.doctorAtiende || 'Sin doctor asignado',
+                asistenteAtiende: ticket.asistenteAtiende || '',
+                urgencia: ticket.tipoUrgencia || 'normal',
+                estado: ticket.estado || 'programado',
+                observaciones: ticket.observaciones || '',
+                idPaciente: ticket.idPaciente || ''
             });
         }
     });
@@ -279,8 +377,14 @@ function displayClientResults(clients) {
                     </div>
                     <div class="client-detail">
                         <i class="fas fa-calendar"></i>
-                        <span>Fecha cirugía: ${client.fechaCirugia || 'N/A'}</span>
+                        <span>Fecha cirugía: ${client.fechaCirugia ? new Date(client.fechaCirugia).toLocaleDateString('es-ES') : 'N/A'}</span>
                     </div>
+                    ${client.horaCirugia ? `
+                    <div class="client-detail">
+                        <i class="fas fa-clock"></i>
+                        <span>Hora: ${client.horaCirugia}</span>
+                    </div>
+                    ` : ''}
                     <div class="client-detail">
                         <i class="fas fa-user-md"></i>
                         <span>${client.doctorAtiende}</span>
@@ -376,20 +480,46 @@ function openConsentForm(templateKey) {
     let templateUrl = template.file;
     
     if (selectedClient) {
+        const correoValue = selectedClient.correo || '';
+        const fechaCirugiaFormatted = selectedClient.fechaCirugia ? 
+            new Date(selectedClient.fechaCirugia).toLocaleDateString('es-ES') : 
+            new Date().toLocaleDateString('es-ES');
+            
         const params = new URLSearchParams({
+            // Datos del cliente
             clienteNombre: selectedClient.nombre,
             clienteCedula: selectedClient.cedula,
             clienteTelefono: selectedClient.telefono,
-            clienteCorreo: selectedClient.correo || '',
+            clienteCorreo: correoValue,
+            correo: correoValue,
+            
+            // Datos de la mascota
             mascotaNombre: selectedClient.mascota,
             mascotaTipo: selectedClient.tipoMascota,
             mascotaRaza: selectedClient.raza || '',
             mascotaEdad: selectedClient.edad || '',
             mascotaPeso: selectedClient.peso || '',
+            mascotaSexo: selectedClient.sexo || '',
+            
+            // Datos del procedimiento
             procedimiento: selectedClient.procedimiento || '',
+            observaciones: selectedClient.observaciones || '',
+            
+            // Datos médicos
             doctorAtiende: selectedClient.doctorAtiende || '',
-            fechaCirugia: selectedClient.fechaCirugia || '',
+            asistenteAtiende: selectedClient.asistenteAtiende || '',
+            
+            // Datos de la cirugía
+            fechaCirugia: fechaCirugiaFormatted,
+            horaCirugia: selectedClient.horaCirugia || '',
             urgencia: selectedClient.urgencia || 'normal',
+            estado: selectedClient.estado || 'programado',
+            
+            // Datos del ticket
+            ticketId: selectedClient.ticketId || '',
+            idPaciente: selectedClient.idPaciente || '',
+            
+            // Datos de fecha y hora actuales
             fecha: new Date().toLocaleDateString('es-ES'),
             hora: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
         });

@@ -86,9 +86,9 @@
         </div>
 
         <!-- Quirófano -->
-        <div id="quirofanoCategory" class="nav-category" style="display: none;">
+        <div class="nav-category">
           <button id="quirofanoBtn" class="nav-category-btn" onclick="toggleSubmenuHTML('quirofanoBtn', 'quirofanoSubmenu');">
-            <i class="fas fa-user-md"></i> Quirófano
+            <i class="fas fa-cut"></i> Quirófano
             <i class="fas fa-chevron-down category-arrow"></i>
           </button>
           <div id="quirofanoSubmenu" class="nav-submenu">
@@ -98,12 +98,10 @@
             <button id="verQuirofanoBtn" class="submenu-btn" onclick="navigateToQuirofano('verQuirofanoSection', 'verQuirofanoBtn');">
               <i class="fas fa-list-alt"></i> Ver Tickets
             </button>
-            <button id="verConsentimientosQuirofanoBtn" class="submenu-btn" onclick="navigateToQuirofano('verConsentimientosSection', 'verConsentimientosQuirofanoBtn');">
-              <i class="fas fa-file-contract"></i> Ver Consentimientos
-            </button>
           </div>
         </div>
 
+      
         <!-- Administrativo (solo para admin) -->
         <div id="administrativoCategory" class="nav-category admin-only" style="display: none;">
           <button id="administrativoBtn" class="nav-category-btn" onclick="toggleSubmenuHTML('administrativoBtn', 'administrativoSubmenu');">
@@ -736,233 +734,9 @@
         </div>
       </section>
       
-      <!-- ===== SECCIONES DE QUIRÓFANO ===== -->
-      
-      <!-- Sección para crear tickets de Quirófano -->
-      <section id="crearQuirofanoSection" class="hidden">
-        <h2><i class="fas fa-user-md"></i> Crear Ticket de Quirófano</h2>
-        <div class="form-container">
-          <form id="quirofanoTicketForm">
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoNombre">Nombre del Cliente</label>
-                <input type="text" id="quirofanoNombre" required>
-              </div>
-              <div class="form-group">
-                <label for="quirofanoCedula">Cédula</label>
-                <input type="text" id="quirofanoCedula" required>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoCorreo">Correo Electrónico</label>
-                <input type="email" id="quirofanoCorreo" placeholder="correo@ejemplo.com">
-              </div>
-              <div class="form-group">
-                <label for="quirofanoTelefono">Teléfono</label>
-                <input type="tel" id="quirofanoTelefono" placeholder="8888-8888">
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoMascota">Nombre de la Mascota</label>
-                <input type="text" id="quirofanoMascota" required>
-              </div>
-              <div class="form-group">
-                <label for="quirofanoTipoMascota">Tipo de Mascota</label>
-                <select id="quirofanoTipoMascota" required>
-                  <option value="perro">Perro</option>
-                  <option value="gato">Gato</option>
-                  <option value="conejo">Conejo</option>
-                  <option value="otro">Otro</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoRaza">Raza</label>
-                <input type="text" id="quirofanoRaza" placeholder="Especificar raza">
-              </div>
-              <div class="form-group">
-                <label for="quirofanoPeso">Peso</label>
-                <input type="text" id="quirofanoPeso" placeholder="Ej: 5.2 kg, 500 g, 2.1 libras">
-              </div>
-              <div class="form-group">
-                <label for="quirofanoEdad">Edad</label>
-                <input type="text" id="quirofanoEdad" placeholder="Ej: 2 años, 6 meses">
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoIdPaciente">Número ID del paciente</label>
-                <input type="text" id="quirofanoIdPaciente" placeholder="ID del paciente" required>
-              </div>
-              <div class="form-group">
-                <label for="quirofanoFecha">Fecha de Cirugía</label>
-                <input type="date" id="quirofanoFecha" required>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoHora">Hora de Cirugía</label>
-                <input type="time" id="quirofanoHora">
-              </div>
-              <div class="form-group">
-                <label for="quirofanoUrgencia">Urgencia</label>
-                <select id="quirofanoUrgencia">
-                  <option value="normal">Normal</option>
-                  <option value="media">Media</option>
-                  <option value="alta">Alta</option>
-                  <option value="emergencia">Emergencia</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoDoctorAtiende"><i class="fas fa-user-md"></i> Doctor que atiende</label>
-                <select id="quirofanoDoctorAtiende" name="quirofanoDoctorAtiende">
-                  <option value="">Seleccione un doctor</option>
-                  <option value="Dr. Luis Coto">Dr. Luis Coto</option>
-                  <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
-                </select>
-              </div>
-              <div class="form-group">
-                <label for="quirofanoAsistenteAtiende"><i class="fas fa-user-nurse"></i> Asistente que atiende</label>
-                <select id="quirofanoAsistenteAtiende" name="quirofanoAsistenteAtiende">
-                  <option value="">Seleccione un asistente</option>
-                  <option value="Tec. Johnny Chacón">Tec. Johnny Chacón</option>
-                  <option value="Tec. Gabriela Zuñiga">Tec. Gabriela Zuñiga</option>
-                  <option value="Tec. Indra Perez">Tec. Indra Perez</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoProcedimiento">Procedimiento a realizar</label>
-                <textarea id="quirofanoProcedimiento" placeholder="Describir el procedimiento quirúrgico a realizar" rows="3"></textarea>
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoMotivo">Motivo de la cirugía</label>
-                <textarea id="quirofanoMotivo" placeholder="Motivo o diagnóstico que indica la cirugía" required rows="3"></textarea>
-              </div>
-            </div>
-
-            <button type="submit" class="btn-submit"><i class="fas fa-save"></i> Crear Ticket de Quirófano</button>
-          </form>
-        </div>
-      </section>
-
-      <!-- Sección para ver tickets de Quirófano -->
-      <section id="verQuirofanoSection" class="hidden">
-        <h2><i class="fas fa-user-md"></i> Tickets de Quirófano</h2>
+   
         
-        <!-- Vista de calendario -->
-        <div class="calendar-view" style="margin-bottom: 20px;">
-          <div class="calendar-header">
-            <button id="prevMonth" class="calendar-nav-btn">
-              <i class="fas fa-chevron-left"></i>
-            </button>
-            <h3 id="currentMonth"></h3>
-            <button id="nextMonth" class="calendar-nav-btn">
-              <i class="fas fa-chevron-right"></i>
-            </button>
-          </div>
-          <div id="calendarGrid" class="calendar-grid">
-            <!-- El calendario se generará dinámicamente aquí -->
-          </div>
-        </div>
-        
-        <!-- Barra de búsqueda -->
-        <div class="search-bar" style="margin-bottom: 15px;">
-          <input type="text" id="quirofanoSearchInput" placeholder="Buscar por cliente, mascota, ID paciente..." autocomplete="off">
-          <i class="fas fa-search"></i>
-        </div>
-        
-        <!-- Filtro de fecha -->
-        <div class="date-filter" style="margin-bottom: 15px;">
-          <label for="quirofanoFilterDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
-          <input type="date" id="quirofanoFilterDate">
-        </div>
-
-        <!-- Filtros para quirófano -->
-        <div class="filter-container">
-          <button id="quirofanoFilterTodos" class="quirofano-filter-btn active" data-filter="todos">Todos</button>
-          <button class="quirofano-filter-btn" data-filter="programado">Programado</button>
-          <button class="quirofano-filter-btn" data-filter="en_preparacion">En Preparación</button>
-          <button class="quirofano-filter-btn" data-filter="en_cirugia">En Cirugía</button>
-          <button class="quirofano-filter-btn" data-filter="post_cirugia">Post-Cirugía</button>
-          <button class="quirofano-filter-btn" data-filter="completado">Completado</button>
-        </div>
-        
-        <!-- Contenedor de tickets de quirófano -->
-        <div id="quirofanoTicketContainer" class="ticket-container">
-          <!-- Aquí se mostrarán los tickets de quirófano -->
-        </div>
-
-        <!-- Información del día seleccionado -->
-        <div id="selectedDayInfo" class="selected-day-info" style="display: none; margin: 20px 0;">
-          <h4><i class="fas fa-calendar-day"></i> <span id="selectedDayTitle">Día seleccionado</span></h4>
-          <div class="day-stats">
-            <span id="dayTotalTickets">0 cirugías programadas</span>
-            <span id="dayUrgentTickets" style="margin-left: 15px;">0 urgentes</span>
-          </div>
-        </div>
-
-        <!-- Estadísticas de quirófano -->
-        <div class="quirofano-stats" style="margin-top: 20px;">
-          <!-- Botones de exportación -->
-          <div class="export-buttons" style="margin-bottom: 15px;">
-            <button id="exportQuirofanoExcel" class="btn-export">
-              <i class="fas fa-file-excel"></i> Exportar a Excel
-            </button>
-            <button id="exportQuirofanoCSV" class="btn-export">
-              <i class="fas fa-file-csv"></i> Exportar a CSV
-            </button>
-          </div>
-          
-          <div class="stats-grid">
-            <div class="stat-card">
-              <i class="fas fa-user-md"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="totalQuirofanoTickets">0</span>
-                <span class="stat-label">Total Tickets</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-calendar-check"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="programadosQuirofano">0</span>
-                <span class="stat-label">Programados</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-cut"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="enCirugiaQuirofano">0</span>
-                <span class="stat-label">En Cirugía</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-check-circle"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="completadosQuirofano">0</span>
-                <span class="stat-label">Completados</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+ 
       <!-- Sección para ver consentimientos -->
       <section id="verConsentimientosSection" class="hidden">
         <h2><i class="fas fa-file-contract"></i> Consentimientos Registrados</h2>
@@ -1037,6 +811,197 @@
               </div>
             </div>
           </div>
+        </div>
+      </section>
+      
+      <!-- Sección para crear tickets de quirófano -->
+      <section id="crearQuirofanoSection" class="hidden">
+        <h2><i class="fas fa-cut"></i> Crear Ticket de Quirófano</h2>
+        <div class="form-container">
+          <form id="quirofanoTicketForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoNombre">Nombre del Cliente</label>
+                <input type="text" id="quirofanoNombre" required>
+              </div>
+              <div class="form-group">
+                <label for="quirofanoCedula">Cédula</label>
+                <input type="text" id="quirofanoCedula" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoCorreo">Correo Electrónico</label>
+                <input type="email" id="quirofanoCorreo">
+              </div>
+              <div class="form-group">
+                <label for="quirofanoTelefono">Teléfono</label>
+                <input type="tel" id="quirofanoTelefono">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoMascota">Nombre de la Mascota</label>
+                <input type="text" id="quirofanoMascota" required>
+              </div>
+              <div class="form-group">
+                <label for="quirofanoTipoMascota">Tipo de Mascota</label>
+                <select id="quirofanoTipoMascota" required>
+                  <option value="perro">Perro</option>
+                  <option value="gato">Gato</option>
+                  <option value="conejo">Conejo</option>
+                  <option value="otro">Otro</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoRaza">Raza</label>
+                <input type="text" id="quirofanoRaza">
+              </div>
+              <div class="form-group">
+                <label for="quirofanoPeso">Peso</label>
+                <input type="text" id="quirofanoPeso" placeholder="Ej: 5.5 kg, 2.3 kg">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoIdPaciente">ID del Paciente</label>
+                <input type="text" id="quirofanoIdPaciente" required>
+              </div>
+              <div class="form-group">
+                <label for="quirofanoFecha">Fecha de Cirugía</label>
+                <input type="date" id="quirofanoFecha" required>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoHora">Hora de Cirugía</label>
+                <input type="time" id="quirofanoHora">
+              </div>
+              <div class="form-group">
+                <!-- Campo vacío para mantener la estructura de dos columnas -->
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoEdad">Edad de la Mascota</label>
+                <input type="text" id="quirofanoEdad" placeholder="Ej: 3 años, 8 meses, 2 años">
+              </div>
+              <div class="form-group">
+                <label for="quirofanoUrgencia">Categorización de Paciente</label>
+                <select id="quirofanoUrgencia" required>
+                  <option value="normal">🔵 Cirugía Regular</option>
+                  <option value="media">🟣 Cirugía Programada</option>
+                  <option value="alta">🟠 Cirugía Urgente</option>
+                  <option value="emergencia">🔴 Cirugía de Emergencia</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoDoctorAtiende"><i class="fas fa-user-md"></i> Doctor que atiende</label>
+                <select id="quirofanoDoctorAtiende">
+                  <option value="">Seleccione un doctor</option>
+                  <option value="Dr. Luis Coto">Dr. Luis Coto</option>
+                  <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
+                  <option value="Dr. Gustavo Gonzalez">Dr. Gustavo Gonzalez</option>
+                  <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
+                  <option value="Dra. Francinny Nuñez">Dra. Francinny Nuñez</option>
+                  <option value="Dra. Kharen Moreno">Dra. Kharen Moreno</option>
+                  <option value="Dra. Karina Madrigal">Dra. Karina Madrigal</option>
+                  <option value="Dra. Lourdes Chacón">Dra. Lourdes Chacón</option>
+                  <option value="Dra. Sofia Carrillo">Dra. Sofia Carrillo</option>
+                  <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
+                  <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="quirofanoAsistenteAtiende"><i class="fas fa-user-nurse"></i> Asistente que atiende</label>
+                <select id="quirofanoAsistenteAtiende">
+                  <option value="">Seleccione un asistente</option>
+                  <option value="Tec. Maribel Guzmán">Tec. Maribel Guzmán</option>
+                  <option value="Tec. Juliana Perez">Tec. Juliana Perez</option>
+                  <option value="Tec. Jafeth Bermudez">Tec. Jafeth Bermudez</option>
+                  <option value="Tec. Johnny Chacón">Tec. Johnny Chacón</option>
+                  <option value="Tec. Gabriela Zuñiga">Tec. Gabriela Zuñiga</option>
+                  <option value="Tec. Indra Perez">Tec. Indra Perez</option>
+                  <option value="Tec. Randy Arias">Tec. Randy Arias</option>
+                  <option value="Tec. Yancy Picado">Tec. Yancy Picado</option>
+                  <option value="Tec. Maria Fernanda">Tec. Maria Fernanda</option>
+                  <option value="Tec. Maria José Gutierrez">Tec. Maria José Gutierrez</option>
+                  <option value="Tec. Jimena Urtecho">Tec. Jimena Urtecho</option>
+                  <option value="Tec. Nicole Gamboa">Tec. Nicole Gamboa</option>
+                  <option value="Tec. Paola López">Tec. Paola López</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoProcedimiento">Tipo de Procedimiento</label>
+                <input type="text" id="quirofanoProcedimiento" placeholder="Ej: Esterilización, Castración, Cesárea, etc.">
+              </div>
+            </div>
+
+            <div class="form-group full-width">
+              <label for="quirofanoMotivo">Motivo/Descripción del Procedimiento</label>
+              <textarea id="quirofanoMotivo" placeholder="Describa el motivo y detalles del procedimiento quirúrgico" required></textarea>
+            </div>
+
+            <button type="submit" class="btn-submit"><i class="fas fa-cut"></i> Crear Ticket de Quirófano</button>
+          </form>
+        </div>
+      </section>
+
+      <!-- Sección para ver tickets de quirófano -->
+      <section id="verQuirofanoSection" class="hidden">
+        <h2><i class="fas fa-cut"></i> Tickets de Quirófano</h2>
+
+         <!-- Barra de búsqueda para quirófano -->
+        <div class="quirofano-search-bar">
+          <input type="text" id="quirofanoSearchInput" placeholder="Buscar por cliente, mascota, ID paciente..." autocomplete="off">
+          <i class="fas fa-search"></i>
+        </div>
+
+        <!-- Filtros de quirófano -->
+        <div class="quirofano-filters" style="margin-bottom: 20px;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="quirofanoFilterDate"><i class="fas fa-calendar-alt"></i> Seleccionar por fecha:</label>
+              <input type="date" id="quirofanoFilterDate">
+            </div>
+          </div>
+        </div>
+
+        <!-- Botones de filtro por estado -->
+        <div class="quirofano-filter-container">
+          <button class="quirofano-filter-btn active" data-filter="todos" id="quirofanoFilterTodos">
+            <i class="fas fa-list"></i> Todos
+          </button>
+          <button class="quirofano-filter-btn" data-filter="programado" id="quirofanoFilterProgramado">
+            <i class="fas fa-calendar-check"></i> Programados
+          </button>
+          <button class="quirofano-filter-btn" data-filter="cirugia" id="quirofanoFilterCirugia">
+            <i class="fas fa-user-md"></i> En Cirugía
+          </button>
+          <button class="quirofano-filter-btn" data-filter="terminado" id="quirofanoFilterTerminado">
+            <i class="fas fa-check-circle"></i> Terminados
+          </button>
+        </div>
+
+       
+        
+        <!-- Contenedor de tickets de quirófano -->
+        <div id="quirofanoTicketContainer" class="quirofano-ticket-container">
+          <!-- Aquí se mostrarán los tickets de quirófano -->
         </div>
       </section>
       
