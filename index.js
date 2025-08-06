@@ -376,7 +376,7 @@ function applyRoleBasedUI(role) {
     // Control de visibilidad del botón de quirófano basado en roles
     const quirofanoBtn = document.getElementById('quirofanoBtn');
     const quirofanoCategory = quirofanoBtn ? quirofanoBtn.closest('.nav-category') : null;
-    const allowedQuirofanoRoles = ['admin', 'recepcion', 'quirofano'];
+    const allowedQuirofanoRoles = ['admin', 'recepcion', 'consulta_externa', 'quirofano'];
     
     if (quirofanoCategory) {
         if (allowedQuirofanoRoles.includes(role)) {

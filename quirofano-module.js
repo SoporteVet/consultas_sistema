@@ -67,6 +67,20 @@ function setupQuirofanoFilterVisibility() {
     }
 }
 
+// Función para configurar acceso al módulo de quirófano según el rol
+function setupQuirofanoFilterAccess() {
+    const userRole = sessionStorage.getItem('userRole');
+    const allowedRoles = ['admin', 'recepcion', 'consulta_externa', 'quirofano'];
+    
+    if (!allowedRoles.includes(userRole)) {
+        console.log(`Acceso denegado al módulo de quirófano para rol: ${userRole}`);
+        return false;
+    }
+    
+    console.log(`Acceso concedido al módulo de quirófano para rol: ${userRole}`);
+    return true;
+}
+
 // Función para configurar event listeners del módulo
 function setupQuirofanoEventListeners() {
     // Formulario de crear ticket de quirófano
