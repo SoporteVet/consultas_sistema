@@ -874,7 +874,7 @@
               </div>
               <div class="form-group">
                 <label for="quirofanoPeso">Peso (kg)</label>
-                <input type="number" id="quirofanoPeso" step="0.1" min="0">
+                <input type="text" id="quirofanoPeso" placeholder="Ej: 5.2 kg, 3 libras">
               </div>
             </div>
 
@@ -1004,8 +1004,9 @@
 
         <!-- Botones de filtro por estado -->
         <div class="filter-container">
-          <button class="quirofano-filter-btn active" data-filter="todos" id="quirofanoFilterTodos">Todos</button>
-                        <button class="quirofano-filter-btn" data-filter="en-preparacion">En Preparación</button>
+          <button class="quirofano-filter-btn" data-filter="todos" id="quirofanoFilterTodos">Todos</button>
+                        <button class="quirofano-filter-btn active" data-filter="en-preparacion">En Preparación</button>
+                        <button class="quirofano-filter-btn" data-filter="listo-para-cirugia">Listo para Cirugía</button>
                         <button class="quirofano-filter-btn" data-filter="en-cirugia">En Cirugía</button>
                         <button class="quirofano-filter-btn" data-filter="terminado">Terminados</button>
         </div>

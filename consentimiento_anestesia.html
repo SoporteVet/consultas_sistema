@@ -7,6 +7,16 @@
     <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Script para verificar carga de librerías -->
+    <script>
+        window.addEventListener('load', function() {
+            console.log('Verificando librerías cargadas:');
+            console.log('SignaturePad:', typeof SignaturePad !== 'undefined');
+            console.log('html2canvas:', typeof html2canvas !== 'undefined');
+            console.log('jsPDF:', typeof window.jsPDF !== 'undefined');
+        });
+    </script>
     <style>
         :root {
             --primary-color: #3a7ca5;
@@ -356,137 +366,186 @@
 <script>
     
     document.addEventListener('DOMContentLoaded', function() {
-        // Leer parámetros URL y completar campos automáticamente
-        const urlParams = new URLSearchParams(window.location.search);
+        // Agregar un pequeño delay para asegurar que todo esté listo
+        setTimeout(function() {
+            console.log('Iniciando configuración del consentimiento de anestesia...');
+            
+            // Leer parámetros URL y completar campos automáticamente
+            const urlParams = new URLSearchParams(window.location.search);
         
-        // Completar campos con datos de la base de datos
-        let autoFilledCount = 0;
-        
-        if (urlParams.get('mascotaNombre')) {
-            const field = document.getElementById('petName');
-            field.value = urlParams.get('mascotaNombre').replace(/\+/g, ' ');
-            autoFilledCount++;
-        }
-        if (urlParams.get('mascotaTipo')) {
-            const field = document.getElementById('petSpecies');
-            field.value = urlParams.get('mascotaTipo').replace(/\+/g, ' ');
-            autoFilledCount++;
-        }
-        if (urlParams.get('clienteNombre')) {
-            const field = document.getElementById('ownerName');
-            field.value = urlParams.get('clienteNombre').replace(/\+/g, ' ');
-            autoFilledCount++;
-        }
-        if (urlParams.get('clienteCedula')) {
-            const field = document.getElementById('ownerId');
-            field.value = urlParams.get('clienteCedula').replace(/\+/g, ' ');
-            autoFilledCount++;
-        }
-        if (urlParams.get('clienteTelefono')) {
-            const field = document.getElementById('ownerPhone');
-            field.value = urlParams.get('clienteTelefono').replace(/\+/g, ' ');
-            autoFilledCount++;
-        }
-        
-        // Agregar campos específicos de quirófano
-        if (urlParams.get('mascotaRaza')) {
-            const field = document.getElementById('petBreed');
-            if (field) {
-                field.value = urlParams.get('mascotaRaza').replace(/\+/g, ' ');
+            // Completar campos con datos de la base de datos
+            let autoFilledCount = 0;
+            
+            if (urlParams.get('mascotaNombre')) {
+                const field = document.getElementById('petName');
+                field.value = urlParams.get('mascotaNombre').replace(/\+/g, ' ');
                 autoFilledCount++;
             }
-        }
-        if (urlParams.get('mascotaPeso')) {
-            const field = document.getElementById('petWeight');
-            if (field) {
-                field.value = urlParams.get('mascotaPeso').replace(/\+/g, ' ');
+            if (urlParams.get('mascotaTipo')) {
+                const field = document.getElementById('petSpecies');
+                field.value = urlParams.get('mascotaTipo').replace(/\+/g, ' ');
                 autoFilledCount++;
             }
-        }
-        if (urlParams.get('mascotaEdad')) {
-            const field = document.getElementById('petAge');
-            if (field) {
-                field.value = urlParams.get('mascotaEdad').replace(/\+/g, ' ');
+            if (urlParams.get('clienteNombre')) {
+                const field = document.getElementById('ownerName');
+                field.value = urlParams.get('clienteNombre').replace(/\+/g, ' ');
                 autoFilledCount++;
             }
-        }
-        if (urlParams.get('procedimiento')) {
-            const field = document.getElementById('procedureType');
-            if (field) {
-                field.value = urlParams.get('procedimiento').replace(/\+/g, ' ');
+            if (urlParams.get('clienteCedula')) {
+                const field = document.getElementById('ownerId');
+                field.value = urlParams.get('clienteCedula').replace(/\+/g, ' ');
                 autoFilledCount++;
             }
-        }
-        if (urlParams.get('doctorAtiende')) {
-            const field = document.getElementById('attendingDoctor');
-            if (field) {
-                field.value = urlParams.get('doctorAtiende').replace(/\+/g, ' ');
+            if (urlParams.get('clienteTelefono')) {
+                const field = document.getElementById('ownerPhone');
+                field.value = urlParams.get('clienteTelefono').replace(/\+/g, ' ');
                 autoFilledCount++;
             }
-        }
-        
-        // Mostrar indicador si se autocompletaron campos
-        if (autoFilledCount > 0) {
-            const indicator = document.getElementById('autoDataIndicator');
-            if (indicator) {
-                indicator.style.display = 'flex';
-                indicator.querySelector('span').textContent = 
-                    `${autoFilledCount} campos cargados automáticamente desde la base de datos`;
+            
+            // Agregar campos específicos de quirófano
+            if (urlParams.get('mascotaRaza')) {
+                const field = document.getElementById('petBreed');
+                if (field) {
+                    field.value = urlParams.get('mascotaRaza').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
             }
-        }
-        
-        // Set the current date and time once DOM is ready
-        const now = new Date();
-        document.getElementById('shortDate').textContent = now.toLocaleDateString('es-ES');
-        document.getElementById('shortDate2').textContent = now.toLocaleDateString('es-ES');
-        document.getElementById('shortDate3').textContent = now.toLocaleDateString('es-ES');
-        document.getElementById('currentTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        document.getElementById('currentDay').textContent = now.getDate();
-        document.getElementById('currentMonth').textContent = now.toLocaleString('es-ES', { month: 'long' });
-        document.getElementById('currentYear').textContent = now.getFullYear();
+            if (urlParams.get('mascotaPeso')) {
+                const field = document.getElementById('petWeight');
+                if (field) {
+                    field.value = urlParams.get('mascotaPeso').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
+            }
+            if (urlParams.get('mascotaEdad')) {
+                const field = document.getElementById('petAge');
+                if (field) {
+                    field.value = urlParams.get('mascotaEdad').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
+            }
+            if (urlParams.get('procedimiento')) {
+                const field = document.getElementById('procedureType');
+                if (field) {
+                    field.value = urlParams.get('procedimiento').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
+            }
+            if (urlParams.get('doctorAtiende')) {
+                const field = document.getElementById('attendingDoctor');
+                if (field) {
+                    field.value = urlParams.get('doctorAtiende').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
+            }
+            
+            // Mostrar indicador si se autocompletaron campos
+            if (autoFilledCount > 0) {
+                const indicator = document.getElementById('autoDataIndicator');
+                if (indicator) {
+                    indicator.style.display = 'flex';
+                    indicator.querySelector('span').textContent = 
+                        `${autoFilledCount} campos cargados automáticamente desde la base de datos`;
+                }
+            }
+            
+            // Set the current date and time once DOM is ready
+            const now = new Date();
+            
+            // Proteger cada elemento individualmente
+            const shortDate = document.getElementById('shortDate');
+            if (shortDate) shortDate.textContent = now.toLocaleDateString('es-ES');
+            
+            const shortDate2 = document.getElementById('shortDate2');
+            if (shortDate2) shortDate2.textContent = now.toLocaleDateString('es-ES');
+            
+            const shortDate3 = document.getElementById('shortDate3');
+            if (shortDate3) shortDate3.textContent = now.toLocaleDateString('es-ES');
+            
+            const currentTime = document.getElementById('currentTime');
+            if (currentTime) currentTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const currentDay = document.getElementById('currentDay');
+            if (currentDay) currentDay.textContent = now.getDate();
+            
+            const currentMonth = document.getElementById('currentMonth');
+            if (currentMonth) currentMonth.textContent = now.toLocaleString('es-ES', { month: 'long' });
+            
+            const currentYear = document.getElementById('currentYear');
+            if (currentYear) currentYear.textContent = now.getFullYear();
 
-        // Completar campos de la tercera página con los mismos datos
-        updateControlPageData();
+            console.log('Fecha y hora configuradas:', {
+                fecha: now.toLocaleDateString('es-ES'),
+                hora: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                dia: now.getDate(),
+                mes: now.toLocaleString('es-ES', { month: 'long' }),
+                año: now.getFullYear()
+            });
 
-        // Initialize signature pads and handle resizing
-        const canvasElements = document.querySelectorAll('.signature-pad');
-        window.signaturePads = {};
-        function resizeCanvas(canvas) {
-            const ratio = Math.max(window.devicePixelRatio || 1, 2);
-            canvas.width = canvas.offsetWidth * ratio;
-            canvas.height = canvas.offsetHeight * ratio;
-            const ctx = canvas.getContext('2d');
-            ctx.scale(ratio, ratio);
-            ctx.imageSmoothingEnabled = true;
-            ctx.imageSmoothingQuality = 'high';
-            return ratio;
-        }
-        canvasElements.forEach(canvas => {
-            const pixelRatio = resizeCanvas(canvas);
-            window.signaturePads[canvas.id] = new SignaturePad(canvas, {
-                backgroundColor: 'rgba(255,255,255,0)',
-                penColor: 'rgb(0,0,100)',
-                velocityFilterWeight: 0.5,
-                minWidth: 0.3,            // thinner stroke
-                maxWidth: 1.5 * pixelRatio, // reduced max thickness
-                throttle: 8,
-                minDistance: 1.0
-            });
-            ['touchstart','touchmove','touchend'].forEach(eventName => {
-                canvas.addEventListener(eventName, e => { if (e.cancelable) e.preventDefault(); }, { passive: false });
-            });
-        });
-        window.addEventListener('resize', function() {
-            canvasElements.forEach(canvas => {
-                const pad = window.signaturePads[canvas.id];
-                if (pad) {
-                    const data = pad.isEmpty() ? null : pad.toData();
-                    const ratio = resizeCanvas(canvas);
-                    pad.clear();
-                    if (data) pad.fromData(data);
+            // Completar campos de la tercera página con los mismos datos
+            updateControlPageData();
+
+            // Initialize signature pads and handle resizing
+            const canvasElements = document.querySelectorAll('.signature-pad');
+            console.log('Canvas elements encontrados:', canvasElements.length);
+            
+            window.signaturePads = {};
+            
+            function resizeCanvas(canvas) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 2);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(ratio, ratio);
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                return ratio;
+            }
+            
+            // Verificar si SignaturePad está disponible
+            if (typeof SignaturePad === 'undefined') {
+                console.error('SignaturePad no está cargado. Verifica que la librería esté incluida.');
+                return;
+            }
+            
+            canvasElements.forEach((canvas, index) => {
+                try {
+                    console.log(`Inicializando canvas ${index + 1}:`, canvas.id);
+                    const pixelRatio = resizeCanvas(canvas);
+                    window.signaturePads[canvas.id] = new SignaturePad(canvas, {
+                        backgroundColor: 'rgba(255,255,255,0)',
+                        penColor: 'rgb(0,0,100)',
+                        velocityFilterWeight: 0.5,
+                        minWidth: 0.3,
+                        maxWidth: 1.5 * pixelRatio,
+                        throttle: 8,
+                        minDistance: 1.0
+                    });
+                    
+                    // Agregar event listeners para touch events
+                    ['touchstart','touchmove','touchend'].forEach(eventName => {
+                        canvas.addEventListener(eventName, e => { 
+                            if (e.cancelable) e.preventDefault(); 
+                        }, { passive: false });
+                    });
+                    
+                    console.log(`Canvas ${canvas.id} inicializado correctamente`);
+                } catch (error) {
+                    console.error(`Error inicializando canvas ${canvas.id}:`, error);
                 }
             });
-        });
+            window.addEventListener('resize', function() {
+                canvasElements.forEach(canvas => {
+                    const pad = window.signaturePads[canvas.id];
+                    if (pad) {
+                        const data = pad.isEmpty() ? null : pad.toData();
+                        const ratio = resizeCanvas(canvas);
+                        pad.clear();
+                        if (data) pad.fromData(data);
+                    }
+                });
+            });
+        }, 100); // Ajustar el tiempo según sea necesario
     });
 
     // Función para actualizar los datos de la página de control
@@ -512,8 +571,15 @@
 
     // Clear a specific signature pad by ID
     function clearSignature(canvasId) {
-        if (window.signaturePads && window.signaturePads[canvasId]) {
-            window.signaturePads[canvasId].clear();
+        try {
+            if (window.signaturePads && window.signaturePads[canvasId]) {
+                window.signaturePads[canvasId].clear();
+                console.log(`Firma limpiada para canvas: ${canvasId}`);
+            } else {
+                console.warn(`No se encontró el signature pad para canvas: ${canvasId}`);
+            }
+        } catch (error) {
+            console.error(`Error limpiando firma para canvas ${canvasId}:`, error);
         }
     }
 
