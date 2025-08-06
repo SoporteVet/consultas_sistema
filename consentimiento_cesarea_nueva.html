@@ -434,7 +434,7 @@
         </div>
 
         <div class="pdf-button-container">
-            <button class="pdf-button" onclick="generatePDF()">Generar PDF</button>
+            <button class="pdf-button" onclick="crearFormularioConsentimiento()">Crear Formulario de Consentimiento</button>
         </div>
     </div>
 
@@ -464,7 +464,7 @@
                 if (value) {
                     const field = document.getElementById(fieldId);
                     if (field) {
-                        field.value = decodeURIComponent(value);
+                        field.value = decodeURIComponent(value.replace(/\+/g, ' '));
                         field.style.backgroundColor = '#e8f5e8';
                     }
                 }
@@ -531,74 +531,58 @@
             window.signaturePads[id].clear();
         }
 
-        async function generatePDF() {
+        async function crearFormularioConsentimiento() {
             const ownerName = document.getElementById('ownerName').value;
             const petName = document.getElementById('petName').value;
-            
+            const ownerCedula = document.getElementById('ownerCedula').value;
+            const ownerPhone = document.getElementById('ownerPhone').value;
+            const ownerEmail = document.getElementById('ownerEmail').value;
+            const petBreed = document.getElementById('petBreed').value;
+            const petAge = document.getElementById('petAge').value;
+            const expedientNumber = document.getElementById('expedientNumber').value;
+
+            const signatureData = window.signaturePads.cesareaSigPad.getTrimmedCanvas().toDataURL('image/png');
+
             if (!ownerName || !petName) {
-                alert('Por favor complete el nombre del propietario y de la mascota antes de generar el PDF.');
+                alert('Por favor complete el nombre del propietario y de la mascota antes de crear el formulario.');
                 return;
             }
 
-            // Ocultar elementos no imprimibles
-            const pdfBtn = document.querySelector('.pdf-button-container');
-            const sigBtns = document.querySelectorAll('.signature-buttons');
-            const banner = document.getElementById('autocompleteBanner');
-            
-            const originalPdfDisplay = pdfBtn.style.display;
-            const originalSigDisplays = Array.from(sigBtns).map(b => b.style.display);
-            const originalBannerDisplay = banner ? banner.style.display : 'none';
-            
-            pdfBtn.style.display = 'none';
-            sigBtns.forEach(b => b.style.display = 'none');
-            if (banner) banner.style.display = 'none';
+            const consentimientoData = {
+                tipo: 'cesarea',
+                fecha: `${document.getElementById('cesareaDay').textContent}/${document.getElementById('cesareaMonth').textContent}/${document.getElementById('cesareaYear').textContent}`,
+                hora: `${document.getElementById('cesareaTime').textContent}`,
+                propietarioNombre: ownerName,
+                propietarioCedula: ownerCedula,
+                propietarioTelefono: ownerPhone,
+                propietarioEmail: ownerEmail,
+                mascotaNombre: petName,
+                mascotaRaza: petBreed,
+                mascotaEdad: petAge,
+                expediente: expedientNumber,
+                firmaPropietario: signatureData
+            };
 
             try {
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-                
-                // Página 1
-                const page1 = document.getElementById('cesareaPage1');
-                const canvas1 = await html2canvas(page1, { 
-                    scale: 1.5, 
-                    useCORS: true, 
-                    backgroundColor: '#fff',
-                    width: page1.scrollWidth,
-                    height: page1.scrollHeight
+                const response = await fetch('guardar_consentimiento.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(consentimientoData)
                 });
-                
-                const img1 = canvas1.toDataURL('image/jpeg', 0.8);
-                const imgW = 190;
-                const imgH1 = (canvas1.height * imgW) / canvas1.width;
-                pdf.addImage(img1, 'JPEG', 10, 10, imgW, imgH1);
-                
-                // Página 2
-                pdf.addPage();
-                const page2 = document.getElementById('cesareaPage2');
-                const canvas2 = await html2canvas(page2, { 
-                    scale: 1.5, 
-                    useCORS: true, 
-                    backgroundColor: '#fff',
-                    width: page2.scrollWidth,
-                    height: page2.scrollHeight
-                });
-                
-                const img2 = canvas2.toDataURL('image/jpeg', 0.8);
-                const imgH2 = (canvas2.height * imgW) / canvas2.width;
-                pdf.addImage(img2, 'JPEG', 10, 10, imgW, imgH2);
-                
-                // Guardar PDF
-                const fileName = `Consentimiento_Cesarea_${petName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
-                pdf.save(fileName);
-                
+
+                if (response.ok) {
+                    alert('Formulario de consentimiento guardado exitosamente!');
+                    // Redirigir a la página de anestesia o a donde sea necesario
+                    window.location.href = 'consentimiento_anestesia.html';
+                } else {
+                    const errorData = await response.json();
+                    alert(`Error al guardar el consentimiento: ${errorData.message || 'Desconocido'}`);
+                }
             } catch (error) {
-                console.error('Error generando PDF:', error);
-                alert('Hubo un problema al generar el PDF. Por favor, inténtelo de nuevo.');
-            } finally {
-                // Restaurar elementos ocultos
-                pdfBtn.style.display = originalPdfDisplay;
-                sigBtns.forEach((b, i) => b.style.display = originalSigDisplays[i]);
-                if (banner) banner.style.display = originalBannerDisplay;
+                console.error('Error al guardar el consentimiento:', error);
+                alert('Hubo un problema al guardar el consentimiento. Por favor, inténtelo de nuevo.');
             }
         }
     </script>

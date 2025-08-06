@@ -375,8 +375,8 @@ function applyRoleBasedUI(role) {
     
     // Control de visibilidad del botón de quirófano basado en roles
     const quirofanoBtn = document.getElementById('quirofanoBtn');
-    const quirofanoCategory = document.getElementById('quirofanoCategory');
-    const allowedQuirofanoRoles = ['admin', 'recepcion', 'consulta_externa', 'quirofano', 'internos'];
+    const quirofanoCategory = quirofanoBtn ? quirofanoBtn.closest('.nav-category') : null;
+    const allowedQuirofanoRoles = ['admin', 'recepcion', 'quirofano'];
     
     if (quirofanoCategory) {
         if (allowedQuirofanoRoles.includes(role)) {
@@ -409,8 +409,8 @@ function applyRoleBasedUI(role) {
     }
     
     // Actualizar controles de filtro de quirófano según el rol
-    if (typeof setupQuirofanoFilterVisibility === 'function') {
-        setupQuirofanoFilterVisibility();
+    if (typeof setupQuirofanoFilterAccess === 'function') {
+        setupQuirofanoFilterAccess();
     }
     
     console.log("UI permissions applied successfully for role:", role);
@@ -1088,6 +1088,7 @@ function loadTickets() {
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
                 renderTickets(currentFilter);
                 updateStatsGlobal();
+                updatePrequirurgicoCounter();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
@@ -1106,6 +1107,7 @@ function loadTickets() {
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
                 renderTickets(currentFilter);
                 updateStatsGlobal();
+                updatePrequirurgicoCounter();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
@@ -1120,6 +1122,7 @@ function loadTickets() {
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
                 renderTickets(currentFilter);
                 updateStatsGlobal();
+                updatePrequirurgicoCounter();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
@@ -2368,7 +2371,7 @@ function editTicket(randomId) {
     }
     
     // Mostrar/ocultar campo Hora de Cita según el rol en edición
-    const canShowHoraCita = ["admin", "recepcion", "consulta_externa", "quirofano", "internos"].includes(userRole);
+    const canShowHoraCita = ["admin", "recepción", "quirofano"].includes(userRole);
     
     // Crear el contenido del modal con el formulario
     modal.innerHTML = `
@@ -4004,7 +4007,7 @@ document.addEventListener('DOMContentLoaded', function() {
   const userRole = sessionStorage.getItem('userRole');
   const horaCitaGroup = document.querySelector('input#hora')?.closest('.form-group');
   if (horaCitaGroup) {
-    if (!["admin", "recepcion", "consulta_externa", "quirofano", "internos"].includes(userRole)) {
+    if (!["admin", "recepción", "quirofano"].includes(userRole)) {
       horaCitaGroup.style.display = 'none';
     } else {
       horaCitaGroup.style.display = '';
@@ -4604,15 +4607,12 @@ function navigateToQuirofano(sectionId, buttonId) {
         if (fechaInput && !fechaInput.value) {
             fechaInput.value = getLocalDateString();
         }
+        
+
     }
     
     // Si es la sección de ver tickets, renderizar los tickets
     if (sectionId === 'verQuirofanoSection') {
-        // Configurar visibilidad de filtros según el rol del usuario
-        if (typeof setupQuirofanoFilterVisibility === 'function') {
-            setupQuirofanoFilterVisibility();
-        }
-        
         // Configurar fecha de filtro
         const filterDateInput = document.getElementById('quirofanoFilterDate');
         if (filterDateInput && !filterDateInput.value) {
@@ -4626,8 +4626,48 @@ function navigateToQuirofano(sectionId, buttonId) {
     }
 }
 
+// Función para actualizar el contador de tickets con exámenes prequirúrgicos
+function updatePrequirurgicoCounter() {
+    const counterElement = document.getElementById('prequirurgicoCounter');
+    const countElement = document.getElementById('prequirurgicoCount');
+    
+    if (!counterElement || !countElement) {
+        return;
+    }
+    
+    // Verificar el rol del usuario - ocultar para visitas
+    const userRole = sessionStorage.getItem('userRole');
+    if (userRole === 'visitas') {
+        counterElement.style.display = 'none';
+        return;
+    }
+    
+    // Verificar si tenemos acceso a los tickets de quirófano
+    if (typeof window.quirofanoTickets === 'undefined' || !Array.isArray(window.quirofanoTickets)) {
+        counterElement.style.display = 'none';
+        return;
+    }
+    
+    // Contar tickets con exámenes prequirúrgicos pendientes
+    const ticketsConExamenes = window.quirofanoTickets.filter(ticket => 
+        ticket.examenesPrequirurgicos === true && 
+        (ticket.examenesStatus === 'pendiente' || !ticket.examenesStatus)
+    ).length;
+    
+    // Actualizar el contador
+    countElement.textContent = ticketsConExamenes;
+    
+    // Mostrar u ocultar el contador según si hay tickets
+    if (ticketsConExamenes > 0) {
+        counterElement.style.display = 'flex';
+    } else {
+        counterElement.style.display = 'none';
+    }
+}
+
 // Exponer la función globalmente
 window.navigateToQuirofano = navigateToQuirofano;
+window.updatePrequirurgicoCounter = updatePrequirurgicoCounter;
 
 window.addEventListener('DOMContentLoaded', function() {
   // ... existing code ...

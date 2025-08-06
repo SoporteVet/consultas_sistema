@@ -111,11 +111,34 @@
             box-shadow: 0 3px 10px rgba(0,0,0,0.08);
         }
         
+        /* Layout específico para tabla de información del paciente */
+        .info-table {
+            table-layout: fixed;
+        }
+        
+        .info-table th {
+            width: 20%;
+            text-align: left;
+            vertical-align: middle;
+            padding: 8px 10px;
+        }
+        
+        .info-table td {
+            width: 30%;
+            padding: 6px 8px;
+            vertical-align: middle;
+            overflow: hidden;
+        }
+        
         .info-table th, .info-table td,
         .data-table th, .data-table td {
             border: 1px solid #e1e8ed;
-            padding: 8px 10px;
             text-align: left;
+        }
+        
+        /* Padding específico para headers */
+        .data-table th {
+            padding: 8px 10px;
         }
         
         .info-table th, .data-table th {
@@ -136,16 +159,79 @@
             transition: all 0.2s ease;
         }
         
+        /* Forzar anchos específicos para columnas de la tabla de fármacos */
+        .data-table {
+            table-layout: fixed;
+            width: 100%;
+        }
+        
+        .data-table th:nth-child(1),
+        .data-table td:nth-child(1) {
+            width: 25%;
+            max-width: 25%;
+        }
+        
+        .data-table th:nth-child(2),
+        .data-table td:nth-child(2) {
+            width: 20%;
+            max-width: 20%;
+        }
+        
+        .data-table th:nth-child(3),
+        .data-table td:nth-child(3) {
+            width: 15%;
+            max-width: 15%;
+        }
+        
+        .data-table th:nth-child(4),
+        .data-table td:nth-child(4) {
+            width: 10%;
+            max-width: 10%;
+        }
+        
+        .data-table th:nth-child(5),
+        .data-table td:nth-child(5) {
+            width: 30%;
+            max-width: 30%;
+        }
+        
+        /* Evitar desbordamiento en las celdas */
+        .data-table td {
+            overflow: hidden;
+            padding: 4px 6px;
+            vertical-align: middle;
+        }
+        
         input[type="text"], input[type="date"], input[type="time"], select, textarea {
             border: 2px solid #e1e8ed;
-            padding: 6px 10px;
+            padding: 6px 8px;
             border-radius: 6px;
             font-family: inherit;
-            font-size: 12px;
+            font-size: 11px;
             width: 100%;
+            max-width: 100%;
             box-sizing: border-box;
             transition: all 0.3s ease;
             background: white;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* Estilos específicos para campos en tablas */
+        .data-table input[type="text"],
+        .data-table select {
+            padding: 4px 6px;
+            font-size: 10px;
+            min-height: 20px;
+            height: auto;
+        }
+        
+        /* Estilos específicos para la tabla de información del paciente */
+        .info-table input[type="text"],
+        .info-table select {
+            padding: 6px 8px;
+            font-size: 11px;
         }
         
         input[type="text"]:focus, input[type="date"]:focus, input[type="time"]:focus, 
@@ -166,10 +252,50 @@
         select {
             cursor: pointer;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
-            background-position: right 8px center;
+            background-position: right 6px center;
             background-repeat: no-repeat;
-            background-size: 16px;
-            padding-right: 35px;
+            background-size: 12px;
+            padding-right: 25px;
+            min-width: 50px;
+        }
+        
+        /* Estilos específicos para selects en la tabla de datos */
+        .data-table select {
+            background-size: 10px;
+            background-position: right 4px center;
+            padding-right: 18px;
+            font-size: 10px;
+            min-width: 40px;
+        }
+        
+        /* Select de sexo en tabla de información */
+        .info-table select#sexo {
+            padding-right: 25px;
+            background-size: 12px;
+            background-position: right 6px center;
+        }
+        
+        /* Ocultar opciones por defecto cuando están vacías */
+        select option[value=""]:only-child {
+            display: none;
+        }
+        
+        /* Estilo específico para selects de vía */
+        select.via {
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        /* Mejorar la visualización en PDF */
+        @media print {
+            select {
+                -webkit-appearance: none;
+                -moz-appearance: none;
+                appearance: none;
+                background-image: none !important;
+                border: 1px solid #ddd !important;
+                padding-right: 10px !important;
+            }
         }
         
         .pdf-button-container {
@@ -351,7 +477,7 @@
                     <td><input type="text" class="dosis" /></td>
                     <td>
                         <select class="via">
-                            <option value="">Vía</option>
+                            <option value=""></option>
                             <option value="I.M">I.M</option>
                             <option value="I.V">I.V</option>
                             <option value="S.C">S.C</option>
@@ -374,7 +500,7 @@
                     <td><input type="text" class="dosis" /></td>
                     <td>
                         <select class="via">
-                            <option value="">Vía</option>
+                            <option value=""></option>
                             <option value="I.M">I.M</option>
                             <option value="I.V">I.V</option>
                             <option value="S.C">S.C</option>
@@ -397,7 +523,7 @@
                     <td><input type="text" class="dosis" /></td>
                     <td>
                         <select class="via">
-                            <option value="">Vía</option>
+                            <option value=""></option>
                             <option value="I.M">I.M</option>
                             <option value="I.V">I.V</option>
                             <option value="S.C">S.C</option>
@@ -544,6 +670,45 @@
                 
                 pdfBtn.style.display = 'none';
                 if (banner) banner.style.display = 'none';
+                
+                // Convertir selects vacíos a texto para mejor renderizado en PDF
+                const selects = document.querySelectorAll('select');
+                const originalSelectStates = [];
+                
+                selects.forEach((select, index) => {
+                    originalSelectStates[index] = {
+                        element: select,
+                        originalHTML: select.outerHTML,
+                        parent: select.parentNode
+                    };
+                    
+                    // Si el select está vacío o es la opción por defecto, reemplazar con span vacío
+                    if (!select.value || select.value === "") {
+                        const span = document.createElement('span');
+                        span.style.display = 'inline-block';
+                        span.style.width = '100%';
+                        span.style.minHeight = '20px';
+                        span.style.border = '1px solid #ddd';
+                        span.style.padding = '6px 10px';
+                        span.style.borderRadius = '6px';
+                        span.style.backgroundColor = 'white';
+                        span.textContent = '';
+                        select.parentNode.replaceChild(span, select);
+                    } else {
+                        // Si tiene valor, reemplazar con span que muestre el valor
+                        const span = document.createElement('span');
+                        span.style.display = 'inline-block';
+                        span.style.width = '100%';
+                        span.style.border = '1px solid #ddd';
+                        span.style.padding = '6px 10px';
+                        span.style.borderRadius = '6px';
+                        span.style.backgroundColor = 'white';
+                        span.style.textAlign = 'center';
+                        span.style.fontWeight = '500';
+                        span.textContent = select.value;
+                        select.parentNode.replaceChild(span, select);
+                    }
+                });
 
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
@@ -591,6 +756,17 @@
                 pdfBtn.style.display = originalPdfDisplay;
                 if (banner) banner.style.display = originalBannerDisplay;
                 
+                // Restaurar selects originales
+                originalSelectStates.forEach(state => {
+                    const currentElement = state.parent.firstChild;
+                    if (currentElement) {
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = state.originalHTML;
+                        const restoredSelect = tempDiv.firstChild;
+                        state.parent.replaceChild(restoredSelect, currentElement);
+                    }
+                });
+                
                 // Mostrar mensaje de éxito con mejor estilo
                 const successMsg = document.createElement('div');
                 successMsg.style.cssText = `
@@ -624,6 +800,23 @@
                 const banner = document.getElementById('autocompleteBanner');
                 if (pdfBtn) pdfBtn.style.display = 'block';
                 if (banner) banner.style.display = 'none';
+                
+                // Restaurar selects en caso de error
+                if (typeof originalSelectStates !== 'undefined') {
+                    originalSelectStates.forEach(state => {
+                        try {
+                            const currentElement = state.parent.firstChild;
+                            if (currentElement) {
+                                const tempDiv = document.createElement('div');
+                                tempDiv.innerHTML = state.originalHTML;
+                                const restoredSelect = tempDiv.firstChild;
+                                state.parent.replaceChild(restoredSelect, currentElement);
+                            }
+                        } catch (restoreError) {
+                            console.error('Error al restaurar select:', restoreError);
+                        }
+                    });
+                }
                 
                 alert('Error al generar el PDF: ' + error.message);
             }

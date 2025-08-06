@@ -2771,3 +2771,104 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
 }
+
+/* Estilos para el contador de exámenes prequirúrgicos */
+.prequirurgico-counter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #ff6b35, #ff8c42);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+
+.prequirurgico-counter:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.4);
+}
+
+.prequirurgico-counter i {
+  font-size: 16px;
+  color: white;
+}
+
+.prequirurgico-counter .counter-text {
+  font-weight: 500;
+}
+
+.prequirurgico-counter .counter-number {
+  background: rgba(255, 255, 255, 0.2);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: bold;
+  min-width: 20px;
+  text-align: center;
+}
+
+/* Responsive design para pantallas pequeñas */
+@media (max-width: 768px) {
+  .prequirurgico-counter {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  
+  .prequirurgico-counter .counter-text {
+    display: none;
+  }
+  
+  .prequirurgico-counter i {
+    font-size: 14px;
+  }
+}
+
+/* Estilos para el botón de marcar exámenes como realizados */
+.btn-examenes-realizados {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  margin-left: 8px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-examenes-realizados:hover {
+  background: linear-gradient(135deg, #218838, #1ea085);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(40, 167, 69, 0.4);
+}
+
+.btn-examenes-realizados:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(40, 167, 69, 0.3);
+}
+
+.btn-examenes-realizados i {
+  font-size: 10px;
+  color: white;
+}
+
+/* Responsive para el botón en pantallas pequeñas */
+@media (max-width: 768px) {
+  .btn-examenes-realizados {
+    font-size: 10px;
+    padding: 3px 6px;
+  }
+  
+  .btn-examenes-realizados i {
+    font-size: 9px;
+  }
+}

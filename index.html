@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="laboratorio.css">
   <link rel="stylesheet" href="consentimientos.css">
   <link rel="stylesheet" href="quirofano.css">
+  
   <link rel="icon" href="empresa.jpg" type="image/x-icon">
 </head>
 <body>
@@ -82,6 +83,7 @@
             <button id="verLabBtn" class="submenu-btn" onclick="navigateToLab('verLabSection', 'verLabBtn');">
               <i class="fas fa-microscope"></i> Ver Tickets Lab
             </button>
+
           </div>
         </div>
 
@@ -337,7 +339,16 @@
 
       <!-- Sección para visualizar tickets -->
       <section id="verTicketsSection" class="hidden">
-        <h2><i class="fas fa-list"></i> Sala de Espera</h2>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+          <h2><i class="fas fa-list"></i> Sala de Espera</h2>
+          
+          <!-- Contador de tickets con exámenes prequirúrgicos -->
+          <div id="prequirurgicoCounter" class="prequirurgico-counter" style="display: none;">
+            <i class="fas fa-vials"></i>
+            <span class="counter-text">Exámenes prequirúrgicos pendientes:</span>
+            <span id="prequirurgicoCount" class="counter-number">0</span>
+          </div>
+        </div>
         
         <!-- Barra de búsqueda (visible para todos menos visitas) -->
         <div id="searchBarContainer" class="search-bar" style="display:none; margin-bottom: 15px;">
@@ -733,10 +744,9 @@
           </div>
         </div>
       </section>
+
+
       
-   
-        
- 
       <!-- Sección para ver consentimientos -->
       <section id="verConsentimientosSection" class="hidden">
         <h2><i class="fas fa-file-contract"></i> Consentimientos Registrados</h2>
@@ -860,11 +870,38 @@
             <div class="form-row">
               <div class="form-group">
                 <label for="quirofanoRaza">Raza</label>
-                <input type="text" id="quirofanoRaza">
+                <input type="text" id="quirofanoRaza" placeholder="Ej: Labrador, Persa, SRD">
               </div>
               <div class="form-group">
-                <label for="quirofanoPeso">Peso</label>
-                <input type="text" id="quirofanoPeso" placeholder="Ej: 5.5 kg, 2.3 kg">
+                <label for="quirofanoPeso">Peso (kg)</label>
+                <input type="number" id="quirofanoPeso" step="0.1" min="0">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoEdad">Edad de la Mascota</label>
+                <input type="text" id="quirofanoEdad" placeholder="Ej: 3 años, 8 meses">
+              </div>
+              <div class="form-group">
+                <label for="quirofanoExamenesPrequirurgicos">
+                  <input type="checkbox" id="quirofanoExamenesPrequirurgicos" style="margin-right: 8px;">
+                  Exámenes Pre Quirúrgicos
+                </label>
+                <small style="display: block; color: #666; margin-top: 4px;">
+                  Marque si el paciente requiere exámenes antes de la cirugía
+                </small>
+                
+                <!-- Estado de los exámenes (solo visible cuando se requieren) -->
+                <div id="examenesStatusContainer" style="display: none; margin-top: 8px;">
+                  <label for="quirofanoExamenesStatus" style="font-size: 13px; color: #555;">
+                    Estado de los exámenes:
+                  </label>
+                  <select id="quirofanoExamenesStatus" style="margin-left: 8px; padding: 2px 6px; font-size: 12px;">
+                    <option value="pendiente">⏳ Pendientes</option>
+                    <option value="realizado">✅ Realizados</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -883,16 +920,6 @@
               <div class="form-group">
                 <label for="quirofanoHora">Hora de Cirugía</label>
                 <input type="time" id="quirofanoHora">
-              </div>
-              <div class="form-group">
-                <!-- Campo vacío para mantener la estructura de dos columnas -->
-              </div>
-            </div>
-
-            <div class="form-row">
-              <div class="form-group">
-                <label for="quirofanoEdad">Edad de la Mascota</label>
-                <input type="text" id="quirofanoEdad" placeholder="Ej: 3 años, 8 meses, 2 años">
               </div>
               <div class="form-group">
                 <label for="quirofanoUrgencia">Categorización de Paciente</label>
@@ -964,44 +991,75 @@
       <!-- Sección para ver tickets de quirófano -->
       <section id="verQuirofanoSection" class="hidden">
         <h2><i class="fas fa-cut"></i> Tickets de Quirófano</h2>
-
-         <!-- Barra de búsqueda para quirófano -->
-        <div class="quirofano-search-bar">
-          <input type="text" id="quirofanoSearchInput" placeholder="Buscar por cliente, mascota, ID paciente..." autocomplete="off">
-          <i class="fas fa-search"></i>
-        </div>
-
+        
         <!-- Filtros de quirófano -->
         <div class="quirofano-filters" style="margin-bottom: 20px;">
           <div class="form-row">
             <div class="form-group">
-              <label for="quirofanoFilterDate"><i class="fas fa-calendar-alt"></i> Seleccionar por fecha:</label>
+              <label for="quirofanoFilterDate"><i class="fas fa-calendar-alt"></i> Filtrar por fecha:</label>
               <input type="date" id="quirofanoFilterDate">
             </div>
           </div>
         </div>
 
         <!-- Botones de filtro por estado -->
-        <div class="quirofano-filter-container">
-          <button class="quirofano-filter-btn active" data-filter="todos" id="quirofanoFilterTodos">
-            <i class="fas fa-list"></i> Todos
-          </button>
-          <button class="quirofano-filter-btn" data-filter="programado" id="quirofanoFilterProgramado">
-            <i class="fas fa-calendar-check"></i> Programados
-          </button>
-          <button class="quirofano-filter-btn" data-filter="cirugia" id="quirofanoFilterCirugia">
-            <i class="fas fa-user-md"></i> En Cirugía
-          </button>
-          <button class="quirofano-filter-btn" data-filter="terminado" id="quirofanoFilterTerminado">
-            <i class="fas fa-check-circle"></i> Terminados
-          </button>
+        <div class="filter-container">
+          <button class="quirofano-filter-btn active" data-filter="todos" id="quirofanoFilterTodos">Todos</button>
+                        <button class="quirofano-filter-btn" data-filter="en-preparacion">En Preparación</button>
+                        <button class="quirofano-filter-btn" data-filter="en-cirugia">En Cirugía</button>
+                        <button class="quirofano-filter-btn" data-filter="terminado">Terminados</button>
         </div>
 
-       
+        <!-- Barra de búsqueda para quirófano -->
+        <div class="search-bar" style="margin-bottom: 15px;">
+          <input type="text" id="quirofanoSearchInput" placeholder="Buscar por cliente, mascota, ID paciente..." autocomplete="off">
+          <i class="fas fa-search"></i>
+        </div>
         
         <!-- Contenedor de tickets de quirófano -->
         <div id="quirofanoTicketContainer" class="quirofano-ticket-container">
           <!-- Aquí se mostrarán los tickets de quirófano -->
+        </div>
+
+        <!-- Estadísticas de quirófano -->
+        <div class="quirofano-stats" style="margin-top: 20px;">
+          <div class="stats-grid">
+            <div class="stat-card">
+              <i class="fas fa-cut"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="totalQuirofano">0</span>
+                <span class="stat-label">Total Cirugías</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-calendar-day"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="quirofanoHoy">0</span>
+                <span class="stat-label">Hoy</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-clock"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="quirofanoProgramados">0</span>
+                <span class="stat-label">Programados</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-cut"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="quirofanoEnCurso">0</span>
+                <span class="stat-label">En Curso</span>
+              </div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-check-circle"></i>
+              <div class="stat-info">
+                <span class="stat-number" id="quirofanoCompletados">0</span>
+                <span class="stat-label">Completados</span>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
       
@@ -1397,8 +1455,9 @@
   <script src="services-data.js"></script>
   <script src="auth.js"></script>
   <script src="laboratorio.js"></script>
-  <script src="consentimientos-module.js"></script>
-  <script src="quirofano-module.js"></script>
+
+<script src="consentimientos-module.js"></script>
+<script src="quirofano-module.js"></script>
   <script src="index.js"></script>
   <script src="fix-wait-time.js"></script>
   <script src="admin-users.js"></script>

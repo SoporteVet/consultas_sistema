@@ -192,7 +192,11 @@
                 {param: 'mascotaSexo', element: 'petSex'},
                 {param: 'clienteNombre', element: 'ownerName'},
                 {param: 'clienteCedula', element: 'ownerId'},
-                {param: 'clienteTelefono', element: 'ownerPhone'}
+                {param: 'clienteTelefono', element: 'ownerPhone'},
+                {param: 'procedimiento', element: 'procedureType'},
+                {param: 'doctorAtiende', element: 'attendingDoctor'},
+                {param: 'fechaCirugia', element: 'surgeryDate'},
+                {param: 'urgencia', element: 'urgencyLevel'}
             ];
             
             let hasAutocomplete = false;
@@ -201,7 +205,7 @@
                 if (value) {
                     const element = document.getElementById(field.element);
                     if (element) {
-                        element.value = decodeURIComponent(value);
+                        element.value = decodeURIComponent(value.replace(/\+/g, ' '));
                         hasAutocomplete = true;
                     }
                 }
@@ -271,4 +275,58 @@
         }
     </script>
 </body>
+<script>
+// --- AUTOLLENADO DE DATOS DESDE LA URL ---
+function getQueryParams() {
+    const params = {};
+    const search = window.location.search.substring(1);
+    if (!search) return params;
+    search.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        params[decodeURIComponent(key)] = decodeURIComponent((value || '').replace(/\+/g, ' '));
+    });
+    return params;
+}
+
+function fillFormFromParams() {
+    const params = getQueryParams();
+    let anyFilled = false;
+    // Mapeo de parámetros a posibles IDs de campos
+    const map = {
+        clienteNombre: ['clienteNombre', 'ownerName', 'propietario', 'nombreCliente'],
+        clienteCedula: ['clienteCedula', 'cedula'],
+        clienteTelefono: ['clienteTelefono', 'telefono'],
+        clienteCorreo: ['clienteCorreo', 'correo'],
+        mascotaNombre: ['mascotaNombre', 'petName', 'nombreMascota'],
+        mascotaTipo: ['mascotaTipo', 'tipoMascota'],
+        mascotaRaza: ['mascotaRaza', 'raza'],
+        mascotaEdad: ['mascotaEdad', 'edad'],
+        mascotaPeso: ['mascotaPeso', 'peso'],
+        procedimiento: ['procedimiento'],
+        doctorAtiende: ['doctorAtiende', 'doctor'],
+        fechaCirugia: ['fechaCirugia'],
+        urgencia: ['urgencia'],
+        fecha: ['fecha'],
+        hora: ['hora']
+    };
+    Object.keys(map).forEach(param => {
+        if (params[param]) {
+            map[param].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = params[param].replace(/\+/g, ' ');
+                    anyFilled = true;
+                }
+            });
+        }
+    });
+    // Mostrar banner si se autocompletó algo
+    const banner = document.getElementById('autocompleteBanner');
+    if (banner && anyFilled) {
+        banner.innerHTML = '<span class="icon">ℹ️</span><div class="content"><h3>Datos cargados automáticamente</h3><p>Los campos se han completado con información del sistema. Puedes modificar cualquier dato si es necesario.</p></div>';
+        banner.style.display = 'flex';
+    }
+}
+document.addEventListener('DOMContentLoaded', fillFormFromParams);
+</script>
 </html>

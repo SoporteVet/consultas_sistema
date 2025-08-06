@@ -164,7 +164,8 @@
                 {param: 'mascotaPeso', element: 'petWeight'},
                 {param: 'clienteNombre', element: 'ownerName'},
                 {param: 'clienteCedula', element: 'ownerId'},
-                {param: 'clienteTelefono', element: 'ownerPhone'}
+                {param: 'clienteTelefono', element: 'ownerPhone'},
+                {param: 'procedimiento', element: 'surgType'}
             ];
             
             let hasAutocomplete = false;
@@ -173,7 +174,7 @@
                 if (value) {
                     const element = document.getElementById(field.element);
                     if (element) {
-                        element.value = decodeURIComponent(value);
+                        element.value = decodeURIComponent(value.replace(/\+/g, ' '));
                         hasAutocomplete = true;
                     }
                 }
@@ -196,6 +197,15 @@
                     const declPet = document.getElementById('declPet');
                     if (petName && declPet) {
                         declPet.value = petName;
+                    }
+                    
+                    // Sincronizar tipo de procedimiento
+                    const surgType = document.getElementById('surgType').value;
+                    const surgType2 = document.getElementById('surgType2');
+                    const surgType3 = document.getElementById('surgType3');
+                    if (surgType) {
+                        if (surgType2) surgType2.value = surgType;
+                        if (surgType3) surgType3.value = surgType;
                     }
                 }, 100);
             }
