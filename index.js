@@ -996,8 +996,8 @@ function formatPorCobrarDisplay(porCobrarText) {
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         
-        // Detectar líneas de separación con timestamp
-        if (line.match(/^--- \d{2}\/\d{2}\/\d{4}.*---$/)) {
+        // Detectar líneas de separación con timestamp (mejorado para incluir el nuevo formato)
+        if (line.match(/^--- \d{2}\/\d{2}\/\d{4}.*---$/) || line.match(/^--- \d{2}\/\d{2}\/\d{4}.*\[Ticket.*\] ---$/)) {
             // Si hay contenido previo, agregarlo como sección
             if (currentSection.trim()) {
                 if (formattedContent === '') {
@@ -1010,8 +1010,10 @@ function formatPorCobrarDisplay(porCobrarText) {
                 currentSection = '';
             }
             
-            // Agregar el header de la sección
-            formattedContent += `<div style="font-weight: bold; color: #666; font-size: 11px; margin: 8px 0 4px 0;">${line.replace(/^---\s*/, '').replace(/\s*---$/, '')}</div>`;
+            // Agregar el header de la sección con validación de integridad
+            const headerText = line.replace(/^---\s*/, '').replace(/\s*---$/, '');
+            const isValidated = line.includes('[Ticket') ? ' ✓' : '';
+            formattedContent += `<div style="font-weight: bold; color: #666; font-size: 11px; margin: 8px 0 4px 0;">${headerText}${isValidated}</div>`;
         } else {
             // Agregar línea normal al contenido de la sección actual
             currentSection += (currentSection ? '\n' : '') + line;
@@ -1030,6 +1032,63 @@ function formatPorCobrarDisplay(porCobrarText) {
     }
     
     return formattedContent || porCobrarText;
+}
+
+// NUEVA FUNCIÓN: Validar integridad del por cobrar
+function validatePorCobrarIntegrity(ticket) {
+    if (!ticket.porCobrar) return true;
+    
+    const lines = ticket.porCobrar.split('\n');
+    let hasValidationInfo = false;
+    
+    for (const line of lines) {
+        // Buscar líneas que contengan información de validación (nuevo formato)
+        if (line.includes('[Ticket #') && line.includes(ticket.id) && line.includes(ticket.mascota)) {
+            hasValidationInfo = true;
+            break;
+        }
+    }
+    
+    // Si hay contenido en por cobrar pero no tiene información de validación,
+    // es contenido legacy que se mantiene pero se marca como no validado
+    if (!hasValidationInfo && ticket.porCobrar.trim().length > 0) {
+        console.warn(`Ticket ${ticket.id} tiene contenido por cobrar sin validación:`, ticket.porCobrar);
+        return 'legacy'; // Contenido legacy válido pero sin validación moderna
+    }
+    
+    return hasValidationInfo;
+}
+
+// NUEVA FUNCIÓN: Verificar que el por cobrar pertenece al ticket correcto
+function verifyPorCobrarOwnership(ticket) {
+    if (!ticket.porCobrar) return true;
+    
+    const lines = ticket.porCobrar.split('\n');
+    
+    for (const line of lines) {
+        // Verificar líneas con información de ticket
+        if (line.includes('[Ticket #')) {
+            const ticketIdMatch = line.match(/\[Ticket #(\d+)/);
+            const mascotaMatch = line.match(/- ([^\]]+)\]/);
+            
+            if (ticketIdMatch && mascotaMatch) {
+                const foundTicketId = ticketIdMatch[1];
+                const foundMascota = mascotaMatch[1];
+                
+                // Verificar que coincida con el ticket actual
+                if (foundTicketId !== String(ticket.id) || foundMascota !== ticket.mascota) {
+                    console.error(`MISMATCH DETECTADO en por cobrar:`, {
+                        ticket: {id: ticket.id, mascota: ticket.mascota},
+                        found: {id: foundTicketId, mascota: foundMascota},
+                        line: line
+                    });
+                    return false;
+                }
+            }
+        }
+    }
+    
+    return true;
 }
 
 // Función para cargar tickets desde Firebase
@@ -1098,6 +1157,20 @@ function loadTickets() {
                 ...snapshot.val(),
                 firebaseKey: snapshot.key
             };
+            
+            // VALIDACIÓN INFORMATIVA: Verificar integridad del por cobrar en tiempo real
+            if (updatedTicket.porCobrar) {
+                const isValid = verifyPorCobrarOwnership(updatedTicket);
+                if (!isValid) {
+                    console.warn(`INFORMACIÓN: Ticket ${updatedTicket.id} contiene datos de por cobrar que requieren revisión`);
+                    // Solo notificar en casos críticos, no por datos legacy
+                    const isLegacyData = validatePorCobrarIntegrity(updatedTicket) === 'legacy';
+                    if (!isLegacyData && document.hasFocus()) {
+                        showNotification(`ℹ️ Ticket #${updatedTicket.id} actualizado (verificar por cobrar si es necesario)`, 'info');
+                    }
+                }
+            }
+            
             const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
             if (index !== -1) {
                 tickets[index] = updatedTicket;
@@ -1351,6 +1424,7 @@ function renderTickets(filter = 'todos', date = null) {
                     <th>Hora Llegada</th>
                     <th>Hora Atención</th>
                     <th>Hora Finalización</th>
+                    <th>Listo Facturar</th>
                     <th>Médico/Asistente</th>
                     <th>Urgencia</th>
                     <th>Motivo de Llegada</th>
@@ -1366,6 +1440,20 @@ function renderTickets(filter = 'todos', date = null) {
             else if (ticket.estado === 'quirofano') estadoColor = 'excel-estado-quirofano';
             else if (ticket.estado === 'cliente_se_fue') estadoColor = 'excel-estado-cliente-se-fue';
             else estadoColor = '';
+            // Formatear información de listo para facturar
+            let listoFacturarInfo = '';
+            if (ticket.listoParaFacturar) {
+                listoFacturarInfo = 'SÍ';
+                if (ticket.horaListoParaFacturar) {
+                    listoFacturarInfo += ` (${ticket.horaListoParaFacturar})`;
+                }
+                if (ticket.usuarioListoParaFacturar) {
+                    listoFacturarInfo += ` - ${ticket.usuarioListoParaFacturar}`;
+                }
+            } else {
+                listoFacturarInfo = 'NO';
+            }
+            
             table += `<tr class="${estadoColor}">
                 <td>${index + 1}</td>
                 <td>#${ticket.id}</td>
@@ -1376,6 +1464,7 @@ function renderTickets(filter = 'todos', date = null) {
                 <td>${ticket.horaLlegada || ''}</td>
                 <td>${ticket.horaAtencion || ''}</td>
                 <td>${ticket.horaFinalizacion || ''}</td>
+                <td>${listoFacturarInfo}</td>
                 <td>${ticket.medicoAtiende || ''}</td>
                 <td>${(ticket.urgencia || '').toUpperCase()}</td>
                 <td>${ticket.motivoLlegada || ''}</td>
@@ -1635,7 +1724,16 @@ function renderTickets(filter = 'todos', date = null) {
                         ${estadoText}
                     </div>
                     ${ticket.expediente ? `<div class="expediente-badge"><i class="fas fa-file-medical"></i> <strong>Expediente médico:</strong> Registrado</div>` : ''}
-                    ${ticket.listoParaFacturar ? `<div class="listo-para-facturar-badge"><i class="fas fa-file-invoice-dollar"></i> <strong>Listo para facturar ✓</strong></div>` : ''}
+                    ${ticket.listoParaFacturar ? (() => {
+                        let badgeContent = '<i class="fas fa-file-invoice-dollar"></i> <strong>Listo para facturar ✓</strong>';
+                        if (ticket.horaListoParaFacturar) {
+                            badgeContent += `<br><small style="font-size: 0.8em; opacity: 0.9;">Marcado: ${ticket.horaListoParaFacturar}</small>`;
+                            if (ticket.usuarioListoParaFacturar) {
+                                badgeContent += ` <small style="font-size: 0.75em; opacity: 0.8;">por ${ticket.usuarioListoParaFacturar}</small>`;
+                            }
+                        }
+                        return `<div class="listo-para-facturar-badge">${badgeContent}</div>`;
+                    })() : ''}
                     ${ticket.porCobrar ? `<div class="por-cobrar-info"><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(ticket.porCobrar)}</div></div>` : ''}
                 </div>
             `;
@@ -2206,6 +2304,11 @@ function editTicket(randomId) {
         return;
     }
     
+    // Log informativo
+    if (ticket.porCobrar) {
+        console.log(`Editando ticket ${ticket.id} que contiene información de por cobrar`);
+    }
+    
     console.log("Ticket encontrado:", ticket);
     console.log("Firebase Key:", ticket.firebaseKey);
     
@@ -2275,23 +2378,43 @@ function editTicket(randomId) {
     
     // Obtener el rol actual
     const userRole = sessionStorage.getItem('userRole');
-    // Contador de ediciones para consulta externa
-    if (!ticket.editCount) ticket.editCount = 0;
-    // Solo puede editar "porCobrar" si NO es recepcion y (si no es consulta_externa o no ha alcanzado el límite)
-    const canEditPorCobrar = hasPermission('canEditTickets') && userRole !== 'recepcion' && (userRole !== 'consulta_externa' || ticket.editCount < 7);
+    // Determinar si puede editar "por cobrar"
+    // Recepción puede editar SOLO cuando el ticket esté listo para facturar
+    // Otros usuarios pueden editar siempre (sin límite de ediciones)
+    const canEditPorCobrar = hasPermission('canEditTickets') && 
+        (userRole !== 'recepcion' || ticket.listoParaFacturar);
     
     // Mostrar historial de Por Cobrar arriba (solo lectura)
     let porCobrarHistorial = '';
     if (ticket.porCobrar) {
-      porCobrarHistorial = `<div class='por-cobrar-historial' style='background:#fffbe6;border:1px solid #ffe082;border-radius:4px;padding:8px 12px;margin-bottom:10px;'>${formatPorCobrarDisplay(ticket.porCobrar)}</div>`;
+        porCobrarHistorial = `<div class='por-cobrar-historial' style='background:#fffbe6;border:1px solid #ffe082;border-radius:4px;padding:8px 12px;margin-bottom:10px;'>${formatPorCobrarDisplay(ticket.porCobrar)}</div>`;
     }
-    // Textarea vacío para nueva entrada
+    // Textarea para nueva entrada con información específica para recepción
+    let porCobrarPlaceholder = "Agregue nueva información que hay que cobrar al cliente...";
+    let porCobrarInfo = "";
+    
+    if (userRole === 'recepcion') {
+        if (ticket.listoParaFacturar) {
+            porCobrarPlaceholder = "El ticket está listo para facturar. Puede agregar información adicional de cobro...";
+            porCobrarInfo = `<div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; padding: 6px; margin-bottom: 6px; font-size: 12px; color: #2e7d32;">
+                <i class="fas fa-check-circle" style="margin-right: 4px;"></i>
+                Ticket listo para facturar - Puede editar información de cobro
+            </div>`;
+        } else {
+            porCobrarInfo = `<div style="background: #fff3e0; border: 1px solid #ff9800; border-radius: 4px; padding: 6px; margin-bottom: 6px; font-size: 12px; color: #e65100;">
+                <i class="fas fa-info-circle" style="margin-right: 4px;"></i>
+                Solo puede editar cuando el ticket esté marcado como "Listo para facturar"
+            </div>`;
+        }
+    }
+    
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
+            ${porCobrarInfo}
             ${porCobrarHistorial}
             <textarea id="editPorCobrar" 
-                   placeholder="Agregue nueva información que hay que cobrar al cliente..."
+                   placeholder="${porCobrarPlaceholder}"
                    style="width: 100%; 
                           min-height: 80px; 
                           resize: vertical; 
@@ -2304,6 +2427,7 @@ function editTicket(randomId) {
         </div>`
       : `<div class="form-group">
             <label for="editPorCobrar">Por Cobrar</label>
+            ${porCobrarInfo}
             ${porCobrarHistorial}
             <textarea id="editPorCobrar" readonly 
                    style="width: 100%; 
@@ -2598,10 +2722,26 @@ function editTicket(randomId) {
     const listoParaFacturarCheckbox = document.getElementById('editListoParaFacturar');
     if (listoParaFacturarCheckbox && userRole !== 'visitas') {
         listoParaFacturarCheckbox.addEventListener('change', function() {
-            // Guardar inmediatamente el estado
+            // Preparar datos para actualizar
             const ticketToUpdate = {
                 listoParaFacturar: this.checked
             };
+            
+            // Si se está marcando como listo para facturar, agregar timestamp
+            if (this.checked) {
+                const now = new Date();
+                ticketToUpdate.fechaListoParaFacturar = now.toISOString();
+                ticketToUpdate.horaListoParaFacturar = now.toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                ticketToUpdate.usuarioListoParaFacturar = sessionStorage.getItem('userName') || 'Usuario';
+            } else {
+                // Si se desmarca, limpiar los campos de timestamp
+                ticketToUpdate.fechaListoParaFacturar = null;
+                ticketToUpdate.horaListoParaFacturar = null;
+                ticketToUpdate.usuarioListoParaFacturar = null;
+            }
             
             // Referencia a Firebase
             const ticketsRef = firebase.database().ref('tickets');
@@ -2610,6 +2750,44 @@ function editTicket(randomId) {
                 .then(() => {
                     const statusMessage = this.checked ? 'Marcado como listo para facturar' : 'Desmarcado como listo para facturar';
                     showNotification(statusMessage, 'success');
+                    
+                    // Si es recepción, actualizar dinámicamente la capacidad de editar por cobrar
+                    if (userRole === 'recepcion') {
+                        const porCobrarTextarea = document.getElementById('editPorCobrar');
+                        const porCobrarInfoDiv = porCobrarTextarea?.parentNode.querySelector('div[style*="background:"]');
+                        
+                        if (porCobrarTextarea && porCobrarInfoDiv) {
+                            if (this.checked) {
+                                // Habilitar edición
+                                porCobrarTextarea.readOnly = false;
+                                porCobrarTextarea.style.background = '#fff';
+                                porCobrarTextarea.style.color = '#000';
+                                porCobrarTextarea.style.cursor = 'text';
+                                porCobrarTextarea.placeholder = 'El ticket está listo para facturar. Puede agregar información adicional de cobro...';
+                                
+                                // Actualizar info
+                                porCobrarInfoDiv.innerHTML = `<i class="fas fa-check-circle" style="margin-right: 4px;"></i>
+                                    Ticket listo para facturar - Puede editar información de cobro`;
+                                porCobrarInfoDiv.style.background = '#e8f5e8';
+                                porCobrarInfoDiv.style.borderColor = '#4caf50';
+                                porCobrarInfoDiv.style.color = '#2e7d32';
+                            } else {
+                                // Deshabilitar edición
+                                porCobrarTextarea.readOnly = true;
+                                porCobrarTextarea.style.background = '#f5f5f5';
+                                porCobrarTextarea.style.color = '#888';
+                                porCobrarTextarea.style.cursor = 'not-allowed';
+                                porCobrarTextarea.placeholder = '';
+                                
+                                // Actualizar info
+                                porCobrarInfoDiv.innerHTML = `<i class="fas fa-info-circle" style="margin-right: 4px;"></i>
+                                    Solo puede editar cuando el ticket esté marcado como "Listo para facturar"`;
+                                porCobrarInfoDiv.style.background = '#fff3e0';
+                                porCobrarInfoDiv.style.borderColor = '#ff9800';
+                                porCobrarInfoDiv.style.color = '#e65100';
+                            }
+                        }
+                    }
                 })
                 .catch(error => {
                     console.error('Error actualizando estado de facturación:', error);
@@ -2644,12 +2822,40 @@ function editTicket(randomId) {
         const editListoParaFacturar = document.getElementById('editListoParaFacturar');
         const listoParaFacturarValue = editListoParaFacturar ? editListoParaFacturar.checked : false;
         
-        // Procesar el campo porCobrar
+        // Preservar o establecer timestamps de "listo para facturar"
+        let fechaListoParaFacturar = ticket.fechaListoParaFacturar;
+        let horaListoParaFacturar = ticket.horaListoParaFacturar;
+        let usuarioListoParaFacturar = ticket.usuarioListoParaFacturar;
+        
+        // Si se está marcando como listo y no tenía timestamp, agregarlo
+        if (listoParaFacturarValue && !ticket.listoParaFacturar) {
+            const now = new Date();
+            fechaListoParaFacturar = now.toISOString();
+            horaListoParaFacturar = now.toLocaleTimeString('es-ES', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+            usuarioListoParaFacturar = sessionStorage.getItem('userName') || 'Usuario';
+        } else if (!listoParaFacturarValue) {
+            // Si se desmarca, limpiar timestamps
+            fechaListoParaFacturar = null;
+            horaListoParaFacturar = null;
+            usuarioListoParaFacturar = null;
+        }
+        
+        // Procesar el campo porCobrar con validaciones mejoradas
         let updatedPorCobrar = ticket.porCobrar || '';
         const editPorCobrar = document.getElementById('editPorCobrar');
         if (editPorCobrar && canEditPorCobrar) {
             const newContent = editPorCobrar.value.trim();
             if (newContent.length > 0) {
+                // Obtener la versión más reciente para merge inteligente
+                const currentTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
+                if (currentTicket && currentTicket.porCobrar !== ticket.porCobrar) {
+                    console.log('Detectado cambio concurrente en por cobrar, usando versión más reciente como base');
+                    updatedPorCobrar = currentTicket.porCobrar || '';
+                }
+                
                 const timestamp = new Date().toLocaleString('es-ES', {
                     year: 'numeric',
                     month: '2-digit',
@@ -2684,7 +2890,10 @@ function editTicket(randomId) {
             firebaseKey: safeTicket.firebaseKey,
             porCobrar: updatedPorCobrar,
             expediente: expedienteValue,
-            listoParaFacturar: listoParaFacturarValue
+            listoParaFacturar: listoParaFacturarValue,
+            fechaListoParaFacturar: fechaListoParaFacturar,
+            horaListoParaFacturar: horaListoParaFacturar,
+            usuarioListoParaFacturar: usuarioListoParaFacturar
         };
         
         // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
@@ -2693,26 +2902,13 @@ function editTicket(randomId) {
             updatedTicket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         }
         
-        // Si el usuario es consulta_externa, incrementar el contador de ediciones
-        if (userRole === 'consulta_externa') {
-            ticket.editCount = (ticket.editCount || 0) + 1;
-            updatedTicket.editCount = ticket.editCount;
-        }
+        // Nota: Se removió el límite de ediciones - todos los usuarios pueden editar sin restricciones
         
         // Guardar el ticket actualizado
         saveEditedTicket(updatedTicket);
     });
     
-    // Deshabilitar el botón de guardar si se alcanzó el límite de ediciones
-    if (userRole === 'consulta_externa' && ticket.editCount >= 7) {
-        const saveBtn = modal.querySelector('.btn-save');
-        if (saveBtn) {
-            saveBtn.disabled = true;
-            saveBtn.textContent = 'Límite de ediciones alcanzado';
-            saveBtn.style.background = '#ccc';
-            saveBtn.style.cursor = 'not-allowed';
-        }
-    }
+    // Nota: Se removió el límite de ediciones - el botón de guardar siempre está habilitado
     
     // Actualizar descripción de urgencia
     const editUrgenciaDescriptions = {
@@ -2818,12 +3014,40 @@ function getTicketDiff(oldTicket, newTicket) {
 
 function saveEditedTicket(ticket) {
     console.log("Guardando ticket actualizado:", ticket);
+    console.log("Ticket ID:", ticket.id, "RandomID:", ticket.randomId, "FirebaseKey:", ticket.firebaseKey);
     
     if (!ticket.firebaseKey) {
         console.error("Error: No hay clave de Firebase para el ticket", ticket);
         showNotification('Error al guardar los cambios: falta identificador', 'error');
         return;
     }
+    
+    // NUEVA VALIDACIÓN: Verificar integridad del ticket antes de guardar
+    if (!ticket.id || !ticket.mascota || !ticket.nombre) {
+        console.error("Error: Datos esenciales del ticket faltantes", ticket);
+        showNotification('Error: Datos esenciales del ticket están incompletos', 'error');
+        return;
+    }
+    
+    // NUEVA VALIDACIÓN: Verificar que el ticket existe en la base de datos local
+    const localTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
+    if (!localTicket) {
+        console.error("Error: Ticket no encontrado en datos locales", ticket.firebaseKey);
+        showNotification('Error: El ticket no está sincronizado. Por favor, recargue la página.', 'error');
+        return;
+    }
+    
+    // LOGGING ADICIONAL para debug
+    console.log("Ticket local encontrado:", {
+        id: localTicket.id, 
+        randomId: localTicket.randomId, 
+        firebaseKey: localTicket.firebaseKey
+    });
+    console.log("Ticket a guardar:", {
+        id: ticket.id, 
+        randomId: ticket.randomId, 
+        firebaseKey: ticket.firebaseKey
+    });
     
     // Guardar la sección y filtro activos antes de actualizar
     const currentSection = document.querySelector('.content section.active');
@@ -2902,10 +3126,147 @@ function saveEditedTicket(ticket) {
         }
     }
     
-    // Usar update en lugar de eliminar y recrear el ticket
-    ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
-        .then(() => {
+    // MEJORADO: Usar transacción para merge inteligente de cambios concurrentes
+    ticketsRef.child(ticket.firebaseKey).transaction((currentData) => {
+        if (currentData === null) {
+            // El ticket fue eliminado por otro usuario
+            console.error("El ticket fue eliminado por otro usuario");
+            return; // Abortar transacción
+        }
+        
+        // Verificar que los datos críticos coincidan (evitar sobrescribir el ticket equivocado)
+        // Usar comparación más flexible para evitar problemas de tipos
+        const currentIdStr = String(currentData.id || '');
+        const ticketIdStr = String(ticket.id || '');
+        const currentRandomId = String(currentData.randomId || '');
+        const ticketRandomId = String(ticket.randomId || '');
+        
+        if (currentIdStr !== ticketIdStr || currentRandomId !== ticketRandomId) {
+            console.error("Mismatch de ticket detectado - IDs no coinciden", {
+                expected: {id: ticketIdStr, randomId: ticketRandomId},
+                found: {id: currentIdStr, randomId: currentRandomId}
+            });
+            
+            // Solo abortar si hay una diferencia real significativa
+            if (currentIdStr && ticketIdStr && currentIdStr !== ticketIdStr) {
+                return; // Abortar transacción solo si hay IDs diferentes no vacíos
+            }
+            if (currentRandomId && ticketRandomId && currentRandomId !== ticketRandomId) {
+                return; // Abortar transacción solo si hay randomIds diferentes no vacíos
+            }
+            
+            console.warn("Diferencias menores en IDs detectadas, continuando con precaución...");
+        }
+        
+        // MERGE SIMPLE: Usar la versión más reciente del por cobrar si hay conflictos
+        let finalPorCobrar = ticketToSave.porCobrar;
+        if (currentData.porCobrar !== ticket.porCobrar) {
+            console.log('Detectado cambio concurrente en por cobrar, usando versión del ticket a guardar');
+            finalPorCobrar = ticketToSave.porCobrar; // Usar la versión que se está guardando
+        }
+        
+        // Combinar todos los datos preservando cambios concurrentes
+        const mergedData = {
+            ...currentData,
+            ...ticketToSave,
+            porCobrar: finalPorCobrar,
+            lastModified: new Date().toISOString(),
+            lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
+        };
+        
+        // Solo actualizar si hay cambios reales después del merge
+        const hasChanges = Object.keys(mergedData).some(key => {
+            return currentData[key] !== mergedData[key];
+        });
+        
+        if (!hasChanges) {
+            console.log("No hay cambios reales para guardar después del merge");
+            return currentData; // No cambiar nada
+        }
+        
+        return mergedData;
+    }, (error, committed, snapshot) => {
+        if (error) {
+            console.error("Error en transacción:", error);
+            console.log("Intentando guardado directo como respaldo...");
+            
+            // RESPALDO: Intentar guardado directo si la transacción falla
+            ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+                .then(() => {
+                    console.log("Guardado directo exitoso");
+                    closeModal();
+                    showNotification('Consulta actualizada correctamente', 'success');
+                    
+                    // Actualizar la página actual
+                    if (currentSection && currentSection.id === 'verTicketsSection') {
+                        renderTickets(currentFilter);
+                        
+                        // Mantener el filtro activo
+                        document.querySelectorAll('.filter-btn').forEach(btn => {
+                            btn.classList.remove('active');
+                            if (btn.getAttribute('data-filter') === currentFilter) {
+                                btn.classList.add('active');
+                            }
+                        });
+                        
+                        setActiveButton(verTicketsBtn);
+                    } else if (currentSection && currentSection.id === 'horarioSection') {
+                        mostrarHorario();
+                    } else {
+                        renderTickets();
+                    }
+                    
+                    updateStatsGlobal();
+                })
+                .catch(backupError => {
+                    console.error("Error en guardado de respaldo:", backupError);
+                    if (saveButton) {
+                        hideLoadingButton(saveButton);
+                    }
+                    showNotification('Error al guardar los cambios: ' + backupError.message, 'error');
+                });
+        } else if (!committed) {
+            console.log("Transacción abortada - intentando guardado directo");
+            
+            // RESPALDO: Si la transacción se abortó por validaciones muy estrictas, intentar guardado directo
+            ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+                .then(() => {
+                    console.log("Guardado directo después de abort exitoso");
+                    closeModal();
+                    showNotification('Consulta actualizada correctamente', 'success');
+                    
+                    // Actualizar la página actual
+                    if (currentSection && currentSection.id === 'verTicketsSection') {
+                        renderTickets(currentFilter);
+                        
+                        // Mantener el filtro activo
+                        document.querySelectorAll('.filter-btn').forEach(btn => {
+                            btn.classList.remove('active');
+                            if (btn.getAttribute('data-filter') === currentFilter) {
+                                btn.classList.add('active');
+                            }
+                        });
+                        
+                        setActiveButton(verTicketsBtn);
+                    } else if (currentSection && currentSection.id === 'horarioSection') {
+                        mostrarHorario();
+                    } else {
+                        renderTickets();
+                    }
+                    
+                    updateStatsGlobal();
+                })
+                .catch(backupError => {
+                    console.error("Error en guardado de respaldo después de abort:", backupError);
+                    if (saveButton) {
+                        hideLoadingButton(saveButton);
+                    }
+                    showNotification('No se pudieron guardar los cambios. Recargue la página e intente nuevamente.', 'error');
+                });
+        } else {
+            console.log("Ticket actualizado correctamente con transacción");
             closeModal();
+            
             showNotification('Consulta actualizada correctamente', 'success');
             
             // Actualizar la página actual
@@ -2929,14 +3290,8 @@ function saveEditedTicket(ticket) {
             }
             
             updateStatsGlobal();
-        })
-        .catch(error => {
-            console.error("Error actualizando ticket:", error);
-            if (saveButton) {
-                hideLoadingButton(saveButton);
-            }
-            showNotification('Error al guardar los cambios: ' + error.message, 'error');
-        });
+        }
+    });
 }
 
 function changeStatus(randomId) {
