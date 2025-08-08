@@ -68,6 +68,9 @@ function initLaboratorioSystem() {
           // Establecer fecha por defecto
         setDefaultLabDate();
         
+        // Exponer variables globales inmediatamente (aunque estén vacías inicialmente)
+
+        
         // Configurar actualización en tiempo real de clientes
         console.log('Configurando actualización en tiempo real de clientes...');
         setupClientesDataListener();
@@ -180,10 +183,25 @@ function updateClientesDataFromSnapshot(snapshot) {
                     }
                 }
                 
-                // Mantener la información más reciente del cliente
+                // Mantener la información más reciente del cliente y mascota
                 if (ticket.nombre) clienteInfo.Nombre = ticket.nombre;
                 if (ticket.mascota) clienteInfo['nombre mascota'] = ticket.mascota;
                 if (ticket.cedula) clienteInfo.Identificacion = ticket.cedula;
+                if (ticket.telefono) clienteInfo.telefono = ticket.telefono;
+                if (ticket.correo) clienteInfo.correo = ticket.correo;
+                if (ticket.raza) clienteInfo.raza = ticket.raza;
+                if (ticket.edad) clienteInfo.edad = ticket.edad;
+                if (ticket.peso) clienteInfo.peso = ticket.peso;
+                if (ticket.sexo) clienteInfo.sexo = ticket.sexo;
+                if (ticket.tipoMascota) {
+                    clienteInfo['tipo mascota'] = ticket.tipoMascota;
+                    clienteInfo.Especie = ticket.tipoMascota === 'perro' ? 'Canino' : 
+                                         ticket.tipoMascota === 'gato' ? 'Felino' : 
+                                         ticket.tipoMascota === 'conejo' ? 'Lagomorfo' : 
+                                         ticket.tipoMascota === 'cuilo' ? 'Cuilo' : 'Otro';
+                }
+                if (ticket.medicoAtiene || ticket.medicoSolicita) clienteInfo.medico = ticket.medicoAtiene || ticket.medicoSolicita;
+                if (ticket.idPaciente) clienteInfo.Id = ticket.idPaciente;
                 
                 clientesMap.set(claveUnica, clienteInfo);
             }
@@ -191,6 +209,8 @@ function updateClientesDataFromSnapshot(snapshot) {
         
         const previousCount = clientesData.length;
         clientesData = Array.from(clientesMap.values());
+        
+
         
         console.log(`Clientes actualizados: ${previousCount} → ${clientesData.length}`);
         
@@ -223,10 +243,20 @@ function addClienteFromTicket(ticket) {
             Nombre: ticket.nombre,
             Identificacion: ticket.cedula || '',
             'nombre mascota': mascotaNombre,
+            'tipo mascota': ticket.tipoMascota || 'otro',
             Especie: ticket.tipoMascota === 'perro' ? 'Canino' : 
                     ticket.tipoMascota === 'gato' ? 'Felino' : 
-                    ticket.tipoMascota === 'conejo' ? 'Conejo' : 'Otro',
-            ultimaActualizacion: new Date().getTime()
+                    ticket.tipoMascota === 'conejo' ? 'Lagomorfo' : 
+                    ticket.tipoMascota === 'cuilo' ? 'Cuilo' : 'Otro',
+            raza: ticket.raza || '',
+            edad: ticket.edad || '',
+            peso: ticket.peso || '',
+            sexo: ticket.sexo || '',
+            telefono: ticket.telefono || '',
+            correo: ticket.correo || '',
+            medico: ticket.medicoAtiene || ticket.medicoSolicita || '',
+            ultimaActualizacion: new Date().getTime(),
+            consultas: [] // Historial de consultas
         };
         
         if (existingClienteIndex === -1) {
@@ -238,6 +268,8 @@ function addClienteFromTicket(ticket) {
             clientesData[existingClienteIndex] = nuevoCliente;
             console.log(`Cliente+mascota actualizado: ${nuevoCliente.Nombre} - ${mascotaNombre}`);
         }
+        
+
         
         notifyClientesDataUpdated();
         
@@ -314,7 +346,10 @@ function setupLabFirebaseListeners() {
                 }
             });
         }
-          // Actualizar la vista si está activa
+        
+
+        
+        // Actualizar la vista si está activa
         const labSection = document.getElementById('verLabSection');
         if (labSection && !labSection.classList.contains('hidden')) {
             // Obtener filtros activos
@@ -328,6 +363,12 @@ function setupLabFirebaseListeners() {
         }
         
         console.log(`Cargados ${labTickets.length} tickets de laboratorio`);
+        // Exportar globalmente para otros módulos (Reportes Lab)
+        try {
+            window.labTickets = labTickets;
+        } catch (e) {
+            console.warn('No se pudo exponer labTickets globalmente:', e);
+        }
     });
 }
 
@@ -680,7 +721,7 @@ function setupClienteSearch(searchInput) {
 }
 
 // Buscar clientes en los datos con cache y optimización
-function searchClientes(query) {
+function searchClientes(query = '') {
     console.log('Buscando clientes con query:', query);
     console.log('Datos disponibles:', clientesData.length, 'clientes');
     
@@ -1057,8 +1098,29 @@ function showLabSection(sectionId) {
             
             // Inicializar sistema de servicios cuando se muestra la sección de crear
             setTimeout(() => {
+                console.log('Intentando inicializar sistema de servicios...');
+                
+                // Verificar elementos del DOM primero
+                const domCheck = verifyServiceSystemElements();
+                
                 if (typeof initServiceSelection === 'function') {
-                    initServiceSelection();
+                    console.log('Función initServiceSelection encontrada, ejecutando...');
+                    try {
+                        initServiceSelection();
+                        console.log('Sistema de servicios inicializado exitosamente');
+                    } catch (error) {
+                        console.error('Error al inicializar sistema de servicios:', error);
+                    }
+                } else {
+                    console.error('Función initServiceSelection no encontrada');
+                }
+                
+                // También ejecutar las pruebas si están disponibles
+                if (typeof runAllServiceTests === 'function') {
+                    console.log('Ejecutando pruebas de servicios...');
+                    setTimeout(() => {
+                        runAllServiceTests();
+                    }, 500);
                 }
             }, 100);        } else if (sectionId === 'verLabSection') {
             const verBtn = document.getElementById('verLabBtn');
@@ -1087,6 +1149,31 @@ function showLabSection(sectionId) {
             
             renderLabTickets(defaultFilter);
             updateLabStats();
+        } else if (sectionId === 'reportesLabSection') {
+            const reportesBtn = document.getElementById('reportesLabBtn');
+            if (reportesBtn) {
+                reportesBtn.classList.add('active');
+                // Usar la función setActiveButton del sistema principal si está disponible
+                if (typeof setActiveButton === 'function') {
+                    setActiveButton(reportesBtn);
+                }
+                console.log('Botón reportes laboratorio activado');
+            }
+            
+            // Reinicializar el módulo de reportes cuando se muestra la sección
+            setTimeout(() => {
+                console.log('Reinicializando módulo de reportes lab...');
+                if (typeof initReportesLabModule === 'function') {
+                    try {
+                        initReportesLabModule();
+                        console.log('Módulo de reportes lab reinicializado exitosamente');
+                    } catch (error) {
+                        console.error('Error al reinicializar módulo de reportes:', error);
+                    }
+                } else {
+                    console.error('Función initReportesLabModule no encontrada');
+                }
+            }, 100);
         }
         
         console.log('Sección de laboratorio mostrada exitosamente');
@@ -1161,6 +1248,8 @@ function handleLabTicketSubmit(e) {
         estado: document.getElementById('labEstado').value
     };
     
+
+    
     // Validar datos requeridos
     if (!validateLabTicketData(formData)) {
         return;
@@ -1228,6 +1317,9 @@ function saveLabTicket(ticketData) {
     labTicketsRef.push(ticketData)
         .then(() => {
             showNotification('Ticket de laboratorio creado exitosamente', 'success');
+            
+
+            
             resetLabForm();
             currentLabTicketId++;
             
@@ -1833,7 +1925,7 @@ function editLabTicket(randomId) {
                     <div class="form-group">
                         <label>Raza</label>
                         <select id="editLabRaza" required>
-                            <option value="">Seleccionar raza</option>
+                            <option value="">Seleccionar raza
                         </select>
                     </div>
                 </div>
@@ -2414,13 +2506,18 @@ function saveEditedLabTicket(ticket) {
         });
 }
 
-// Cambiar estado del ticket de laboratorio
-function changeLabStatus(randomId) {
+// Eliminar ticket de laboratorio (mostrar confirmación)
+function deleteLabTicket(randomId) {
     const ticket = labTickets.find(t => t.randomId === randomId);
-    if (!ticket) return;    const modal = document.createElement('div');
+    if (!ticket) return;
+    
+    const animalIcon = getAnimalIcon(ticket.tipoMascota);
+    
+    const modal = document.createElement('div');
     modal.className = 'edit-modal';
     modal.innerHTML = `
-        <div class="modal-content animate-scale">            <h3><i class="fas fa-exclamation-triangle" style="color: var(--accent-color);"></i> Eliminar ticket de laboratorio</h3>
+        <div class="modal-content animate-scale">
+            <h3><i class="fas fa-exclamation-triangle" style="color: var(--accent-color);"></i> Eliminar ticket de laboratorio</h3>
             <div style="text-align: center; margin: 25px 0;">
                 <div style="margin-bottom: 15px;">
                     ${animalIcon}
@@ -2622,21 +2719,105 @@ function forceUpdateClientesData() {
 
 // ===== FUNCIONES DEL SISTEMA DE SERVICIOS =====
 
+// Verificar que todos los elementos necesarios estén presentes en el DOM
+function verifyServiceSystemElements() {
+    console.log('Verificando elementos del DOM para el sistema de servicios...');
+    
+    const requiredElements = [
+        { id: 'selectedServicesList', description: 'Lista de servicios seleccionados' },
+        { id: 'totalPrice', description: 'Precio total' },
+        { id: 'servicesList', description: 'Lista de servicios disponibles' },
+        { id: 'categoryFilter', description: 'Filtro de categorías' },
+        { id: 'servicesSearch', description: 'Búsqueda de servicios' }
+    ];
+    
+    let allElementsPresent = true;
+    const missingElements = [];
+    
+    requiredElements.forEach(({ id, description }) => {
+        const element = document.getElementById(id);
+        if (element) {
+            console.log(`✅ ${description} (${id}) encontrado`);
+        } else {
+            console.warn(`⚠️ ${description} (${id}) NO encontrado`);
+            allElementsPresent = false;
+            missingElements.push(id);
+        }
+    });
+    
+    if (!allElementsPresent) {
+        console.warn('Elementos faltantes:', missingElements);
+    }
+    
+    return { allPresent: allElementsPresent, missing: missingElements };
+}
+
 // Inicializar el sistema de servicios
 function initServiceSelection() {
     console.log('Inicializando sistema de servicios...');
     
-    // Cargar categorías en el filtro
-    loadServiceCategories();
+    // Verificar que SERVICIOS_LABORATORIO esté disponible
+    if (typeof SERVICIOS_LABORATORIO === 'undefined') {
+        console.error('SERVICIOS_LABORATORIO no está definido');
+        return false;
+    }
     
-    // Cargar todos los servicios inicialmente
-    loadAllServices();
+    console.log('SERVICIOS_LABORATORIO disponible:', Object.keys(SERVICIOS_LABORATORIO));
     
-    // Configurar event listeners
-    setupServiceEventListeners();
+    // Limpiar servicios seleccionados
+    selectedServices = [];
+    console.log('Servicios seleccionados limpiados');
     
-    // Inicializar lista de servicios seleccionados
-    updateSelectedServicesList();
+    // Verificar elementos del DOM críticos
+    const elementosCriticos = ['selectedServicesList', 'totalPrice'];
+    const elementosFaltantes = [];
+    
+    elementosCriticos.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (!elemento) {
+            elementosFaltantes.push(id);
+        }
+    });
+    
+    if (elementosFaltantes.length > 0) {
+        console.warn('Elementos críticos faltantes:', elementosFaltantes);
+        console.warn('Intentando nuevamente en 1 segundo...');
+        
+        setTimeout(() => {
+            const retryCheck = elementosFaltantes.every(id => document.getElementById(id));
+            if (retryCheck) {
+                console.log('Elementos encontrados en segundo intento, reiniciando...');
+                initServiceSelection();
+            } else {
+                console.error('Elementos críticos aún no disponibles después del reinento');
+            }
+        }, 1000);
+        return false;
+    }
+    
+    try {
+        // Cargar categorías en el filtro
+        loadServiceCategories();
+        
+        // Cargar todos los servicios inicialmente
+        loadAllServices();
+        
+        // Configurar event listeners
+        setupServiceEventListeners();
+        
+        // Inicializar lista de servicios seleccionados
+        updateSelectedServicesList();
+        
+        // Actualizar precio total
+        updateTotalPrice();
+        
+        console.log('Sistema de servicios inicializado correctamente');
+        return true;
+        
+    } catch (error) {
+        console.error('Error durante la inicialización del sistema de servicios:', error);
+        return false;
+    }
 }
 
 // Cargar categorías en el select
@@ -2659,20 +2840,29 @@ function loadServiceCategories() {
 
 // Cargar todos los servicios
 function loadAllServices() {
-    displayServices(getAllServices());
+    console.log('Cargando todos los servicios...');
+    const services = getAllServices();
+    console.log('Servicios obtenidos:', services.length);
+    displayServices(services);
 }
 
 // Mostrar servicios en la interfaz
 function displayServices(services) {
+    console.log('displayServices ejecutándose con', services.length, 'servicios');
+    
     const servicesList = document.getElementById('servicesList');
-    if (!servicesList) return;
+    if (!servicesList) {
+        console.error('Elemento servicesList no encontrado en el DOM');
+        return;
+    }
     
     servicesList.innerHTML = '';
     
     if (services.length === 0) {
+        console.log('No hay servicios para mostrar');
         servicesList.innerHTML = `
             <div class="no-services-found">
-                <i class="fas fa-search"></i>
+
                 <h3>No se encontraron servicios</h3>
                 <p>Intenta cambiar los filtros o términos de búsqueda</p>
             </div>
@@ -2692,6 +2882,8 @@ function displayServices(services) {
         servicesByCategory[service.categoria].servicios.push(service);
     });
     
+    console.log('Servicios agrupados por categoría:', Object.keys(servicesByCategory));
+    
     // Renderizar cada categoría
     Object.keys(servicesByCategory).forEach(categoryKey => {
         const category = servicesByCategory[categoryKey];
@@ -2708,32 +2900,100 @@ function displayServices(services) {
         categoryDiv.appendChild(categoryHeader);
           // Servicios de la categoría
         category.servicios.forEach(service => {
-            const serviceDiv = createServiceItem(service);
-            categoryDiv.appendChild(serviceDiv);
+            try {
+                const serviceDiv = createServiceItem(service);
+                categoryDiv.appendChild(serviceDiv);
+            } catch (error) {
+                console.error('Error creando elemento de servicio:', service, error);
+            }
         });
         
         servicesList.appendChild(categoryDiv);    });
+    
+    console.log('Servicios renderizados correctamente en la interfaz');
 }
 
 // Toggle selección de servicio
 function toggleServiceSelection(serviceId) {
+    console.log('toggleServiceSelection ejecutándose para serviceId:', serviceId);
+    
+    // Verificar que selectedServices esté definido y sea un array
+    if (!selectedServices || !Array.isArray(selectedServices)) {
+        console.warn('selectedServices no válido, inicializando...');
+        selectedServices = [];
+        window.selectedServices = selectedServices;
+    }
+    
     const service = getServiceById(serviceId);
-    if (!service) return;
+    console.log('Servicio encontrado:', service);
+    
+    if (!service) {
+        console.error('Servicio no encontrado con ID:', serviceId);
+        return;
+    }
     
     const existingIndex = selectedServices.findIndex(s => s.id === serviceId);
+    console.log('Índice existente:', existingIndex);
     
     if (existingIndex >= 0) {
         // Remover servicio
         selectedServices.splice(existingIndex, 1);
+        console.log('Servicio removido. Servicios seleccionados actuales:', selectedServices);
     } else {
-        // Agregar servicio
-        selectedServices.push(service);
+        // Agregar servicio - crear una copia para evitar problemas de referencia
+        const serviceCopy = {
+            id: service.id,
+            nombre: service.nombre,
+            descripcion: service.descripcion,
+            precio: service.precio,
+            categoria: service.categoria,
+            categoriaTitulo: service.categoriaTitulo
+        };
+        selectedServices.push(serviceCopy);
+        console.log('Servicio agregado. Servicios seleccionados actuales:', selectedServices);
     }
     
-    // Actualizar UI
-    updateServiceSelectionUI(serviceId);
-    updateSelectedServicesList();
-    updateTotalPrice();
+    // Sincronizar con referencia global
+    window.selectedServices = selectedServices;
+    
+    // Log detallado del estado antes de actualizar UI
+    console.log('Estado antes de actualizar UI:', {
+        'selectedServices.length': selectedServices.length,
+        'primer servicio': selectedServices[0] || 'ninguno',
+        'último servicio': selectedServices[selectedServices.length - 1] || 'ninguno'
+    });
+    
+    // Actualizar UI con verificación de errores
+    try {
+        updateServiceSelectionUI(serviceId);
+        console.log('✅ updateServiceSelectionUI completado');
+    } catch (error) {
+        console.error('❌ Error en updateServiceSelectionUI:', error);
+    }
+    
+    try {
+        updateSelectedServicesList();
+        console.log('✅ updateSelectedServicesList completado');
+    } catch (error) {
+        console.error('❌ Error en updateSelectedServicesList:', error);
+    }
+    
+    try {
+        updateTotalPrice();
+        console.log('✅ updateTotalPrice completado');
+    } catch (error) {
+        console.error('❌ Error en updateTotalPrice:', error);
+    }
+    
+    // Verificación final
+    setTimeout(() => {
+        const listElement = document.getElementById('selectedServicesList');
+        const totalElement = document.getElementById('totalPrice');
+        
+        console.log('🔍 Verificación final después de toggleServiceSelection:');
+        console.log('- Lista HTML:', listElement ? listElement.innerHTML.substring(0, 100) + '...' : 'no encontrado');
+        console.log('- Total:', totalElement ? totalElement.textContent : 'no encontrado');
+    }, 50);
 }
 
 // Actualizar UI de selección de un servicio específico
@@ -2755,25 +3015,73 @@ function updateServiceSelectionUI(serviceId) {
 
 // Actualizar lista de servicios seleccionados
 function updateSelectedServicesList() {
+    console.log('updateSelectedServicesList ejecutándose...', {
+        selectedServices: selectedServices,
+        length: selectedServices ? selectedServices.length : 'undefined'
+    });
+    
+    // Verificar que selectedServices esté definido y sea un array
+    if (!selectedServices || !Array.isArray(selectedServices)) {
+        console.error('selectedServices no está definido o no es un array:', selectedServices);
+        selectedServices = [];
+    }
+    
     const selectedList = document.getElementById('selectedServicesList');
-    if (!selectedList) return;
+    console.log('Elemento selectedServicesList encontrado:', selectedList);
+    
+    if (!selectedList) {
+        console.error('Elemento selectedServicesList no encontrado en el DOM');
+        return;
+    }
+    
+    console.log('Verificando contenido antes de actualizar:', {
+        'selectedServices.length': selectedServices.length,
+        'selectedServices contenido': selectedServices
+    });
     
     if (selectedServices.length === 0) {
+        console.log('No hay servicios seleccionados, mostrando mensaje por defecto');
         selectedList.innerHTML = '<div class="no-services-selected">No hay servicios seleccionados</div>';
         return;
     }
     
-    selectedList.innerHTML = selectedServices.map(service => `
-        <div class="selected-service-item">
-            <div class="selected-service-info">
-                <div class="selected-service-name">${service.nombre}</div>
-                <div class="selected-service-price">${formatPrice(service.precio)}</div>
-            </div>
-            <button class="remove-service-btn" onclick="removeSelectedService('${service.id}')" type="button">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-    `).join('');
+    console.log('Renderizando servicios seleccionados:', selectedServices);
+    
+    try {
+        const htmlContent = selectedServices.map(service => {
+            console.log('Procesando servicio para renderizado:', service);
+            
+            // Verificar que el servicio tenga las propiedades necesarias
+            if (!service || !service.id || !service.nombre) {
+                console.warn('Servicio incompleto:', service);
+                return '';
+            }
+            
+            const precio = service.precio || 0;
+            return `
+                <div class="selected-service-item">
+                    <div class="selected-service-info">
+                        <div class="selected-service-name">${service.nombre}</div>
+                        <div class="selected-service-price">${formatPrice(precio)}</div>
+                    </div>
+                    <button class="remove-service-btn" onclick="removeSelectedService('${service.id}')" type="button">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            `;
+        }).filter(html => html.length > 0).join('');
+        
+        console.log('HTML generado para servicios:', htmlContent.substring(0, 200) + '...');
+        
+        selectedList.innerHTML = htmlContent;
+        
+        console.log('Lista de servicios seleccionados actualizada exitosamente');
+        console.log('Contenido final del elemento:', selectedList.innerHTML.substring(0, 200) + '...');
+        
+    } catch (error) {
+        console.error('Error al renderizar servicios seleccionados:', error);
+        selectedList.innerHTML = '<div class="error-message">Error al mostrar servicios seleccionados</div>';
+    }
 }
 
 // Remover servicio seleccionado
@@ -2789,14 +3097,40 @@ function removeSelectedService(serviceId) {
 
 // Actualizar precio total
 function updateTotalPrice() {
+    console.log('Actualizando precio total...');
+    
+    // Verificar que selectedServices esté definido y sea un array
+    if (!selectedServices || !Array.isArray(selectedServices)) {
+        console.error('selectedServices no está definido o no es un array:', selectedServices);
+        selectedServices = [];
+    }
+    
     const totalPriceElement = document.getElementById('totalPrice');
-    if (!totalPriceElement) return;
+    console.log('Elemento totalPrice encontrado:', totalPriceElement);
+    
+    if (!totalPriceElement) {
+        console.error('Elemento totalPrice no encontrado');
+        return;
+    }
     
     const total = selectedServices.reduce((sum, service) => {
-        return sum + (service.precio || 0);
+        if (!service || typeof service.precio !== 'number') {
+            console.warn('Servicio con precio inválido:', service);
+            return sum;
+        }
+        return sum + service.precio;
     }, 0);
     
-    totalPriceElement.textContent = formatPrice(total);
+    console.log('Total calculado:', total, 'para servicios:', selectedServices);
+    
+    try {
+        const formattedPrice = formatPrice(total);
+        totalPriceElement.textContent = formattedPrice;
+        console.log('Precio total actualizado en UI:', formattedPrice);
+    } catch (error) {
+        console.error('Error al formatear precio:', error);
+        totalPriceElement.textContent = '₡0';
+    }
 }
 
 // Configurar event listeners para el sistema de servicios
@@ -2887,8 +3221,7 @@ function createServiceItem(service) {
     
     serviceDiv.innerHTML = `
         <div class="service-checkbox-container">
-            <input type="checkbox" class="service-checkbox" ${isSelected ? 'checked' : ''} 
-                   onchange="toggleServiceSelection('${service.id}')">
+            <input type="checkbox" class="service-checkbox" ${isSelected ? 'checked' : ''}>
         </div>
         <div class="service-info">
             <div class="service-name">${service.nombre}</div>
@@ -2896,6 +3229,23 @@ function createServiceItem(service) {
             <div class="service-price">₡${service.precio.toLocaleString()}</div>
         </div>
     `;
+    
+    // Agregar event listener al checkbox usando JavaScript en lugar de onchange inline
+    const checkbox = serviceDiv.querySelector('.service-checkbox');
+    if (checkbox) {
+        checkbox.addEventListener('change', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log('🎯 Checkbox clicked para servicio:', service.id);
+            
+            // Usar la versión forzada si está disponible, sino la normal
+            if (typeof toggleServiceSelectionForced === 'function') {
+                toggleServiceSelectionForced(service.id);
+            } else {
+                toggleServiceSelection(service.id);
+            }
+        });
+    }
     
     return serviceDiv;
 }
@@ -2977,7 +3327,7 @@ function displayEditServices(services) {
     if (services.length === 0) {
         servicesList.innerHTML = `
             <div class="no-services-found">
-                <i class="fas fa-search"></i>
+
                 <h3>No se encontraron servicios</h3>
                 <p>Intenta cambiar los filtros o términos de búsqueda</p>
             </div>

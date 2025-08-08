@@ -83,6 +83,9 @@
             <button id="verLabBtn" class="submenu-btn" onclick="navigateToLab('verLabSection', 'verLabBtn');">
               <i class="fas fa-microscope"></i> Ver Tickets Lab
             </button>
+            <button id="reportesLabBtn" class="submenu-btn" onclick="navigateToLab('reportesLabSection', 'reportesLabBtn');">
+              <i class="fas fa-file-medical"></i> Reportes Lab
+            </button>
 
           </div>
         </div>
@@ -742,6 +745,58 @@
               </div>
             </div>
           </div>
+        </div>
+      </section>
+
+      <!-- Sección para crear reportes de laboratorio (similar a consentimientos) -->
+      <section id="reportesLabSection" class="hidden">
+        <h2><i class="fas fa-file-medical"></i> Reportes de Laboratorio</h2>
+
+        <!-- Buscador de clientes (fuente: tickets de laboratorio) -->
+        <div class="client-search-section">
+          <h3><i class="fas fa-search"></i> Buscar Cliente (Tickets de Laboratorio)</h3>
+          <div class="search-container">
+            <div class="search-input-container">
+              <input type="text" id="labReportClientSearch" placeholder="Buscar por nombre, cédula, mascota, ID paciente o factura..." class="search-input">
+              <button id="searchLabReportClientBtn" class="search-btn">
+                <i class="fas fa-search"></i> Buscar
+              </button>
+            </div>
+            <div id="labReportClientResults" class="search-results"></div>
+          </div>
+        </div>
+
+        <!-- Selector de plantilla de reporte de laboratorio -->
+        <div class="consent-template-section">
+          <h3><i class="fas fa-file-medical"></i> Seleccionar Plantilla de Reporte</h3>
+          <div class="template-grid" id="labReportTemplateGrid">
+            <div class="template-card" data-template="hemograma"><h4>Hemograma</h4><p>Resultados de hemograma</p></div>
+            <div class="template-card" data-template="panel_basico"><h4>Panel Básico</h4><p>Perfil básico</p></div>
+            <div class="template-card" data-template="panel_plus"><h4>Panel Plus</h4><p>Perfil ampliado</p></div>
+            <div class="template-card" data-template="perfil_quimico"><h4>Perfil Químico</h4><p>Química sanguínea</p></div>
+            <div class="template-card" data-template="perfil_renal"><h4>Perfil Renal</h4><p>Función renal</p></div>
+            <div class="template-card" data-template="perfil_pre_quirurgico"><h4>Perfil Pre-Quirúrgico</h4><p>Evaluación preoperatoria</p></div>
+            <div class="template-card" data-template="heces"><h4>Análisis de Heces</h4><p>Macroscópico/Microscópico</p></div>
+            <div class="template-card" data-template="urianalisis"><h4>Urianálisis</h4><p>Análisis de orina</p></div>
+            <div class="template-card" data-template="frotis"><h4>Frotis Sanguíneo</h4><p>Morfología sanguínea</p></div>
+            <div class="template-card" data-template="tests"><h4>Pruebas Rápidas</h4><p>Tests rápidos</p></div>
+          </div>
+        </div>
+
+        <!-- Visor del reporte -->
+        <div id="labReportFormContainer" class="consent-form-container" style="display:none;">
+          <div class="form-header">
+            <h3 id="selectedLabReportTitle">Reporte Seleccionado</h3>
+            <div style="display:flex; gap:8px;">
+              <button id="printLabReportBtn" class="close-btn" title="Generar PDF">
+                <i class="fas fa-file-pdf"></i> PDF
+              </button>
+              <button id="closeLabReportBtn" class="close-btn">
+                <i class="fas fa-times"></i> Cerrar
+              </button>
+            </div>
+          </div>
+          <iframe id="labReportIframe" src="" frameborder="0"></iframe>
         </div>
       </section>
 
@@ -1466,6 +1521,7 @@
 
 <script src="consentimientos-module.js"></script>
 <script src="quirofano-module.js"></script>
+  <script src="reportes-lab-module.js"></script>
   <script src="index.js"></script>
   <script src="fix-wait-time.js"></script>
   <script src="admin-users.js"></script>
