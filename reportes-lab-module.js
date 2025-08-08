@@ -6,7 +6,7 @@ let labReportSelectedTemplate = null;
 
 // Mapeo de plantillas a archivos HTML del repositorio
 const LAB_REPORT_TEMPLATES = {
-  hemograma: { name: 'Hemograma', file: 'hemograma.html' },
+  hemograma: { name: 'Hemograma', file: 'hemograma_2.html' },
   panel_basico: { name: 'Panel Básico', file: 'Panel_Básico.html' },
   panel_plus: { name: 'Panel Plus', file: 'Panel_Plus.html' },
   perfil_quimico: { name: 'Perfil Químico', file: 'perfil_quimico.html' },
