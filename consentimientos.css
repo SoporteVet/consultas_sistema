@@ -34,6 +34,64 @@
   color: var(--consent-primary);
 }
 
+/* ===== SELECCIÓN DE ORIGEN (Consulta / Quirófano / Internos) ===== */
+.consent-source-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 16px;
+  flex-wrap: wrap;
+}
+
+.consent-source-label {
+  margin-left: auto;
+  color: #546e7a;
+  font-weight: 600;
+}
+
+.consent-source-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: #eceff1;
+  color: #37474f;
+  border: 1px solid #cfd8dc;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: var(--consent-transition);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.consent-source-btn i { color: inherit; }
+
+.consent-source-btn:hover { 
+  transform: translateY(-1px);
+  background: #e3f2fd; 
+  border-color: #bbdefb;
+}
+
+.consent-source-btn.active[data-source="consulta"] {
+  background: linear-gradient(135deg, #1976d2, #2196f3);
+  color: #fff;
+  border-color: #1976d2;
+}
+
+.consent-source-btn.active[data-source="quirofano"] {
+  background: linear-gradient(135deg, #455a64, #607d8b);
+  color: #fff;
+  border-color: #455a64;
+}
+
+.consent-source-btn.active[data-source="internos"] {
+  background: linear-gradient(135deg, #6a1b9a, #8e24aa);
+  color: #fff;
+  border-color: #6a1b9a;
+}
+
+.consent-source-btn:active { transform: translateY(0); }
+
 /* ===== SECCIÓN DE BÚSQUEDA DE CLIENTES ===== */
 .client-search-section {
   background: white;

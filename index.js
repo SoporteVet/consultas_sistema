@@ -2379,10 +2379,8 @@ function editTicket(randomId) {
     // Obtener el rol actual
     const userRole = sessionStorage.getItem('userRole');
     // Determinar si puede editar "por cobrar"
-    // Recepción puede editar SOLO cuando el ticket esté listo para facturar
-    // Otros usuarios pueden editar siempre (sin límite de ediciones)
-    const canEditPorCobrar = hasPermission('canEditTickets') && 
-        (userRole !== 'recepcion' || ticket.listoParaFacturar);
+    // Todos los usuarios con permisos pueden editar siempre
+    const canEditPorCobrar = hasPermission('canEditTickets');
     
     // Mostrar historial de Por Cobrar arriba (solo lectura)
     let porCobrarHistorial = '';
@@ -2393,20 +2391,7 @@ function editTicket(randomId) {
     let porCobrarPlaceholder = "Agregue nueva información que hay que cobrar al cliente...";
     let porCobrarInfo = "";
     
-    if (userRole === 'recepcion') {
-        if (ticket.listoParaFacturar) {
-            porCobrarPlaceholder = "El ticket está listo para facturar. Puede agregar información adicional de cobro...";
-            porCobrarInfo = `<div style="background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; padding: 6px; margin-bottom: 6px; font-size: 12px; color: #2e7d32;">
-                <i class="fas fa-check-circle" style="margin-right: 4px;"></i>
-                Ticket listo para facturar - Puede editar información de cobro
-            </div>`;
-        } else {
-            porCobrarInfo = `<div style="background: #fff3e0; border: 1px solid #ff9800; border-radius: 4px; padding: 6px; margin-bottom: 6px; font-size: 12px; color: #e65100;">
-                <i class="fas fa-info-circle" style="margin-right: 4px;"></i>
-                Solo puede editar cuando el ticket esté marcado como "Listo para facturar"
-            </div>`;
-        }
-    }
+
     
     const porCobrarField = canEditPorCobrar
       ? `<div class="form-group">
@@ -2751,43 +2736,7 @@ function editTicket(randomId) {
                     const statusMessage = this.checked ? 'Marcado como listo para facturar' : 'Desmarcado como listo para facturar';
                     showNotification(statusMessage, 'success');
                     
-                    // Si es recepción, actualizar dinámicamente la capacidad de editar por cobrar
-                    if (userRole === 'recepcion') {
-                        const porCobrarTextarea = document.getElementById('editPorCobrar');
-                        const porCobrarInfoDiv = porCobrarTextarea?.parentNode.querySelector('div[style*="background:"]');
-                        
-                        if (porCobrarTextarea && porCobrarInfoDiv) {
-                            if (this.checked) {
-                                // Habilitar edición
-                                porCobrarTextarea.readOnly = false;
-                                porCobrarTextarea.style.background = '#fff';
-                                porCobrarTextarea.style.color = '#000';
-                                porCobrarTextarea.style.cursor = 'text';
-                                porCobrarTextarea.placeholder = 'El ticket está listo para facturar. Puede agregar información adicional de cobro...';
-                                
-                                // Actualizar info
-                                porCobrarInfoDiv.innerHTML = `<i class="fas fa-check-circle" style="margin-right: 4px;"></i>
-                                    Ticket listo para facturar - Puede editar información de cobro`;
-                                porCobrarInfoDiv.style.background = '#e8f5e8';
-                                porCobrarInfoDiv.style.borderColor = '#4caf50';
-                                porCobrarInfoDiv.style.color = '#2e7d32';
-                            } else {
-                                // Deshabilitar edición
-                                porCobrarTextarea.readOnly = true;
-                                porCobrarTextarea.style.background = '#f5f5f5';
-                                porCobrarTextarea.style.color = '#888';
-                                porCobrarTextarea.style.cursor = 'not-allowed';
-                                porCobrarTextarea.placeholder = '';
-                                
-                                // Actualizar info
-                                porCobrarInfoDiv.innerHTML = `<i class="fas fa-info-circle" style="margin-right: 4px;"></i>
-                                    Solo puede editar cuando el ticket esté marcado como "Listo para facturar"`;
-                                porCobrarInfoDiv.style.background = '#fff3e0';
-                                porCobrarInfoDiv.style.borderColor = '#ff9800';
-                                porCobrarInfoDiv.style.color = '#e65100';
-                            }
-                        }
-                    }
+
                 })
                 .catch(error => {
                     console.error('Error actualizando estado de facturación:', error);

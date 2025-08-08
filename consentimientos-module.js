@@ -4,6 +4,14 @@
 let selectedClient = null;
 let selectedTemplate = null;
 let consentimientos = [];
+let consentSource = 'consulta'; // 'consulta' | 'quirofano' | 'internos'
+
+// Plantillas permitidas por origen
+const ALLOWED_TEMPLATES_BY_SOURCE = {
+    consulta: ['anestesia', 'emergencias', 'transfusion', 'cesarea', 'eutanasia', 'cirugia', 'alta_voluntaria', 'control_anestesico'],
+    quirofano: ['anestesia', 'cirugia', 'cesarea', 'control_anestesico'],
+    internos: ['alta_voluntaria', 'anestesia', 'internamiento', 'transfusion', 'eutanasia']
+};
 
 // Mapeo de plantillas disponibles
 const CONSENT_TEMPLATES = {
@@ -72,8 +80,8 @@ function initConsentimientos() {
         return;
     }
     
-    // Habilitar plantillas desde el inicio
-    enableTemplateSelection();
+    // Configurar origen por defecto y disponibilidad de plantillas
+    setConsentSource('consulta');
     
     // Verificar datos de quirófano inmediatamente
     console.log('Estado inicial de datos de quirófano:');
@@ -141,6 +149,14 @@ function setupConsentEventListeners() {
     if (closeBtn) {
         closeBtn.addEventListener('click', closeConsentForm);
     }
+    
+    // Botones de origen
+    const btnConsulta = document.getElementById('consentSourceConsulta');
+    const btnQuirofano = document.getElementById('consentSourceQuirofano');
+    const btnInternos = document.getElementById('consentSourceInternos');
+    if (btnConsulta) btnConsulta.addEventListener('click', () => setConsentSource('consulta'));
+    if (btnQuirofano) btnQuirofano.addEventListener('click', () => setConsentSource('quirofano'));
+    if (btnInternos) btnInternos.addEventListener('click', () => setConsentSource('internos'));
 }
 
 function setupTemplateCardListeners() {
@@ -148,8 +164,46 @@ function setupTemplateCardListeners() {
     templateCards.forEach(card => {
         card.addEventListener('click', function() {
             const template = this.getAttribute('data-template');
+            // Evitar seleccionar plantillas deshabilitadas por origen
+            if (this.classList.contains('disabled')) {
+                showConsentNotification('Esta plantilla no está disponible para el origen seleccionado', 'warning');
+                return;
+            }
             selectTemplate(template);
         });
+    });
+}
+
+function setConsentSource(sourceKey) {
+    if (!['consulta', 'quirofano', 'internos'].includes(sourceKey)) return;
+    consentSource = sourceKey;
+    // Actualizar etiqueta visual
+    const label = document.getElementById('consentCurrentSourceLabel');
+    if (label) {
+        label.textContent = 'Origen actual: ' + (sourceKey === 'consulta' ? 'Consulta' : sourceKey === 'quirofano' ? 'Quirófano' : 'Internos');
+    }
+    // Resaltar botón activo
+    document.querySelectorAll('.consent-source-btn').forEach(btn => btn.classList.remove('active'));
+    const activeBtn = document.querySelector(`.consent-source-btn[data-source="${sourceKey}"]`);
+    if (activeBtn) activeBtn.classList.add('active');
+    // Limpiar búsqueda y selección de cliente
+    clearClientSearch();
+    // Actualizar disponibilidad de plantillas
+    updateTemplateAvailabilityForSource();
+}
+
+function updateTemplateAvailabilityForSource() {
+    const allowed = new Set(ALLOWED_TEMPLATES_BY_SOURCE[consentSource] || []);
+    document.querySelectorAll('.template-card').forEach(card => {
+        const key = card.getAttribute('data-template');
+        if (!key) return;
+        if (allowed.has(key)) {
+            card.classList.remove('disabled');
+            card.style.display = '';
+        } else {
+            card.classList.add('disabled');
+            card.style.display = 'none';
+        }
     });
 }
 
@@ -246,45 +300,85 @@ function searchClients() {
         return;
     }
     
-    console.log('Buscando clientes:', searchTerm);
-    console.log('window.quirofanoTickets disponible:', !!window.quirofanoTickets);
-    console.log('Cantidad de tickets de quirófano:', window.quirofanoTickets ? window.quirofanoTickets.length : 'N/A');
+    console.log('Buscando clientes:', searchTerm, 'Origen:', consentSource);
     
     // Mostrar indicador de carga
     resultsContainer.innerHTML = '<div class="loading-consent"><i class="fas fa-spinner fa-spin"></i> Buscando clientes...</div>';
     resultsContainer.classList.add('active');
     
-    // Verificar si los datos de quirófano están disponibles
-    if (!window.quirofanoTickets) {
-        console.warn('window.quirofanoTickets no está disponible todavía');
-        resultsContainer.innerHTML = `
-            <div class="no-clients-found">
-                <i class="fas fa-clock"></i>
-                <h4>Cargando datos del sistema</h4>
-                <p>Por favor espere mientras se cargan los datos de quirófano...</p>
-                <button onclick="searchClients()" class="btn-retry">Reintentar búsqueda</button>
-            </div>
-        `;
-        return;
-    }
-    
-    // Buscar en tickets de quirófano existentes
-    if (window.quirofanoTickets && window.quirofanoTickets.length > 0) {
-        const filteredClients = filterClientsFromQuirofanoTickets(searchTerm);
-        console.log('Clientes filtrados:', filteredClients.length);
-        displayClientResults(filteredClients);
-    } else {
-        // Si no hay tickets de quirófano, mostrar mensaje más descriptivo
-        console.log('No hay tickets de quirófano disponibles o el array está vacío');
-        resultsContainer.innerHTML = `
-            <div class="no-clients-found">
-                <i class="fas fa-database"></i>
-                <h4>No hay datos disponibles</h4>
-                <p>No se encontraron registros de clientes en el sistema de quirófano.</p>
-                <p><small>Asegúrese de que haya tickets de quirófano registrados antes de buscar clientes.</small></p>
-                <button onclick="debugConsentimientos()" class="btn-retry">Ver información de debug</button>
-            </div>
-        `;
+    if (consentSource === 'quirofano') {
+        if (!window.quirofanoTickets) {
+            resultsContainer.innerHTML = `
+                <div class="no-clients-found">
+                    <i class="fas fa-clock"></i>
+                    <h4>Cargando datos</h4>
+                    <p>Esperando tickets de quirófano...</p>
+                    <button onclick="searchClients()" class="btn-retry">Reintentar</button>
+                </div>
+            `;
+            return;
+        }
+        const filteredClients = (window.quirofanoTickets.length > 0) ? filterClientsFromQuirofanoTickets(searchTerm) : [];
+        if (filteredClients.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="no-clients-found">
+                    <i class="fas fa-database"></i>
+                    <h4>Sin resultados</h4>
+                    <p>No se encontraron clientes en quirófano con ese término.</p>
+                </div>
+            `;
+        } else {
+            displayClientResults(filteredClients);
+        }
+    } else if (consentSource === 'consulta') {
+        if (!window.tickets) {
+            resultsContainer.innerHTML = `
+                <div class="no-clients-found">
+                    <i class="fas fa-clock"></i>
+                    <h4>Cargando datos</h4>
+                    <p>Esperando consultas...</p>
+                    <button onclick="searchClients()" class="btn-retry">Reintentar</button>
+                </div>
+            `;
+            return;
+        }
+        const filteredClients = (window.tickets.length > 0) ? filterClientsFromConsultaTickets(searchTerm) : [];
+        if (filteredClients.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="no-clients-found">
+                    <i class="fas fa-database"></i>
+                    <h4>Sin resultados</h4>
+                    <p>No se encontraron clientes de consulta con ese término.</p>
+                </div>
+            `;
+        } else {
+            displayClientResults(filteredClients);
+        }
+    } else if (consentSource === 'internos') {
+        // Por ahora reutiliza tickets de consulta
+        if (!window.tickets) {
+            resultsContainer.innerHTML = `
+                <div class="no-clients-found">
+                    <i class="fas fa-clock"></i>
+                    <h4>Cargando datos</h4>
+                    <p>Esperando pacientes internos...</p>
+                    <button onclick="searchClients()" class="btn-retry">Reintentar</button>
+                </div>
+            `;
+            return;
+        }
+        const filteredClients = (window.tickets.length > 0) ? filterClientsFromInternos(searchTerm) : [];
+        if (filteredClients.length === 0) {
+            resultsContainer.innerHTML = `
+                <div class="no-clients-found">
+                    <i class="fas fa-database"></i>
+                    <h4>Sin resultados</h4>
+                    <p>No se encontraron pacientes internos con ese término.</p>
+                </div>
+            `;
+        } else {
+            displayClientResults(filteredClients);
+        }
     }
 }
 
@@ -371,20 +465,25 @@ function displayClientResults(clients) {
                         <i class="fas fa-paw"></i>
                         <span>${client.mascota} (${getMascotaIcon(client.tipoMascota)})</span>
                     </div>
+                    ${client.procedimiento ? `
                     <div class="client-detail">
                         <i class="fas fa-cut"></i>
                         <span>${client.procedimiento}</span>
-                    </div>
+                    </div>` : ''}
                     <div class="client-detail">
                         <i class="fas fa-calendar"></i>
-                        <span>Fecha cirugía: ${client.fechaCirugia ? new Date(client.fechaCirugia).toLocaleDateString('es-ES') : 'N/A'}</span>
+                        <span>${client.fechaCirugia ? 'Fecha cirugía: ' + new Date(client.fechaCirugia).toLocaleDateString('es-ES') : (client.fechaConsulta ? 'Fecha consulta: ' + client.fechaConsulta : 'Sin fecha')}</span>
                     </div>
                     ${client.horaCirugia ? `
                     <div class="client-detail">
                         <i class="fas fa-clock"></i>
                         <span>Hora: ${client.horaCirugia}</span>
                     </div>
-                    ` : ''}
+                    ` : (client.horaConsulta ? `
+                    <div class="client-detail">
+                        <i class="fas fa-clock"></i>
+                        <span>Hora: ${client.horaConsulta}</span>
+                    </div>` : '')}
                     <div class="client-detail">
                         <i class="fas fa-user-md"></i>
                         <span>${client.doctorAtiende}</span>
@@ -418,6 +517,57 @@ function selectClientByIndex(index) {
     
     // Mostrar notificación
     showConsentNotification('Cliente seleccionado: ' + selectedClient.nombre, 'success');
+}
+
+function normalizeTicketToClient(ticket) {
+    // Ticket de consulta a estructura común
+    return {
+        nombre: ticket.nombre || 'Sin nombre',
+        cedula: ticket.cedula || ticket.idPaciente || 'Sin cédula',
+        telefono: ticket.telefono || '',
+        correo: ticket.correo || '',
+        mascota: ticket.mascota || 'Sin mascota',
+        tipoMascota: ticket.tipoMascota || 'otro',
+        raza: ticket.raza || '',
+        edad: ticket.edad || '',
+        peso: ticket.peso || '',
+        sexo: ticket.sexo || '',
+        ticketId: ticket.randomId || '',
+        fechaConsulta: ticket.fechaConsulta || ticket.fecha || '',
+        horaConsulta: ticket.horaConsulta || ticket.horaAtencion || '',
+        procedimiento: ticket.motivo || ticket.tipoServicio || '',
+        doctorAtiende: ticket.medicoAtiende || ticket.doctorAtiende || '',
+        asistenteAtiende: ticket.asistenteAtiende || '',
+        urgencia: ticket.urgencia || '',
+        estado: ticket.estado || '',
+        observaciones: ticket.motivoLlegada || ticket.motivo || '',
+        idPaciente: ticket.idPaciente || ''
+    };
+}
+
+function filterClientsFromConsultaTickets(searchTerm) {
+    const term = searchTerm.toLowerCase();
+    const clientsMap = new Map();
+    const source = Array.isArray(window.tickets) ? window.tickets : [];
+    const matching = source.filter(t => (
+        (t.nombre && t.nombre.toLowerCase().includes(term)) ||
+        (t.cedula && t.cedula.toLowerCase().includes(term)) ||
+        (t.mascota && t.mascota.toLowerCase().includes(term)) ||
+        (t.idPaciente && String(t.idPaciente).toLowerCase().includes(term)) ||
+        (t.numFactura && String(t.numFactura).toLowerCase().includes(term))
+    ));
+    matching.forEach(ticket => {
+        const key = ticket.cedula || ticket.idPaciente || (ticket.nombre + '|' + ticket.mascota);
+        if (!clientsMap.has(key)) {
+            clientsMap.set(key, normalizeTicketToClient(ticket));
+        }
+    });
+    return Array.from(clientsMap.values());
+}
+
+function filterClientsFromInternos(searchTerm) {
+    // Por ahora, reutilizamos los tickets de consulta
+    return filterClientsFromConsultaTickets(searchTerm);
 }
 
 function getMascotaIcon(tipoMascota) {
@@ -483,7 +633,8 @@ function openConsentForm(templateKey) {
         const correoValue = selectedClient.correo || '';
         const fechaCirugiaFormatted = selectedClient.fechaCirugia ? 
             new Date(selectedClient.fechaCirugia).toLocaleDateString('es-ES') : 
-            new Date().toLocaleDateString('es-ES');
+            '';
+        const fechaConsultaFormatted = selectedClient.fechaConsulta ? selectedClient.fechaConsulta : '';
             
         const params = new URLSearchParams({
             // Datos del cliente
@@ -514,6 +665,10 @@ function openConsentForm(templateKey) {
             horaCirugia: selectedClient.horaCirugia || '',
             urgencia: selectedClient.urgencia || 'normal',
             estado: selectedClient.estado || 'programado',
+            
+            // Datos de la consulta
+            fechaConsulta: fechaConsultaFormatted,
+            horaConsulta: selectedClient.horaConsulta || '',
             
             // Datos del ticket
             ticketId: selectedClient.ticketId || '',

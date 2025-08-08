@@ -892,16 +892,7 @@
                   Marque si el paciente requiere exámenes antes de la cirugía
                 </small>
                 
-                <!-- Estado de los exámenes (solo visible cuando se requieren) -->
-                <div id="examenesStatusContainer" style="display: none; margin-top: 8px;">
-                  <label for="quirofanoExamenesStatus" style="font-size: 13px; color: #555;">
-                    Estado de los exámenes:
-                  </label>
-                  <select id="quirofanoExamenesStatus" style="margin-left: 8px; padding: 2px 6px; font-size: 12px;">
-                    <option value="pendiente">⏳ Pendientes</option>
-                    <option value="realizado">✅ Realizados</option>
-                  </select>
-                </div>
+
               </div>
             </div>
 
@@ -1304,6 +1295,22 @@
       <!-- Sección de Consentimientos -->
       <section id="consentimientosSection" class="hidden">
         <h2><i class="fas fa-file-contract"></i> Formularios de Consentimiento</h2>
+        <!-- Pestañas de origen de datos -->
+        <div class="consent-source-tabs">
+          <button id="consentSourceConsulta" class="consent-source-btn active" data-source="consulta">
+            <i class="fas fa-stethoscope"></i>
+            <span>Consulta</span>
+          </button>
+          <button id="consentSourceQuirofano" class="consent-source-btn" data-source="quirofano">
+            <i class="fas fa-cut"></i>
+            <span>Quirófano</span>
+          </button>
+          <button id="consentSourceInternos" class="consent-source-btn" data-source="internos">
+            <i class="fas fa-home"></i>
+            <span>Internos</span>
+          </button>
+          <span id="consentCurrentSourceLabel" class="consent-source-label">Origen actual: Consulta</span>
+        </div>
         
         <!-- Buscador de clientes -->
         <div class="client-search-section">
