@@ -4,11 +4,8 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    console.log("Fix-wait-time.js cargado correctamente");
-    
     // Comprobar si estamos en la página correcta antes de ejecutar el fix
     if (document.querySelector('.wait-time-statistics')) {
-        console.log("Sección de estadísticas encontrada, aplicando fix");
         
         // Forzar la visibilidad de la sección de tiempo promedio
         const fixWaitTimeSection = () => {
@@ -24,8 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Agregar un borde para que sea más visible
                 waitTimeSection.style.border = '2px solid #4285f4';
-                
-                console.log("Fix aplicado a la sección de tiempo de espera");
             }
         };
         
@@ -35,7 +30,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const estadisticasBtn = document.getElementById('estadisticasBtn');
         if (estadisticasBtn) {
             estadisticasBtn.addEventListener('click', () => {
-                console.log("Clic en estadísticas detectado, aplicando fix");
                 // Dar tiempo para que la sección se muestre primero
                 setTimeout(fixWaitTimeSection, 100);
                 
@@ -43,8 +37,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 setTimeout(() => {
                     const canvas = document.getElementById('waitTimeChart');
                     if (canvas) {
-                        console.log("Reinicializando gráfico de tiempo de espera");
-                        
                         // Forzar redimensionamiento del canvas
                         canvas.style.width = '100%';
                         canvas.style.height = '300px';

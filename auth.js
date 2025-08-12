@@ -91,8 +91,6 @@ const PERMISSIONS = {
 // Check if user is logged in - fixed to prevent redirect loops completely
 function checkAuth() {
   return new Promise((resolve, reject) => {
-    console.log("Checking authentication status...");
-    
     // Check if we're already on the login page (home.html)
     const onLoginPage = window.location.pathname.toLowerCase().includes('home.html') || 
                        window.location.pathname.endsWith('/');
@@ -101,11 +99,8 @@ function checkAuth() {
     const userRole = sessionStorage.getItem('userRole');
     const userName = sessionStorage.getItem('userName');
     
-    console.log("Session storage check - Role:", userRole, "Name:", userName);
-    
     // If we have session data and we're not on the login page, trust it for immediate UI rendering
     if (userRole && userName && !onLoginPage) {
-      console.log("Using session data for:", userName, "with role:", userRole);
       
       // Return cached session data immediately
       resolve({
@@ -118,19 +113,18 @@ function checkAuth() {
       try {
         firebase.auth().onAuthStateChanged((user) => {
           if (!user) {
-            console.warn("Firebase session invalid but using sessionStorage data");
+            // Firebase session invalid but using sessionStorage data
             // Don't clear sessionStorage here to prevent UI flashing
           }
         });
       } catch (error) {
-        console.error("Error verifying authentication:", error);
+        // Error verifying authentication
       }
       return;
     }
     
     // If on login page, prevent checking auth to avoid redirects
     if (onLoginPage) {
-      console.log("On login page, skipping auth check");
       resolve(null); // Cambiado: resolver en vez de rechazar para evitar error
       return;
     }
@@ -139,8 +133,6 @@ function checkAuth() {
     try {
       firebase.auth().onAuthStateChanged((user) => {
         if (user) {
-          console.log("User authenticated:", user.email);
-          
           // Get user role from database
           firebase.database().ref(`users/${user.uid}`).once('value')
             .then((snapshot) => {
@@ -152,10 +144,8 @@ function checkAuth() {
                 sessionStorage.setItem('userEmail', user.email);
                 sessionStorage.setItem('userId', user.uid);
                 
-                console.log("User data loaded:", userData);
                 resolve(userData);
               } else {
-                console.log("User authenticated but no role found, creating default");
                 // No role, assign default
                 const defaultUserData = {
                   email: user.email,
@@ -170,17 +160,14 @@ function checkAuth() {
                     sessionStorage.setItem('userEmail', user.email);
                     sessionStorage.setItem('userId', user.uid);
                     
-                    console.log("Default user data saved:", defaultUserData);
                     resolve(defaultUserData);
                   })
                   .catch(error => {
-                    console.error("Error saving default user data:", error);
                     reject(error);
                   });
               }
             })
             .catch(error => {
-              console.error("Error fetching user data:", error);
               if (error.code === 'PERMISSION_DENIED') {
                 // Sign out and redirect to login if no permission to read user record
                 firebase.auth().signOut().finally(() => {
@@ -193,10 +180,8 @@ function checkAuth() {
             });
         } else {
           // Not authenticated - only redirect if not on login page
-          console.log("User not authenticated");
           
           if (!onLoginPage) {
-            console.log("Not on login page, should redirect");
             // Only manually redirect if not already on login page
             sessionStorage.clear();
             // Use a different approach than immediate redirect
@@ -204,14 +189,13 @@ function checkAuth() {
               window.location.href = 'home.html';
             }, 100);
           } else {
-            console.log("Already on login page, no redirect needed");
+            // Already on login page, no redirect needed
           }
           
           reject(new Error('User not authenticated'));
         }
       });
     } catch (error) {
-      console.error("Error checking authentication:", error);
       reject(error);
     }
   });
@@ -227,7 +211,6 @@ function hasPermission(permission) {
 
 // Sign out
 function signOut() {
-  console.log("Signing out user");
   sessionStorage.clear();
   
   firebase.auth().signOut()
@@ -235,7 +218,6 @@ function signOut() {
       window.location.href = 'home.html';
     })
     .catch((error) => {
-      console.error("Error signing out:", error);
       // Try to redirect anyway
       window.location.href = 'home.html';
     });
@@ -245,5 +227,3 @@ function signOut() {
 window.checkAuth = checkAuth;
 window.hasPermission = hasPermission;
 window.signOut = signOut;
-
-console.log("Auth module loaded successfully");

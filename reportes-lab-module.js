@@ -18,6 +18,14 @@ const LAB_REPORT_TEMPLATES = {
   tests: { name: 'Pruebas Rápidas', file: 'Tests_Laboratorio.html' }
 };
 
+// Función auxiliar para convertir texto a formato de primera letra mayúscula
+function capitalizeFirstLetter(text) {
+  if (!text || typeof text !== 'string') return text;
+  
+  // Convertir a minúsculas primero y luego capitalizar primera letra
+  return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
 // Asegurar inicialización aunque el DOM ya esté listo
 (function() {
   if (document.readyState === 'loading') {
@@ -153,24 +161,36 @@ function searchLabReportClients() {
 }
 
 function normalizeLabTicketToClient(t) {
-  return {
-    nombre: t.nombre || t.nombreCliente || 'Sin nombre',
+  const normalized = {
+    nombre: capitalizeFirstLetter(t.nombre || t.nombreCliente || 'Sin nombre'),
     cedula: t.cedula || t.idPaciente || '',
     telefono: t.telefono || '',
     correo: t.correo || '',
-    mascota: t.mascota || t.nombreMascota || '',
+    mascota: capitalizeFirstLetter(t.mascota || t.nombreMascota || ''),
     tipoMascota: t.tipoMascota || 'otro',
-    raza: t.raza || '',
-    edad: t.edad || '',
+    raza: capitalizeFirstLetter(t.raza || ''),
+    edad: (t.edad || '').toLowerCase(), // Convertir edad a minúsculas
     peso: t.peso || '',
     sexo: t.sexo || '',
     idPaciente: t.idPaciente || '',
     fecha: t.fecha || t.fechaServicio || '',
-    medico: t.medicoSolicita || t.medicoAtiende || '',
+    medico: capitalizeFirstLetter(t.medicoSolicita || t.medicoAtiende || ''),
     estado: t.estado || '',
     factura: t.factura || t.numFactura || '',
     ticketId: t.randomId || t.firebaseKey || ''
   };
+  
+  // Log para debugging de la normalización
+  console.log('🔍 Datos normalizados del ticket:', {
+    razaOriginal: t.raza,
+    razaNormalizada: normalized.raza,
+    edadOriginal: t.edad,
+    edadNormalizada: normalized.edad,
+    nombreOriginal: t.nombre,
+    nombreNormalizado: normalized.nombre
+  });
+  
+  return normalized;
 }
 
 function displayLabReportClientResults(clients) {
@@ -197,6 +217,7 @@ function displayLabReportClientResults(clients) {
           <div class="client-detail"><i class="fas fa-id-card"></i> <span>${c.cedula}</span></div>
           <div class="client-detail"><i class="fas fa-phone"></i> <span>${c.telefono || '—'}</span></div>
           <div class="client-detail"><i class="fas fa-paw"></i> <span>${c.mascota || '—'}</span></div>
+          <div class="client-detail"><i class="fas fa-dna"></i> <span>${c.raza || '—'}</span></div>
           <div class="client-detail"><i class="fas fa-user-md"></i> <span>${c.medico || '—'}</span></div>
         </div>
       </div>
@@ -261,10 +282,13 @@ function openLabReportViewer(templateKey) {
       mascotaPeso: c.peso || '',
       mascotaRaza: c.raza || '',
       mascotaSexo: c.sexo || '',
-      especie: c.tipoMascota || '',
+      especie: capitalizeFirstLetter(c.tipoMascota || ''),
       propietarioFecha: c.fecha || '',
       idPaciente: c.idPaciente || ''
     });
+    
+   
+    
     url = `${template.file}?${params.toString()}`;
   }
 
@@ -319,6 +343,7 @@ function showLabReportNotification(message, type = 'info') {
 // Exponer funciones globales usadas desde HTML
 window.selectLabReportClient = selectLabReportClient;
 window.initReportesLabModule = initReportesLabModule;
+window.capitalizeFirstLetter = capitalizeFirstLetter;
 
 console.log('reportes-lab-module.js cargado');
 

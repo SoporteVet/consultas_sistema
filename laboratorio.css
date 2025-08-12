@@ -1885,3 +1885,138 @@ nav button#verLabBtn:hover::before {
   background: #d4edda;
   color: #155724;
 }
+
+/* ===== ESTILOS PARA INDICADORES DE QUIRÓFANO ===== */
+
+/* Indicador visual para tickets de quirófano */
+.quirofano-indicator {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: #e74c3c;
+  color: white;
+  border-radius: 50%;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  animation: pulseQuirofano 2s infinite;
+  z-index: 2;
+}
+
+@keyframes pulseQuirofano {
+  0% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0.7);
+  }
+  70% {
+    transform: scale(1.1);
+    box-shadow: 0 0 0 10px rgba(231, 76, 60, 0);
+  }
+  100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(231, 76, 60, 0);
+  }
+}
+
+/* Resultados de búsqueda que provienen de quirófano */
+.cliente-search-item.quirofano-result {
+  border-left: 4px solid #e74c3c;
+  background: linear-gradient(135deg, #fff 0%, #fff5f5 100%);
+}
+
+.cliente-search-item.quirofano-result:hover {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe8e8 100%);
+  border-left-color: #c0392b;
+}
+
+/* Información específica de quirófano en los resultados */
+.quirofano-info {
+  border-left: 3px solid #e74c3c;
+  background: #fff5f5;
+  margin-top: 8px;
+  border-radius: 0 6px 6px 0;
+}
+
+.quirofano-header {
+  color: #c0392b;
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.quirofano-header i {
+  margin-right: 6px;
+}
+
+.quirofano-item {
+  background: #fff;
+  border: 1px solid #fadbd8;
+  border-radius: 4px;
+  padding: 6px 10px;
+  margin: 4px 0;
+  font-size: 0.8rem;
+  color: #7b241c;
+}
+
+.quirofano-item .consulta-fecha {
+  font-weight: 600;
+  color: #e74c3c;
+}
+
+.quirofano-item .consulta-estado {
+  background: #e74c3c;
+  color: white;
+  padding: 2px 6px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  margin: 0 4px;
+}
+
+.quirofano-item .consulta-medico {
+  color: #c0392b;
+  font-weight: 500;
+}
+
+/* Estados específicos de quirófano */
+.estado-en-preparacion {
+  background: #f39c12 !important;
+}
+
+.estado-listo-para-cirugia {
+  background: #3498db !important;
+}
+
+.estado-en-cirugia {
+  background: #e74c3c !important;
+}
+
+.estado-terminado {
+  background: #27ae60 !important;
+}
+
+/* Responsive para indicadores de quirófano */
+@media (max-width: 768px) {
+  .quirofano-indicator {
+    width: 20px;
+    height: 20px;
+    font-size: 0.7rem;
+    top: 6px;
+    right: 6px;
+  }
+  
+  .quirofano-info {
+    margin-top: 6px;
+  }
+  
+  .quirofano-item {
+    padding: 4px 8px;
+    font-size: 0.75rem;
+  }
+  
+  .quirofano-header {
+    font-size: 0.8rem;
+  }
+}

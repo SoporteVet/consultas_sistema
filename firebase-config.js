@@ -17,9 +17,8 @@ try {
   // Check if Firebase is already initialized
   if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
-    console.log("Firebase initialized successfully");
   } else {
-    console.log("Firebase already initialized");
+    // Firebase already initialized
   }
 
   // Initialize references
@@ -35,9 +34,9 @@ try {
     window.firebaseConnected = isConnected;
     
     if (isConnected) {
-      console.log("Connected to Firebase database successfully");
+      // Connected to Firebase database successfully
     } else {
-      console.warn("Disconnected from Firebase database - check your network connection");
+      // Disconnected from Firebase database - check your network connection
       
       // Show connection error without redirecting
       const existingError = document.getElementById('firebase-connection-error');
@@ -69,7 +68,7 @@ try {
       }
     }
   }, (error) => {
-    console.error("Error monitoring database connection:", error.code);
+    // Error monitoring database connection
     // Log but don't redirect
   });
   
@@ -79,7 +78,7 @@ try {
   window.settingsRef = settingsRef;
   
 } catch (error) {
-  console.error("Error initializing Firebase:", error);
+  // Error initializing Firebase
   
   // Show a visible error message to the user
   const errorDiv = document.createElement('div');

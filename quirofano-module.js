@@ -1,7 +1,11 @@
-// Quirófano Module - Sistema de tickets para cirugía
 // Variables globales del módulo de quirófano
-let quirofanoTickets = [];
-let currentQuirofanoFilter = 'en-preparacion';
+if (typeof window.quirofanoTickets === 'undefined') {
+    window.quirofanoTickets = [];
+}
+// Usar la variable global directamente para evitar conflictos de redeclaración
+if (typeof window.currentQuirofanoFilter === 'undefined') {
+    window.currentQuirofanoFilter = 'en-preparacion';
+}
 let quirofanoCurrentEditingId = null;
 
 
@@ -23,10 +27,13 @@ function generateRandomId(length = 16) {
 
 // Función para inicializar el módulo de quirófano
 function initQuirofanoModule() {
-    console.log('Inicializando módulo de quirófano...');
+    // Evitar inicialización múltiple
+    if (window.quirofanoModuleInitialized) {
+        return;
+    }
     
-    // Inicializar variable global inmediatamente
-    window.quirofanoTickets = quirofanoTickets;
+            // Inicializar variable global inmediatamente
+        // window.quirofanoTickets ya está definido globalmente
     
     // Establecer fecha de hoy por defecto en el filtro de fecha
     const dateFilterInput = document.getElementById('quirofanoFilterDate');
@@ -43,12 +50,9 @@ function initQuirofanoModule() {
     
     // Configurar visibilidad del filtro "Todos" basado en el rol del usuario
     setupQuirofanoFilterVisibility();
-
-    // Asegurar que el filtro visual activo coincida con el filtro por defecto
-    const defaultFilterBtn = document.querySelector(`.quirofano-filter-btn[data-filter="${currentQuirofanoFilter}"]`);
-    if (defaultFilterBtn) {
-        setActiveQuirofanoFilter(defaultFilterBtn);
-    }
+    
+    // Marcar módulo como inicializado
+    window.quirofanoModuleInitialized = true;
 }
 
 // Función para configurar la visibilidad del filtro "Todos" para quirófano
@@ -73,11 +77,9 @@ function setupQuirofanoFilterAccess() {
     const allowedRoles = ['admin', 'recepcion', 'consulta_externa', 'quirofano'];
     
     if (!allowedRoles.includes(userRole)) {
-        console.log(`Acceso denegado al módulo de quirófano para rol: ${userRole}`);
         return false;
     }
     
-    console.log(`Acceso concedido al módulo de quirófano para rol: ${userRole}`);
     return true;
 }
 
@@ -89,7 +91,19 @@ function setupQuirofanoEventListeners() {
         quirofanoForm.addEventListener('submit', handleQuirofanoFormSubmit);
     }
     
-
+    // Configurar el checkbox de exámenes prequirúrgicos
+    const examenesCheckbox = document.getElementById('quirofanoExamenesPrequirurgicos');
+    const examenesStatusContainer = document.getElementById('examenesStatusContainer');
+    
+    if (examenesCheckbox && examenesStatusContainer) {
+        examenesCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                examenesStatusContainer.style.display = 'block';
+            } else {
+                examenesStatusContainer.style.display = 'none';
+            }
+        });
+    }
     
 
 
@@ -110,10 +124,10 @@ function setupQuirofanoEventListeners() {
     filterBtns.forEach(btn => {
         btn.addEventListener('click', (e) => {
             setActiveQuirofanoFilter(btn);
-            currentQuirofanoFilter = btn.dataset.filter;
+            window.currentQuirofanoFilter = btn.dataset.filter;
             const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
             const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
-            renderQuirofanoTicketsWithDateFilter(currentQuirofanoFilter, searchTerm, dateFilter);
+            renderQuirofanoTicketsWithDateFilter(window.currentQuirofanoFilter, searchTerm, dateFilter);
         });
     });
 
@@ -126,38 +140,68 @@ function setupQuirofanoEventListeners() {
 }
 
 // Función para manejar el envío del formulario
+// Incluye validaciones de seguridad para evitar errores cuando los elementos del DOM no existen
 function handleQuirofanoFormSubmit(e) {
     e.preventDefault();
+    
+    // Verificar que el formulario existe antes de procesar
+    if (!e.target || !e.target.id) {
+        showNotification('Error: Formulario no válido', 'error');
+        return;
+    }
+    
+    // Función auxiliar para obtener valor de campo de forma segura
+    const getFieldValue = (fieldId, defaultValue = '') => {
+        const element = document.getElementById(fieldId);
+        if (!element) {
+            console.warn(`Campo ${fieldId} no encontrado`);
+            return defaultValue;
+        }
+        return element.value || defaultValue;
+    };
+    
+    // Función auxiliar para obtener valor de checkbox de forma segura
+    const getCheckboxValue = (fieldId, defaultValue = false) => {
+        const element = document.getElementById(fieldId);
+        if (!element) {
+            console.warn(`Checkbox ${fieldId} no encontrado`);
+            return defaultValue;
+        }
+        return element.checked || defaultValue;
+    };
     
     const formData = new FormData(e.target);
     const ticketData = {
         randomId: generateRandomId(),
         numero: getNextQuirofanoTicketNumber(),
-        nombreMascota: document.getElementById('quirofanoMascota').value,
-        nombrePropietario: document.getElementById('quirofanoNombre').value,
-        cedula: document.getElementById('quirofanoCedula').value,
-        correo: document.getElementById('quirofanoCorreo').value,
-        telefono: document.getElementById('quirofanoTelefono').value,
-        tipoMascota: document.getElementById('quirofanoTipoMascota').value,
-        raza: document.getElementById('quirofanoRaza').value,
-        peso: document.getElementById('quirofanoPeso').value,
-        edad: document.getElementById('quirofanoEdad').value,
-        idPaciente: document.getElementById('quirofanoIdPaciente').value,
-        procedimiento: document.getElementById('quirofanoProcedimiento').value,
-        tipoUrgencia: document.getElementById('quirofanoUrgencia').value,
-        observaciones: document.getElementById('quirofanoMotivo').value,
-        examenesPrequirurgicos: document.getElementById('quirofanoExamenesPrequirurgicos').checked,
+        nombreMascota: getFieldValue('quirofanoMascota'),
+        nombrePropietario: getFieldValue('quirofanoNombre'),
+        cedula: getFieldValue('quirofanoCedula'),
+        correo: getFieldValue('quirofanoCorreo'),
+        telefono: getFieldValue('quirofanoTelefono'),
+        factura: getFieldValue('quirofanoFactura'),
+        tipoMascota: getFieldValue('quirofanoTipoMascota'),
+        raza: getFieldValue('quirofanoRaza'),
+        peso: getFieldValue('quirofanoPeso'),
+        edad: getFieldValue('quirofanoEdad'),
+        idPaciente: getFieldValue('quirofanoIdPaciente'),
+        procedimiento: getFieldValue('quirofanoProcedimiento'),
+        tipoUrgencia: getFieldValue('quirofanoUrgencia'),
+        observaciones: getFieldValue('quirofanoMotivo'),
+        examenesPrequirurgicos: getCheckboxValue('quirofanoExamenesPrequirurgicos'),
+        examenesStatus: getCheckboxValue('quirofanoExamenesPrequirurgicos') ? 
+            getFieldValue('quirofanoExamenesStatus') : null,
         fechaCreacion: new Date().toISOString(),
-        fechaProgramada: document.getElementById('quirofanoFecha').value,
-        horaProgramada: document.getElementById('quirofanoHora').value,
+        fechaProgramada: getFieldValue('quirofanoFecha'),
+        horaProgramada: getFieldValue('quirofanoHora'),
         estado: 'en-preparacion',
         creadoPor: sessionStorage.getItem('userName') || 'Usuario',
-        doctorAtiende: document.getElementById('quirofanoDoctorAtiende').value,
-        asistenteAtiende: document.getElementById('quirofanoAsistenteAtiende').value,
+        doctorAtiende: getFieldValue('quirofanoDoctorAtiende'),
+        asistenteAtiende: getFieldValue('quirofanoAsistenteAtiende'),
         // Combinar doctor y asistente como en consultas
         medicoAtiende: (() => {
-            const doctor = document.getElementById('quirofanoDoctorAtiende').value;
-            const asistente = document.getElementById('quirofanoAsistenteAtiende').value;
+            const doctor = getFieldValue('quirofanoDoctorAtiende');
+            const asistente = getFieldValue('quirofanoAsistenteAtiende');
             if (doctor && asistente) {
                 return `${doctor}, ${asistente}`;
             } else if (doctor) {
@@ -173,14 +217,19 @@ function handleQuirofanoFormSubmit(e) {
         horaFinalizacion: null
     };
 
-    // Debug: Verificar que se estén capturando los datos en creación
-    console.log('Datos de creación:', ticketData);
-    console.log('Cédula creación:', ticketData.cedula);
-    console.log('ID Paciente creación:', ticketData.idPaciente);
+    // Verificar que se estén capturando los datos en creación
 
     // Validación básica
     if (!ticketData.nombreMascota || !ticketData.nombrePropietario || !ticketData.procedimiento) {
         showNotification('Por favor, complete todos los campos obligatorios', 'error');
+        return;
+    }
+    
+    // Validación adicional: verificar que los campos críticos tengan valores válidos
+    if (ticketData.nombreMascota.trim() === '' || 
+        ticketData.nombrePropietario.trim() === '' || 
+        ticketData.procedimiento.trim() === '') {
+        showNotification('Los campos nombre de mascota, propietario y procedimiento no pueden estar vacíos', 'error');
         return;
     }
 
@@ -201,8 +250,7 @@ function saveQuirofanoTicket(ticketData) {
             
             // Actualizar variable global inmediatamente después de crear
             setTimeout(() => {
-                window.quirofanoTickets = quirofanoTickets;
-                console.log('Variable global actualizada después de crear ticket');
+                // window.quirofanoTickets ya está actualizado
                 
                 // Actualizar contador de exámenes prequirúrgicos
                 if (typeof window.updatePrequirurgicoCounter === 'function') {
@@ -215,15 +263,12 @@ function saveQuirofanoTicket(ticketData) {
         })
         .catch((error) => {
             hideLoading();
-            console.error('Error al guardar ticket:', error);
             showNotification('Error al crear el ticket', 'error');
         });
 }
 
 // Función específica para redirigir a la vista de tickets de quirófano
 function redirectToQuirofanoView() {
-    console.log('Intentando redirigir a vista de tickets...');
-    
     // Método 1: Buscar y hacer clic en el botón/enlace de ver tickets
     const verTicketsLink = document.querySelector('a[onclick*="verQuirofano"]') || 
                           document.querySelector('button[onclick*="verQuirofano"]') ||
@@ -231,7 +276,6 @@ function redirectToQuirofanoView() {
                           document.querySelector('.nav-item[onclick*="verQuirofano"]');
     
     if (verTicketsLink) {
-        console.log('Haciendo clic en el enlace de ver tickets...');
         verTicketsLink.click();
         return;
     }
@@ -241,8 +285,6 @@ function redirectToQuirofanoView() {
     const verSection = document.getElementById('verQuirofanoSection');
     
     if (crearSection && verSection) {
-        console.log('Cambiando secciones manualmente...');
-        
         // Ocultar todas las secciones primero
         const allSections = document.querySelectorAll('[id$="Section"]');
         allSections.forEach(section => {
@@ -263,20 +305,16 @@ function redirectToQuirofanoView() {
             }
         });
         
-        console.log('Redirección manual exitosa');
         return;
     }
     
     // Método 3: Intentar con hash de URL
     if (window.location.hash !== '#quirofano-ver') {
-        console.log('Cambiando hash de URL...');
         window.location.hash = '#quirofano-ver';
         
         // Trigger hashchange event
         window.dispatchEvent(new HashChangeEvent('hashchange'));
     }
-    
-    console.log('Todos los métodos de redirección probados');
 }
 
 // Función para cargar tickets desde Firebase
@@ -284,7 +322,7 @@ function loadQuirofanoTickets() {
     showLoading();
     
     quirofanoFirebaseRef.on('value', (snapshot) => {
-        quirofanoTickets = [];
+        window.quirofanoTickets = [];
         
         if (snapshot.exists()) {
             snapshot.forEach((childSnapshot) => {
@@ -320,23 +358,15 @@ function loadQuirofanoTickets() {
                     }
                 }
                 
-                quirofanoTickets.push(ticket);
+                window.quirofanoTickets.push(ticket);
             });
         }
         
         hideLoading();
-        
-        // Asegurar que el filtro visual esté sincronizado con el filtro actual
-        const activeFilterBtn = document.querySelector(`.quirofano-filter-btn[data-filter="${currentQuirofanoFilter}"]`);
-        if (activeFilterBtn) {
-            setActiveQuirofanoFilter(activeFilterBtn);
-        }
-        
-        renderQuirofanoTicketsWithDateFilter(currentQuirofanoFilter, '', '');
+        renderQuirofanoTicketsWithDateFilter(window.currentQuirofanoFilter, '', '');
         
         // Exportar tickets globalmente para el módulo de consentimientos
-        window.quirofanoTickets = quirofanoTickets;
-        console.log('Tickets de quirófano exportados globalmente:', quirofanoTickets.length, 'tickets disponibles');
+        // window.quirofanoTickets ya está actualizado
         
         // Actualizar contador de exámenes prequirúrgicos
         if (typeof window.updatePrequirurgicoCounter === 'function') {
@@ -357,7 +387,7 @@ function renderQuirofanoTicketsWithDateFilter(filter = 'todos', searchTerm = '',
     const container = document.getElementById('quirofanoTicketContainer');
     if (!container) return;
 
-    let filteredTickets = quirofanoTickets;
+    let filteredTickets = window.quirofanoTickets;
     const userRole = sessionStorage.getItem('userRole');
 
     // Si no hay dateFilter específico, usar la fecha de hoy por defecto
@@ -369,31 +399,15 @@ function renderQuirofanoTicketsWithDateFilter(filter = 'todos', searchTerm = '',
                     String(today.getDate()).padStart(2, '0');
     }
 
-    console.log('Quirófano - Filtrado:', {
-        filtroEstado: filter,
-        fechaObjetivo: targetDate,
-        totalTickets: quirofanoTickets.length,
-        busqueda: searchTerm
-    });
-
     // Primero filtrar por fecha (siempre aplicar filtro de fecha)
     filteredTickets = filteredTickets.filter(ticket => {
         if (!ticket.fechaProgramada) return false;
-        // Normalizar a YYYY-MM-DD por si la fecha viene en Date o ISO
-        const onlyDate = (val) => {
-            if (!val) return '';
-            if (typeof val === 'string' && val.length >= 10) return val.substring(0,10);
-            try { return new Date(val).toISOString().substring(0,10); } catch { return String(val).substring(0,10); }
-        };
-        return onlyDate(ticket.fechaProgramada) === onlyDate(targetDate);
+        return ticket.fechaProgramada === targetDate;
     });
-
-    console.log('Después de filtro por fecha:', filteredTickets.length, 'tickets');
 
     // Luego filtrar por estado si no es "todos"
     if (filter && filter !== 'todos') {
-        filteredTickets = filteredTickets.filter(ticket => String(ticket.estado) === String(filter));
-        console.log('Después de filtro por estado:', filteredTickets.length, 'tickets');
+        filteredTickets = filteredTickets.filter(ticket => ticket.estado === filter);
     }
 
     // Filtrar por búsqueda
@@ -478,10 +492,14 @@ function renderQuirofanoTicketsWithDateFilter(filter = 'todos', searchTerm = '',
                 <p><i class="fas fa-calendar-alt"></i> <strong>Fecha:</strong> ${formatQuirofanoDate(ticket.fechaProgramada)}</p>
                 <p><i class="fas fa-user-md"></i> <strong>Médico:</strong> ${ticket.medicoAtiende || ticket.veterinario || 'No asignado'}</p>
                 ${ticket.examenesPrequirurgicos ? `<p><i class="fas fa-vials"></i> <strong>Exámenes Pre Quirúrgicos:</strong> 
-                    ${ticket.examenesPrequirurgicos === 'realizados' ? 
+                    ${ticket.examenesStatus === 'realizado' ? 
                         '<span style="color: #28a745; font-weight: bold;">✅ Realizados</span>' : 
                         `<span style="color: #ff6b35; font-weight: bold;">⏳ Pendientes</span>
-`
+                         <button onclick="marcarExamenesRealizados('${ticket.randomId}')" 
+                                 class="btn-examenes-realizados" 
+                                 title="Marcar exámenes como realizados">
+                            <i class="fas fa-check"></i> Marcar como realizados
+                         </button>`
                     }</p>` : ''}
                 ${ticket.observaciones ? `<p><i class="fas fa-sticky-note"></i> <strong>Observaciones:</strong> ${ticket.observaciones}</p>` : ''}
                 
@@ -535,7 +553,7 @@ function getNextQuirofanoTicketNumber() {
                        String(today.getDate()).padStart(2, '0');
     
     // Filtrar solo los tickets creados hoy
-    const todaysTickets = quirofanoTickets.filter(ticket => {
+    const todaysTickets = window.quirofanoTickets.filter(ticket => {
         if (!ticket.fechaCreacion) return false;
         
         // Extraer solo la fecha de la fechaCreacion (sin la hora)
@@ -555,7 +573,7 @@ function getNextQuirofanoTicketNumber() {
 function handleQuirofanoSearch(e) {
     const searchTerm = e.target.value;
     const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
-    renderQuirofanoTicketsWithDateFilter(currentQuirofanoFilter, searchTerm, dateFilter);
+            renderQuirofanoTicketsWithDateFilter(window.currentQuirofanoFilter, searchTerm, dateFilter);
 }
 
 // Función para manejar filtro por fecha
@@ -563,14 +581,7 @@ function handleQuirofanoDateFilter(e) {
     const selectedDate = e.target.value;
     const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
     
-    // Debug para verificar el filtro de fecha
-    console.log('Filtro de fecha seleccionado:', selectedDate);
-    console.log('Tickets disponibles:', quirofanoTickets.map(t => ({
-        nombre: t.nombreMascota,
-        fechaProgramada: t.fechaProgramada
-    })));
-    
-    renderQuirofanoTicketsWithDateFilter(currentQuirofanoFilter, searchTerm, selectedDate);
+            renderQuirofanoTicketsWithDateFilter(window.currentQuirofanoFilter, searchTerm, selectedDate);
 }
 
 // Función para establecer filtro activo
@@ -593,7 +604,7 @@ function clearQuirofanoDateFilter() {
         dateFilter.value = todayString;
         
         const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
-        renderQuirofanoTicketsWithDateFilter(currentQuirofanoFilter, searchTerm, todayString);
+        renderQuirofanoTicketsWithDateFilter(window.currentQuirofanoFilter, searchTerm, todayString);
     }
 }
 
@@ -622,7 +633,7 @@ function separateQuirofanoMedicoAtiende(medicoAtiende) {
 
 // Función para editar ticket - igual que consultas
 function editQuirofanoTicket(randomId) {
-    const ticket = quirofanoTickets.find(t => t.randomId === randomId);
+    const ticket = window.quirofanoTickets.find(t => t.randomId === randomId);
     if (!ticket) return;
 
     quirofanoCurrentEditingId = randomId;
@@ -659,6 +670,16 @@ function editQuirofanoTicket(randomId) {
                         <div class="form-group">
                             <label for="editQuirofanoTelefono">Teléfono</label>
                             <input type="tel" id="editQuirofanoTelefono" name="telefono" value="${ticket.telefono || ''}" required>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="editQuirofanoFactura">Número de Factura</label>
+                            <input type="text" id="editQuirofanoFactura" name="factura" value="${ticket.factura || ''}">
+                        </div>
+                        <div class="form-group">
+                            <!-- Campo vacío para mantener el diseño de dos columnas -->
                         </div>
                     </div>
 
@@ -794,7 +815,16 @@ function editQuirofanoTicket(randomId) {
                                 Marque si el paciente requiere exámenes antes de la cirugía
                             </small>
                             
-
+                            <!-- Estado de los exámenes en edición -->
+                            <div id="editExamenesStatusContainer" style="display: ${ticket.examenesPrequirurgicos ? 'block' : 'none'}; margin-top: 8px;">
+                                <label for="editQuirofanoExamenesStatus" style="font-size: 13px; color: #555;">
+                                    Estado de los exámenes:
+                                </label>
+                                <select id="editQuirofanoExamenesStatus" style="margin-left: 8px; padding: 2px 6px; font-size: 12px;">
+                                    <option value="pendiente" ${ticket.examenesStatus === 'pendiente' || !ticket.examenesStatus ? 'selected' : ''}>⏳ Pendientes</option>
+                                    <option value="realizado" ${ticket.examenesStatus === 'realizado' ? 'selected' : ''}>✅ Realizados</option>
+                                </select>
+                            </div>
                         </div>
                         <div class="form-group">
                             <!-- Campo vacío para mantener estructura -->
@@ -848,7 +878,19 @@ function editQuirofanoTicket(randomId) {
     // Event listener para el formulario de edición
     document.getElementById('quirofanoEditForm').addEventListener('submit', handleQuirofanoEdit);
     
-
+    // Event listener para el checkbox de exámenes en edición
+    const editExamenesCheckbox = document.getElementById('editQuirofanoExamenesPrequirurgicos');
+    const editExamenesStatusContainer = document.getElementById('editExamenesStatusContainer');
+    
+    if (editExamenesCheckbox && editExamenesStatusContainer) {
+        editExamenesCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                editExamenesStatusContainer.style.display = 'block';
+            } else {
+                editExamenesStatusContainer.style.display = 'none';
+            }
+        });
+    }
     
 
 }
@@ -858,7 +900,7 @@ function handleQuirofanoEdit(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
-    const ticket = quirofanoTickets.find(t => t.randomId === quirofanoCurrentEditingId);
+    const ticket = window.quirofanoTickets.find(t => t.randomId === quirofanoCurrentEditingId);
     
     if (!ticket) return;
     
@@ -883,6 +925,7 @@ function handleQuirofanoEdit(e) {
         cedula: document.getElementById('editQuirofanoCedula').value,
         correo: document.getElementById('editQuirofanoCorreo').value,
         telefono: document.getElementById('editQuirofanoTelefono').value,
+        factura: document.getElementById('editQuirofanoFactura').value,
         tipoMascota: document.getElementById('editQuirofanoTipoMascota').value,
         raza: document.getElementById('editQuirofanoRaza').value,
         peso: document.getElementById('editQuirofanoPeso').value,
@@ -900,6 +943,8 @@ function handleQuirofanoEdit(e) {
         estado: document.getElementById('editQuirofanoEstado').value,
         observaciones: document.getElementById('editQuirofanoMotivo').value,
         examenesPrequirurgicos: document.getElementById('editQuirofanoExamenesPrequirurgicos').checked,
+        examenesStatus: document.getElementById('editQuirofanoExamenesPrequirurgicos').checked ? 
+            document.getElementById('editQuirofanoExamenesStatus').value : null,
         fechaModificacion: new Date().toISOString(),
         modificadoPor: sessionStorage.getItem('userName') || 'Usuario'
     };
@@ -907,13 +952,6 @@ function handleQuirofanoEdit(e) {
     // Actualizar horas automáticamente según el cambio de estado
     const nuevoEstado = document.getElementById('editQuirofanoEstado').value;
     const estadoAnterior = ticket.estado;
-    
-    // Si cambia a "listo-para-cirugia" y tiene exámenes prequirúrgicos, marcarlos como realizados
-    if (nuevoEstado === 'listo-para-cirugia' && estadoAnterior !== 'listo-para-cirugia' && updatedData.examenesPrequirurgicos) {
-        updatedData.examenesPrequirurgicos = 'realizados';
-        updatedData.fechaExamenesRealizados = new Date().toISOString();
-        console.log('Exámenes marcados como realizados automáticamente desde edición para:', updatedData.nombreMascota);
-    }
     
     // Si cambia a "cirugia" y no tenía hora de atención, agregarla
     if (nuevoEstado === 'cirugia' && estadoAnterior !== 'cirugia' && !ticket.horaAtencion) {
@@ -925,22 +963,14 @@ function handleQuirofanoEdit(e) {
         updatedData.horaFinalizacion = new Date().toLocaleTimeString('es-ES', { hour12: false });
     }
     
-    // Debug: Verificar que se estén capturando los datos
-    console.log('Datos a actualizar:', updatedData);
-    console.log('Cédula:', updatedData.cedula);
-    console.log('ID Paciente:', updatedData.idPaciente);
-    
     // Actualizar en Firebase
     quirofanoFirebaseRef.child(ticket.firebaseKey).update(updatedData)
         .then(() => {
-            const examenesMsg = updatedData.examenesPrequirurgicos === 'realizados' && estadoAnterior !== 'listo-para-cirugia' ? 
-                ' y exámenes prequirúrgicos marcados como realizados' : '';
-            showNotification(`Ticket actualizado exitosamente${examenesMsg}`, 'success');
+            showNotification('Ticket actualizado exitosamente', 'success');
             closeQuirofanoModal();
             loadQuirofanoTickets();
         })
         .catch((error) => {
-            console.error('Error al actualizar ticket:', error);
             showNotification('Error al actualizar el ticket', 'error');
         });
 }
@@ -951,7 +981,7 @@ function handleQuirofanoEdit(e) {
 
 // Función para eliminar ticket
 function deleteQuirofanoTicket(randomId) {
-    const ticket = quirofanoTickets.find(t => t.randomId === randomId);
+    const ticket = window.quirofanoTickets.find(t => t.randomId === randomId);
     if (!ticket) return;
 
     // Crear modal de confirmación personalizado
@@ -1012,7 +1042,7 @@ function closeQuirofanoDeleteModal() {
 
 // Función para confirmar eliminación
 function confirmDeleteQuirofanoTicket(randomId) {
-    const ticket = quirofanoTickets.find(t => t.randomId === randomId);
+    const ticket = window.quirofanoTickets.find(t => t.randomId === randomId);
     if (!ticket) return;
 
     quirofanoFirebaseRef.child(ticket.firebaseKey).remove()
@@ -1023,14 +1053,13 @@ function confirmDeleteQuirofanoTicket(randomId) {
             loadQuirofanoTickets();
         })
         .catch((error) => {
-            console.error('Error al eliminar ticket:', error);
             showNotification('Error al eliminar el ticket', 'error');
         });
 }
 
 // Función para terminar cirugía
 function endQuirofanoSurgery(randomId) {
-    const ticket = quirofanoTickets.find(t => t.randomId === randomId);
+    const ticket = window.quirofanoTickets.find(t => t.randomId === randomId);
     if (!ticket) return;
 
     if (ticket.estado === 'terminado') {
@@ -1055,7 +1084,6 @@ function endQuirofanoSurgery(randomId) {
             loadQuirofanoTickets();
         })
         .catch((error) => {
-            console.error('Error al terminar cirugía:', error);
             showNotification('Error al terminar la cirugía', 'error');
         });
 }
@@ -1110,10 +1138,10 @@ function getUrgenciaQuirofanoLabel(urgencia) {
 }
 
 // Función para marcar un ticket como listo para cirugía
+// Automáticamente marca los exámenes prequirúrgicos como realizados si los requiere
 function marcarListoParaCirugia(randomId) {
-    const ticket = quirofanoTickets.find(t => t.randomId === randomId);
+    const ticket = window.quirofanoTickets.find(t => t.randomId === randomId);
     if (!ticket) {
-        console.error('Ticket no encontrado:', randomId);
         return;
     }
 
@@ -1124,48 +1152,55 @@ function marcarListoParaCirugia(randomId) {
 
     showLoading();
 
-    // Actualizar el estado del ticket y marcar exámenes como realizados automáticamente
+    // Actualizar el estado del ticket
     ticket.estado = 'listo-para-cirugia';
     ticket.fechaListoParaCirugia = new Date().toISOString();
     
-    // Marcar exámenes prequirúrgicos como realizados automáticamente
+    // Si el ticket requiere exámenes prequirúrgicos, marcarlos como realizados automáticamente
     if (ticket.examenesPrequirurgicos) {
-        ticket.examenesPrequirurgicos = 'realizados';
+        ticket.examenesStatus = 'realizado';
         ticket.fechaExamenesRealizados = new Date().toISOString();
-        console.log('Exámenes marcados como realizados para:', ticket.nombreMascota);
-    }
-    
-    const updatePayload = {
-        estado: 'listo-para-cirugia',
-        fechaListoParaCirugia: ticket.fechaListoParaCirugia
-    };
-    
-    // Agregar información de exámenes si fueron marcados como realizados
-    if (ticket.examenesPrequirurgicos === 'realizados') {
-        updatePayload.examenesPrequirurgicos = 'realizados';
-        updatePayload.fechaExamenesRealizados = ticket.fechaExamenesRealizados;
     }
 
     // Actualizar en Firebase
     const ticketRef = quirofanoFirebaseRef.child(ticket.firebaseKey || randomId);
-    ticketRef.update(updatePayload)
+    const updateData = {
+        estado: 'listo-para-cirugia',
+        fechaListoParaCirugia: ticket.fechaListoParaCirugia
+    };
+    
+    // Agregar datos de exámenes si es necesario
+    if (ticket.examenesPrequirurgicos) {
+        updateData.examenesStatus = 'realizado';
+        updateData.fechaExamenesRealizados = ticket.fechaExamenesRealizados;
+    }
+    
+    ticketRef.update(updateData)
     .then(() => {
         hideLoading();
-        const examenesMsg = ticket.examenesPrequirurgicos === 'realizados' ? 
-            ' y exámenes prequirúrgicos marcados como realizados' : '';
-        showNotification(`${ticket.nombreMascota} ha sido marcado como listo para cirugía${examenesMsg}`, 'success');
         
-        // Debug: verificar el estado del ticket después de la actualización
-        console.log('Estado del ticket después de actualizar:', {
-            nombre: ticket.nombreMascota,
-            estado: ticket.estado,
-            examenesPrequirurgicos: ticket.examenesPrequirurgicos
-        });
+        let message = `${ticket.nombreMascota} ha sido marcado como listo para cirugía`;
+        if (ticket.examenesPrequirurgicos) {
+            message += ' y exámenes prequirúrgicos marcados como realizados automáticamente';
+        }
+        
+        showNotification(message, 'success');
+        
+        // Actualizar array local para mantener consistencia
+        const index = window.quirofanoTickets.findIndex(t => t.randomId === randomId);
+        if (index !== -1) {
+            window.quirofanoTickets[index] = ticket;
+        }
+        
+        // Actualizar contador de exámenes prequirúrgicos si existe la función
+        if (typeof window.updatePrequirurgicoCounter === 'function') {
+            window.updatePrequirurgicoCounter();
+        }
         
         // Re-renderizar los tickets
         const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
         const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
-        const currentFilter = document.querySelector('.quirofano-filter-btn.active')?.dataset.filter || 'todos';
+        const currentFilter = document.querySelector('.quirofanoFilterBtn.active')?.dataset.filter || 'todos';
         
         if (dateFilter) {
             renderQuirofanoTicketsWithDateFilter(currentFilter, searchTerm, dateFilter);
@@ -1175,7 +1210,6 @@ function marcarListoParaCirugia(randomId) {
     })
     .catch((error) => {
         hideLoading();
-        console.error('Error al actualizar el estado:', error);
         showNotification('Error al marcar como listo para cirugía', 'error');
     });
 }
@@ -1196,11 +1230,9 @@ function hideLoading() {
 }
 
 function showNotification(message, type = 'info') {
-    // Si existe la función global, la usa, sino usa console.log
+    // Si existe la función global, la usa
     if (window.showNotification) {
         window.showNotification(message, type);
-    } else {
-        console.log(`${type.toUpperCase()}: ${message}`);
     }
 }
 
@@ -1220,7 +1252,64 @@ function getTipoMascotaLabel(tipo) {
 
 
 
-
+// Función para marcar exámenes como realizados
+function marcarExamenesRealizados(randomId) {
+    const ticket = window.quirofanoTickets.find(t => t.randomId === randomId);
+    if (!ticket) {
+        showNotification('Ticket no encontrado', 'error');
+        return;
+    }
+    
+    if (!ticket.examenesPrequirurgicos) {
+        showNotification('Este ticket no requiere exámenes prequirúrgicos', 'warning');
+        return;
+    }
+    
+    if (ticket.examenesStatus === 'realizado') {
+        showNotification('Los exámenes ya están marcados como realizados', 'info');
+        return;
+    }
+    
+    // Confirmar la acción
+    if (!confirm('¿Está seguro de marcar los exámenes prequirúrgicos como realizados?')) {
+        return;
+    }
+    
+    showLoading();
+    
+    // Actualizar el ticket
+    const updatedData = {
+        ...ticket,
+        examenesStatus: 'realizado',
+        fechaModificacion: new Date().toISOString(),
+        modificadoPor: sessionStorage.getItem('userName') || 'Usuario'
+    };
+    
+    // Guardar en Firebase
+    quirofanoFirebaseRef.child(ticket.firebaseKey).update(updatedData)
+        .then(() => {
+            hideLoading();
+            showNotification('Exámenes marcados como realizados exitosamente', 'success');
+            
+            // Actualizar array local
+            const index = window.quirofanoTickets.findIndex(t => t.randomId === randomId);
+            if (index !== -1) {
+                window.quirofanoTickets[index] = updatedData;
+            }
+            
+            // Actualizar contador
+            if (typeof window.updatePrequirurgicoCounter === 'function') {
+                window.updatePrequirurgicoCounter();
+            }
+            
+            // Re-renderizar tickets
+            loadQuirofanoTickets();
+        })
+        .catch((error) => {
+            hideLoading();
+            showNotification('Error al marcar exámenes como realizados', 'error');
+        });
+}
 
 // Exportar funciones necesarias globalmente
 window.editQuirofanoTicket = editQuirofanoTicket;
@@ -1231,7 +1320,7 @@ window.clearQuirofanoDateFilter = clearQuirofanoDateFilter;
 window.setupQuirofanoFilterVisibility = setupQuirofanoFilterVisibility;
 window.closeQuirofanoDeleteModal = closeQuirofanoDeleteModal;
 window.confirmDeleteQuirofanoTicket = confirmDeleteQuirofanoTicket;
-
+window.marcarExamenesRealizados = marcarExamenesRealizados;
 
 
 
@@ -1252,6 +1341,4 @@ window.addEventListener('hashchange', function() {
         initQuirofanoModule();
     }
 });
-
-console.log('Módulo de quirófano cargado exitosamente');
 

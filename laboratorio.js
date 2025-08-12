@@ -44,11 +44,8 @@ const razasOtras = [
 
 // Inicializar el sistema de laboratorio
 function initLaboratorioSystem() {
-    console.log('Inicializando sistema de laboratorio...');
-    
     // Verificar acceso al módulo de laboratorio
     if (!hasLabAccess()) {
-        console.log('Usuario sin acceso al módulo de laboratorio');
         return;
     }
     
@@ -56,10 +53,8 @@ function initLaboratorioSystem() {
         // Configurar referencia de Firebase
         if (window.database) {
             labTicketsRef = window.database.ref('lab_tickets');
-            console.log('Referencia de Firebase configurada para laboratorio');
             setupLabFirebaseListeners();
         } else {
-            console.error('Base de datos no disponible');
             return;
         }
         
@@ -72,23 +67,17 @@ function initLaboratorioSystem() {
 
         
         // Configurar actualización en tiempo real de clientes
-        console.log('Configurando actualización en tiempo real de clientes...');
         setupClientesDataListener();
         
-        console.log('Sistema de laboratorio inicializado correctamente');
-        
     } catch (error) {
-        console.error('Error inicializando sistema de laboratorio:', error);
+        // Error silencioso
     }
 }
 
 // Cargar datos de clientes desde Firebase tickets y configurar actualización en tiempo real
 function setupClientesDataListener() {
     try {
-        console.log('Configurando listener de clientes en tiempo real...');
-        
         if (!window.database) {
-            console.error('Base de datos no disponible');
             return;
         }
 
@@ -97,23 +86,19 @@ function setupClientesDataListener() {
         // PRIMERA CARGA: Obtener datos iniciales una sola vez
         ticketsRef.once('value')
             .then((snapshot) => {
-                console.log('Carga inicial de datos de clientes...');
                 updateClientesDataFromSnapshot(snapshot);
-                console.log(`Datos iniciales cargados: ${clientesData.length} clientes`);
             })
             .catch((error) => {
-                console.error('Error en carga inicial de clientes:', error);
+                // Error silencioso
             });
         
         // Configurar listener en tiempo real para tickets (para cambios futuros)
         ticketsRef.on('value', (snapshot) => {
-            console.log('Actualizando datos de clientes en tiempo real...');
             updateClientesDataFromSnapshot(snapshot);
         });
         
         // También escuchar cambios específicos para optimizar
         ticketsRef.on('child_added', (snapshot) => {
-            console.log('Nuevo ticket añadido, actualizando clientes...');
             const ticket = snapshot.val();
             if (ticket) {
                 addClienteFromTicket(ticket);
@@ -121,7 +106,6 @@ function setupClientesDataListener() {
         });
         
         ticketsRef.on('child_changed', (snapshot) => {
-            console.log('Ticket modificado, actualizando clientes...');
             const ticket = snapshot.val();
             if (ticket) {
                 updateClienteFromTicket(ticket);
@@ -129,7 +113,7 @@ function setupClientesDataListener() {
         });
         
     } catch (error) {
-        console.error('Error configurando listener de clientes:', error);
+        // Error silencioso
     }
 }
 
@@ -212,13 +196,11 @@ function updateClientesDataFromSnapshot(snapshot) {
         
 
         
-        console.log(`Clientes actualizados: ${previousCount} → ${clientesData.length}`);
-        
         // Notificar que los datos de clientes han sido actualizados
         notifyClientesDataUpdated();
         
     } catch (error) {
-        console.error('Error actualizando datos de clientes:', error);
+        // Error silencioso
     }
 }
 
@@ -262,11 +244,9 @@ function addClienteFromTicket(ticket) {
         if (existingClienteIndex === -1) {
             // Cliente+mascota nuevo
             clientesData.push(nuevoCliente);
-            console.log(`Nuevo cliente+mascota añadido: ${nuevoCliente.Nombre} - ${mascotaNombre}`);
         } else {
             // Actualizar cliente+mascota existente
             clientesData[existingClienteIndex] = nuevoCliente;
-            console.log(`Cliente+mascota actualizado: ${nuevoCliente.Nombre} - ${mascotaNombre}`);
         }
         
 
@@ -274,7 +254,7 @@ function addClienteFromTicket(ticket) {
         notifyClientesDataUpdated();
         
     } catch (error) {
-        console.error('Error añadiendo cliente individual:', error);
+        // Error silencioso
     }
 }
 
@@ -300,7 +280,7 @@ function notifyClientesDataUpdated() {
         updateActiveClienteSearch();
         
     } catch (error) {
-        console.error('Error notificando actualización de clientes:', error);
+        // Error silencioso
     }
 }
 
@@ -310,7 +290,6 @@ function updateActiveClienteSearch() {
         const searchInput = document.getElementById('labClienteSearch');
         if (searchInput && searchInput.value.trim().length >= 2) {
             const query = searchInput.value.trim();
-            console.log('Actualizando búsqueda activa para:', query);
             
             // Pequeño delay para evitar demasiadas actualizaciones
             setTimeout(() => {
@@ -318,7 +297,7 @@ function updateActiveClienteSearch() {
             }, 300);
         }
     } catch (error) {
-        console.error('Error actualizando búsqueda activa:', error);
+        // Error silencioso
     }
 }
 
@@ -362,12 +341,11 @@ function setupLabFirebaseListeners() {
             updateLabStats();
         }
         
-        console.log(`Cargados ${labTickets.length} tickets de laboratorio`);
         // Exportar globalmente para otros módulos (Reportes Lab)
         try {
             window.labTickets = labTickets;
         } catch (e) {
-            console.warn('No se pudo exponer labTickets globalmente:', e);
+            // Error silencioso
         }
     });
 }
@@ -384,10 +362,7 @@ function updateRazasSelect() {
     const tipoMascota = document.getElementById('labTipoMascota').value;
     const razaSelect = document.getElementById('labRaza');
     
-    console.log(`updateRazasSelect - Tipo de mascota: ${tipoMascota}`);
-    
     if (!razaSelect) {
-        console.warn('Select de raza no encontrado');
         return;
     }
     
@@ -411,8 +386,6 @@ function updateRazasSelect() {
             razas = ['SRD'];
     }
     
-    console.log(`Razas disponibles para ${tipoMascota}:`, razas.length);
-    
     // Agregar opción por defecto
     const defaultOption = document.createElement('option');
     defaultOption.value = '';
@@ -426,60 +399,44 @@ function updateRazasSelect() {
         option.textContent = raza;
         razaSelect.appendChild(option);
     });
-    
-    console.log(`Razas actualizadas para ${tipoMascota}: ${razas.length} opciones`);
 }
 
 // Configurar event listeners del sistema de laboratorio
 function setupLabEventListeners() {
-    console.log('Configurando event listeners de laboratorio...');
-    
     // NOTA: Los botones de navegación (crearLabBtn, verLabBtn) ahora se manejan
     // desde el sistema de navegación categorizada en index.js
     
     // Búsqueda de clientes
     const labClienteSearch = document.getElementById('labClienteSearch');
     if (labClienteSearch) {
-        console.log('Configurando búsqueda de clientes');
         setupClienteSearch(labClienteSearch);
-    } else {
-        console.warn('Input labClienteSearch no encontrado');
     }
       
     // Formulario de creación
     const labTicketForm = document.getElementById('labTicketForm');
     if (labTicketForm) {
-        console.log('Configurando formulario de laboratorio');
         labTicketForm.addEventListener('submit', handleLabTicketSubmit);
-    } else {
-        console.warn('Formulario labTicketForm no encontrado');
     }
     
     // Configurar listener para cambio de tipo de mascota
     const labTipoMascota = document.getElementById('labTipoMascota');
     if (labTipoMascota) {
-        console.log('Configurando selector de tipo de mascota');
         labTipoMascota.addEventListener('change', updateRazasSelect);
         // Inicializar las razas con el valor por defecto
         updateRazasSelect();
-    } else {
-        console.warn('Select labTipoMascota no encontrado');
     }
     
     // Configurar listener para el médico que solicita (para controlar examen de regalía)
     const labMedicoSolicita = document.getElementById('labMedicoSolicita');
     if (labMedicoSolicita) {
-        console.log('Configurando selector de médico que solicita');
         labMedicoSolicita.addEventListener('change', toggleExamenRegaliaVisibility);
         // Inicializar la visibilidad del campo
         toggleExamenRegaliaVisibility();
-    } else {
-        console.warn('Select labMedicoSolicita no encontrado');
     }
     
     // Filtros de laboratorio
     const labFilterBtns = document.querySelectorAll('.lab-filter-btn');
-    console.log('Filtros de laboratorio encontrados:', labFilterBtns.length);    // Ocultar filtro "Todos" para usuarios que no sean admin
+    // Ocultar filtro "Todos" para usuarios que no sean admin
     const userRole = sessionStorage.getItem('userRole');
     if (userRole !== 'admin') {
         const todosLabBtn = document.querySelector('.lab-filter-btn[data-filter="todos"]');
@@ -540,7 +497,6 @@ function setupLabEventListeners() {
     // Event listener para el filtro de médicos
     const labMedicoFilter = document.getElementById('labMedicoFilter');
     if (labMedicoFilter) {
-        console.log('Configurando filtro de médicos');
         labMedicoFilter.addEventListener('change', (e) => {
             const selectedMedico = e.target.value;
             
@@ -551,24 +507,18 @@ function setupLabEventListeners() {
             // Renderizar con ambos filtros
             renderLabTickets(currentStateFilter, selectedMedico);
         });
-    } else {
-        console.warn('Select labMedicoFilter no encontrado');
     }
 
     // Búsqueda de laboratorio
     const labSearchInput = document.getElementById('labSearchInput');
     if (labSearchInput) {
-        console.log('Configurando búsqueda de laboratorio');
         labSearchInput.addEventListener('input', (e) => {
             const searchTerm = e.target.value.toLowerCase();
             filterLabTicketsBySearch(searchTerm);
         });
-    } else {
-        console.warn('Input labSearchInput no encontrado');
     }    // Filtro de fecha
     const labFilterDate = document.getElementById('labFilterDate');
     if (labFilterDate) {
-        console.log('Configurando filtro de fecha de laboratorio');
         labFilterDate.addEventListener('change', (e) => {
             // Obtener el filtro de estado activo
             const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
@@ -581,27 +531,19 @@ function setupLabEventListeners() {
             // Renderizar con todos los filtros
             renderLabTickets(currentStateFilter, currentMedicoFilter);
         });
-    } else {
-        console.warn('Input labFilterDate no encontrado');
     }
     
     // Filtro de fecha para búsqueda de clientes
     const labFechaFiltro = document.getElementById('labFechaFiltro');
     if (labFechaFiltro) {
-        console.log('Configurando filtro de fecha para búsqueda de clientes');
         labFechaFiltro.addEventListener('change', (e) => {
-            console.log('Filtro de fecha cambiado:', e.target.value);
             // Si hay una búsqueda activa, volver a ejecutarla con el nuevo filtro
             const searchInput = document.getElementById('labClienteSearch');
             if (searchInput && searchInput.value.trim().length >= 2) {
                 searchClientes(searchInput.value.trim());
             }
         });
-    } else {
-        console.warn('Input labFechaFiltro no encontrado');
     }
-    
-    console.log('Event listeners de laboratorio configurados');
 }
 
 // Controlar la visibilidad del campo de examen de regalía
@@ -635,7 +577,7 @@ function toggleExamenRegaliaVisibility() {
 function setupClienteSearch(searchInput) {
     const resultsContainer = document.getElementById('labClienteResults');
     if (!resultsContainer) {
-        console.error('Contenedor de resultados no encontrado');
+        // Error silencioso
         return;
     }
     
@@ -644,7 +586,6 @@ function setupClienteSearch(searchInput) {
     
     // Escuchar actualizaciones de datos de clientes
     document.addEventListener('clientesDataUpdated', function(e) {
-        console.log('Datos de clientes actualizados, refrescando búsqueda si es necesaria');
         // Si hay una búsqueda activa, actualizarla
         if (searchInput.value.trim().length >= 2) {
             const query = searchInput.value.trim();
@@ -722,18 +663,13 @@ function setupClienteSearch(searchInput) {
 
 // Buscar clientes en los datos con cache y optimización
 function searchClientes(query = '') {
-    console.log('Buscando clientes con query:', query);
-    console.log('Datos disponibles:', clientesData.length, 'clientes');
-    
     const resultsContainer = document.getElementById('labClienteResults');
     if (!resultsContainer) {
-        console.error('Contenedor de resultados no encontrado');
         return;
     }
     
     // Verificar si hay datos disponibles
     if (!clientesData.length) {
-        console.log('No hay datos de clientes disponibles');
         resultsContainer.innerHTML = '<div class="no-results">Cargando datos de clientes... <br><small>Si el problema persiste, <button onclick="forceReloadClientesData()" style="background: none; border: none; color: var(--primary-color); text-decoration: underline; cursor: pointer;">haga clic aquí para recargar</button></small></div>';
         resultsContainer.style.display = 'block';
         
@@ -746,7 +682,6 @@ function searchClientes(query = '') {
         // Intentar forzar carga si no hay datos después de 2 segundos
         setTimeout(() => {
             if (clientesData.length === 0) {
-                console.log('Forzando carga de datos después del timeout...');
                 if (typeof forceReloadClientesData === 'function') {
                     forceReloadClientesData();
                 } else {
@@ -757,14 +692,16 @@ function searchClientes(query = '') {
                             updateClientesDataFromSnapshot(snapshot);
                         })
                         .catch((error) => {
-                            console.error('Error en carga forzada:', error);
+                            // Error silencioso
                         });
                 }
             }
         }, 2000);
         
         return;
-    }    const queryLower = query.toLowerCase();
+    }
+    
+    const queryLower = query.toLowerCase();
     
     // Obtener filtro de fecha (obligatorio)
     const fechaFiltroInput = document.getElementById('labFechaFiltro');
@@ -775,17 +712,13 @@ function searchClientes(query = '') {
         if (fechaFiltroInput) {
             fechaFiltroInput.value = getLocalDateString();
         }
-        console.log('No había fecha seleccionada, usando fecha actual');
         return; // Salir y dejar que se ejecute de nuevo con la fecha actual
     }
-    
-    console.log('Filtrando por fecha:', fechaFiltro);
     
     // Búsqueda optimizada con múltiples criterios
     const results = clientesData.filter(cliente => {
         // Validar que cliente es un objeto válido
         if (!cliente || typeof cliente !== 'object') {
-            console.warn('Cliente inválido encontrado:', cliente);
             return false;
         }
         
@@ -804,7 +737,8 @@ function searchClientes(query = '') {
                    nombre.includes(word) || 
                    mascota.includes(word)
                );
-          // Si no hay coincidencia de texto, filtrar
+        
+        // Si no hay coincidencia de texto, filtrar
         if (!textMatches) {
             return false;
         }
@@ -817,8 +751,7 @@ function searchClientes(query = '') {
         if (!tieneConsultaEnFecha) {
             return false;
         }
-               
-
+        
         return true;
     })
     .sort((a, b) => {
@@ -836,24 +769,90 @@ function searchClientes(query = '') {
     })
     .slice(0, 8); // Limitar a 8 resultados para mejor rendimiento
     
-    console.log('Resultados encontrados:', results.length);
+    // Buscar en tickets de quirófano para expandir las opciones de búsqueda
+    // Los datos de quirófano se usan para mostrar más opciones y llenar completamente el formulario de laboratorio
+    let quirofanoResults = [];
+    if (window.quirofanoTickets && Array.isArray(window.quirofanoTickets)) {
+        quirofanoResults = window.quirofanoTickets.filter(ticket => {
+            if (!ticket) return false;
+            
+            const nombre = (ticket.nombrePropietario || '').toString().toLowerCase();
+            const cedula = (ticket.cedula || '').toString().toLowerCase();
+            const mascota = (ticket.nombreMascota || '').toString().toLowerCase();
+            const id = (ticket.idPaciente || '').toString().toLowerCase();
+            
+            // Búsqueda por texto
+            const textMatches = nombre.includes(queryLower) ||
+                   cedula.includes(queryLower) ||
+                   mascota.includes(queryLower) ||
+                   id.includes(queryLower) ||
+                   queryLower.split(' ').some(word => 
+                       nombre.includes(word) || 
+                       mascota.includes(word)
+                   );
+            
+            if (!textMatches) return false;
+            
+            // Verificar si hay fecha programada que coincida
+            if (fechaFiltro && ticket.fechaProgramada) {
+                return ticket.fechaProgramada === fechaFiltro;
+            }
+            
+            return true;
+        }).map(ticket => ({
+            // Normalizar datos del ticket de quirófano para que coincidan con el formato esperado
+            Nombre: ticket.nombrePropietario || '',
+            Identificacion: ticket.cedula || '',
+            'nombre mascota': ticket.nombreMascota || '',
+            Id: ticket.idPaciente || '',
+            Especie: ticket.tipoMascota === 'perro' ? 'Canino' : 
+                     ticket.tipoMascota === 'gato' ? 'Felino' : 
+                     ticket.tipoMascota === 'conejo' ? 'Conejo' : 'Otro',
+            Raza: ticket.raza || '',
+            Peso: ticket.peso || '',
+            Edad: ticket.edad || '',
+            Sexo: ticket.sexo || '',
+            Correo: ticket.correo || '',
+            Telefono: ticket.telefono || '',
+            // Marcar como ticket de quirófano
+            esQuirofano: true,
+            ticketQuirofano: ticket,
+            ultimaActualizacion: ticket.fechaCreacion ? new Date(ticket.fechaCreacion).getTime() : 0
+        }));
+    }
     
-    displaySearchResults(results, queryLower);
+    // Combinar y ordenar resultados
+    const allResults = [...results, ...quirofanoResults].sort((a, b) => {
+        // Priorizar tickets de consulta sobre tickets de quirófano
+        if (a.esQuirofano && !b.esQuirofano) return 1;
+        if (!a.esQuirofano && b.esQuirofano) return -1;
+        
+        // Luego por relevancia de texto
+        const aExact = (a.Nombre || '').toLowerCase().startsWith(queryLower) ||
+                       (a['nombre mascota'] || '').toLowerCase().startsWith(queryLower);
+        const bExact = (b.Nombre || '').toLowerCase().startsWith(queryLower) ||
+                       (b['nombre mascota'] || '').toLowerCase().startsWith(queryLower);
+        
+        if (aExact && !bExact) return -1;
+        if (!aExact && bExact) return 1;
+        
+        // Finalmente por fecha de actualización
+        return (b.ultimaActualizacion || 0) - (a.ultimaActualizacion || 0);
+    }).slice(0, 10); // Aumentar límite para incluir resultados de quirófano
+    
+    displaySearchResults(allResults, queryLower);
 }
 
 // Mostrar resultados de búsqueda con highlighting y mejor UX
 function displaySearchResults(results, queryLower = '') {
-    console.log('Mostrando resultados:', results);
-    
     const resultsContainer = document.getElementById('labClienteResults');
     if (!resultsContainer) {
-        console.error('Contenedor de resultados no encontrado');
         return;
     }    if (results.length === 0) {
         resultsContainer.innerHTML = `
             <div class="no-results">
                 <i class="fas fa-search" style="font-size: 2rem; color: #bdc3c7; margin-bottom: 10px;"></i>
-                <p>No se encontraron clientes para: "<strong>${query}</strong>"</p>
+                <p>No se encontraron clientes para: "<strong>${queryLower}</strong>"</p>
                 <small style="color: #7f8c8d;">
                     Intente con: nombre, cédula, nombre de la mascota o ID del paciente<br>
                     Total de clientes en base de datos: ${clientesData.length}
@@ -883,7 +882,6 @@ function displaySearchResults(results, queryLower = '') {
         const html = results.map((cliente, index) => {
             // Validar datos del cliente
             if (!cliente || typeof cliente !== 'object') {
-                console.warn('Cliente inválido en resultados:', cliente);
                 return '';
             }
             
@@ -903,12 +901,34 @@ function displaySearchResults(results, queryLower = '') {
             const isRecent = cliente.ultimaActualizacion && 
                            (new Date().getTime() - cliente.ultimaActualizacion) < 30000; // 30 segundos
             
-            // Información de consultas del cliente
+            // Información de consultas del cliente o procedimiento de quirófano
             let consultasInfo = '';
             const fechaFiltroInput = document.getElementById('labFechaFiltro');
             const fechaFiltro = fechaFiltroInput ? fechaFiltroInput.value : null;
             
-            if (cliente.consultas && cliente.consultas.length > 0) {
+            if (cliente.esQuirofano && cliente.ticketQuirofano) {
+                // Mostrar información del procedimiento de quirófano
+                const ticket = cliente.ticketQuirofano;
+                consultasInfo = `
+                    <div class="cliente-consultas quirofano-info">
+                        <div class="consultas-header quirofano-header">
+                            <i class="fas fa-cut" style="color: #e74c3c;"></i>
+                            <span>Procedimiento Quirúrgico:</span>
+                        </div>
+                        <div class="consulta-item quirofano-item">
+                            <span class="consulta-fecha">${ticket.fechaProgramada ? formatDate(ticket.fechaProgramada) : 'Fecha no especificada'}</span>
+                            <span class="consulta-estado estado-${ticket.estado || 'en-preparacion'}">${getQuirofanoEstadoLabel(ticket.estado)}</span>
+                            <span class="consulta-medico">${ticket.procedimiento || 'Procedimiento no especificado'}</span>
+                        </div>
+                        ${ticket.medicoAtiende ? `
+                            <div class="consulta-item quirofano-item">
+                                <span class="consulta-medico"><i class="fas fa-user-md"></i> ${ticket.medicoAtiende}</span>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else if (cliente.consultas && cliente.consultas.length > 0) {
+                // Mostrar información de consultas regulares
                 let consultasRelevantes = cliente.consultas;
                 
                 // Si hay filtro de fecha, mostrar solo esas consultas
@@ -940,9 +960,14 @@ function displaySearchResults(results, queryLower = '') {
                 }
             }
             
+            // Indicador visual para tickets de quirófano
+            const quirofanoIndicator = cliente.esQuirofano ? 
+                '<div class="quirofano-indicator" title="Ticket de Quirófano"><i class="fas fa-cut"></i></div>' : '';
+            
             return `
-                <div class="cliente-search-item ${index === 0 ? 'first-result' : ''}" data-cliente="${clienteJson}">
+                <div class="cliente-search-item ${index === 0 ? 'first-result' : ''} ${cliente.esQuirofano ? 'quirofano-result' : ''}" data-cliente="${clienteJson}">
                     ${isRecent ? '<div class="recent-indicator" title="Actualizado recientemente"><i class="fas fa-circle"></i></div>' : ''}
+                    ${quirofanoIndicator}
                     <div class="cliente-name">${nombreHighlighted}</div>
                     <div class="cliente-details">
                         <div class="cliente-detail-item">
@@ -966,8 +991,6 @@ function displaySearchResults(results, queryLower = '') {
         resultsContainer.innerHTML = html;
         resultsContainer.style.display = 'block';
         
-        console.log('Resultados mostrados en el DOM');
-        
         // Agregar event listeners a los items
         resultsContainer.querySelectorAll('.cliente-search-item').forEach(item => {
             item.addEventListener('click', () => selectCliente(item));
@@ -989,7 +1012,6 @@ function displaySearchResults(results, queryLower = '') {
         }
         
     } catch (error) {
-        console.error('Error mostrando resultados:', error);
         resultsContainer.innerHTML = `
             <div class="no-results error">
                 <i class="fas fa-exclamation-triangle"></i>
@@ -1013,9 +1035,7 @@ function selectCliente(itemElement) {
         const decodedStr = clienteDataStr.replace(/&quot;/g, '"');
         const clienteData = JSON.parse(decodedStr);
         
-        console.log('Cliente seleccionado:', clienteData);
-        
-        // Llenar campos del formulario
+        // Llenar campos del formulario de laboratorio (único formulario que se llena)
         const nombreInput = document.getElementById('labNombre');
         const cedulaInput = document.getElementById('labCedula');
         const mascotaInput = document.getElementById('labMascota');
@@ -1036,10 +1056,35 @@ function selectCliente(itemElement) {
             
             tipoMascotaSelect.value = tipoMascota;
             
-            console.log(`Tipo de mascota determinado: ${tipoMascota} (Especie: ${clienteData.Especie})`);
-            
             // Actualizar las razas según el tipo de mascota seleccionado
             updateRazasSelect();
+        }
+        
+        // Si es un cliente de quirófano, llenar campos adicionales con datos del ticket
+        if (clienteData.esQuirofano && clienteData.ticketQuirofano) {
+            const ticket = clienteData.ticketQuirofano;
+            
+            // Llenar campos adicionales disponibles en el formulario de laboratorio
+            const edadInput = document.getElementById('labEdad');
+            const pesoInput = document.getElementById('labPeso');
+            const razaInput = document.getElementById('labRaza');
+            const sexoInput = document.getElementById('labSexo');
+            const correoInput = document.getElementById('labCorreo');
+            const telefonoInput = document.getElementById('labTelefono');
+            
+            if (edadInput) edadInput.value = ticket.edad || '';
+            if (pesoInput) pesoInput.value = ticket.peso || '';
+            if (razaInput) razaInput.value = ticket.raza || '';
+            if (sexoInput) sexoInput.value = ticket.sexo || '';
+            if (correoInput) correoInput.value = ticket.correo || '';
+            if (telefonoInput) telefonoInput.value = ticket.telefono || '';
+            
+            // Si hay raza, actualizar el select de razas después de llenar el campo
+            if (razaInput && ticket.raza && tipoMascotaSelect) {
+                setTimeout(() => {
+                    updateRazasSelect();
+                }, 100);
+            }
         }
         
         // Ocultar resultados
@@ -1054,18 +1099,32 @@ function selectCliente(itemElement) {
             searchInput.value = `${clienteData.Nombre} - ${clienteData['nombre mascota']}`;
         }
         
-        showNotification('Cliente seleccionado correctamente', 'success');
+        const message = clienteData.esQuirofano ? 
+            'Cliente de quirófano seleccionado. Todos los datos disponibles cargados en formulario de laboratorio.' : 
+            'Cliente seleccionado correctamente';
+        
+        showNotification(message, 'success');
         
     } catch (error) {
-        console.error('Error al seleccionar cliente:', error);
         showNotification('Error al seleccionar cliente', 'error');
     }
 }
 
+// Función eliminada - no se necesita llenar formulario de quirófano
+
+// Función auxiliar para obtener etiqueta de estado de quirófano
+function getQuirofanoEstadoLabel(estado) {
+    const estados = {
+        'en-preparacion': 'En Preparación',
+        'listo-para-cirugia': 'Listo para Cirugía',
+        'en-cirugia': 'En Cirugía',
+        'terminado': 'Terminado'
+    };
+    return estados[estado] || estado;
+}
+
 // Mostrar sección de laboratorio
 function showLabSection(sectionId) {
-    console.log('Mostrando sección de laboratorio:', sectionId);
-    
     try {
         // Ocultar todas las secciones
         document.querySelectorAll('.content section').forEach(section => {
@@ -1076,11 +1135,9 @@ function showLabSection(sectionId) {
         // Mostrar la sección seleccionada
         const targetSection = document.getElementById(sectionId);
         if (targetSection) {
-            console.log('Sección encontrada:', sectionId);
             targetSection.classList.remove('hidden');
             setTimeout(() => targetSection.classList.add('active'), 50);
         } else {
-            console.error('Sección no encontrada:', sectionId);
             return;
         }
         
@@ -1093,31 +1150,23 @@ function showLabSection(sectionId) {
                 if (typeof setActiveButton === 'function') {
                     setActiveButton(crearBtn);
                 }
-                console.log('Botón crear laboratorio activado');
             }
             
             // Inicializar sistema de servicios cuando se muestra la sección de crear
             setTimeout(() => {
-                console.log('Intentando inicializar sistema de servicios...');
-                
                 // Verificar elementos del DOM primero
                 const domCheck = verifyServiceSystemElements();
                 
                 if (typeof initServiceSelection === 'function') {
-                    console.log('Función initServiceSelection encontrada, ejecutando...');
                     try {
                         initServiceSelection();
-                        console.log('Sistema de servicios inicializado exitosamente');
                     } catch (error) {
-                        console.error('Error al inicializar sistema de servicios:', error);
+                        // Error silencioso
                     }
-                } else {
-                    console.error('Función initServiceSelection no encontrada');
                 }
                 
                 // También ejecutar las pruebas si están disponibles
                 if (typeof runAllServiceTests === 'function') {
-                    console.log('Ejecutando pruebas de servicios...');
                     setTimeout(() => {
                         runAllServiceTests();
                     }, 500);
@@ -1130,7 +1179,6 @@ function showLabSection(sectionId) {
                 if (typeof setActiveButton === 'function') {
                     setActiveButton(verBtn);
                 }
-                console.log('Botón ver laboratorio activado');
             }
             
             // Establecer fecha actual por defecto si no hay una fecha seleccionada
@@ -1157,28 +1205,22 @@ function showLabSection(sectionId) {
                 if (typeof setActiveButton === 'function') {
                     setActiveButton(reportesBtn);
                 }
-                console.log('Botón reportes laboratorio activado');
             }
             
             // Reinicializar el módulo de reportes cuando se muestra la sección
             setTimeout(() => {
-                console.log('Reinicializando módulo de reportes lab...');
                 if (typeof initReportesLabModule === 'function') {
                     try {
                         initReportesLabModule();
-                        console.log('Módulo de reportes lab reinicializado exitosamente');
                     } catch (error) {
-                        console.error('Error al reinicializar módulo de reportes:', error);
+                        // Error silencioso
                     }
-                } else {
-                    console.error('Función initReportesLabModule no encontrada');
                 }
             }, 100);
         }
         
-        console.log('Sección de laboratorio mostrada exitosamente');
     } catch (error) {
-        console.error('Error mostrando sección de laboratorio:', error);
+        // Error silencioso
     }
 }
 
@@ -1327,7 +1369,6 @@ function saveLabTicket(ticketData) {
             showLabSection('verLabSection');
         })
         .catch(error => {
-            console.error('Error guardando ticket de laboratorio:', error);
             showNotification('Error al crear el ticket de laboratorio', 'error');
         })
         .finally(() => {
@@ -1725,7 +1766,6 @@ function toggleServiceStatus(ticketRandomId, serviceIndex) {
     
     const ticket = labTickets.find(t => t.randomId === ticketRandomId);
     if (!ticket || !ticket.serviciosSeleccionados || !ticket.serviciosSeleccionados[serviceIndex]) {
-        console.error('Ticket o servicio no encontrado');
         return;
     }
     
@@ -1751,7 +1791,6 @@ function toggleServiceStatus(ticketRandomId, serviceIndex) {
                 renderLabTickets(currentStateFilter, currentMedicoFilter);
             })
             .catch(error => {
-                console.error('Error actualizando estado del servicio:', error);
                 showNotification('Error al actualizar el estado del servicio', 'error');                // Revertir el cambio en caso de error
                 ticket.serviciosSeleccionados[serviceIndex].realizado = !ticket.serviciosSeleccionados[serviceIndex].realizado;
             });
@@ -2156,31 +2195,21 @@ function setupEditRazasSelector(ticket) {
     const editTipoMascota = document.getElementById('editLabTipoMascota');
     const editRazaSelect = document.getElementById('editLabRaza');
     
-    console.log('setupEditRazasSelector - Estado inicial:', {
-        editTipoMascota: !!editTipoMascota,
-        editRazaSelect: !!editRazaSelect,
-        tipoMascotaValue: editTipoMascota?.value,
-        ticketTipoMascota: ticket.tipoMascota,
-        ticketRaza: ticket.raza
-    });
+    // Estado inicial del selector de razas para edición
     
     if (!editTipoMascota || !editRazaSelect) {
-        console.error('No se encontraron los elementos de tipo de mascota o raza para edición');
         return;
     }
     
-    // Asegurar que el valor del select de tipo de mascota sea correcto
-    if (editTipoMascota.value !== ticket.tipoMascota) {
-        editTipoMascota.value = ticket.tipoMascota;
-        console.log(`Corrigiendo valor del select tipo mascota: ${ticket.tipoMascota}`);
-    }
+            // Asegurar que el valor del select de tipo de mascota sea correcto
+        if (editTipoMascota.value !== ticket.tipoMascota) {
+            editTipoMascota.value = ticket.tipoMascota;
+        }
     
     // Función para actualizar las razas en el modal de edición
     function updateEditRazasSelect(tipoMascotaParam = null) {
         // Usar el parámetro proporcionado o el valor actual del select
         const tipoMascota = tipoMascotaParam || editTipoMascota.value;
-        
-        console.log(`Actualizando razas - Tipo de mascota: ${tipoMascota}, Raza del ticket: ${ticket.raza}`);
         
         // Limpiar opciones existentes
         editRazaSelect.innerHTML = '';
@@ -2202,8 +2231,6 @@ function setupEditRazasSelector(ticket) {
                 razas = ['SRD'];
         }
         
-        console.log(`Razas encontradas para ${tipoMascota}:`, razas.length);
-        
         // Agregar opción por defecto
         const defaultOption = document.createElement('option');
         defaultOption.value = '';
@@ -2218,12 +2245,9 @@ function setupEditRazasSelector(ticket) {
             // Seleccionar la raza actual del ticket si coincide
             if (ticket.raza === raza) {
                 option.selected = true;
-                console.log(`Raza seleccionada: ${raza}`);
             }
             editRazaSelect.appendChild(option);
         });
-        
-        console.log(`Razas actualizadas para edición - ${tipoMascota}: ${razas.length} opciones`);
     }
     
     // Configurar listener para cambio de tipo de mascota
@@ -2468,7 +2492,7 @@ function syncLabFacturaToConsultaByClienteData(facturaNumero, cedula, idPaciente
             }
         }
     } catch (error) {
-        console.error('Error sincronizando factura desde laboratorio:', error);
+        // Error silencioso
     }
 }
 
@@ -2496,7 +2520,6 @@ function saveEditedLabTicket(ticket) {
             updateLabStats();
         })
         .catch(error => {
-            console.error('Error actualizando ticket de laboratorio:', error);
             showNotification('Error al actualizar el ticket', 'error');
         })
         .finally(() => {
@@ -2558,7 +2581,6 @@ function confirmDeleteLabTicket(firebaseKey) {
             updateLabStats();
         })
         .catch(error => {
-            console.error('Error eliminando ticket de laboratorio:', error);
             showNotification('Error al eliminar el ticket', 'error');
         })
         .finally(() => {
@@ -2706,13 +2728,11 @@ function clearClientesSearchCache() {
 
 // Función para forzar actualización de datos de clientes
 function forceUpdateClientesData() {
-    console.log('Forzando actualización de datos de clientes...');
     if (window.database) {
         const ticketsRef = window.database.ref('tickets');
         ticketsRef.once('value', (snapshot) => {
             updateClientesDataFromSnapshot(snapshot);
             showClientesUpdateIndicator();
-            console.log('Actualización forzada completada');
         });
     }
 }
@@ -2721,8 +2741,6 @@ function forceUpdateClientesData() {
 
 // Verificar que todos los elementos necesarios estén presentes en el DOM
 function verifyServiceSystemElements() {
-    console.log('Verificando elementos del DOM para el sistema de servicios...');
-    
     const requiredElements = [
         { id: 'selectedServicesList', description: 'Lista de servicios seleccionados' },
         { id: 'totalPrice', description: 'Precio total' },
@@ -2737,36 +2755,25 @@ function verifyServiceSystemElements() {
     requiredElements.forEach(({ id, description }) => {
         const element = document.getElementById(id);
         if (element) {
-            console.log(`✅ ${description} (${id}) encontrado`);
+            // Elemento encontrado
         } else {
-            console.warn(`⚠️ ${description} (${id}) NO encontrado`);
             allElementsPresent = false;
             missingElements.push(id);
         }
     });
-    
-    if (!allElementsPresent) {
-        console.warn('Elementos faltantes:', missingElements);
-    }
     
     return { allPresent: allElementsPresent, missing: missingElements };
 }
 
 // Inicializar el sistema de servicios
 function initServiceSelection() {
-    console.log('Inicializando sistema de servicios...');
-    
     // Verificar que SERVICIOS_LABORATORIO esté disponible
     if (typeof SERVICIOS_LABORATORIO === 'undefined') {
-        console.error('SERVICIOS_LABORATORIO no está definido');
         return false;
     }
     
-    console.log('SERVICIOS_LABORATORIO disponible:', Object.keys(SERVICIOS_LABORATORIO));
-    
     // Limpiar servicios seleccionados
     selectedServices = [];
-    console.log('Servicios seleccionados limpiados');
     
     // Verificar elementos del DOM críticos
     const elementosCriticos = ['selectedServicesList', 'totalPrice'];
@@ -2780,16 +2787,10 @@ function initServiceSelection() {
     });
     
     if (elementosFaltantes.length > 0) {
-        console.warn('Elementos críticos faltantes:', elementosFaltantes);
-        console.warn('Intentando nuevamente en 1 segundo...');
-        
         setTimeout(() => {
             const retryCheck = elementosFaltantes.every(id => document.getElementById(id));
             if (retryCheck) {
-                console.log('Elementos encontrados en segundo intento, reiniciando...');
                 initServiceSelection();
-            } else {
-                console.error('Elementos críticos aún no disponibles después del reinento');
             }
         }, 1000);
         return false;
@@ -2811,11 +2812,9 @@ function initServiceSelection() {
         // Actualizar precio total
         updateTotalPrice();
         
-        console.log('Sistema de servicios inicializado correctamente');
         return true;
         
     } catch (error) {
-        console.error('Error durante la inicialización del sistema de servicios:', error);
         return false;
     }
 }
@@ -2840,26 +2839,20 @@ function loadServiceCategories() {
 
 // Cargar todos los servicios
 function loadAllServices() {
-    console.log('Cargando todos los servicios...');
     const services = getAllServices();
-    console.log('Servicios obtenidos:', services.length);
     displayServices(services);
 }
 
 // Mostrar servicios en la interfaz
 function displayServices(services) {
-    console.log('displayServices ejecutándose con', services.length, 'servicios');
-    
     const servicesList = document.getElementById('servicesList');
     if (!servicesList) {
-        console.error('Elemento servicesList no encontrado en el DOM');
         return;
     }
     
     servicesList.innerHTML = '';
     
     if (services.length === 0) {
-        console.log('No hay servicios para mostrar');
         servicesList.innerHTML = `
             <div class="no-services-found">
 
@@ -2882,8 +2875,6 @@ function displayServices(services) {
         servicesByCategory[service.categoria].servicios.push(service);
     });
     
-    console.log('Servicios agrupados por categoría:', Object.keys(servicesByCategory));
-    
     // Renderizar cada categoría
     Object.keys(servicesByCategory).forEach(categoryKey => {
         const category = servicesByCategory[categoryKey];
@@ -2904,41 +2895,33 @@ function displayServices(services) {
                 const serviceDiv = createServiceItem(service);
                 categoryDiv.appendChild(serviceDiv);
             } catch (error) {
-                console.error('Error creando elemento de servicio:', service, error);
+                // Error silencioso
             }
         });
         
         servicesList.appendChild(categoryDiv);    });
     
-    console.log('Servicios renderizados correctamente en la interfaz');
 }
 
 // Toggle selección de servicio
 function toggleServiceSelection(serviceId) {
-    console.log('toggleServiceSelection ejecutándose para serviceId:', serviceId);
-    
     // Verificar que selectedServices esté definido y sea un array
     if (!selectedServices || !Array.isArray(selectedServices)) {
-        console.warn('selectedServices no válido, inicializando...');
         selectedServices = [];
         window.selectedServices = selectedServices;
     }
     
     const service = getServiceById(serviceId);
-    console.log('Servicio encontrado:', service);
     
     if (!service) {
-        console.error('Servicio no encontrado con ID:', serviceId);
         return;
     }
     
     const existingIndex = selectedServices.findIndex(s => s.id === serviceId);
-    console.log('Índice existente:', existingIndex);
     
     if (existingIndex >= 0) {
         // Remover servicio
         selectedServices.splice(existingIndex, 1);
-        console.log('Servicio removido. Servicios seleccionados actuales:', selectedServices);
     } else {
         // Agregar servicio - crear una copia para evitar problemas de referencia
         const serviceCopy = {
@@ -2950,50 +2933,29 @@ function toggleServiceSelection(serviceId) {
             categoriaTitulo: service.categoriaTitulo
         };
         selectedServices.push(serviceCopy);
-        console.log('Servicio agregado. Servicios seleccionados actuales:', selectedServices);
     }
     
     // Sincronizar con referencia global
     window.selectedServices = selectedServices;
     
-    // Log detallado del estado antes de actualizar UI
-    console.log('Estado antes de actualizar UI:', {
-        'selectedServices.length': selectedServices.length,
-        'primer servicio': selectedServices[0] || 'ninguno',
-        'último servicio': selectedServices[selectedServices.length - 1] || 'ninguno'
-    });
-    
     // Actualizar UI con verificación de errores
     try {
         updateServiceSelectionUI(serviceId);
-        console.log('✅ updateServiceSelectionUI completado');
     } catch (error) {
-        console.error('❌ Error en updateServiceSelectionUI:', error);
+        // Error silencioso
     }
     
     try {
         updateSelectedServicesList();
-        console.log('✅ updateSelectedServicesList completado');
     } catch (error) {
-        console.error('❌ Error en updateSelectedServicesList:', error);
+        // Error silencioso
     }
     
     try {
         updateTotalPrice();
-        console.log('✅ updateTotalPrice completado');
     } catch (error) {
-        console.error('❌ Error en updateTotalPrice:', error);
+        // Error silencioso
     }
-    
-    // Verificación final
-    setTimeout(() => {
-        const listElement = document.getElementById('selectedServicesList');
-        const totalElement = document.getElementById('totalPrice');
-        
-        console.log('🔍 Verificación final después de toggleServiceSelection:');
-        console.log('- Lista HTML:', listElement ? listElement.innerHTML.substring(0, 100) + '...' : 'no encontrado');
-        console.log('- Total:', totalElement ? totalElement.textContent : 'no encontrado');
-    }, 50);
 }
 
 // Actualizar UI de selección de un servicio específico
@@ -3015,45 +2977,26 @@ function updateServiceSelectionUI(serviceId) {
 
 // Actualizar lista de servicios seleccionados
 function updateSelectedServicesList() {
-    console.log('updateSelectedServicesList ejecutándose...', {
-        selectedServices: selectedServices,
-        length: selectedServices ? selectedServices.length : 'undefined'
-    });
-    
     // Verificar que selectedServices esté definido y sea un array
     if (!selectedServices || !Array.isArray(selectedServices)) {
-        console.error('selectedServices no está definido o no es un array:', selectedServices);
         selectedServices = [];
     }
     
     const selectedList = document.getElementById('selectedServicesList');
-    console.log('Elemento selectedServicesList encontrado:', selectedList);
     
     if (!selectedList) {
-        console.error('Elemento selectedServicesList no encontrado en el DOM');
         return;
     }
     
-    console.log('Verificando contenido antes de actualizar:', {
-        'selectedServices.length': selectedServices.length,
-        'selectedServices contenido': selectedServices
-    });
-    
     if (selectedServices.length === 0) {
-        console.log('No hay servicios seleccionados, mostrando mensaje por defecto');
         selectedList.innerHTML = '<div class="no-services-selected">No hay servicios seleccionados</div>';
         return;
     }
     
-    console.log('Renderizando servicios seleccionados:', selectedServices);
-    
     try {
         const htmlContent = selectedServices.map(service => {
-            console.log('Procesando servicio para renderizado:', service);
-            
             // Verificar que el servicio tenga las propiedades necesarias
             if (!service || !service.id || !service.nombre) {
-                console.warn('Servicio incompleto:', service);
                 return '';
             }
             
@@ -3071,15 +3014,9 @@ function updateSelectedServicesList() {
             `;
         }).filter(html => html.length > 0).join('');
         
-        console.log('HTML generado para servicios:', htmlContent.substring(0, 200) + '...');
-        
         selectedList.innerHTML = htmlContent;
         
-        console.log('Lista de servicios seleccionados actualizada exitosamente');
-        console.log('Contenido final del elemento:', selectedList.innerHTML.substring(0, 200) + '...');
-        
     } catch (error) {
-        console.error('Error al renderizar servicios seleccionados:', error);
         selectedList.innerHTML = '<div class="error-message">Error al mostrar servicios seleccionados</div>';
     }
 }
@@ -3097,38 +3034,28 @@ function removeSelectedService(serviceId) {
 
 // Actualizar precio total
 function updateTotalPrice() {
-    console.log('Actualizando precio total...');
-    
     // Verificar que selectedServices esté definido y sea un array
     if (!selectedServices || !Array.isArray(selectedServices)) {
-        console.error('selectedServices no está definido o no es un array:', selectedServices);
         selectedServices = [];
     }
     
     const totalPriceElement = document.getElementById('totalPrice');
-    console.log('Elemento totalPrice encontrado:', totalPriceElement);
     
     if (!totalPriceElement) {
-        console.error('Elemento totalPrice no encontrado');
         return;
     }
     
     const total = selectedServices.reduce((sum, service) => {
         if (!service || typeof service.precio !== 'number') {
-            console.warn('Servicio con precio inválido:', service);
             return sum;
         }
         return sum + service.precio;
     }, 0);
     
-    console.log('Total calculado:', total, 'para servicios:', selectedServices);
-    
     try {
         const formattedPrice = formatPrice(total);
         totalPriceElement.textContent = formattedPrice;
-        console.log('Precio total actualizado en UI:', formattedPrice);
     } catch (error) {
-        console.error('Error al formatear precio:', error);
         totalPriceElement.textContent = '₡0';
     }
 }
@@ -3236,7 +3163,6 @@ function createServiceItem(service) {
         checkbox.addEventListener('change', function(e) {
             e.preventDefault();
             e.stopPropagation();
-            console.log('🎯 Checkbox clicked para servicio:', service.id);
             
             // Usar la versión forzada si está disponible, sino la normal
             if (typeof toggleServiceSelectionForced === 'function') {
@@ -3276,8 +3202,6 @@ function getSelectedServicesData() {
 
 // Inicializar selección de servicios para edición
 function initEditServiceSelection(ticket) {
-    console.log('Inicializando selección de servicios para edición', ticket);
-    
     // Cargar servicios existentes del ticket si los tiene
     if (ticket.serviciosSeleccionados && ticket.serviciosSeleccionados.length > 0) {
         selectedServices = [...ticket.serviciosSeleccionados];

@@ -1,7 +1,5 @@
 // User authentication logic
 document.addEventListener('DOMContentLoaded', function() {
-  console.log("Login page loaded");
-  
   // Flag to prevent multiple redirects
   let isRedirecting = false;
 
@@ -16,14 +14,12 @@ document.addEventListener('DOMContentLoaded', function() {
   if (currentPath.toLowerCase().includes('home.html') || currentPath.endsWith('/')) {
     // Check Firebase initialization first
     if (!firebase.apps.length) {
-      console.error("Firebase not initialized properly!");
       showError("Error de inicialización. Por favor, recarga la página.");
       return;
     }
     
     // Set a timeout to prevent hanging
     const redirectTimeout = setTimeout(() => {
-      console.warn("Auto-login check timed out after 10 seconds");
       if (!isRedirecting) {
         // Clear any loading state if it exists
         resetLoginButton();
@@ -32,7 +28,6 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Add marker to prevent multiple checks
     if (window.checkingAuth) {
-      console.log("Already checking auth, skipping duplicate check");
       clearTimeout(redirectTimeout);
       return;
     }
@@ -44,14 +39,12 @@ document.addEventListener('DOMContentLoaded', function() {
       window.checkingAuth = false;
       
       if (user && !isRedirecting) {
-        console.log("User already logged in, checking role...");
         isRedirecting = true;
         
         // Check if we already redirected recently - prevent loops
         const lastRedirect = sessionStorage.getItem('lastRedirect');
         const now = Date.now();
         if (lastRedirect && (now - parseInt(lastRedirect)) < 5000) {
-          console.warn("Prevented redirect loop - redirected too recently");
           isRedirecting = false;
           return;
         }
@@ -64,12 +57,10 @@ document.addEventListener('DOMContentLoaded', function() {
           .then((snapshot) => {
             const userData = snapshot.val();
             if (userData && userData.role) {
-              console.log("User has role, redirecting to app");
               sessionStorage.setItem('userRole', userData.role);
               sessionStorage.setItem('userName', userData.name || user.email.split('@')[0]);
               redirectToApp();
             } else {
-              console.log("User exists but has no role, creating default role");
               // User exists but has no role, assign default
               firebase.database().ref(`users/${user.uid}`).set({
                 email: user.email,
@@ -80,7 +71,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 sessionStorage.setItem('userName', user.email.split('@')[0]);
                 redirectToApp();
               }).catch(error => {
-                console.error("Error setting default role:", error);
                 // Don't redirect if there was an error
                 isRedirecting = false;
                 resetLoginButton();
@@ -88,17 +78,16 @@ document.addEventListener('DOMContentLoaded', function() {
             }
           })
           .catch((error) => {
-            console.error("Error getting user data:", error);
             // Don't redirect if there was an error
             isRedirecting = false;
             resetLoginButton();
           });
       } else {
-        console.log("No user logged in or already redirecting");
+        // No user logged in or already redirecting
       }
     });
   } else {
-    console.log("Not on login page, skipping auto-login check");
+    // Not on login page, skipping auto-login check
   }
 
   // Login form submission
@@ -127,7 +116,6 @@ document.addEventListener('DOMContentLoaded', function() {
       // Set login timeout - in case Firebase hangs
       if (loginTimeout) clearTimeout(loginTimeout);
       loginTimeout = setTimeout(() => {
-        console.warn("Login timed out after 15 seconds");
         resetLoginButton();
         showError("La conexión ha tardado demasiado. Por favor, intente de nuevo.");
       }, 15000);
@@ -137,7 +125,6 @@ document.addEventListener('DOMContentLoaded', function() {
       
       // Check Firebase initialization first
       if (!firebase.apps.length) {
-        console.error("Firebase not initialized properly!");
         clearTimeout(loginTimeout);
         resetLoginButton();
         showError("Error de inicialización. Por favor, recarga la página.");
@@ -185,7 +172,6 @@ document.addEventListener('DOMContentLoaded', function() {
                   sessionStorage.setItem('userId', user.uid);
                   redirectToApp();
                 }).catch(error => {
-                  console.error("Error setting default role:", error);
                   isRedirecting = false;
                   resetLoginButton();
                   showError("Error al configurar usuario: " + error.message);
@@ -193,7 +179,6 @@ document.addEventListener('DOMContentLoaded', function() {
               }
             })
             .catch((error) => {
-              console.error("Error getting user data:", error);
               isRedirecting = false;
               resetLoginButton();
               showError("Error al obtener datos del usuario: " + error.message);
@@ -201,7 +186,6 @@ document.addEventListener('DOMContentLoaded', function() {
         })
         .catch((error) => {
           clearTimeout(loginTimeout); // Clear timeout
-          console.error("Authentication failed:", error);
           
           // Display user-friendly error message
           if (error.code === 'auth/user-not-found' || 
@@ -255,7 +239,6 @@ function createTestUsers() {
 
   // Only attempt this if Firebase is properly initialized
   if (!firebase || !firebase.apps || !firebase.apps.length) {
-    console.error("Firebase not initialized, skipping test user creation");
     return;
   }
   
@@ -263,14 +246,12 @@ function createTestUsers() {
   try {
     firebase.database().ref('.info/connected').once('value')
       .then(() => {
-        console.log("Database connection verified, creating test users if needed");
         createUsers();
       })
       .catch(error => {
-        console.error("Database connection failed, skipping test user creation:", error);
+        // Database connection failed, skipping test user creation
       });
   } catch (error) {
-    console.error("Error accessing database:", error);
     return;
   }
 
@@ -281,7 +262,6 @@ function createTestUsers() {
         .then((signInMethods) => {
           if (signInMethods.length === 0) {
             // User doesn't exist, create them
-            console.log(`Creating test user: ${user.email}`);
             
             firebase.auth().createUserWithEmailAndPassword(user.email, user.password)
               .then((userCredential) => {
@@ -293,12 +273,12 @@ function createTestUsers() {
                 });
               })
               .then(() => {
-                console.log(`Test user created: ${user.email} (${user.role})`);
+                // Test user created successfully
               })
               .catch((error) => {
                 // Handle specific error cases
                 if (error.code === 'auth/email-already-in-use') {
-                  console.log(`Test user ${user.email} already exists - no action needed`);
+                  // Test user already exists - no action needed
                   
                   // Try to ensure the user has correct role in database anyway
                   firebase.auth().signInWithEmailAndPassword(user.email, user.password)
@@ -308,32 +288,31 @@ function createTestUsers() {
                         name: user.name
                       })
                       .then(() => {
-                        console.log(`Updated role for existing user: ${user.email}`);
                         firebase.auth().signOut(); // Sign out after updating
                       });
                     })
                     .catch(err => {
-                      console.log(`Could not update existing user ${user.email}:`, err.message);
+                      // Could not update existing user
                     });
                 } else if (error.code === 'auth/invalid-email') {
-                  console.error(`Invalid email format for test user: ${user.email}`);
+                  // Invalid email format for test user
                 } else if (error.code === 'auth/weak-password') {
-                  console.error(`Password too weak for test user: ${user.email}`);
+                  // Password too weak for test user
                 } else {
-                  console.error(`Error creating test user ${user.email}:`, error.message);
+                  // Error creating test user
                 }
               });
           } else {
-            console.log(`Test user ${user.email} already exists with methods: ${signInMethods.join(', ')}`);
+            // Test user already exists
           }
         })
         .catch((error) => {
           if (error.code === 'auth/invalid-api-key') {
-            console.error("Invalid Firebase API key. Check your firebase-config.js file.");
+            // Invalid Firebase API key. Check your firebase-config.js file.
           } else if (error.code === 'auth/network-request-failed') {
-            console.error("Network error when checking user. Check your internet connection.");
+            // Network error when checking user. Check your internet connection.
           } else {
-            console.error(`Error checking user ${user.email}:`, error.message);
+            // Error checking user
           }
         });
     });
@@ -342,12 +321,9 @@ function createTestUsers() {
 
 // Function to redirect to main app with loop prevention
 function redirectToApp() {
-  console.log("Redirecting to app...");
-  
   try {
     // Check if we're already on index page to prevent loops
     if (window.location.pathname.includes('index.html')) {
-      console.log("Already on index page, not redirecting");
       return;
     }
     
@@ -358,7 +334,6 @@ function redirectToApp() {
       window.location.href = `index.html?t=${timestamp}`;
     }, 500);
   } catch (error) {
-    console.error("Error during redirect:", error);
     alert("Hubo un problema al redirigir. Por favor intente de nuevo.");
     isRedirecting = false;
     

@@ -11,7 +11,7 @@ function safeAddEventListener(elementId, eventType, handler) {
   if (element) {
     element.addEventListener(eventType, handler);
   } else {
-    console.warn(`Element with ID '${elementId}' not found for event listener`);
+    // Element with ID not found for event listener
   }
 }
 
@@ -71,19 +71,16 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show the UI elements based on user role
         applyRoleBasedUI(userData.role);
         
-        console.log("Successfully authenticated as", userData.role);
-        
         // Continue with loading data
         showLoading();
         
         // Verify if the sections exist before trying to work with them
         const crearTicketSection = document.getElementById('crearTicketSection');
-        const verTicketsSection = document.getElementById('verTicketsSection');
+        const verTicketsSection = document.getElementById('crearTicketSection');
         const horarioSection = document.getElementById('horarioSection');
         const estadisticasSection = document.getElementById('estadisticasSection');
         
         if (!crearTicketSection || !verTicketsSection) {
-            console.error("Critical sections missing in the DOM. Check your HTML structure.");
             hideLoading();
             showNotification('Error: Estructura HTML incompleta', 'error');
             return;
@@ -136,29 +133,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 
                 // Inicializar sistema de laboratorio
                 if (typeof initLaboratorioSystem === 'function') {
-                    console.log('Inicializando sistema de laboratorio desde index.js');
                     initLaboratorioSystem();
                     window.laboratorioInitialized = true;
                 } else {
-                    console.warn('Sistema de laboratorio no disponible');
+                    // Sistema de laboratorio no disponible
                 }
                 
                 // Inicializar sistema de quirófano
                 if (typeof initQuirofanoSystem === 'function') {
-                    console.log('Inicializando sistema de quirófano desde index.js');
                     initQuirofanoSystem();
                     window.quirofanoInitialized = true;
                 } else {
-                    console.warn('Sistema de quirófano no disponible');
+                    // Sistema de quirófano no disponible
                 }
                 
             }).catch(err => {
-                console.error("Error cargando tickets:", err);
                 hideLoading();
                 showNotification('Error al cargar los datos', 'error');
             });
         }).catch(err => {
-            console.error("Error en autenticación:", err);
             hideLoading();
             showNotification('Error al conectar con el servidor', 'error');
         });
@@ -167,7 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.location.pathname.toLowerCase().includes('home.html')) {
             return;
         }
-        console.error("Authentication error:", err);
         hideLoading();
         showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
         // Add a login button instead of auto-redirect
@@ -273,7 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Improved version of applyRoleBasedUI with better debugging and role detection
 function applyRoleBasedUI(role) {
-    console.log(`Applying UI for role: ${role}`);
+    
     
     // Set user info in UI
     const userNameElement = document.getElementById('userName');
@@ -286,50 +278,37 @@ function applyRoleBasedUI(role) {
         userRoleElement.textContent = role.charAt(0).toUpperCase() + role.slice(1);
     }
     
-    // Debug info to console
-    console.log("User role from sessionStorage:", sessionStorage.getItem('userRole'));
-    console.log("User name from sessionStorage:", sessionStorage.getItem('userName'));
-    console.log("Admin permissions:", JSON.stringify(PERMISSIONS.admin));
-    
     // Add role-specific class to body element for CSS targeting
     document.body.classList.add(`${role}-role`);
-    console.log(`Added ${role}-role class to body`);
     
     // Check explicitly for admin role with string comparison
     if (role === 'admin') {
-        console.log("ADMIN ROLE DETECTED - enabling all admin features");
-        
         // Show all admin-specific buttons
         const adminElements = document.querySelectorAll('.admin-only');
-        console.log(`Found ${adminElements.length} admin-only elements`);
         adminElements.forEach(el => {
             el.style.display = 'block';
-            console.log(`Showing admin element:`, el);
         });
 
         // Enable export buttons for admin
         const exportButtons = document.querySelectorAll('.export-controls button');
         if (exportButtons && exportButtons.length > 0) {
-            console.log(`Found ${exportButtons.length} export buttons`);
             exportButtons.forEach(btn => {
                 btn.style.display = 'inline-flex';
             });
         } else {
-            console.log("No export buttons found");
+            // No export buttons found
         }
         
         // Enable backup buttons for admin
         const backupButtons = document.querySelectorAll('.backup-controls button');
         if (backupButtons && backupButtons.length > 0) {
-            console.log(`Found ${backupButtons.length} backup buttons`);
             backupButtons.forEach(btn => {
                 btn.style.display = 'inline-flex';
             });
         } else {
-            console.log("No backup buttons found");
+            // No backup buttons found
         }
     } else {
-        console.log(`Non-admin role detected: ${role}`);
         // For non-admin roles, hide features based on permissions
         if (!hasPermission('canCreateTickets')) {
             document.getElementById('crearTicketBtn').style.display = 'none';
@@ -366,10 +345,10 @@ function applyRoleBasedUI(role) {
     if (laboratorioCategory) {
         if (allowedLabRoles.includes(role)) {
             laboratorioCategory.style.display = 'block';
-            console.log(`Módulo de laboratorio mostrado para rol: ${role}`);
+
         } else {
             laboratorioCategory.style.display = 'none';
-            console.log(`Módulo de laboratorio ocultado para rol: ${role}`);
+
         }
     }
     
@@ -381,10 +360,8 @@ function applyRoleBasedUI(role) {
     if (quirofanoCategory) {
         if (allowedQuirofanoRoles.includes(role)) {
             quirofanoCategory.style.display = 'block';
-            console.log(`Módulo de quirófano mostrado para rol: ${role}`);
         } else {
             quirofanoCategory.style.display = 'none';
-            console.log(`Módulo de quirófano ocultado para rol: ${role}`);
         }
     }
     
@@ -395,10 +372,8 @@ function applyRoleBasedUI(role) {
     if (consentimientosCategory) {
         if (role !== 'visitas') {
             consentimientosCategory.style.display = 'block';
-            console.log(`Módulo de consentimientos mostrado para rol: ${role}`);
         } else {
             consentimientosCategory.style.display = 'none';
-            console.log(`Módulo de consentimientos ocultado para rol: ${role}`);
         }
     }
     
@@ -412,8 +387,6 @@ function applyRoleBasedUI(role) {
     if (typeof setupQuirofanoFilterAccess === 'function') {
         setupQuirofanoFilterAccess();
     }
-    
-    console.log("UI permissions applied successfully for role:", role);
 }
 
 // Mostrar/ocultar sidebar para visitas
@@ -448,7 +421,7 @@ safeAddEventListener('crearTicketBtn', 'click', () => {
         showSection(section);
         setActiveButton(document.getElementById('crearTicketBtn'));
     } else {
-        console.error("Section 'crearTicketSection' not found");
+
     }
 });
 function setDefaultFilterDate() {
@@ -486,7 +459,7 @@ safeAddEventListener('verTicketsBtn', 'click', () => {
         showSection(section);
         setActiveButton(document.getElementById('verTicketsBtn'));
     } else {
-        console.error("Section 'verTicketsSection' not found");
+        // Section 'verTicketsSection' not found
     }
 });
 
@@ -504,7 +477,7 @@ safeAddEventListener('horarioBtn', 'click', () => {
         // Optionally load today's schedule automatically
         mostrarHorario();
     } else {
-        console.error("Section 'horarioSection' not found");
+        // Section 'horarioSection' not found
     }
 });
 
@@ -530,7 +503,7 @@ safeAddEventListener('estadisticasBtn', 'click', () => {
             renderizarGraficosTiempoEspera(tickets);
         }, 200);
     } else {
-        console.error("Section 'estadisticasSection' not found");
+        // Section 'estadisticasSection' not found
     }
 });
 
@@ -945,7 +918,6 @@ filterBtns.forEach(btn => {
 function showSection(section) {
     // Check if section exists
     if (!section) {
-        console.error("Error: Attempted to show a section that doesn't exist");
         return; // Exit the function early
     }
     
@@ -971,7 +943,7 @@ function showSectionById(sectionId) {
     if (section) {
         showSection(section);
     } else {
-        console.error(`Section with ID '${sectionId}' not found`);
+        // Section with ID not found
     }
 }
 
@@ -1052,7 +1024,6 @@ function validatePorCobrarIntegrity(ticket) {
     // Si hay contenido en por cobrar pero no tiene información de validación,
     // es contenido legacy que se mantiene pero se marca como no validado
     if (!hasValidationInfo && ticket.porCobrar.trim().length > 0) {
-        console.warn(`Ticket ${ticket.id} tiene contenido por cobrar sin validación:`, ticket.porCobrar);
         return 'legacy'; // Contenido legacy válido pero sin validación moderna
     }
     
@@ -1077,11 +1048,6 @@ function verifyPorCobrarOwnership(ticket) {
                 
                 // Verificar que coincida con el ticket actual
                 if (foundTicketId !== String(ticket.id) || foundMascota !== ticket.mascota) {
-                    console.error(`MISMATCH DETECTADO en por cobrar:`, {
-                        ticket: {id: ticket.id, mascota: ticket.mascota},
-                        found: {id: foundTicketId, mascota: foundMascota},
-                        line: line
-                    });
                     return false;
                 }
             }
@@ -1089,6 +1055,55 @@ function verifyPorCobrarOwnership(ticket) {
     }
     
     return true;
+}
+
+// Función para actualizar un ticket específico en el DOM sin re-renderizar todo
+function updateTicketInDOM(updatedTicket) {
+    // Buscar el elemento del ticket en el DOM
+    const ticketElement = document.querySelector(`[data-ticket-id="${updatedTicket.randomId}"]`);
+    if (!ticketElement) return;
+    
+    // Actualizar solo el contenido del por cobrar si existe
+    const porCobrarElement = ticketElement.querySelector('.por-cobrar-info');
+    if (updatedTicket.porCobrar) {
+        if (porCobrarElement) {
+            // Actualizar contenido existente
+            porCobrarElement.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedTicket.porCobrar)}</div>`;
+        } else {
+            // Agregar por cobrar si no existía
+            const ticketInfo = ticketElement.querySelector('.ticket-info');
+            if (ticketInfo) {
+                const porCobrarDiv = document.createElement('div');
+                porCobrarDiv.className = 'por-cobrar-info';
+                porCobrarDiv.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedTicket.porCobrar)}</div>`;
+                ticketInfo.appendChild(porCobrarDiv);
+            }
+        }
+    } else if (porCobrarElement) {
+        // Remover por cobrar si ya no existe
+        porCobrarElement.remove();
+    }
+    
+    // Actualizar otros campos que podrían cambiar
+    const estadoElement = ticketElement.querySelector('.estado-consulta');
+    if (estadoElement) {
+        estadoElement.textContent = getEstadoDisplayName(updatedTicket.estado);
+        estadoElement.className = `estado-consulta estado-${updatedTicket.estado}`;
+    }
+    
+    // Actualizar indicador de listo para facturar
+    const listoElement = ticketElement.querySelector('.listo-facturar-indicator');
+    if (updatedTicket.listoParaFacturar) {
+        if (!listoElement) {
+            const indicator = document.createElement('div');
+            indicator.className = 'listo-facturar-indicator';
+            indicator.innerHTML = '<i class="fas fa-check-circle"></i> Listo para facturar';
+            const ticketInfo = ticketElement.querySelector('.ticket-info');
+            if (ticketInfo) ticketInfo.appendChild(indicator);
+        }
+    } else if (listoElement) {
+        listoElement.remove();
+    }
 }
 
 // Función para cargar tickets desde Firebase
@@ -1126,7 +1141,6 @@ function loadTickets() {
                 resolve();
             })
             .catch(error => {
-                console.error("Error cargando datos:", error);
                 reject(error);
             });
         // --- Escuchas en tiempo real ---
@@ -1158,27 +1172,29 @@ function loadTickets() {
                 firebaseKey: snapshot.key
             };
             
-            // VALIDACIÓN INFORMATIVA: Verificar integridad del por cobrar en tiempo real
-            if (updatedTicket.porCobrar) {
-                const isValid = verifyPorCobrarOwnership(updatedTicket);
-                if (!isValid) {
-                    console.warn(`INFORMACIÓN: Ticket ${updatedTicket.id} contiene datos de por cobrar que requieren revisión`);
-                    // Solo notificar en casos críticos, no por datos legacy
-                    const isLegacyData = validatePorCobrarIntegrity(updatedTicket) === 'legacy';
-                    if (!isLegacyData && document.hasFocus()) {
-                        showNotification(`ℹ️ Ticket #${updatedTicket.id} actualizado (verificar por cobrar si es necesario)`, 'info');
-                    }
-                }
-            }
-            
             const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
             if (index !== -1) {
+                const oldTicket = tickets[index];
                 tickets[index] = updatedTicket;
                 // Update global reference
                 window.tickets = tickets;
-                const currentFilterBtn = document.querySelector('.filter-btn.active');
-                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
-                renderTickets(currentFilter);
+                
+                // Actualización optimizada: solo re-renderizar si es necesario
+                const needsFullRerender = (
+                    oldTicket.estado !== updatedTicket.estado ||
+                    oldTicket.fechaConsulta !== updatedTicket.fechaConsulta ||
+                    oldTicket.urgencia !== updatedTicket.urgencia
+                );
+                
+                if (needsFullRerender) {
+                    const currentFilterBtn = document.querySelector('.filter-btn.active');
+                    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+                    renderTickets(currentFilter);
+                } else {
+                    // Actualización parcial para campos como porCobrar
+                    updateTicketInDOM(updatedTicket);
+                }
+                
                 updateStatsGlobal();
                 updatePrequirurgicoCounter();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
@@ -1206,7 +1222,6 @@ function loadTickets() {
 // Reemplaza la función addTicket() actual con esta versión corregida
 function addTicket() {
     try {
-        console.log("addTicket function called");
         // 1. Obtener valores del formulario
         const nombre = document.getElementById('nombre').value;
         const mascota = document.getElementById('mascota').value;
@@ -1235,7 +1250,6 @@ function addTicket() {
         const horaCita = document.getElementById('hora')?.value;
         const horaAtencion = document.getElementById('horaAtencion')?.value;
         const expediente = document.getElementById('expediente')?.checked || false;
-        console.log("Datos recopilados:", { nombre, mascota, fechaConsulta, horaCita, horaAtencion, tipoServicio, expediente });
         const fecha = new Date();
         // --- Calcular el número de ticket visual justo antes de guardar ---
         const hoy = fechaConsulta || getLocalDateString();
@@ -1273,14 +1287,12 @@ function addTicket() {
         if (horaAtencion) nuevoTicket.horaAtencion = horaAtencion;
         showLoadingButton(document.querySelector('.btn-submit'));
         if (!ticketsRef) {
-            console.error("Error: ticketsRef no está definido");
             showNotification('Error con la base de datos. Por favor recarga la página.', 'error');
             hideLoadingButton(document.querySelector('.btn-submit'));
             return;
         }
         ticketsRef.push(nuevoTicket)
             .then(() => {
-                console.log("Ticket guardado exitosamente");
                 ticketForm.reset();
                 if (document.getElementById('fecha')) {
                     document.getElementById('fecha').value = getLocalDateString();
@@ -1293,12 +1305,10 @@ function addTicket() {
                 }, 1500);
             })
             .catch(error => {
-                console.error("Error guardando ticket:", error);
                 hideLoadingButton(document.querySelector('.btn-submit'));
                 showNotification('Error al guardar la consulta: ' + error.message, 'error');
             });
     } catch (error) {
-        console.error("Error en la función addTicket:", error);
         hideLoadingButton(document.querySelector('.btn-submit'));
         showNotification('Error en el proceso de creación: ' + error.message, 'error');
     }
@@ -1333,7 +1343,6 @@ async function fixDuplicateTicketIds() {
     });
 
     if (updates.length === 0) {
-        console.log('No hay IDs duplicados.');
         showNotification('No se encontraron tickets duplicados.', 'success');
         return;
     }
@@ -1341,7 +1350,6 @@ async function fixDuplicateTicketIds() {
     // Actualizar en Firebase
     for (const upd of updates) {
         await ticketsRef.child(upd.firebaseKey).update({ id: upd.newId });
-        console.log(`Ticket con firebaseKey ${upd.firebaseKey}: ID cambiado de ${upd.oldId} a ${upd.newId}`);
     }
     showNotification('IDs de tickets duplicados corregidos.', 'success');
 }
@@ -1529,6 +1537,7 @@ function renderTickets(filter = 'todos', date = null) {
         }
         
         ticketElement.dataset.id = ticket.id;
+        ticketElement.dataset.ticketId = ticket.randomId;
         
         let ticketContent = '';
         
@@ -2285,7 +2294,7 @@ function cleanOldData() {
                 }
             })
             .catch(error => {
-                console.error("Error eliminando ticket antiguo:", error);
+    
                 pendingOperations--;
                 if (pendingOperations === 0) {
                     hideLoading();
@@ -2299,18 +2308,9 @@ function editTicket(randomId) {
     const ticket = tickets.find(t => t.randomId === randomId);
     
     if (!ticket) {
-        console.error("Ticket no encontrado con randomId:", randomId);
         showNotification('Error: Ticket no encontrado', 'error');
         return;
     }
-    
-    // Log informativo
-    if (ticket.porCobrar) {
-        console.log(`Editando ticket ${ticket.id} que contiene información de por cobrar`);
-    }
-    
-    console.log("Ticket encontrado:", ticket);
-    console.log("Firebase Key:", ticket.firebaseKey);
     
     // Cerrar cualquier modal existente primero
     closeModal();
@@ -2739,7 +2739,7 @@ function editTicket(randomId) {
 
                 })
                 .catch(error => {
-                    console.error('Error actualizando estado de facturación:', error);
+        
                     showNotification('Error al actualizar estado de facturación', 'error');
                     // Revertir el cambio en caso de error
                     this.checked = !this.checked;
@@ -2792,7 +2792,7 @@ function editTicket(randomId) {
             usuarioListoParaFacturar = null;
         }
         
-        // Procesar el campo porCobrar con validaciones mejoradas
+        // Procesar el campo porCobrar con validaciones mejoradas y actualización optimista
         let updatedPorCobrar = ticket.porCobrar || '';
         const editPorCobrar = document.getElementById('editPorCobrar');
         if (editPorCobrar && canEditPorCobrar) {
@@ -2801,7 +2801,6 @@ function editTicket(randomId) {
                 // Obtener la versión más reciente para merge inteligente
                 const currentTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
                 if (currentTicket && currentTicket.porCobrar !== ticket.porCobrar) {
-                    console.log('Detectado cambio concurrente en por cobrar, usando versión más reciente como base');
                     updatedPorCobrar = currentTicket.porCobrar || '';
                 }
                 
@@ -2816,6 +2815,23 @@ function editTicket(randomId) {
                 const separator = updatedPorCobrar ? '\n\n' : '';
                 const newEntry = `${separator}--- ${timestamp} (${userName}) ---\n${newContent}`;
                 updatedPorCobrar = updatedPorCobrar + newEntry;
+                
+                // Actualización optimista: mostrar inmediatamente en el DOM
+                const ticketElement = document.querySelector(`[data-ticket-id="${ticket.randomId}"]`);
+                if (ticketElement) {
+                    const porCobrarElement = ticketElement.querySelector('.por-cobrar-info');
+                    if (porCobrarElement) {
+                        porCobrarElement.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedPorCobrar)}</div>`;
+                    } else {
+                        const ticketInfo = ticketElement.querySelector('.ticket-info');
+                        if (ticketInfo) {
+                            const porCobrarDiv = document.createElement('div');
+                            porCobrarDiv.className = 'por-cobrar-info';
+                            porCobrarDiv.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedPorCobrar)}</div>`;
+                            ticketInfo.appendChild(porCobrarDiv);
+                        }
+                    }
+                }
             }
             // Si no hay texto nuevo, no se agrega nada
         }
@@ -2962,18 +2978,17 @@ function getTicketDiff(oldTicket, newTicket) {
 }
 
 function saveEditedTicket(ticket) {
-    console.log("Guardando ticket actualizado:", ticket);
-    console.log("Ticket ID:", ticket.id, "RandomID:", ticket.randomId, "FirebaseKey:", ticket.firebaseKey);
+    
+    
     
     if (!ticket.firebaseKey) {
-        console.error("Error: No hay clave de Firebase para el ticket", ticket);
+
         showNotification('Error al guardar los cambios: falta identificador', 'error');
         return;
     }
     
     // NUEVA VALIDACIÓN: Verificar integridad del ticket antes de guardar
     if (!ticket.id || !ticket.mascota || !ticket.nombre) {
-        console.error("Error: Datos esenciales del ticket faltantes", ticket);
         showNotification('Error: Datos esenciales del ticket están incompletos', 'error');
         return;
     }
@@ -2981,22 +2996,9 @@ function saveEditedTicket(ticket) {
     // NUEVA VALIDACIÓN: Verificar que el ticket existe en la base de datos local
     const localTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
     if (!localTicket) {
-        console.error("Error: Ticket no encontrado en datos locales", ticket.firebaseKey);
         showNotification('Error: El ticket no está sincronizado. Por favor, recargue la página.', 'error');
         return;
     }
-    
-    // LOGGING ADICIONAL para debug
-    console.log("Ticket local encontrado:", {
-        id: localTicket.id, 
-        randomId: localTicket.randomId, 
-        firebaseKey: localTicket.firebaseKey
-    });
-    console.log("Ticket a guardar:", {
-        id: ticket.id, 
-        randomId: ticket.randomId, 
-        firebaseKey: ticket.firebaseKey
-    });
     
     // Guardar la sección y filtro activos antes de actualizar
     const currentSection = document.querySelector('.content section.active');
@@ -3075,74 +3077,78 @@ function saveEditedTicket(ticket) {
         }
     }
     
-    // MEJORADO: Usar transacción para merge inteligente de cambios concurrentes
-    ticketsRef.child(ticket.firebaseKey).transaction((currentData) => {
-        if (currentData === null) {
-            // El ticket fue eliminado por otro usuario
-            console.error("El ticket fue eliminado por otro usuario");
-            return; // Abortar transacción
-        }
-        
-        // Verificar que los datos críticos coincidan (evitar sobrescribir el ticket equivocado)
-        // Usar comparación más flexible para evitar problemas de tipos
-        const currentIdStr = String(currentData.id || '');
-        const ticketIdStr = String(ticket.id || '');
-        const currentRandomId = String(currentData.randomId || '');
-        const ticketRandomId = String(ticket.randomId || '');
-        
-        if (currentIdStr !== ticketIdStr || currentRandomId !== ticketRandomId) {
-            console.error("Mismatch de ticket detectado - IDs no coinciden", {
-                expected: {id: ticketIdStr, randomId: ticketRandomId},
-                found: {id: currentIdStr, randomId: currentRandomId}
-            });
-            
-            // Solo abortar si hay una diferencia real significativa
-            if (currentIdStr && ticketIdStr && currentIdStr !== ticketIdStr) {
-                return; // Abortar transacción solo si hay IDs diferentes no vacíos
-            }
-            if (currentRandomId && ticketRandomId && currentRandomId !== ticketRandomId) {
-                return; // Abortar transacción solo si hay randomIds diferentes no vacíos
-            }
-            
-            console.warn("Diferencias menores en IDs detectadas, continuando con precaución...");
-        }
-        
-        // MERGE SIMPLE: Usar la versión más reciente del por cobrar si hay conflictos
-        let finalPorCobrar = ticketToSave.porCobrar;
-        if (currentData.porCobrar !== ticket.porCobrar) {
-            console.log('Detectado cambio concurrente en por cobrar, usando versión del ticket a guardar');
-            finalPorCobrar = ticketToSave.porCobrar; // Usar la versión que se está guardando
-        }
-        
-        // Combinar todos los datos preservando cambios concurrentes
-        const mergedData = {
-            ...currentData,
-            ...ticketToSave,
-            porCobrar: finalPorCobrar,
+    // Optimización: Detectar si solo se cambió el porCobrar para usar update directo
+    const onlyPorCobrarChanged = (
+        ticket.porCobrar !== ticketToSave.porCobrar &&
+        Object.keys(ticketToSave).filter(key => 
+            key !== 'porCobrar' && 
+            key !== 'lastModified' && 
+            key !== 'lastModifiedBy' &&
+            ticket[key] !== ticketToSave[key]
+        ).length === 0
+    );
+    
+    if (onlyPorCobrarChanged) {
+        // Actualización rápida solo para porCobrar
+        const porCobrarUpdate = {
+            porCobrar: ticketToSave.porCobrar,
             lastModified: new Date().toISOString(),
             lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
         };
         
-        // Solo actualizar si hay cambios reales después del merge
-        const hasChanges = Object.keys(mergedData).some(key => {
-            return currentData[key] !== mergedData[key];
-        });
-        
-        if (!hasChanges) {
-            console.log("No hay cambios reales para guardar después del merge");
-            return currentData; // No cambiar nada
+        ticketsRef.child(ticket.firebaseKey).update(porCobrarUpdate)
+            .then(() => {
+                closeModal();
+                showNotification('Por cobrar actualizado correctamente', 'success');
+                
+                // Actualizar la página actual
+                if (currentSection && currentSection.id === 'verTicketsSection') {
+                    renderTickets(currentFilter);
+                    
+                    // Mantener el filtro activo
+                    document.querySelectorAll('.filter-btn').forEach(btn => {
+                        btn.classList.remove('active');
+                        if (btn.getAttribute('data-filter') === currentFilter) {
+                            btn.classList.add('active');
+                        }
+                    });
+                    
+                    setActiveButton(verTicketsBtn);
+                } else if (currentSection && currentSection.id === 'horarioSection') {
+                    mostrarHorario();
+                } else {
+                    renderTickets();
+                }
+                
+                updateStatsGlobal();
+            })
+            .catch(error => {
+                if (saveButton) saveButton.disabled = false;
+                showNotification('Error al actualizar por cobrar: ' + error.message, 'error');
+            });
+        return;
+    }
+    
+    // Para otros cambios, usar transacción (simplificada)
+    ticketsRef.child(ticket.firebaseKey).transaction((currentData) => {
+        if (currentData === null) {
+            return; // Abortar transacción
         }
+        
+        // Merge simple sin validaciones complejas
+        const mergedData = {
+            ...currentData,
+            ...ticketToSave,
+            lastModified: new Date().toISOString(),
+            lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
+        };
         
         return mergedData;
     }, (error, committed, snapshot) => {
         if (error) {
-            console.error("Error en transacción:", error);
-            console.log("Intentando guardado directo como respaldo...");
-            
             // RESPALDO: Intentar guardado directo si la transacción falla
             ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
                 .then(() => {
-                    console.log("Guardado directo exitoso");
                     closeModal();
                     showNotification('Consulta actualizada correctamente', 'success');
                     
@@ -3168,19 +3174,15 @@ function saveEditedTicket(ticket) {
                     updateStatsGlobal();
                 })
                 .catch(backupError => {
-                    console.error("Error en guardado de respaldo:", backupError);
                     if (saveButton) {
                         hideLoadingButton(saveButton);
                     }
                     showNotification('Error al guardar los cambios: ' + backupError.message, 'error');
                 });
         } else if (!committed) {
-            console.log("Transacción abortada - intentando guardado directo");
-            
             // RESPALDO: Si la transacción se abortó por validaciones muy estrictas, intentar guardado directo
             ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
                 .then(() => {
-                    console.log("Guardado directo después de abort exitoso");
                     closeModal();
                     showNotification('Consulta actualizada correctamente', 'success');
                     
@@ -3206,14 +3208,12 @@ function saveEditedTicket(ticket) {
                     updateStatsGlobal();
                 })
                 .catch(backupError => {
-                    console.error("Error en guardado de respaldo después de abort:", backupError);
                     if (saveButton) {
                         hideLoadingButton(saveButton);
                     }
                     showNotification('No se pudieron guardar los cambios. Recargue la página e intente nuevamente.', 'error');
                 });
         } else {
-            console.log("Ticket actualizado correctamente con transacción");
             closeModal();
             
             showNotification('Consulta actualizada correctamente', 'success');
@@ -3348,7 +3348,7 @@ function changeStatus(randomId) {
                 }
             })
             .catch(error => {
-                console.error("Error actualizando estado:", error);
+    
                 if (saveButton) {
                     hideLoadingButton(saveButton);
                 }
@@ -3446,7 +3446,7 @@ function confirmDeleteByFirebaseKey(firebaseKey) {
             updateStatsGlobal();
         })
         .catch(error => {
-            console.error("Error eliminando ticket:", error);
+
             if (deleteButton) {
                 hideLoadingButton(deleteButton);
             }
@@ -3470,11 +3470,11 @@ let userCredential = null;
 // Iniciar sesión o crear cuenta anónima
 function initAuth() {
   return new Promise((resolve, reject) => {
-    console.log("Initializing auth...");
+    
     
     firebase.auth().onAuthStateChanged((user) => {
       if (user) {
-        console.log("User already authenticated:", user.uid);
+
         resolve(user);
       } else {
         // Redirigir al login si no hay usuario autenticado
@@ -3548,7 +3548,7 @@ function showNotification(message, type = 'info') {
 // --- Actualizar estadísticas usando el filtro global ---
 function updateStatsGlobal() {
   const filtered = filtrarTicketsPorPeriodoGlobal(tickets);
-  console.log('[DEBUG] Tickets filtrados:', filtered.length, filtered.map(t => t.fechaConsulta));
+  
   
   // Actualizar contadores
   document.getElementById('totalPacientes').textContent = filtered.length;
@@ -3622,7 +3622,7 @@ function renderizarGraficosTiempoEspera(ticketsFiltrados) {
     try {
       window.waitTimeChart.destroy();
     } catch (error) {
-      console.log('Error al destruir gráfico anterior:', error);
+      // Error al destruir gráfico anterior
     }
   }
   
@@ -3702,7 +3702,7 @@ function renderizarGraficosTiempoEspera(ticketsFiltrados) {
       }
     });
   } catch (error) {
-    console.error("Error al crear gráfico de tiempos de espera:", error);
+    
   }
 }
 
@@ -3721,7 +3721,7 @@ function renderizarGraficosPersonalServicios(ticketsFiltrados) {
     });
   }
   
-  console.log('[DEBUG] Tickets para gráficos después de filtro servicio:', ticketsAGraficar.length);
+  
   
   // Conteo de servicios por personal y servicios totales
   const conteoPersonalServicio = {};
@@ -3766,8 +3766,8 @@ function renderizarGraficosPersonalServicios(ticketsFiltrados) {
     });
   });
   
-  console.log('[DEBUG] Conteo personal/servicio:', conteoPersonalServicio);
-  console.log('[DEBUG] Conteo servicios:', conteoServicios);
+  
+  
   
   // Actualizar tabla de estadísticas
   actualizarTablaEstadisticas(conteoPersonalServicio, conteoServicios, totalServicios);
@@ -3837,7 +3837,7 @@ function renderizarGraficoPersonalPorServicio(conteoPersonalServicio) {
     try {
       window.chartServiciosPersonal.destroy();
     } catch (error) {
-      console.log('Error al destruir gráfico anterior:', error);
+      // Error al destruir gráfico anterior
     }
     window.chartServiciosPersonal = null;
   }
@@ -3907,7 +3907,7 @@ function renderizarGraficoPersonalPorServicio(conteoPersonalServicio) {
       }
     });
   } catch (error) {
-    console.error('Error al crear gráfico de servicios por personal:', error);
+    
     ctx.font = '16px Arial';
     ctx.fillStyle = '#f00';
     ctx.textAlign = 'center';
@@ -3927,7 +3927,7 @@ function renderizarGraficoDistribucionServicios(conteoServicios) {
     try {
       window.chartDistribucionServicios.destroy();
     } catch (error) {
-      console.log('Error al destruir gráfico anterior:', error);
+      // Error al destruir gráfico anterior
     }
     window.chartDistribucionServicios = null;
   }
@@ -3986,7 +3986,7 @@ function renderizarGraficoDistribucionServicios(conteoServicios) {
       }
     });
   } catch (error) {
-    console.error('Error al crear gráfico de distribución de servicios:', error);
+    
     ctx.font = '16px Arial';
     ctx.fillStyle = '#f00';
     ctx.textAlign = 'center';
@@ -4390,7 +4390,9 @@ document.addEventListener('DOMContentLoaded', function() {
       renderLabResults();
       // Marcar botón activo
       document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-      labFilterBtn.classList.add('active');
+      if (labFilterBtn) {
+        labFilterBtn.classList.add('active');
+      }
     });
   }
 
@@ -4719,7 +4721,7 @@ function confirmEndConsultationByFirebaseKey(firebaseKey) {
             updateStatsGlobal();
         })
         .catch(error => {
-            console.error("Error terminando consulta:", error);
+
             if (endButton) {
                 hideLoadingButton(endButton);
             }
@@ -4731,13 +4733,13 @@ function confirmEndConsultationByFirebaseKey(firebaseKey) {
 
 // Funciones de navegación para onclick en HTML
 function toggleSubmenuHTML(categoryBtnId, submenuId) {
-    console.log('🔥 Toggle submenu:', categoryBtnId, submenuId);
+    
     
     const categoryBtn = document.getElementById(categoryBtnId);
     const submenu = document.getElementById(submenuId);
     
     if (!categoryBtn || !submenu) {
-        console.error('❌ Elementos no encontrados:', { categoryBtn: !!categoryBtn, submenu: !!submenu });
+
         return;
     }
     
@@ -4763,20 +4765,20 @@ function toggleSubmenuHTML(categoryBtnId, submenuId) {
     if (wasActive) {
         submenu.classList.remove('active');
         categoryBtn.classList.remove('active');
-        console.log('📉 Submenu cerrado');
+
     } else {
         submenu.classList.add('active');
         categoryBtn.classList.add('active');
-        console.log('📈 Submenu abierto');
+
     }
 }
 
 function navigateToSection(sectionId, buttonId) {
-    console.log('🎯 Navegando a sección:', sectionId);
+    
     
     const section = document.getElementById(sectionId);
     if (!section) {
-        console.error('❌ Sección no encontrada:', sectionId);
+
         return;
     }
     
@@ -4796,7 +4798,7 @@ function navigateToSection(sectionId, buttonId) {
             }
         }
     } else {
-        console.error('❌ Función showSection no disponible');
+        // Función showSection no disponible
     }
 }
 
@@ -4804,7 +4806,7 @@ function navigateToSection(sectionId, buttonId) {
 window.navigateToSection = navigateToSection;
 
 function navigateToConsultas() {
-    console.log('🎯 Navegando a Ver Consultas');
+
     
     // Inicializar filtro de fecha
     const filterDateInput = document.getElementById('filterDate');
@@ -4834,18 +4836,18 @@ function navigateToConsultas() {
 }
 
 function navigateToLab(sectionId, buttonId) {
-    console.log('🎯 Navegando a laboratorio:', sectionId);
+
     
     if (typeof showLabSection === 'function') {
         showLabSection(sectionId);
         setActiveSubmenuButtonHTML(buttonId);
     } else {
-        console.warn('⚠️ Función showLabSection no disponible');
+
     }
 }
 
 function navigateToEstadisticas() {
-    console.log('🎯 Navegando a Estadísticas');
+
     
     const section = document.getElementById('estadisticasSection');
     if (section) {
@@ -4864,10 +4866,10 @@ function navigateToEstadisticas() {
                 waitTimeSection.style.display = 'block';
             }
         } else {
-            console.error('❌ Función showSection no disponible');
+            // Función showSection no disponible
         }
     } else {
-        console.error('❌ Sección estadisticasSection no encontrada');
+
     }
 }
 
@@ -4880,7 +4882,7 @@ function setActiveSubmenuButtonHTML(buttonId) {
     const button = document.getElementById(buttonId);
     if (button) {
         button.classList.add('active');
-        console.log('🔥 Botón activo:', buttonId);
+
     }
 }
 

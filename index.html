@@ -356,7 +356,6 @@
         <!-- Barra de búsqueda (visible para todos menos visitas) -->
         <div id="searchBarContainer" class="search-bar" style="display:none; margin-bottom: 15px;">
           <input type="text" id="ticketSearchInput" placeholder="Buscar por cliente, mascota, ID paciente o factura..." autocomplete="off">
-          <i class="fas fa-search"></i>
         </div>
         
         <!-- nuevo filtro de fecha -->
@@ -384,9 +383,8 @@
             <!-- Búsqueda de Cliente -->
             <div class="form-row">
               <div class="form-group" style="position: relative;">
-                <label for="labClienteSearch"><i class="fas fa-search"></i> Buscar Cliente</label>
+                <label for="labClienteSearch">Buscar Cliente</label>
                 <input type="text" id="labClienteSearch" placeholder="Escriba nombre, cédula o ID del paciente..." autocomplete="off">
-                <i class="fas fa-search search-icon"></i>
                 <div id="labClienteResults" class="cliente-search-results"></div>
               </div>
               <div class="form-group">
@@ -638,7 +636,6 @@
         <!-- Barra de búsqueda para laboratorio -->
         <div class="search-bar" style="margin-bottom: 15px;">
           <input type="text" id="labSearchInput" placeholder="Buscar por cliente, mascota, ID paciente o tipo de examen..." autocomplete="off">
-          <i class="fas fa-search"></i>
         </div>
         
         <!-- Filtro de fecha para laboratorio -->
@@ -754,12 +751,12 @@
 
         <!-- Buscador de clientes (fuente: tickets de laboratorio) -->
         <div class="client-search-section">
-          <h3><i class="fas fa-search"></i> Buscar Cliente (Tickets de Laboratorio)</h3>
+          <h3>Buscar Cliente (Tickets de Laboratorio)</h3>
           <div class="search-container">
             <div class="search-input-container">
               <input type="text" id="labReportClientSearch" placeholder="Buscar por nombre, cédula, mascota, ID paciente o factura..." class="search-input">
               <button id="searchLabReportClientBtn" class="search-btn">
-                <i class="fas fa-search"></i> Buscar
+                Buscar
               </button>
             </div>
             <div id="labReportClientResults" class="search-results"></div>
@@ -836,7 +833,6 @@
         <!-- Barra de búsqueda para consentimientos -->
         <div class="search-bar" style="margin-bottom: 15px;">
           <input type="text" id="consentimientosSearchInput" placeholder="Buscar por cliente, mascota, tipo de consentimiento..." autocomplete="off">
-          <i class="fas fa-search"></i>
         </div>
         
         <!-- Contenedor de consentimientos -->
@@ -903,6 +899,16 @@
               <div class="form-group">
                 <label for="quirofanoTelefono">Teléfono</label>
                 <input type="tel" id="quirofanoTelefono">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="quirofanoFactura">Número de Factura</label>
+                <input type="text" id="quirofanoFactura">
+              </div>
+              <div class="form-group">
+                <!-- Campo vacío para mantener el diseño de dos columnas -->
               </div>
             </div>
 
@@ -1060,7 +1066,6 @@
         <!-- Barra de búsqueda para quirófano -->
         <div class="search-bar" style="margin-bottom: 15px;">
           <input type="text" id="quirofanoSearchInput" placeholder="Buscar por cliente, mascota, ID paciente..." autocomplete="off">
-          <i class="fas fa-search"></i>
         </div>
         
         <!-- Contenedor de tickets de quirófano -->
@@ -1307,7 +1312,7 @@
         
         <div class="date-controls">
           <input type="date" id="fechaHorario" value="">
-          <button id="verHorarioBtn"><i class="fas fa-search"></i> Ver horario</button>
+                      <button id="verHorarioBtn">Ver horario</button>
         </div>
         
         <div class="export-controls">
@@ -1369,12 +1374,12 @@
         
         <!-- Buscador de clientes -->
         <div class="client-search-section">
-          <h3><i class="fas fa-search"></i> Buscar Cliente</h3>
+          <h3>Buscar Cliente</h3>
           <div class="search-container">
             <div class="search-input-container">
               <input type="text" id="consentClientSearch" placeholder="Buscar por nombre, cédula o nombre de mascota..." class="search-input">
               <button id="searchClientBtn" class="search-btn">
-                <i class="fas fa-search"></i> Buscar
+                Buscar
               </button>
             </div>
             <div id="clientSearchResults" class="search-results"></div>
