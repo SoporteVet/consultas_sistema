@@ -195,17 +195,65 @@
             font-family: inherit;
             font-size: 14px;
             resize: vertical;
+            line-height: 1.6;
+            white-space: pre-wrap !important;
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: pre-line !important;
+            overflow: auto;
         }
         .large-textarea:focus {
             outline: none;
             border-color: var(--primary-color);
             background-color: var(--highlight-color);
         }
+        /* Estilos específicos para el PDF */
+        .pdf-textarea {
+            white-space: pre-line !important;
+            line-height: 1.8 !important;
+            font-size: 13px !important;
+            padding: 15px !important;
+            background-color: #f8f9fa !important;
+            border: 1px solid #dee2e6 !important;
+        }
+        
+        /* Estilos adicionales para asegurar saltos de línea */
+        .large-textarea {
+            white-space: pre-wrap !important;
+            line-height: 1.6 !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            font-family: 'Courier New', monospace !important;
+        }
+        
+        /* Estilos específicos para el textarea de condiciones */
+        #condicionesMascota {
+            white-space: pre-wrap !important;
+            line-height: 1.6 !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            font-family: 'Courier New', monospace !important;
+            min-height: 120px !important;
+        }
         @media print {
             body { background-color: white; margin: 0; padding: 0; }
             .container { box-shadow: none; border: none; padding: 10px; }
             .signature-buttons, .pdf-button-container { display: none; }
             .auto-data-indicator { display: none !important; }
+            
+            /* Estilos específicos para textareas en impresión */
+            .large-textarea {
+                white-space: pre-line !important;
+                line-height: 1.8 !important;
+                font-size: 12px !important;
+                padding: 10px !important;
+                background-color: #f8f9fa !important;
+                border: 1px solid #dee2e6 !important;
+                min-height: auto !important;
+                height: auto !important;
+                overflow: visible !important;
+                resize: none !important;
+            }
         }
         @media (max-width: 600px) {
             .header { flex-direction: column; text-align: center; }
@@ -314,6 +362,7 @@
 
         <div class="pdf-button-container">
             <button class="pdf-button" onclick="generatePDF()">Generar PDF</button>
+            <button type="button" onclick="testLineBreaks()" style="background: #ff9800; margin-left: 10px;">🧪 Probar Saltos de Línea</button>
         </div>
     </div>
 
@@ -325,21 +374,32 @@
             // Completar campos con datos de la base de datos
             let autoFilledCount = 0;
             
-            if (urlParams.get('clienteNombre')) {
-                const field = document.getElementById('ownerName');
-                field.value = urlParams.get('clienteNombre');
-                autoFilledCount++;
-            }
-            if (urlParams.get('clienteCedula')) {
-                const field = document.getElementById('ownerCedula');
-                field.value = urlParams.get('clienteCedula');
-                autoFilledCount++;
-            }
-            if (urlParams.get('mascotaNombre')) {
-                const field = document.getElementById('petName');
-                field.value = urlParams.get('mascotaNombre');
-                autoFilledCount++;
-            }
+            const fields = [
+                ['clienteNombre', 'ownerName'],
+                ['clienteCedula', 'ownerCedula'],
+                ['mascotaNombre', 'petName'],
+                ['mascotaRaza', 'petBreed'],
+                ['mascotaEdad', 'petAge'],
+                ['mascotaPeso', 'petWeight'],
+                ['procedimiento', 'procedureType'],
+                ['doctorAtiende', 'attendingDoctor'],
+                ['fechaCirugia', 'surgeryDate'],
+                ['urgencia', 'urgencyLevel']
+            ];
+            
+            fields.forEach(([param, fieldId]) => {
+                const value = urlParams.get(param);
+                if (value) {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.value = value;
+                        autoFilledCount++;
+                        console.log(`✅ Campo ${fieldId} completado con: ${value}`);
+                    } else {
+                        console.log(`⚠️ Campo ${fieldId} no encontrado en el formulario`);
+                    }
+                }
+            });
             
             // Mostrar indicador si se autocompletaron campos
             if (autoFilledCount > 0) {
@@ -363,6 +423,52 @@
             // Initialize signature pads and handle resizing
             const canvasElements = document.querySelectorAll('.signature-pad');
             window.signaturePads = {};
+            
+            // Configurar textareas para preservar saltos de línea
+            const textareas = document.querySelectorAll('.large-textarea');
+            textareas.forEach(textarea => {
+                // Forzar estilos CSS importantes
+                textarea.style.setProperty('white-space', 'pre-wrap', 'important');
+                textarea.style.setProperty('line-height', '1.6', 'important');
+                textarea.style.setProperty('word-wrap', 'break-word', 'important');
+                textarea.style.setProperty('overflow-wrap', 'break-word', 'important');
+                
+                // Preservar saltos de línea al escribir
+                textarea.addEventListener('input', function() {
+                    // Asegurar que los saltos de línea se mantengan
+                    this.style.setProperty('white-space', 'pre-wrap', 'important');
+                    this.style.setProperty('line-height', '1.6', 'important');
+                    
+                    // Forzar el re-renderizado del textarea
+                    this.style.height = 'auto';
+                    this.style.height = this.scrollHeight + 'px';
+                });
+                
+                // Preservar saltos de línea al pegar
+                textarea.addEventListener('paste', function(e) {
+                    e.preventDefault();
+                    const text = (e.originalEvent || e).clipboardData.getData('text/plain');
+                    const selection = window.getSelection();
+                    if (selection.rangeCount) {
+                        const range = selection.getRangeAt(0);
+                        range.deleteContents();
+                        range.insertNode(document.createTextNode(text));
+                    }
+                    
+                    // Forzar el re-renderizado después de pegar
+                    setTimeout(() => {
+                        this.style.height = 'auto';
+                        this.style.height = this.scrollHeight + 'px';
+                    }, 10);
+                });
+                
+                // Preservar saltos de línea al cambiar el valor programáticamente
+                textarea.addEventListener('change', function() {
+                    this.style.setProperty('white-space', 'pre-wrap', 'important');
+                    this.style.setProperty('line-height', '1.6', 'important');
+                });
+            });
+            
             function resizeCanvas(canvas) {
                 const ratio = Math.max(window.devicePixelRatio || 1, 2);
                 canvas.width = canvas.offsetWidth * ratio;
@@ -408,6 +514,62 @@
             }
         }
 
+        // Función para probar saltos de línea
+        function testLineBreaks() {
+            const textarea = document.getElementById('condicionesMascota');
+            if (textarea) {
+                // Insertar texto de prueba con saltos de línea
+                const testText = `Estado de la mascota al retirarla:
+
+• Temperatura: 38.5°C
+• Frecuencia cardíaca: 120 lpm
+• Frecuencia respiratoria: 20 rpm
+• Estado de consciencia: Alerta
+• Apetito: Regular
+• Hidratación: Buena
+
+Observaciones adicionales:
+La mascota presenta mejoría significativa
+pero requiere seguimiento veterinario.`;
+
+                textarea.value = testText;
+                
+                // Forzar el re-renderizado
+                textarea.style.height = 'auto';
+                textarea.style.height = textarea.scrollHeight + 'px';
+                
+                // Aplicar estilos importantes
+                textarea.style.setProperty('white-space', 'pre-wrap', 'important');
+                textarea.style.setProperty('line-height', '1.6', 'important');
+                
+                // Mostrar mensaje de confirmación
+                alert('Texto de prueba insertado. Verifica que los saltos de línea se vean correctamente.');
+                
+                // Hacer scroll al textarea
+                textarea.scrollIntoView({ behavior: 'smooth' });
+                textarea.focus();
+            }
+        }
+
+        // Función auxiliar para procesar contenido del textarea para PDF
+        function processTextareaForPDF(textarea) {
+            if (!textarea.value) return null;
+            
+            // Convertir saltos de línea a elementos HTML
+            const lines = textarea.value.split(/\r?\n/);
+            const processedLines = lines.map(line => {
+                if (line.trim() === '') {
+                    return '<br>';
+                } else if (line.startsWith('•')) {
+                    return `<div style="margin: 8px 0; padding-left: 20px;">${line}</div>`;
+                } else {
+                    return `<div style="margin: 4px 0;">${line}</div>`;
+                }
+            });
+            
+            return processedLines.join('');
+        }
+
         // Generate a multi-page A4 PDF with all content
         async function generatePDF() {
             const ownerName = document.getElementById('ownerName').value;
@@ -433,6 +595,58 @@
             pdfBtn.style.display = 'none';
             sigBtns.forEach(b => b.style.display = 'none');
             if (autoIndicator) autoIndicator.style.display = 'none';
+            
+            // Procesar textareas para preservar saltos de línea en el PDF
+            const textareas = document.querySelectorAll('.large-textarea');
+            const originalValues = [];
+            const originalStyles = [];
+            
+            textareas.forEach((textarea, index) => {
+                // Guardar valores y estilos originales
+                originalValues[index] = textarea.value;
+                originalStyles[index] = {
+                    whiteSpace: textarea.style.whiteSpace,
+                    lineHeight: textarea.style.lineHeight,
+                    fontSize: textarea.style.fontSize,
+                    padding: textarea.style.padding,
+                    backgroundColor: textarea.style.backgroundColor,
+                    border: textarea.style.border
+                };
+                
+                // Convertir saltos de línea a <br> para html2canvas
+                if (textarea.value) {
+                    const processedValue = processTextareaForPDF(textarea);
+                    
+                    if (processedValue) {
+                        // Crear un div temporal con el contenido formateado
+                        const tempDiv = document.createElement('div');
+                        tempDiv.innerHTML = processedValue;
+                        tempDiv.style.cssText = `
+                            white-space: pre-line !important;
+                            line-height: 1.6 !important;
+                            font-family: inherit !important;
+                            font-size: 14px !important;
+                            padding: 12px !important;
+                            margin: 0 !important;
+                            border: none !important;
+                            background: transparent !important;
+                            width: 100% !important;
+                            min-height: 100px !important;
+                            word-wrap: break-word !important;
+                            overflow-wrap: break-word !important;
+                            color: #333 !important;
+                        `;
+                        
+                        // Reemplazar temporalmente el textarea con el div formateado
+                        textarea.style.display = 'none';
+                        textarea.parentNode.insertBefore(tempDiv, textarea);
+                        
+                        // Guardar referencia para restaurar después
+                        textarea._tempDiv = tempDiv;
+                    }
+                }
+            });
+            
             try {
                 const { jsPDF } = window.jspdf;
                 const pdf = new jsPDF('p', 'mm', 'a4');
@@ -440,15 +654,34 @@
                 
                 for (let i = 0; i < containers.length; i++) {
                     const cont = containers[i];
+                    
+                    // Configuración mejorada para html2canvas
                     const canvas = await html2canvas(cont, {
-                        scale: 1.3,
+                        scale: 1.5, // Aumentar escala para mejor calidad
                         useCORS: true,
                         logging: false,
                         allowTaint: true,
-                        backgroundColor: '#ffffff'
+                        backgroundColor: '#ffffff',
+                        width: cont.scrollWidth,
+                        height: cont.scrollHeight,
+                        scrollX: 0,
+                        scrollY: 0,
+                        windowWidth: cont.scrollWidth,
+                        windowHeight: cont.scrollHeight,
+                        onclone: function(clonedDoc) {
+                            // Asegurar que los estilos se apliquen en el documento clonado
+                            const clonedTextareas = clonedDoc.querySelectorAll('.large-textarea');
+                            clonedTextareas.forEach(textarea => {
+                                if (textarea._tempDiv) {
+                                    textarea.style.display = 'none';
+                                    const clonedTempDiv = textarea._tempDiv.cloneNode(true);
+                                    textarea.parentNode.insertBefore(clonedTempDiv, textarea);
+                                }
+                            });
+                        }
                     });
                     
-                    const imgData = canvas.toDataURL('image/jpeg', 0.8);
+                    const imgData = canvas.toDataURL('image/jpeg', 0.9); // Mejorar calidad
                     const imgWidth = 190;
                     const pageHeight = 297;
                     const imgHeight = (canvas.height * imgWidth) / canvas.width;
@@ -478,8 +711,97 @@
                 pdfBtn.style.display = originalPdfDisplay;
                 sigBtns.forEach((b, i) => b.style.display = originalSigDisplays[i]);
                 if (autoIndicator) autoIndicator.style.display = originalIndicatorDisplay;
+                
+                // Restaurar textareas originales
+                textareas.forEach((textarea, index) => {
+                    // Restaurar valor original
+                    if (originalValues[index] !== undefined) {
+                        textarea.value = originalValues[index];
+                    }
+                    
+                    // Restaurar estilos originales
+                    if (originalStyles[index]) {
+                        textarea.style.whiteSpace = originalStyles[index].whiteSpace;
+                        textarea.style.lineHeight = originalStyles[index].lineHeight;
+                        textarea.style.fontSize = originalStyles[index].fontSize;
+                        textarea.style.padding = originalStyles[index].padding;
+                        textarea.style.backgroundColor = originalStyles[index].backgroundColor;
+                        textarea.style.border = originalStyles[index].border;
+                    }
+                    
+                    // Mostrar textarea y remover div temporal
+                    textarea.style.display = '';
+                    if (textarea._tempDiv && textarea._tempDiv.parentNode) {
+                        textarea._tempDiv.parentNode.removeChild(textarea._tempDiv);
+                        delete textarea._tempDiv;
+                    }
+                });
             }
         }
     </script>
 </body>
+<script>
+// --- AUTOLLENADO DE DATOS DESDE LA URL ---
+function getQueryParams() {
+    const params = {};
+    const search = window.location.search.substring(1);
+    if (!search) return params;
+    search.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+    });
+    return params;
+}
+
+function fillFormFromParams() {
+    const params = getQueryParams();
+    let anyFilled = false;
+    // Mapeo extendido de parámetros a posibles IDs de campos
+    const map = {
+        clienteNombre: ['clienteNombre', 'ownerName', 'propietario', 'nombreCliente'],
+        clienteCedula: ['clienteCedula', 'cedula', 'ownerCedula'],
+        clienteTelefono: ['clienteTelefono', 'telefono'],
+        clienteCorreo: ['clienteCorreo', 'correo', 'email'],
+        mascotaNombre: ['mascotaNombre', 'petName', 'nombreMascota'],
+        mascotaTipo: ['mascotaTipo', 'tipoMascota', 'petSpecies', 'especie'],
+        mascotaRaza: ['mascotaRaza', 'raza', 'petBreed'],
+        mascotaEdad: ['mascotaEdad', 'edad', 'petAge'],
+        mascotaPeso: ['mascotaPeso', 'peso', 'petWeight'],
+        mascotaSexo: ['mascotaSexo', 'sexo', 'petSex'],
+        procedimiento: ['procedimiento'],
+        doctorAtiende: ['doctorAtiende', 'doctor', 'medico'],
+        fechaCirugia: ['fechaCirugia'],
+        urgencia: ['urgencia'],
+        fecha: ['fecha'],
+        hora: ['hora']
+    };
+    Object.keys(map).forEach(param => {
+        if (params[param]) {
+            let value = params[param].replace(/\+/g, ' ');
+            map[param].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (el.tagName === 'SELECT') {
+                        for (let i = 0; i < el.options.length; i++) {
+                            if (el.options[i].value.toLowerCase() === value.toLowerCase()) {
+                                el.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    } else {
+                        el.value = value;
+                    }
+                    anyFilled = true;
+                }
+            });
+        }
+    });
+    const banner = document.getElementById('autocompleteBanner');
+    if (banner && anyFilled) {
+        banner.innerHTML = '<span class="icon">ℹ️</span><div class="content"><h3>Datos cargados automáticamente</h3><p>Los campos se han completado con información del sistema. Puedes modificar cualquier dato si es necesario.</p></div>';
+        banner.style.display = 'flex';
+    }
+}
+document.addEventListener('DOMContentLoaded', fillFormFromParams);
+</script>
 </html>
