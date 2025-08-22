@@ -185,14 +185,14 @@
         
         .data-table th:nth-child(4),
         .data-table td:nth-child(4) {
-            width: 10%;
-            max-width: 10%;
+            width: 15%;
+            max-width: 15%;
         }
         
         .data-table th:nth-child(5),
         .data-table td:nth-child(5) {
-            width: 30%;
-            max-width: 30%;
+            width: 25%;
+            max-width: 25%;
         }
         
         /* Evitar desbordamiento en las celdas */
@@ -200,6 +200,22 @@
             overflow: hidden;
             padding: 4px 6px;
             vertical-align: middle;
+            word-wrap: break-word;
+            word-break: break-word;
+            hyphens: auto;
+        }
+        
+        /* Mejoras para PDF */
+        @media print, screen and (max-width: 0px) {
+            .data-table {
+                table-layout: auto !important;
+            }
+            .data-table td {
+                overflow: visible !important;
+                white-space: normal !important;
+                word-wrap: break-word !important;
+                hyphens: auto !important;
+            }
         }
         
         input[type="text"], input[type="date"], input[type="time"], select, textarea {
@@ -247,7 +263,12 @@
             min-height: 45px;
             resize: vertical;
             line-height: 1.5;
+            overflow: hidden;
+            word-wrap: break-word;
+            white-space: pre-wrap;
         }
+        
+
         
         select {
             cursor: pointer;
@@ -333,6 +354,36 @@
             transform: translateY(0);
         }
         
+        /* Estilos para los botones de agregar filas */
+        .add-row-container {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+        }
+        
+        .add-row-btn {
+            background: linear-gradient(135deg, #4285f4, #5a9aff);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(66, 133, 244, 0.3);
+        }
+        
+        .add-row-btn:hover {
+            background: linear-gradient(135deg, #3367d6, #4285f4);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(66, 133, 244, 0.4);
+        }
+        
+        .add-row-btn:active {
+            transform: translateY(0);
+        }
+        
         .autofill-banner {
             background: linear-gradient(135deg, #e3f2fd, #bbdefb);
             border: 1px solid #2196f3;
@@ -358,7 +409,7 @@
         }
         
         @media print {
-            .autofill-banner, .pdf-button-container {
+            .autofill-banner, .pdf-button-container, .add-row-container {
                 display: none !important;
             }
             body {
@@ -371,7 +422,8 @@
         }
         
         .pdf-generation .autofill-banner,
-        .pdf-generation .pdf-button-container {
+        .pdf-generation .pdf-button-container,
+        .pdf-generation .add-row-container {
             display: none !important;
         }
         
@@ -457,23 +509,14 @@
                     <th style="width: 25%;">Fármaco</th>
                     <th style="width: 20%;">Uso</th>
                     <th style="width: 15%;">Dosis</th>
-                    <th style="width: 10%;">Vía</th>
-                    <th style="width: 30%;">Responsable</th>
+                    <th style="width: 15%;">Vía</th>
+                    <th style="width: 25%;">Responsable</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td><input type="text" class="farmaco" /></td>
-                    <td>
-                        <select class="uso">
-                            <option value="">Seleccionar</option>
-                            <option value="Preanestésico">Preanestésico</option>
-                            <option value="Inducción">Inducción</option>
-                            <option value="Mantenimiento">Mantenimiento</option>
-                            <option value="Antibiótico">Antibiótico</option>
-                            <option value="Analgésico">Analgésico</option>
-                        </select>
-                    </td>
+                    <td><input type="text" class="uso"/></td>
                     <td><input type="text" class="dosis" /></td>
                     <td>
                         <select class="via">
@@ -481,22 +524,29 @@
                             <option value="I.M">I.M</option>
                             <option value="I.V">I.V</option>
                             <option value="S.C">S.C</option>
+                            <option value="Inhalatoria">Inhalatoria</option>
+                        </select>
+                    </td>
+                    <td><input type="text" class="responsable" /></td>
+                </tr>
+                <tr>
+                    <td><input type="text" class="farmaco" /></td>
+                    <td><input type="text" class="uso" placeholder="Ej: Preanestésico, Inducción, etc." /></td>
+                    <td><input type="text" class="dosis" /></td>
+                    <td>
+                        <select class="via">
+                            <option value=""></option>
+                            <option value="I.M">I.M</option>
+                            <option value="I.V">I.V</option>
+                            <option value="S.C">S.C</option>
+                            <option value="Inhalatoria">Inhalatoria</option>
                         </select>
                     </td>
                     <td><input type="text" class="responsable" placeholder="Nombre del responsable" /></td>
                 </tr>
                 <tr>
                     <td><input type="text" class="farmaco" /></td>
-                    <td>
-                        <select class="uso">
-                            <option value="">Seleccionar</option>
-                            <option value="Preanestésico">Preanestésico</option>
-                            <option value="Inducción">Inducción</option>
-                            <option value="Mantenimiento">Mantenimiento</option>
-                            <option value="Antibiótico">Antibiótico</option>
-                            <option value="Analgésico">Analgésico</option>
-                        </select>
-                    </td>
+                    <td><input type="text" class="uso" placeholder="Ej: Preanestésico, Inducción, etc." /></td>
                     <td><input type="text" class="dosis" /></td>
                     <td>
                         <select class="via">
@@ -504,35 +554,17 @@
                             <option value="I.M">I.M</option>
                             <option value="I.V">I.V</option>
                             <option value="S.C">S.C</option>
-                        </select>
-                    </td>
-                    <td><input type="text" class="responsable" placeholder="Nombre del responsable" /></td>
-                </tr>
-                <tr>
-                    <td><input type="text" class="farmaco" /></td>
-                    <td>
-                        <select class="uso">
-                            <option value="">Seleccionar</option>
-                            <option value="Preanestésico">Preanestésico</option>
-                            <option value="Inducción">Inducción</option>
-                            <option value="Mantenimiento">Mantenimiento</option>
-                            <option value="Antibiótico">Antibiótico</option>
-                            <option value="Analgésico">Analgésico</option>
-                        </select>
-                    </td>
-                    <td><input type="text" class="dosis" /></td>
-                    <td>
-                        <select class="via">
-                            <option value=""></option>
-                            <option value="I.M">I.M</option>
-                            <option value="I.V">I.V</option>
-                            <option value="S.C">S.C</option>
+                            <option value="Inhalatoria">Inhalatoria</option>
                         </select>
                     </td>
                     <td><input type="text" class="responsable" placeholder="Nombre del responsable" /></td>
                 </tr>
             </tbody>
         </table>
+
+        <div class="add-row-container">
+            <button type="button" class="add-row-btn" onclick="addFarmacoRow()">➕ Agregar Fármaco</button>
+        </div>
 
         <h2>Monitoreo de Signos Vitales</h2>
         <table class="data-table" id="monitoreo-table">
@@ -586,6 +618,10 @@
                 </tr>
             </tbody>
         </table>
+
+        <div class="add-row-container">
+            <button type="button" class="add-row-btn" onclick="addMonitoreoRow()">➕ Agregar Monitoreo</button>
+        </div>
 
         <h2>Descripción del Procedimiento</h2>
         <textarea id="descripcion" placeholder="Describa el desarrollo del procedimiento" style="width: 100%; min-height: 55px; font-family: inherit; border-radius: 6px;"></textarea>
@@ -661,113 +697,160 @@
 
         async function generatePDF() {
             try {
-                // Ocultar elementos no imprimibles
+                const container = document.getElementById('bitacoraContent');
+                if (!container) {
+                    alert('No se encontró el contenido para generar el PDF');
+                    return;
+                }
+                
                 const pdfBtn = document.querySelector('.pdf-button-container');
                 const banner = document.getElementById('autocompleteBanner');
+                const addRowBtns = document.querySelectorAll('.add-row-container');
                 
-                const originalPdfDisplay = pdfBtn.style.display;
-                const originalBannerDisplay = banner ? banner.style.display : 'none';
+                // Guardar estados originales
+                const originalPdfDisplay = pdfBtn ? pdfBtn.style.display : '';
+                const originalBannerDisplay = banner ? banner.style.display : '';
+                const originalAddRowDisplays = Array.from(addRowBtns).map(btn => btn.style.display);
                 
-                pdfBtn.style.display = 'none';
+                // Ocultar elementos no imprimibles
+                if (pdfBtn) pdfBtn.style.display = 'none';
                 if (banner) banner.style.display = 'none';
+                addRowBtns.forEach(btn => btn.style.display = 'none');
                 
-                // Convertir selects vacíos a texto para mejor renderizado en PDF
-                const selects = document.querySelectorAll('select');
-                const originalSelectStates = [];
+                // Procesar inputs y selects para mostrar valores
+                const inputs = container.querySelectorAll('input, textarea, select');
+                console.log('Elementos encontrados:', inputs.length);
+                const originalElements = [];
                 
-                selects.forEach((select, index) => {
-                    originalSelectStates[index] = {
-                        element: select,
-                        originalHTML: select.outerHTML,
-                        parent: select.parentNode
-                    };
-                    
-                    // Si el select está vacío o es la opción por defecto, reemplazar con span vacío
-                    if (!select.value || select.value === "") {
-                        const span = document.createElement('span');
-                        span.style.display = 'inline-block';
-                        span.style.width = '100%';
-                        span.style.minHeight = '20px';
-                        span.style.border = '1px solid #ddd';
-                        span.style.padding = '6px 10px';
-                        span.style.borderRadius = '6px';
-                        span.style.backgroundColor = 'white';
-                        span.textContent = '';
-                        select.parentNode.replaceChild(span, select);
+                inputs.forEach((element, index) => {
+                    if (element) {
+                        originalElements[index] = {
+                            element: element,
+                            originalHTML: element.outerHTML,
+                            parent: element.parentNode
+                        };
                     } else {
-                        // Si tiene valor, reemplazar con span que muestre el valor
-                        const span = document.createElement('span');
-                        span.style.display = 'inline-block';
-                        span.style.width = '100%';
-                        span.style.border = '1px solid #ddd';
-                        span.style.padding = '6px 10px';
-                        span.style.borderRadius = '6px';
-                        span.style.backgroundColor = 'white';
-                        span.style.textAlign = 'center';
-                        span.style.fontWeight = '500';
-                        span.textContent = select.value;
-                        select.parentNode.replaceChild(span, select);
+                        originalElements[index] = null;
+                    }
+                    
+                    if (element && element.value && element.value.trim() !== '') {
+                        const displayElement = document.createElement('div');
+                        
+                        // Obtener la fuente actual del elemento original
+                        let fontFamily = "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif";
+                        let fontSize = '12px';
+                        
+                        try {
+                            const computedStyle = window.getComputedStyle(element);
+                            fontFamily = computedStyle.fontFamily || fontFamily;
+                            fontSize = computedStyle.fontSize || fontSize;
+                        } catch (styleError) {
+                            console.warn('Error obteniendo estilos:', styleError);
+                        }
+                        
+                        displayElement.style.cssText = `
+                            border: 1px solid #333;
+                            padding: 6px 10px;
+                            border-radius: 4px;
+                            background: white;
+                            font-family: ${fontFamily};
+                            font-size: ${fontSize};
+                            font-weight: bold;
+                            min-height: 20px;
+                            display: flex;
+                            align-items: center;
+                            word-wrap: break-word;
+                            white-space: pre-wrap;
+                            color: #2c3e50;
+                            line-height: 1.4;
+                        `;
+                        displayElement.textContent = element.value;
+                        
+                        if (element.parentNode) {
+                            element.parentNode.replaceChild(displayElement, element);
+                            // Guardar referencia para restaurar
+                            originalElements[index].replacement = displayElement;
+                        }
                     }
                 });
-
-                const { jsPDF } = window.jspdf;
-                const pdf = new jsPDF('p', 'mm', 'a4');
-
-                const container = document.getElementById('bitacoraContent');
                 
-                // Configuración de alta calidad para mejor resolución
+                // Esperar un momento para que se apliquen los cambios
+                await new Promise(resolve => setTimeout(resolve, 300));
+
+                // Configuración optimizada para menor tamaño de archivo
                 const canvas = await html2canvas(container, {
-                    scale: 2.5, // Mayor escala para mejor calidad
+                    scale: 1.5, // Reducir escala para menor tamaño
                     useCORS: true,
+                    allowTaint: true,
                     backgroundColor: '#ffffff',
+                    logging: false,
                     width: container.scrollWidth,
                     height: container.scrollHeight,
-                    logging: false,
-                    allowTaint: false,
-                    foreignObjectRendering: false,
-                    imageTimeout: 0,
-                    removeContainer: false
+                    windowWidth: container.scrollWidth,
+                    windowHeight: container.scrollHeight,
+                    removeContainer: true, // Optimización de memoria
+                    imageTimeout: 0
                 });
 
-                // Usar PNG con alta calidad en lugar de JPEG
-                const imgData = canvas.toDataURL('image/png', 1.0);
-                const imgW = 190;
-                const imgH = (canvas.height * imgW) / canvas.width;
+                // Crear PDF con compresión
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4',
+                    compress: true // Activar compresión del PDF
+                });
                 
-                // Si la imagen es más alta que la página, ajustar para que quepa en una sola página
-                if (imgH > 277) { // altura máxima de A4 con márgenes
-                    const scaleFactor = 277 / imgH;
-                    const finalW = imgW * scaleFactor;
-                    const finalH = imgH * scaleFactor;
-                    const xOffset = (210 - finalW) / 2;
-                    pdf.addImage(imgData, 'PNG', xOffset, 10, finalW, finalH, '', 'FAST');
+                // Usar JPEG con compresión para reducir tamaño del archivo
+                const imgData = canvas.toDataURL('image/jpeg', 0.8); // Compresión al 80%
+                const imgWidth = 190;
+                const pageHeight = 297;
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                
+                // Ajustar a la página
+                if (imgHeight > pageHeight - 20) {
+                    const scale = (pageHeight - 20) / imgHeight;
+                    const finalWidth = imgWidth * scale;
+                    const finalHeight = imgHeight * scale;
+                    const x = (210 - finalWidth) / 2;
+                    pdf.addImage(imgData, 'JPEG', x, 10, finalWidth, finalHeight, '', 'MEDIUM');
                 } else {
-                    pdf.addImage(imgData, 'PNG', 10, 10, imgW, imgH, '', 'FAST');
+                    pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight, '', 'MEDIUM');
                 }
 
                 // Generar nombre del archivo
-                const paciente = document.getElementById('paciente').value || 'Sin_nombre';
-                const fecha = document.getElementById('fecha').value || new Date().toISOString().split('T')[0];
+                const pacienteElement = document.getElementById('paciente');
+                const fechaElement = document.getElementById('fecha');
+                const paciente = (pacienteElement && pacienteElement.value) ? pacienteElement.value : 'Sin_nombre';
+                const fecha = (fechaElement && fechaElement.value) ? fechaElement.value : new Date().toISOString().split('T')[0];
                 const fileName = `Bitacora_Procedimientos_${paciente.replace(/\s+/g, '_')}_${fecha}.pdf`;
                 
                 pdf.save(fileName);
 
-                // Restaurar elementos ocultos
-                pdfBtn.style.display = originalPdfDisplay;
-                if (banner) banner.style.display = originalBannerDisplay;
-                
-                // Restaurar selects originales
-                originalSelectStates.forEach(state => {
-                    const currentElement = state.parent.firstChild;
-                    if (currentElement) {
+                // Restaurar elementos originales
+                originalElements.forEach((item, index) => {
+                    if (item && item.replacement && item.replacement.parentNode && item.originalHTML) {
+                        try {
                         const tempDiv = document.createElement('div');
-                        tempDiv.innerHTML = state.originalHTML;
-                        const restoredSelect = tempDiv.firstChild;
-                        state.parent.replaceChild(restoredSelect, currentElement);
+                            tempDiv.innerHTML = item.originalHTML;
+                            const restoredElement = tempDiv.firstChild;
+                            if (restoredElement) {
+                                item.replacement.parentNode.replaceChild(restoredElement, item.replacement);
+                            }
+                        } catch (restoreError) {
+                            console.warn(`Error restaurando elemento ${index}:`, restoreError);
+                        }
                     }
                 });
                 
-                // Mostrar mensaje de éxito con mejor estilo
+                // Restaurar elementos ocultos
+                if (pdfBtn) pdfBtn.style.display = originalPdfDisplay;
+                if (banner) banner.style.display = originalBannerDisplay;
+                addRowBtns.forEach((btn, index) => {
+                    btn.style.display = originalAddRowDisplays[index] || '';
+                });
+                
+                // Mostrar mensaje de éxito
                 const successMsg = document.createElement('div');
                 successMsg.style.cssText = `
                     position: fixed; top: 20px; right: 20px; z-index: 10000;
@@ -777,7 +860,6 @@
                     font-family: 'Segoe UI', sans-serif;
                     font-weight: 600; font-size: 14px;
                     display: flex; align-items: center; gap: 10px;
-                    animation: slideIn 0.3s ease-out;
                 `;
                 successMsg.innerHTML = `
                     <span style="font-size: 18px;">✅</span>
@@ -787,8 +869,7 @@
                 
                 setTimeout(() => {
                     if (document.body.contains(successMsg)) {
-                        successMsg.style.animation = 'slideOut 0.3s ease-in';
-                        setTimeout(() => document.body.removeChild(successMsg), 300);
+                        document.body.removeChild(successMsg);
                     }
                 }, 3000);
 
@@ -798,28 +879,51 @@
                 // Restaurar elementos en caso de error
                 const pdfBtn = document.querySelector('.pdf-button-container');
                 const banner = document.getElementById('autocompleteBanner');
+                const addRowBtns = document.querySelectorAll('.add-row-container');
                 if (pdfBtn) pdfBtn.style.display = 'block';
                 if (banner) banner.style.display = 'none';
+                addRowBtns.forEach(btn => btn.style.display = 'block');
                 
-                // Restaurar selects en caso de error
-                if (typeof originalSelectStates !== 'undefined') {
-                    originalSelectStates.forEach(state => {
-                        try {
-                            const currentElement = state.parent.firstChild;
-                            if (currentElement) {
-                                const tempDiv = document.createElement('div');
-                                tempDiv.innerHTML = state.originalHTML;
-                                const restoredSelect = tempDiv.firstChild;
-                                state.parent.replaceChild(restoredSelect, currentElement);
-                            }
-                        } catch (restoreError) {
-                            console.error('Error al restaurar select:', restoreError);
-                        }
-                    });
-                }
-                
-                alert('Error al generar el PDF: ' + error.message);
+                alert('Error al generar el PDF. Por favor, inténtalo de nuevo.');
             }
+        }
+
+        // Función para agregar nueva fila de fármacos
+        function addFarmacoRow() {
+            const tbody = document.querySelector('#farmacos-table tbody');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td><input type="text" class="farmaco" /></td>
+                <td><input type="text" class="uso" placeholder="Ej: Preanestésico, Inducción, etc." /></td>
+                <td><input type="text" class="dosis" /></td>
+                <td>
+                    <select class="via">
+                        <option value=""></option>
+                        <option value="I.M">I.M</option>
+                        <option value="I.V">I.V</option>
+                        <option value="S.C">S.C</option>
+                        <option value="Inhalatoria">Inhalatoria</option>
+                    </select>
+                </td>
+                <td><input type="text" class="responsable" placeholder="Nombre del responsable" /></td>
+            `;
+            tbody.appendChild(newRow);
+        }
+
+        // Función para agregar nueva fila de monitoreo
+        function addMonitoreoRow() {
+            const tbody = document.querySelector('#monitoreo-table tbody');
+            const newRow = document.createElement('tr');
+            newRow.innerHTML = `
+                <td><input type="time" class="hora" /></td>
+                <td><input type="text" class="spo2" /></td>
+                <td><input type="text" class="co2" /></td>
+                <td><input type="text" class="fc" /></td>
+                <td><input type="text" class="fr" /></td>
+                <td><input type="text" class="pam" /></td>
+                <td><input type="text" class="temp" /></td>
+            `;
+            tbody.appendChild(newRow);
         }
     </script>
 </body>
