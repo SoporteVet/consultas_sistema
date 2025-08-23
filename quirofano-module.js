@@ -658,18 +658,18 @@ function editQuirofanoTicket(randomId) {
                         </div>
                         <div class="form-group">
                             <label for="editQuirofanoCedula">Cédula</label>
-                            <input type="text" id="editQuirofanoCedula" name="cedula" value="${ticket.cedula || ''}" required>
+                            <input type="text" id="editQuirofanoCedula" name="cedula" value="${ticket.cedula || ''}" placeholder="Cualquier texto válido">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="editQuirofanoCorreo">Correo Electrónico</label>
-                            <input type="email" id="editQuirofanoCorreo" name="correo" value="${ticket.correo || ''}" required>
+                            <input type="text" id="editQuirofanoCorreo" name="correo" value="${ticket.correo || ''}">
                         </div>
                         <div class="form-group">
                             <label for="editQuirofanoTelefono">Teléfono</label>
-                            <input type="tel" id="editQuirofanoTelefono" name="telefono" value="${ticket.telefono || ''}" required>
+                            <input type="tel" id="editQuirofanoTelefono" name="telefono" value="${ticket.telefono || ''}">
                         </div>
                     </div>
 
