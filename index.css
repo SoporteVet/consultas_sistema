@@ -2129,7 +2129,7 @@ body.visitas-role .ticket-header {
   margin-bottom: 16px;
 }
 
-/* --- Sidebar toggle for visitas --- */
+/* --- Sidebar toggle for all users except recepción --- */
 .menu-toggle {
   display: none;
   position: absolute;
@@ -2150,62 +2150,65 @@ body.visitas-role .ticket-header {
 .menu-toggle:hover {
   background: #3367d6;
 }
-body.visitas-role .menu-toggle {
+/* Mostrar botón para todos los roles excepto recepción */
+body:not(.recepcion-role) .menu-toggle {
   display: block;
 }
 
-body.visitas-role .sidebar {
+/* Aplicar transiciones del sidebar para todos los roles excepto recepción */
+body:not(.recepcion-role) .sidebar {
   transition: margin-left 0.3s, width 0.3s;
 }
-body.visitas-role .main-container.sidebar-hidden .sidebar {
+body:not(.recepcion-role) .main-container.sidebar-hidden .sidebar {
   display: none !important;
 }
-body.visitas-role .main-container.sidebar-hidden .content {
+body:not(.recepcion-role) .main-container.sidebar-hidden .content {
   margin-left: 0 !important;
   width: 100% !important;
   max-width: 100vw;
   transition: width 0.3s, margin-left 0.3s;
 }
-body.visitas-role .main-container {
+body:not(.recepcion-role) .main-container {
   transition: all 0.3s;
 }
 @media (max-width: 980px) {
-  body.visitas-role .main-container.sidebar-hidden .sidebar {
+  body:not(.recepcion-role) .main-container.sidebar-hidden .sidebar {
     left: -280px !important;
     width: 0 !important;
     min-width: 0 !important;
   }
 }
-body.visitas-role.sidebar-hidden .sidebar {
+/* Estados del sidebar oculto para todos los roles excepto recepción */
+body:not(.recepcion-role).sidebar-hidden .sidebar {
   margin-left: -40px;
   width: 40px;
   min-width: 40px;
   padding: 0;
   overflow: hidden;
 }
-body.visitas-role.sidebar-hidden .content {
+body:not(.recepcion-role).sidebar-hidden .content {
   margin-left: 0 !important;
   width: 100% !important;
   max-width: 100vw;
   transition: width 0.3s, margin-left 0.3s;
 }
-body.visitas-role .main-container {
+body:not(.recepcion-role) .main-container {
   transition: all 0.3s;
 }
 @media (max-width: 980px) {
-  body.visitas-role .sidebar {
+  body:not(.recepcion-role) .sidebar {
     position: fixed;
     left: 0;
     top: 0;
     height: 100vh;
     z-index: 2000;
   }
-  body.visitas-role.sidebar-hidden .sidebar {
+  body:not(.recepcion-role).sidebar-hidden .sidebar {
     left: -40px;
     width: 40px;
     min-width: 40px;
   }
-  body.visitas-role .content {
+  body:not(.recepcion-role) .content {
     width: 100vw;
     max-width: 100vw;
   }

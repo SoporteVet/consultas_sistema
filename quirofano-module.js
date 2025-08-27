@@ -1217,15 +1217,27 @@ function marcarListoParaCirugia(randomId) {
 // Funciones auxiliares para loading y notificaciones (si no están disponibles globalmente)
 function showLoading() {
     // Si existe la función global, la usa, sino no hace nada
-    if (window.showLoading) {
+    if (window.showLoading && window.showLoading !== showLoading) {
         window.showLoading();
+    } else {
+        // Fallback: mostrar el loading spinner directamente
+        const loadingElement = document.querySelector('.loading-spinner, .loading, #loading');
+        if (loadingElement) {
+            loadingElement.style.display = 'block';
+        }
     }
 }
 
 function hideLoading() {
     // Si existe la función global, la usa, sino no hace nada
-    if (window.hideLoading) {
+    if (window.hideLoading && window.hideLoading !== hideLoading) {
         window.hideLoading();
+    } else {
+        // Fallback: ocultar el loading spinner directamente
+        const loadingElement = document.querySelector('.loading-spinner, .loading, #loading');
+        if (loadingElement) {
+            loadingElement.style.display = 'none';
+        }
     }
 }
 

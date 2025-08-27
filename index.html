@@ -13,11 +13,11 @@
   <link rel="icon" href="empresa.jpg" type="image/x-icon">
 </head>
 <body>
-  <!-- Botón menú hamburguesa solo para visitas -->
+  <!-- Botón menú hamburguesa para dispositivos móviles -->
 <button id="menuToggle" class="menu-toggle" title="Mostrar/Ocultar menú" style="display:none;">
   <i class="fas fa-bars"></i>
 </button>
-  <!-- Botón para ocultar sidebar solo para visitas -->
+  <!-- Botón para ocultar sidebar (todos los usuarios excepto recepción) -->
   <button id="menuToggleBtn" class="menu-toggle" style="display:none;">
     <i class="fas fa-angle-double-left"></i> 
   </button>
@@ -682,67 +682,7 @@
           <!-- Aquí se mostrarán los tickets de laboratorio -->
         </div>
 
-        <!-- Estadísticas rápidas de laboratorio -->
-        <div class="lab-stats" style="margin-top: 20px;">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <i class="fas fa-vials"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="totalLabTickets">0</span>
-                <span class="stat-label">Total Tickets</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-clock"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="pendientesLab">0</span>
-                <span class="stat-label">Pendientes</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-microscope"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="procesandoLab">0</span>
-                <span class="stat-label">En Proceso</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-flask"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="reportadosLab">0</span>
-                <span class="stat-label">Reportados Lab</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-paper-plane"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="reportadosClienteLab">0</span>
-                <span class="stat-label">Por reportar al cliente</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-external-link-alt"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="laboratorioExternoLab">0</span>
-                <span class="stat-label">Laboratorio Externo</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-phone-slash"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="clienteNoContestaLab">0</span>
-                <span class="stat-label">Cliente no contesta</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-home"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="internosLab">0</span>
-                <span class="stat-label">Internos</span>
-              </div>
-            </div>
-          </div>
-        </div>
+      
       </section>
 
       <!-- Sección para crear reportes de laboratorio (similar a consentimientos) -->
@@ -1071,47 +1011,6 @@
         <!-- Contenedor de tickets de quirófano -->
         <div id="quirofanoTicketContainer" class="quirofano-ticket-container">
           <!-- Aquí se mostrarán los tickets de quirófano -->
-        </div>
-
-        <!-- Estadísticas de quirófano -->
-        <div class="quirofano-stats" style="margin-top: 20px;">
-          <div class="stats-grid">
-            <div class="stat-card">
-              <i class="fas fa-cut"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="totalQuirofano">0</span>
-                <span class="stat-label">Total Cirugías</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-calendar-day"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="quirofanoHoy">0</span>
-                <span class="stat-label">Hoy</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-clock"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="quirofanoProgramados">0</span>
-                <span class="stat-label">Programados</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-cut"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="quirofanoEnCurso">0</span>
-                <span class="stat-label">En Curso</span>
-              </div>
-            </div>
-            <div class="stat-card">
-              <i class="fas fa-check-circle"></i>
-              <div class="stat-info">
-                <span class="stat-number" id="quirofanoCompletados">0</span>
-                <span class="stat-label">Completados</span>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
       

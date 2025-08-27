@@ -389,15 +389,16 @@ function applyRoleBasedUI(role) {
     }
 }
 
-// Mostrar/ocultar sidebar para visitas
+// Mostrar/ocultar sidebar para todos los usuarios excepto recepción
 function setupVisitasSidebarToggle() {
   const btn = document.getElementById('menuToggleBtn');
   const sidebar = document.querySelector('.sidebar');
   const mainContainer = document.querySelector('.main-container');
   if (!btn || !sidebar || !mainContainer) return;
 
-  // Mostrar solo si es visitas
-  if (sessionStorage.getItem('userRole') === 'visitas') {
+  // Mostrar para todos los roles excepto recepción
+  const userRole = sessionStorage.getItem('userRole');
+  if (userRole !== 'recepcion') {
     btn.style.display = 'block';
     btn.addEventListener('click', function() {
       mainContainer.classList.toggle('sidebar-hidden');
