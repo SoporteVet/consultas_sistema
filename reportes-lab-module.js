@@ -22,7 +22,12 @@ const LAB_REPORT_TEMPLATES = {
 function capitalizeFirstLetter(text) {
   if (!text || typeof text !== 'string') return text;
   
-  // Convertir a minúsculas primero y luego capitalizar primera letra
+  // Si el texto ya tiene capitalización correcta (como nombres propios), no lo alteremos
+  if (text.match(/^[A-Z][a-z]+(\s+[A-Z][a-z]+)*$/)) {
+    return text;
+  }
+  
+  // Para texto que no es nombre propio, aplicar capitalización estándar
   return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
@@ -174,7 +179,7 @@ function normalizeLabTicketToClient(t) {
     sexo: t.sexo || '',
     idPaciente: t.idPaciente || '',
     fecha: t.fecha || t.fechaServicio || '',
-    medico: capitalizeFirstLetter(t.medicoSolicita || t.medicoAtiende || ''),
+    medico: t.medicoSolicita || t.medicoAtiende || '', // No aplicar capitalizeFirstLetter a nombres de doctores
     estado: t.estado || '',
     factura: t.factura || t.numFactura || '',
     ticketId: t.randomId || t.firebaseKey || ''
