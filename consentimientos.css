@@ -802,3 +802,72 @@
 .btn-retry:active {
   transform: translateY(0);
 }
+
+/* ===== MENSAJE INFORMATIVO SOBRE FILTRO DE FECHA ===== */
+.search-info-message {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  border: 1px solid #90caf9;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: #1565c0;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.15);
+  animation: slideInDown 0.4s ease-out;
+}
+
+.search-info-message i {
+  font-size: 1.2rem;
+  color: #1976d2;
+}
+
+.search-info-message span {
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.search-info {
+  color: #546e7a;
+  font-size: 0.9rem;
+  font-style: italic;
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.search-info i {
+  color: #78909c;
+  font-size: 0.8rem;
+}
+
+/* ===== MENSAJE INFORMATIVO DE LA SECCIÓN ===== */
+.date-filter-info {
+  margin-bottom: 20px;
+}
+
+.date-filter-info .search-info-message {
+  background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+  border: 1px solid #ffcc80;
+  color: #e65100;
+  box-shadow: 0 2px 8px rgba(255, 152, 0, 0.15);
+}
+
+.date-filter-info .search-info-message i {
+  color: #f57c00;
+}
+
+/* ===== ANIMACIÓN PARA EL MENSAJE INFORMATIVO ===== */
+@keyframes slideInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

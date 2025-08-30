@@ -400,14 +400,19 @@ function setupVisitasSidebarToggle() {
   const userRole = sessionStorage.getItem('userRole');
   if (userRole !== 'recepcion') {
     btn.style.display = 'block';
-    btn.addEventListener('click', function() {
-      mainContainer.classList.toggle('sidebar-hidden');
-      if (mainContainer.classList.contains('sidebar-hidden')) {
-        btn.innerHTML = '<i class="fas fa-angle-double-right"></i> ';
-      } else {
-        btn.innerHTML = '<i class="fas fa-angle-double-left"></i>';
-      }
-    });
+    btn.addEventListener('click', toggleSidebar);
+    
+    // Agregar event listener para el botón de menú móvil
+    const mobileMenuBtn = document.getElementById('menuToggle');
+    if (mobileMenuBtn) {
+      mobileMenuBtn.addEventListener('click', toggleSidebar);
+    }
+    
+    // Agregar event listener para cambios de tamaño de ventana
+    window.addEventListener('resize', handleResize);
+    
+    // Inicializar el estado del botón
+    updateToggleButton();
   } else {
     btn.style.display = 'none';
   }
@@ -4783,6 +4788,11 @@ function navigateToSection(sectionId, buttonId) {
         return;
     }
     
+    // Cerrar sidebar en móviles después de navegar
+    if (window.innerWidth <= 980) {
+        closeSidebar();
+    }
+    
     // Usar la función showSection existente
     if (typeof showSection === 'function') {
         showSection(section);
@@ -4833,11 +4843,21 @@ function navigateToConsultas() {
         if (esperaBtn) esperaBtn.classList.add('active');
     }
     
+    // Cerrar sidebar en móviles después de navegar
+    if (window.innerWidth <= 980) {
+        closeSidebar();
+    }
+    
     navigateToSection('verTicketsSection', 'verTicketsBtn');
 }
 
 function navigateToLab(sectionId, buttonId) {
 
+    
+    // Cerrar sidebar en móviles después de navegar
+    if (window.innerWidth <= 980) {
+        closeSidebar();
+    }
     
     if (typeof showLabSection === 'function') {
         showLabSection(sectionId);
@@ -4849,6 +4869,11 @@ function navigateToLab(sectionId, buttonId) {
 
 function navigateToEstadisticas() {
 
+    
+    // Cerrar sidebar en móviles después de navegar
+    if (window.innerWidth <= 980) {
+        closeSidebar();
+    }
     
     const section = document.getElementById('estadisticasSection');
     if (section) {
@@ -4889,6 +4914,11 @@ function setActiveSubmenuButtonHTML(buttonId) {
 
 // Función para navegar al módulo de quirófano
 function navigateToQuirofano(sectionId, buttonId) {
+    // Cerrar sidebar en móviles después de navegar
+    if (window.innerWidth <= 980) {
+        closeSidebar();
+    }
+    
     // Ocultar todas las secciones
     const sections = document.querySelectorAll('.content section');
     sections.forEach(section => {
@@ -4976,6 +5006,92 @@ function updatePrequirurgicoCounter() {
 window.navigateToQuirofano = navigateToQuirofano;
 window.updatePrequirurgicoCounter = updatePrequirurgicoCounter;
 
+// Funciones mejoradas para manejo del sidebar en móviles
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const mainContainer = document.querySelector('.main-container');
+  const userRole = sessionStorage.getItem('userRole');
+  
+  if (userRole === 'recepcion') return;
+  
+  if (window.innerWidth <= 980) {
+    // En móviles, usar la clase .show
+    sidebar.classList.toggle('show');
+    console.log('Sidebar toggled, show class:', sidebar.classList.contains('show'));
+  } else {
+    // En desktop, usar la clase sidebar-hidden
+    mainContainer.classList.toggle('sidebar-hidden');
+  }
+  
+  // Actualizar el botón de toggle
+  updateToggleButton();
+}
+
+function closeSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  const mainContainer = document.querySelector('.main-container');
+  const userRole = sessionStorage.getItem('userRole');
+  
+  if (userRole === 'recepcion') return;
+  
+  if (window.innerWidth <= 980) {
+    sidebar.classList.remove('show');
+    console.log('Sidebar closed, show class removed');
+  } else {
+    mainContainer.classList.remove('sidebar-hidden');
+  }
+  
+  updateToggleButton();
+}
+
+function updateToggleButton() {
+  const btn = document.getElementById('menuToggleBtn');
+  const sidebar = document.querySelector('.sidebar');
+  const mainContainer = document.querySelector('.main-container');
+  
+  if (!btn) return;
+  
+  if (window.innerWidth <= 980) {
+    // En móviles
+    if (sidebar.classList.contains('show')) {
+      btn.innerHTML = '<i class="fas fa-times"></i>';
+    } else {
+      btn.innerHTML = '<i class="fas fa-bars"></i>';
+    }
+  } else {
+    // En desktop
+    if (mainContainer.classList.contains('sidebar-hidden')) {
+      btn.innerHTML = '<i class="fas fa-angle-double-right"></i>';
+    } else {
+      btn.innerHTML = '<i class="fas fa-angle-double-left"></i>';
+    }
+  }
+}
+
+// Función para cerrar sidebar al cambiar tamaño de ventana
+function handleResize() {
+  const sidebar = document.querySelector('.sidebar');
+  const mainContainer = document.querySelector('.main-container');
+  
+  if (window.innerWidth <= 980) {
+    // En móviles, asegurar que el sidebar esté oculto por defecto
+    sidebar.classList.remove('show');
+    mainContainer.classList.remove('sidebar-hidden');
+  }
+}
+
+// Exponer funciones globalmente
+window.toggleSidebar = toggleSidebar;
+window.closeSidebar = closeSidebar;
+window.updateToggleButton = updateToggleButton;
+
+// Event listener para cerrar sidebar con tecla Escape
+document.addEventListener('keydown', function(event) {
+  if (event.key === 'Escape') {
+    closeSidebar();
+  }
+});
+
 window.addEventListener('DOMContentLoaded', function() {
   // ... existing code ...
   // Mostrar botón de Consentimientos solo si el usuario no es 'visitas'
@@ -4994,4 +5110,24 @@ window.addEventListener('DOMContentLoaded', function() {
   const scriptQuirofano = document.createElement('script');
   scriptQuirofano.src = 'quirofano-module.js';
   document.body.appendChild(scriptQuirofano);
+  
+  // Inicializar el sidebar para móviles
+  if (window.innerWidth <= 980) {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) {
+      sidebar.classList.remove('show');
+    }
+    
+    // Agregar event listener para el overlay
+    const overlay = document.querySelector('.sidebar-overlay');
+    if (overlay) {
+      overlay.addEventListener('click', closeSidebar);
+    }
+    
+    // Agregar event listener para el botón de cierre
+    const closeBtn = document.querySelector('.sidebar-close-btn');
+    if (closeBtn) {
+      closeBtn.addEventListener('click', closeSidebar);
+    }
+  }
 });

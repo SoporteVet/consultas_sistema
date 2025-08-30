@@ -123,7 +123,6 @@ document.addEventListener('DOMContentLoaded', function(){
     setVal('propietarioTelefono', p.get('propietarioTelefono'));
     setVal('propietarioEmail', p.get('propietarioEmail'));
     setVal('nombreMedico', p.get('nombreMedico'));
-    setVal('propietarioFecha', p.get('propietarioFecha'));
     setVal('mascotaRaza', p.get('mascotaRaza'));
     setVal('mascotaEdad', p.get('mascotaEdad'));
     setVal('mascotaPeso', p.get('mascotaPeso'));
@@ -512,7 +511,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr>
                 <tr>
                     <td>EOSINOFILOS #</td>
-                    <td><input type="text" id="eosinofilos" list="rangoEosinofilos" style="background-color: #f0f0f0;" onblur="formatearDecimal('eosinofilos')" onkeydown="moverFoco(event, 'basofilos')" title="Se calcula automáticamente: (Eosinófilos % × Leucocitos) ÷ 100"></td>
+                    <td><input type="text" id="eosinofilos" list="rangoEosinofilos" readonly class="campo-calculado" style="background-color: #f0f0f0;" onblur="formatearDecimal('eosinofilos')" onkeydown="moverFoco(event, 'basofilos')" title="Se calcula automáticamente: (Eosinófilos % × Leucocitos) ÷ 100"></td>
                     <td id="refeosinofilos">0,0 - 1,7</td>
                     <td>x 10³/µl</td>
                 </tr>
@@ -555,7 +554,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 <script>
                         const valoresReferencia = {
-                  Canino: {
+                Canino: {
                     Macho: {
                         "De 1 año a 12 años": {
                             Recuentoleucocitos: "6,8 - 13,9",
@@ -882,14 +881,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             Linfocitos_numero: "3,2 - 9,0",
                             Monocitos_numero: "0,1 - 0,6",
                             Neutrofilos_numero: "2,9 - 11,0",
-                            Eosinofilos_numero: "",
+                            Eosinofilos_numero: "25,0 - 60,0",
                             Basofilos_numero: "0,00 - 0,76",
-                            Linfocitos_porcentaje: "25,0 - 60,0",
-                            Monocitos_porcentaje: "2,0 - 10,0",
+                            Linfocitos_porcentaje: "2,0 - 10,0",
                             Neutrofilos_porcentaje: "35,0 - 55,0",
                             Eosinofilos_porcentaje: "0,0 - 5,0",
                             Basofilos_porcentaje: "0,0 - 8,0",
-                            Recuentoeritrocitos: "4,0 - 8,0",
+                            Recuentoeritrocitos: "0,0 - 5,0",
                             Hemoglobina: "4,0 - 8,0",
                             Hematocrito: "8,0 - 17,5",
                             vcm: "30,0 - 50,0",
@@ -906,14 +904,13 @@ document.addEventListener('DOMContentLoaded', function() {
                             Linfocitos_numero: "3,2 - 9,0",
                             Monocitos_numero: "0,1 - 0,6",
                             Neutrofilos_numero: "2,9 - 11,0",
-                            Eosinofilos_numero: "",
+                            Eosinofilos_numero: "25,0 - 60,0",
                             Basofilos_numero: "0,00 - 0,76",
-                            Linfocitos_porcentaje: "25,0 - 60,0",
-                            Monocitos_porcentaje: "2,0 - 10,0",
+                            Linfocitos_porcentaje: "2,0 - 10,0",
                             Neutrofilos_porcentaje: "35,0 - 55,0",
                             Eosinofilos_porcentaje: "0,0 - 5,0",
                             Basofilos_porcentaje: "0,0 - 8,0",
-                            Recuentoeritrocitos: "4,0 - 8,0",
+                            Recuentoeritrocitos: "0,0 - 5,0",
                             Hemoglobina: "4,0 - 8,0",
                             Hematocrito: "8,0 - 17,5",
                             vcm: "30,0 - 50,0",

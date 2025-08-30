@@ -6,10 +6,45 @@ let selectedTemplate = null;
 let consentimientos = [];
 let consentSource = 'consulta'; // 'consulta' | 'quirofano' | 'internos'
 
+// Función para obtener la fecha actual en formato YYYY-MM-DD
+function getCurrentDateString() {
+    const today = new Date();
+    return today.getFullYear() + '-' + 
+           String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+           String(today.getDate()).padStart(2, '0');
+}
+
+// Función para verificar si un ticket fue creado hoy
+function isTicketCreatedToday(ticket) {
+    const today = getCurrentDateString();
+    
+    // Verificar fechaCreacion (campo principal para tickets de quirófano)
+    if (ticket.fechaCreacion) {
+        const ticketDate = ticket.fechaCreacion.split('T')[0];
+        return ticketDate === today;
+    }
+    
+    // Verificar fecha (campo para tickets de consulta)
+    if (ticket.fecha) {
+        const ticketDate = new Date(ticket.fecha);
+        if (!isNaN(ticketDate.getTime())) {
+            const ticketDateString = ticketDate.toISOString().split('T')[0];
+            return ticketDateString === today;
+        }
+    }
+    
+    // Verificar fechaConsulta como fallback
+    if (ticket.fechaConsulta) {
+        return ticket.fechaConsulta === today;
+    }
+    
+    return false;
+}
+
 // Plantillas permitidas por origen
 const ALLOWED_TEMPLATES_BY_SOURCE = {
-    consulta: ['anestesia', 'emergencias', 'transfusion', 'cesarea', 'eutanasia', 'cirugia', 'alta_voluntaria', 'control_anestesico'],
-    quirofano: ['anestesia', 'cirugia', 'cesarea', 'control_anestesico'],
+    consulta: ['anestesia', 'emergencias', 'transfusion', 'cesarea', 'eutanasia', 'cirugia', 'alta_voluntaria', 'control_anestesico', 'internamiento'],
+    quirofano: ['anestesia', 'cirugia', 'cesarea', 'control_anestesico', 'internamiento'],
     internos: ['alta_voluntaria', 'anestesia', 'internamiento', 'transfusion', 'eutanasia']
 };
 
@@ -29,11 +64,6 @@ const CONSENT_TEMPLATES = {
         name: 'Emergencias',
         file: 'Emergencias_Plantilla.html',
         description: 'Consentimiento para atención de emergencias'
-    },
-    internamiento: {
-        name: 'Internamiento',
-        file: 'internamiento.html',
-        description: 'Autorización para internamiento hospitalario'
     },
     transfusion: {
         name: 'Transfusión',
@@ -59,6 +89,11 @@ const CONSENT_TEMPLATES = {
         name: 'Control Anestésico y Medicamentoso',
         file: 'control_anestesico.html',
         description: 'Control de anestesia y medicamentos administrados durante cirugía'
+    },
+    internamiento: {
+        name: 'Consentimiento Internamiento',
+        file: 'consentimiento_internamiento.html',
+        description: 'Consentimiento informado para internamiento y procedimientos hospitalarios'
     }
 };
 
@@ -140,6 +175,8 @@ function setupConsentEventListeners() {
         // Búsqueda en tiempo real
         searchInput.addEventListener('input', debounce(searchClients, 500));
     }
+    
+    
     
     // Template cards
     setupTemplateCardListeners();
@@ -324,7 +361,8 @@ function searchClients() {
                 <div class="no-clients-found">
                     <i class="fas fa-database"></i>
                     <h4>Sin resultados</h4>
-                    <p>No se encontraron clientes en quirófano con ese término.</p>
+                    <p>No se encontraron clientes en quirófano con ese término para el día de hoy.</p>
+                    <p class="search-info"><i class="fas fa-info-circle"></i> Solo se muestran tickets creados hoy</p>
                 </div>
             `;
         } else {
@@ -348,7 +386,8 @@ function searchClients() {
                 <div class="no-clients-found">
                     <i class="fas fa-database"></i>
                     <h4>Sin resultados</h4>
-                    <p>No se encontraron clientes de consulta con ese término.</p>
+                    <p>No se encontraron clientes de consulta con ese término para el día de hoy.</p>
+                    <p class="search-info"><i class="fas fa-info-circle"></i> Solo se muestran tickets creados hoy</p>
                 </div>
             `;
         } else {
@@ -371,9 +410,10 @@ function searchClients() {
         if (filteredClients.length === 0) {
             resultsContainer.innerHTML = `
                 <div class="no-clients-found">
-                    <i class="fas fa-database"></i>
+                    <i class="fas fa-info-circle"></i>
                     <h4>Sin resultados</h4>
-                    <p>No se encontraron pacientes internos con ese término.</p>
+                    <p>No se encontraron pacientes internos con ese término para el día de hoy.</p>
+                    <p class="search-info"><i class="fas fa-info-circle"></i> Solo se muestran tickets creados hoy</p>
                 </div>
             `;
         } else {
@@ -389,8 +429,14 @@ function filterClientsFromQuirofanoTickets(searchTerm) {
     console.log('Buscando en tickets de quirófano:', window.quirofanoTickets.length, 'tickets disponibles');
     console.log('Ejemplo de ticket:', window.quirofanoTickets[0]);
     
-    // Filtrar tickets de quirófano que coincidan con el término de búsqueda
+    // Filtrar tickets de quirófano que coincidan con el término de búsqueda Y que sean creados hoy
     const matchingTickets = window.quirofanoTickets.filter(ticket => {
+        // Primero verificar que el ticket fue creado hoy
+        if (!isTicketCreatedToday(ticket)) {
+            return false;
+        }
+        
+        // Luego verificar que coincida con el término de búsqueda
         return (
             (ticket.nombrePropietario && ticket.nombrePropietario.toLowerCase().includes(term)) ||
             (ticket.cedula && ticket.cedula.toLowerCase().includes(term)) ||
@@ -401,6 +447,7 @@ function filterClientsFromQuirofanoTickets(searchTerm) {
     });
     
     console.log('Tickets que coinciden con la búsqueda:', matchingTickets.length);
+    console.log('Filtro aplicado: Solo tickets creados hoy (' + getCurrentDateString() + ')');
     
     // Agrupar por cliente único
     matchingTickets.forEach(ticket => {
@@ -448,7 +495,15 @@ function displayClientResults(clients) {
         return;
     }
     
-    const resultsHTML = clients.map((client, index) => `
+    // Agregar mensaje informativo sobre el filtro de fecha
+    const infoMessage = `
+        <div class="search-info-message">
+            <i class="fas fa-calendar-day"></i>
+            <span>Mostrando solo tickets creados hoy (${getCurrentDateString()})</span>
+        </div>
+    `;
+    
+    const resultsHTML = infoMessage + clients.map((client, index) => `
         <div class="client-result-item" onclick="selectClientByIndex(${index})">
             <div class="client-info">
                 <h4>${client.nombre}</h4>
@@ -549,13 +604,27 @@ function filterClientsFromConsultaTickets(searchTerm) {
     const term = searchTerm.toLowerCase();
     const clientsMap = new Map();
     const source = Array.isArray(window.tickets) ? window.tickets : [];
-    const matching = source.filter(t => (
-        (t.nombre && t.nombre.toLowerCase().includes(term)) ||
-        (t.cedula && t.cedula.toLowerCase().includes(term)) ||
-        (t.mascota && t.mascota.toLowerCase().includes(term)) ||
-        (t.idPaciente && String(t.idPaciente).toLowerCase().includes(term)) ||
-        (t.numFactura && String(t.numFactura).toLowerCase().includes(term))
-    ));
+    
+    // Filtrar tickets que coincidan con el término de búsqueda Y que sean creados hoy
+    const matching = source.filter(t => {
+        // Primero verificar que el ticket fue creado hoy
+        if (!isTicketCreatedToday(t)) {
+            return false;
+        }
+        
+        // Luego verificar que coincida con el término de búsqueda
+        return (
+            (t.nombre && t.nombre.toLowerCase().includes(term)) ||
+            (t.cedula && t.cedula.toLowerCase().includes(term)) ||
+            (t.mascota && t.mascota.toLowerCase().includes(term)) ||
+            (t.idPaciente && String(t.idPaciente).toLowerCase().includes(term)) ||
+            (t.numFactura && String(t.numFactura).toLowerCase().includes(term))
+        );
+    });
+    
+    console.log('Tickets de consulta que coinciden con la búsqueda:', matching.length);
+    console.log('Filtro aplicado: Solo tickets creados hoy (' + getCurrentDateString() + ')');
+    
     matching.forEach(ticket => {
         const key = ticket.cedula || ticket.idPaciente || (ticket.nombre + '|' + ticket.mascota);
         if (!clientsMap.has(key)) {
@@ -796,6 +865,9 @@ function clearClientSearch() {
         card.classList.remove('selected');
     });
 }
+
+// Función para agregar mensaje informativo sobre el filtro de fecha
+
 
 // Función para imprimir consentimiento desde iframe
 function printConsentForm() {
