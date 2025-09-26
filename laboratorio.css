@@ -14,6 +14,12 @@
   --lab-dark: #202124;
   --lab-shadow: 0 4px 12px rgba(66, 165, 245, 0.1);
   --lab-transition: all 0.3s ease;
+  
+  /* Colores para estadísticas del laboratorio */
+  --lab-stat-blue: #007bff;
+  --lab-stat-bg: #ffffff;
+  --lab-stat-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --lab-stat-border: #e9ecef;
 }
 
 /* Botones de navegación de laboratorio */
@@ -2018,5 +2024,157 @@ nav button#verLabBtn:hover::before {
   
   .quirofano-header {
     font-size: 0.8rem;
+  }
+}
+
+/* ===== ESTILOS PARA ESTADÍSTICAS DEL LABORATORIO (ESTILO DASHBOARD) ===== */
+
+/* Contenedor principal de estadísticas */
+.lab-stats-container {
+  background: #f8f9fa;
+  padding: 20px;
+  margin-bottom: 25px;
+  border-radius: 8px;
+}
+
+.lab-stats-container h3 {
+  margin: 0 0 20px 0;
+  color: #2c3e50;
+  font-size: 18px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lab-stats-container h3 i {
+  color: var(--lab-stat-blue);
+  font-size: 20px;
+}
+
+/* Grid de estadísticas */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-top: 15px;
+}
+
+/* Tarjetas de estadísticas - Estilo dashboard limpio */
+.stat-card {
+  background: var(--lab-stat-bg);
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+  box-shadow: var(--lab-stat-shadow);
+  border: 1px solid var(--lab-stat-border);
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+/* Iconos de estadísticas */
+.stat-icon {
+  font-size: 32px;
+  color: var(--lab-stat-blue);
+  margin-bottom: 12px;
+  display: block;
+}
+
+/* Números de estadísticas */
+.stat-number {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--lab-stat-blue);
+  margin-bottom: 8px;
+  line-height: 1;
+}
+
+/* Etiquetas de estadísticas */
+.stat-label {
+  font-size: 14px;
+  color: #333;
+  font-weight: 500;
+  margin: 0;
+  line-height: 1.2;
+}
+
+/* Responsive design */
+@media (max-width: 1200px) {
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+  }
+  
+  .stat-card {
+    padding: 15px;
+  }
+  
+  .stat-number {
+    font-size: 32px;
+  }
+  
+  .stat-icon {
+    font-size: 28px;
+  }
+}
+
+@media (max-width: 768px) {
+  .lab-stats-container {
+    padding: 15px;
+    margin-bottom: 20px;
+  }
+  
+  .stats-grid {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+  }
+  
+  .stat-card {
+    padding: 12px;
+  }
+  
+  .stat-number {
+    font-size: 28px;
+  }
+  
+  .stat-icon {
+    font-size: 24px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .lab-stats-container h3 {
+    font-size: 16px;
+    margin-bottom: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  
+  .stat-card {
+    padding: 10px;
+  }
+  
+  .stat-number {
+    font-size: 24px;
+  }
+  
+  .stat-icon {
+    font-size: 20px;
+  }
+  
+  .stat-label {
+    font-size: 11px;
   }
 }

@@ -669,6 +669,9 @@
             const params = new URLSearchParams(window.location.search);
             let anyFilled = false;
             
+            console.log('URL completa:', window.location.href);
+            console.log('Parámetros URL:', window.location.search);
+            
             const fieldMap = {
                 'clienteNombre': 'propietario',
                 'mascotaNombre': 'paciente',
@@ -680,14 +683,20 @@
             };
             
             Object.keys(fieldMap).forEach(param => {
-                if (params.get(param)) {
+                const paramValue = params.get(param);
+                console.log(`Parámetro ${param}:`, paramValue);
+                if (paramValue) {
                     const element = document.getElementById(fieldMap[param]);
+                    console.log(`Elemento ${fieldMap[param]} encontrado:`, !!element);
                     if (element) {
-                        element.value = params.get(param).replace(/\+/g, ' ');
+                        element.value = paramValue.replace(/\+/g, ' ');
+                        console.log(`Valor asignado a ${fieldMap[param]}:`, element.value);
                         anyFilled = true;
                     }
                 }
             });
+            
+            console.log('¿Se llenó algún campo?', anyFilled);
             
             if (anyFilled) {
                 const banner = document.getElementById('autocompleteBanner');
@@ -696,6 +705,16 @@
         }
 
         async function generatePDF() {
+            // CAPTURAR VALORES ANTES DE MODIFICAR EL DOM
+            const mascotaNombre = document.getElementById('paciente').value || 'Sin_nombre';
+            const propietarioNombre = document.getElementById('propietario').value || 'Sin_apellido';
+            const fecha = document.getElementById('fecha').value || new Date().toISOString().split('T')[0];
+            
+            console.log('VALORES CAPTURADOS ANTES DE GENERAR PDF:');
+            console.log('Mascota nombre:', mascotaNombre);
+            console.log('Propietario nombre completo:', propietarioNombre);
+            console.log('Fecha:', fecha);
+            
             try {
                 const container = document.getElementById('bitacoraContent');
                 if (!container) {
@@ -818,12 +837,47 @@
                     pdf.addImage(imgData, 'JPEG', 10, 10, imgWidth, imgHeight, '', 'MEDIUM');
                 }
 
-                // Generar nombre del archivo
-                const pacienteElement = document.getElementById('paciente');
-                const fechaElement = document.getElementById('fecha');
-                const paciente = (pacienteElement && pacienteElement.value) ? pacienteElement.value : 'Sin_nombre';
-                const fecha = (fechaElement && fechaElement.value) ? fechaElement.value : new Date().toISOString().split('T')[0];
-                const fileName = `Bitacora_Procedimientos_${paciente.replace(/\s+/g, '_')}_${fecha}.pdf`;
+                // Generar nombre del archivo usando los valores capturados al inicio
+                const nombreArray = propietarioNombre.split(' ');
+                const propietarioApellido = nombreArray.length > 1 ? nombreArray[nombreArray.length - 1] : nombreArray[0];
+                
+                console.log('USANDO VALORES CAPTURADOS:');
+                console.log('Mascota nombre:', mascotaNombre);
+                console.log('Propietario nombre completo:', propietarioNombre);
+                console.log('Propietario apellido:', propietarioApellido);
+                console.log('Fecha:', fecha);
+                
+                const fileName = `Bitacora_Procedimientos_${mascotaNombre.replace(/\s+/g, '_')}_${propietarioApellido.replace(/\s+/g, '_')}_${fecha}.pdf`;
+                console.log('Nombre del archivo:', fileName);
+                
+                // Si no hay datos válidos, permitir llenar manualmente
+                if (mascotaNombre === 'Sin_nombre' || propietarioNombre === 'Sin_apellido') {
+                    const llenarManual = confirm('No se encontraron datos del paciente o propietario. ¿Deseas llenar los datos manualmente?');
+                    if (llenarManual) {
+                        const nuevoPaciente = prompt('Ingresa el nombre de la mascota:', mascotaNombre === 'Sin_nombre' ? '' : mascotaNombre);
+                        const nuevoPropietario = prompt('Ingresa el nombre del propietario:', propietarioNombre === 'Sin_apellido' ? '' : propietarioNombre);
+                        
+                        if (nuevoPaciente && nuevoPaciente.trim() !== '') {
+                            mascotaNombre = nuevoPaciente.trim();
+                        }
+                        if (nuevoPropietario && nuevoPropietario.trim() !== '') {
+                            propietarioNombre = nuevoPropietario.trim();
+                            
+                            // Recalcular apellido
+                            const nombreArray = propietarioNombre.split(' ');
+                            propietarioApellido = nombreArray.length > 1 ? nombreArray[nombreArray.length - 1] : nombreArray[0];
+                        }
+                        
+                        // Regenerar nombre del archivo
+                        const fileName = `Bitacora_Procedimientos ${mascotaNombre.replace(/\s+/g, '_')} ${propietarioApellido.replace(/\s+/g, '_')}_${fecha}.pdf`;
+                        console.log('Nombre del archivo actualizado:', fileName);
+                    } else {
+                        const confirmar = confirm('¿Deseas continuar con el nombre por defecto?');
+                        if (!confirmar) {
+                            return; // Cancelar generación
+                        }
+                    }
+                }
                 
                 pdf.save(fileName);
 

@@ -646,6 +646,50 @@
           <input type="text" id="labSearchInput" placeholder="Buscar por cliente, mascota, ID paciente o tipo de examen..." autocomplete="off">
         </div>
         
+        <!-- Estadísticas del Laboratorio -->
+        <div class="lab-stats-container">
+          <h3><i class="fas fa-chart-bar"></i> Estadísticas del Laboratorio</h3>
+          <div class="stats-grid">
+            <div class="stat-card">
+              <i class="fas fa-vials stat-icon"></i>
+              <div class="stat-number" id="totalLabTickets">0</div>
+              <div class="stat-label">Total Tickets</div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-clock stat-icon"></i>
+              <div class="stat-number" id="pendientesLab">0</div>
+              <div class="stat-label">Pendientes</div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-cogs stat-icon"></i>
+              <div class="stat-number" id="procesandoLab">0</div>
+              <div class="stat-label">En Proceso</div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-check-circle stat-icon"></i>
+              <div class="stat-number" id="reportadosLab">0</div>
+              <div class="stat-label">Reportados por lab</div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-phone stat-icon"></i>
+              <div class="stat-number" id="reportadosClienteLab">0</div>
+              <div class="stat-label">Reportados al Cliente</div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-phone-slash stat-icon"></i>
+              <div class="stat-number" id="clienteNoContestaLab">0</div>
+              <div class="stat-label">Cliente No Contesta</div>
+            </div>
+            <div class="stat-card">
+              <i class="fas fa-hospital stat-icon"></i>
+              <div class="stat-number" id="internosLab">0</div>
+              <div class="stat-label">Internos</div>
+            </div>
+          </div>
+        </div>
+        
+        
+        
         <!-- Filtro de fecha para laboratorio -->
         <div class="date-filter" style="margin-bottom: 15px;" id="labDateFilterContainer">
           <label for="labFilterDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
@@ -1427,6 +1471,9 @@
   emailjs.init('ZiyjOCMRsBnxJn_LT');
 </script>
   <script src="firebase-config.js"></script>
+  <!-- Módulos de optimización de tiempo real -->
+  <script src="firebase-realtime-optimizer.js"></script>
+  <script src="porcobrar-performance-fix.js"></script>
   <script src="services-data.js"></script>
   <script src="auth.js"></script>
   <script src="laboratorio.js"></script>
@@ -1439,6 +1486,13 @@
   <script src="admin-users.js"></script>
   <script src="fix-lab-search.js"></script>
   <script src="fix-services-selection.js"></script>
+  <!-- Inicialización de optimizaciones -->
+  <script src="realtime-performance-init.js"></script>
+  <!-- Optimizador de memoria -->
+  <script src="memory-optimizer.js"></script>
+  <!-- Herramientas de diagnóstico (solo en desarrollo) -->
+  <script src="diagnostico-tiempo-real.js"></script>
+  <script src="memory-diagnostic.js"></script>
   
 <script>
 document.addEventListener('DOMContentLoaded', function() {

@@ -1098,14 +1098,33 @@ function updateTicketInDOM(updatedTicket) {
     }
     
     // Actualizar indicador de listo para facturar
-    const listoElement = ticketElement.querySelector('.listo-facturar-indicator');
+    const listoElement = ticketElement.querySelector('.listo-para-facturar-badge');
     if (updatedTicket.listoParaFacturar) {
         if (!listoElement) {
+            // Crear el badge de listo para facturar
+            let badgeContent = '<i class="fas fa-file-invoice-dollar"></i> <strong>Listo para facturar ✓</strong>';
+            if (updatedTicket.horaListoParaFacturar) {
+                badgeContent += `<br><small style="font-size: 0.8em; opacity: 0.9;">Marcado: ${updatedTicket.horaListoParaFacturar}</small>`;
+                if (updatedTicket.usuarioListoParaFacturar) {
+                    badgeContent += ` <small style="font-size: 0.75em; opacity: 0.8;">por ${updatedTicket.usuarioListoParaFacturar}</small>`;
+                }
+            }
+            
             const indicator = document.createElement('div');
-            indicator.className = 'listo-facturar-indicator';
-            indicator.innerHTML = '<i class="fas fa-check-circle"></i> Listo para facturar';
+            indicator.className = 'listo-para-facturar-badge';
+            indicator.innerHTML = badgeContent;
             const ticketInfo = ticketElement.querySelector('.ticket-info');
             if (ticketInfo) ticketInfo.appendChild(indicator);
+        } else {
+            // Actualizar contenido existente
+            let badgeContent = '<i class="fas fa-file-invoice-dollar"></i> <strong>Listo para facturar ✓</strong>';
+            if (updatedTicket.horaListoParaFacturar) {
+                badgeContent += `<br><small style="font-size: 0.8em; opacity: 0.9;">Marcado: ${updatedTicket.horaListoParaFacturar}</small>`;
+                if (updatedTicket.usuarioListoParaFacturar) {
+                    badgeContent += ` <small style="font-size: 0.75em; opacity: 0.8;">por ${updatedTicket.usuarioListoParaFacturar}</small>`;
+                }
+            }
+            listoElement.innerHTML = badgeContent;
         }
     } else if (listoElement) {
         listoElement.remove();
@@ -1378,7 +1397,8 @@ function renderTickets(filter = 'todos', date = null) {
         // Mostrar todos menos terminados y cliente_se_fue
         filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate && t.estado !== 'terminado' && t.estado !== 'cliente_se_fue');
     } else if (filter === 'espera') {
-        filteredTickets = tickets.filter(ticket => ticket.estado === 'espera' && ticket.fechaConsulta === selectedDate);
+        // Para tickets de consulta en espera, mostrar todos sin importar la fecha
+        filteredTickets = tickets.filter(ticket => ticket.estado === 'espera');
     } else if (filter === 'consultorio') {
         filteredTickets = tickets.filter(ticket => 
             (
@@ -1727,10 +1747,10 @@ function renderTickets(filter = 'todos', date = null) {
                     <p><i class="fas fa-stethoscope"></i> Motivo de llegada: ${ticket.motivoLlegada}</p>
                     <p><i class='fas fa-notes-medical'></i> Motivo: ${ticket.motivo}</p>
                     ${ticket.fechaConsulta ? `<p><i class="fas fa-calendar-day"></i> Fecha: ${formatDate(ticket.fechaConsulta)}</p>` : ''}
-                    ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${ticket.horaLlegada}</p>` : ''}
-                    ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${ticket.horaConsulta}</p>` : ''}
-                    ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${ticket.horaAtencion}</p>` : ''}
-                    ${ticket.horaFinalizacion ? `<p><i class="fas fa-check-circle"></i> Finalización: ${ticket.horaFinalizacion}</p>` : ''}
+                    ${ticket.horaLlegada ? `<p><i class="fas fa-sign-in-alt"></i> Llegada: ${formatTime12Hour(ticket.horaLlegada)}</p>` : ''}
+                    ${ticket.horaConsulta ? `<p><i class="fas fa-calendar-check"></i> Cita: ${formatTime12Hour(ticket.horaConsulta)}</p>` : ''}
+                    ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${formatTime12Hour(ticket.horaAtencion)}</p>` : ''}
+                    ${ticket.horaFinalizacion ? `<p><i class="fas fa-check-circle"></i> Finalización: ${formatTime12Hour(ticket.horaFinalizacion)}</p>` : ''}
                     <p class="${urgenciaClass}"><strong>Categorización de paciente:</strong> ${getUrgenciaLabel(ticket.urgencia)}</p>
                     ${ticket.urgencia === 'emergencia' ? `<div class="ticket-emergencia-anim" style='position:absolute;top:10px;right:10px;z-index:2;'><span style='background:#d32f2f;color:#fff;padding:4px 10px;border-radius:6px;font-weight:bold;font-size:0.95em;box-shadow:0 2px 8px rgba(0,0,0,0.12);letter-spacing:1px;'>Emergencia</span></div>` : ''}
                     <div class="estado-badge ${estadoClass}">
@@ -1898,6 +1918,39 @@ function formatDate(dateString) {
     return `${day}/${month}/${year}`;
 }
 
+// Función para convertir hora militar (24h) a formato 12 horas con AM/PM
+function formatTime12Hour(timeString) {
+    if (!timeString || timeString === '-') return timeString;
+    
+    // Si ya está en formato 12 horas (contiene AM/PM), devolverlo tal como está
+    if (timeString.includes('AM') || timeString.includes('PM')) {
+        return timeString;
+    }
+    
+    // Extraer horas y minutos del formato HH:MM
+    const [hours, minutes] = timeString.split(':');
+    const hour24 = parseInt(hours, 10);
+    const mins = parseInt(minutes, 10);
+    
+    if (isNaN(hour24) || isNaN(mins)) return timeString;
+    
+    // Convertir a formato 12 horas
+    let hour12 = hour24;
+    let period = 'AM';
+    
+    if (hour24 === 0) {
+        hour12 = 12;
+    } else if (hour24 === 12) {
+        hour12 = 12;
+        period = 'PM';
+    } else if (hour24 > 12) {
+        hour12 = hour24 - 12;
+        period = 'PM';
+    }
+    
+    return `${hour12}:${minutes.toString().padStart(2, '0')} ${period}`;
+}
+
 function mostrarHorario() {
     const fecha = fechaHorario.value;
     
@@ -1952,8 +2005,12 @@ function mostrarHorario() {
         // Determinar si es ticket de quirófano o consulta
         const esQuirofano = ticket.fechaCirugia !== undefined;
         
-        // Determinar la hora a mostrar
-        const hora = ticket.horaConsulta || ticket.horaCirugia || ticket.horaCreacion || '-';
+        // Determinar la hora a mostrar (convertir a formato 12 horas para consultas)
+        let hora = ticket.horaConsulta || ticket.horaCirugia || ticket.horaCreacion || '-';
+        // Solo convertir a formato 12 horas si es un ticket de consulta (no quirófano)
+        if (!esQuirofano && hora !== '-') {
+            hora = formatTime12Hour(hora);
+        }
         
         // Determinar el estado
         let estadoLabel = '';
@@ -2183,7 +2240,7 @@ function exportToCSV(data, filename) {
         ticket.idPaciente || '',
         ticket.medicoAtiende || '',
         ticket.fechaConsulta || new Date(ticket.fecha).toISOString().split('T')[0],
-        ticket.horaConsulta || ticket.horaCreacion,
+        formatTime12Hour(ticket.horaConsulta || ticket.horaCreacion),
         getEstadoLabel(ticket.estado),
         (ticket.urgencia || '').toUpperCase(),
         ticket.numFactura || '',
@@ -2709,47 +2766,11 @@ function editTicket(randomId) {
     
     document.body.appendChild(modal);
     
-    // Event listener para el checkbox "Listo para facturar" - disponible para todos excepto visitas
+    // Event listener para el checkbox "Listo para facturar" - SOLO para actualización visual
     const listoParaFacturarCheckbox = document.getElementById('editListoParaFacturar');
     if (listoParaFacturarCheckbox && userRole !== 'visitas') {
         listoParaFacturarCheckbox.addEventListener('change', function() {
-            // Preparar datos para actualizar
-            const ticketToUpdate = {
-                listoParaFacturar: this.checked
-            };
-            
-            // Si se está marcando como listo para facturar, agregar timestamp
-            if (this.checked) {
-                const now = new Date();
-                ticketToUpdate.fechaListoParaFacturar = now.toISOString();
-                ticketToUpdate.horaListoParaFacturar = now.toLocaleTimeString('es-ES', { 
-                    hour: '2-digit', 
-                    minute: '2-digit' 
-                });
-                ticketToUpdate.usuarioListoParaFacturar = sessionStorage.getItem('userName') || 'Usuario';
-            } else {
-                // Si se desmarca, limpiar los campos de timestamp
-                ticketToUpdate.fechaListoParaFacturar = null;
-                ticketToUpdate.horaListoParaFacturar = null;
-                ticketToUpdate.usuarioListoParaFacturar = null;
-            }
-            
-            // Referencia a Firebase
-            const ticketsRef = firebase.database().ref('tickets');
-            
-            ticketsRef.child(ticket.firebaseKey).update(ticketToUpdate)
-                .then(() => {
-                    const statusMessage = this.checked ? 'Marcado como listo para facturar' : 'Desmarcado como listo para facturar';
-                    showNotification(statusMessage, 'success');
-                    
-
-                })
-                .catch(error => {
-        
-                    showNotification('Error al actualizar estado de facturación', 'error');
-                    // Revertir el cambio en caso de error
-                    this.checked = !this.checked;
-                });
+            // Solo actualización visual, sin notificaciones
         });
     }
     
@@ -2777,21 +2798,25 @@ function editTicket(randomId) {
         const editListoParaFacturar = document.getElementById('editListoParaFacturar');
         const listoParaFacturarValue = editListoParaFacturar ? editListoParaFacturar.checked : false;
         
-        // Preservar o establecer timestamps de "listo para facturar"
+        // Manejo mejorado de "listo para facturar" con timestamps
         let fechaListoParaFacturar = ticket.fechaListoParaFacturar;
         let horaListoParaFacturar = ticket.horaListoParaFacturar;
         let usuarioListoParaFacturar = ticket.usuarioListoParaFacturar;
         
-        // Si se está marcando como listo y no tenía timestamp, agregarlo
-        if (listoParaFacturarValue && !ticket.listoParaFacturar) {
-            const now = new Date();
-            fechaListoParaFacturar = now.toISOString();
-            horaListoParaFacturar = now.toLocaleTimeString('es-ES', { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-            });
-            usuarioListoParaFacturar = sessionStorage.getItem('userName') || 'Usuario';
-        } else if (!listoParaFacturarValue) {
+        // Si se está marcando como listo para facturar
+        if (listoParaFacturarValue) {
+            // Si no tenía timestamp o se está marcando por primera vez, agregar timestamp
+            if (!ticket.listoParaFacturar || !ticket.fechaListoParaFacturar) {
+                const now = new Date();
+                fechaListoParaFacturar = now.toISOString();
+                horaListoParaFacturar = now.toLocaleTimeString('es-ES', { 
+                    hour: '2-digit', 
+                    minute: '2-digit' 
+                });
+                usuarioListoParaFacturar = sessionStorage.getItem('userName') || 'Usuario';
+            }
+            // Si ya tenía timestamp, mantenerlo (no sobrescribir)
+        } else {
             // Si se desmarca, limpiar timestamps
             fechaListoParaFacturar = null;
             horaListoParaFacturar = null;
@@ -3155,6 +3180,16 @@ function saveEditedTicket(ticket) {
             // RESPALDO: Intentar guardado directo si la transacción falla
             ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
                 .then(() => {
+                    // Actualizar el array local con los nuevos datos
+                    const localTicketIndex = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
+                    if (localTicketIndex !== -1) {
+                        tickets[localTicketIndex] = {
+                            ...tickets[localTicketIndex],
+                            ...ticketToSave,
+                            firebaseKey: ticket.firebaseKey
+                        };
+                    }
+                    
                     closeModal();
                     showNotification('Consulta actualizada correctamente', 'success');
                     
@@ -3189,6 +3224,16 @@ function saveEditedTicket(ticket) {
             // RESPALDO: Si la transacción se abortó por validaciones muy estrictas, intentar guardado directo
             ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
                 .then(() => {
+                    // Actualizar el array local con los nuevos datos
+                    const localTicketIndex = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
+                    if (localTicketIndex !== -1) {
+                        tickets[localTicketIndex] = {
+                            ...tickets[localTicketIndex],
+                            ...ticketToSave,
+                            firebaseKey: ticket.firebaseKey
+                        };
+                    }
+                    
                     closeModal();
                     showNotification('Consulta actualizada correctamente', 'success');
                     
@@ -3220,6 +3265,16 @@ function saveEditedTicket(ticket) {
                     showNotification('No se pudieron guardar los cambios. Recargue la página e intente nuevamente.', 'error');
                 });
         } else {
+            // Actualizar el array local con los nuevos datos
+            const localTicketIndex = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
+            if (localTicketIndex !== -1) {
+                tickets[localTicketIndex] = {
+                    ...tickets[localTicketIndex],
+                    ...ticketToSave,
+                    firebaseKey: ticket.firebaseKey
+                };
+            }
+            
             closeModal();
             
             showNotification('Consulta actualizada correctamente', 'success');
