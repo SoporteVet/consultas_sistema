@@ -74,7 +74,7 @@ function setupQuirofanoFilterVisibility() {
 // Función para configurar acceso al módulo de quirófano según el rol
 function setupQuirofanoFilterAccess() {
     const userRole = sessionStorage.getItem('userRole');
-    const allowedRoles = ['admin', 'recepcion', 'consulta_externa', 'quirofano'];
+    const allowedRoles = ['admin', 'recepcion', 'consulta_externa', 'quirofano', 'laboratorio'];
     
     if (!allowedRoles.includes(userRole)) {
         return false;
