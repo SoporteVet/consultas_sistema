@@ -505,13 +505,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr>
                 <tr>
                     <td>NEUTROFILOS #</td>
-                    <td><input type="text" id="neutrofilos" list="rangoNeutrofilos" readonly class="campo-calculado" style="background-color: #f0f0f0;" onblur="formatearDecimal('neutrofilos')" onkeydown="moverFoco(event, 'eosinofilos')" title="Se calcula automáticamente: Leucocitos - Linfocitos - Monocitos - Eosinófilos"></td>
+                    <td><input type="text" id="neutrofilos" list="rangoNeutrofilos" class="campo-calculado" style="background-color: #f0f0f0;" onblur="formatearDecimal('neutrofilos')" onkeydown="moverFoco(event, 'eosinofilos')" title="Se calcula automáticamente: Leucocitos - Linfocitos - Monocitos - Eosinófilos"></td>
                     <td id="refneutrofilos">4,1 - 10,3</td>
                     <td>x 10³/µl</td>
                 </tr>
                 <tr>
                     <td>EOSINOFILOS #</td>
-                    <td><input type="text" id="eosinofilos" list="rangoEosinofilos" readonly class="campo-calculado" style="background-color: #f0f0f0;" onblur="formatearDecimal('eosinofilos')" onkeydown="moverFoco(event, 'basofilos')" title="Se calcula automáticamente: (Eosinófilos % × Leucocitos) ÷ 100"></td>
+                    <td><input type="text" id="eosinofilos" list="rangoEosinofilos" class="campo-calculado" style="background-color: #f0f0f0;" onblur="formatearDecimal('eosinofilos')" onkeydown="moverFoco(event, 'basofilos')" title="Se calcula automáticamente: (Eosinófilos % × Leucocitos) ÷ 100"></td>
                     <td id="refeosinofilos">0,0 - 1,7</td>
                     <td>x 10³/µl</td>
                 </tr>
@@ -535,7 +535,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr>
                 <tr>
                     <td>NEUTROFILOS %</td>
-                    <td><input type="text" id="neutrofilos_porcentaje" list="rangoNeutrofilosPorcentaje" readonly class="campo-calculado" style="background-color: #f0f0f0;" onblur="formatearDecimal('neutrofilos_porcentaje')" onkeydown="moverFoco(event, 'eosinofilos_porcentaje')" title="Se calcula automáticamente: 100 - Linfocitos % - Monocitos % - Eosinófilos %"></td>
+                    <td><input type="text" id="neutrofilos_porcentaje" list="rangoNeutrofilosPorcentaje" class="campo-calculado" style="background-color: #f0f0f0;" onblur="formatearDecimal('neutrofilos_porcentaje')" onkeydown="moverFoco(event, 'eosinofilos_porcentaje')" title="Se calcula automáticamente: 100 - Linfocitos % - Monocitos % - Eosinófilos %"></td>
                     <td id="refNeutrofilosPorcentaje">43,0 - 81,0</td>
                     <td>%</td>
                 </tr>
