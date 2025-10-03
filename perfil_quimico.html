@@ -5,6 +5,40 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Plantillas</title>
     <link rel="stylesheet" href="index_lab.css">
+    <style>
+        /* Ocultar encabezados de tablas cuando se use plantilla de analitos */
+        .analitos-mode .table-header-analitos {
+            display: none !important;
+        }
+        
+        /* Alineación específica para las columnas de las tablas del perfil químico */
+        .container table th:nth-child(1),
+        .container table td:nth-child(1) {
+            text-align: left !important; /* PARÁMETRO - alineado a la izquierda */
+        }
+        
+        .container table th:nth-child(2),
+        .container table td:nth-child(2) {
+            text-align: left !important; /* RESULTADO - centrado */
+        }
+        
+        .container table th:nth-child(3),
+        .container table td:nth-child(3) {
+            text-align: left !important; /* VALOR DE REFERENCIA - centrado */
+        }
+        
+        .container table th:nth-child(4),
+        .container table td:nth-child(4) {
+            text-align: left !important; /* UNIDADES - centrado */
+        }
+        
+        /* Centrar los inputs en la columna RESULTADO */
+        .container table td:nth-child(2) input {
+            text-align: center !important;
+            margin: 0 auto;
+            display: block;
+        }
+    </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 </script>
@@ -62,6 +96,13 @@ document.addEventListener('DOMContentLoaded', function(){
       } else {
         funcionamientoRenalTitle.style.display = 'block';
       }
+    }
+    
+    // Agregar/quitar clase para ocultar encabezados de tablas en modo analitos
+    if (template === 'analitos_laboratorio') {
+      document.body.classList.add('analitos-mode');
+    } else {
+      document.body.classList.remove('analitos-mode');
     }
     
     if (funcionamientoHepaticoTitle) {
@@ -137,6 +178,13 @@ function updateHeaderBasedOnTemplate() {
     } else {
       funcionamientoRenalTitle.style.display = 'block';
     }
+  }
+  
+  // Agregar/quitar clase para ocultar encabezados de tablas en modo analitos
+  if (template === 'analitos_laboratorio') {
+    document.body.classList.add('analitos-mode');
+  } else {
+    document.body.classList.remove('analitos-mode');
   }
   
   if (funcionamientoHepaticoTitle) {
@@ -1183,7 +1231,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
         <h3 class="titulos" id="funcionamientoRenalTitle">FUNCIONAMIENTO RENAL</h3>
         <table>
-            <thead>
+            <thead class="table-header-analitos">
                 <tr>
                     <th>PARÁMETRO</th>
                     <th>RESULTADO</th>
@@ -1269,7 +1317,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
         <h3 class="titulos" id="funcionamientoHepaticoTitle">FUNCIONAMIENTO HÉPATICO</h3>
         <table>
-            <thead>
+            <thead class="table-header-analitos">
                 <tr>
                     <th>PARÁMETRO</th>
                     <th>RESULTADO</th>
@@ -1328,7 +1376,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
         <h3 class="titulos" id="funcionamientoSanguineoTitle">FUNCIONAMIENTO SANGUINEO</h3>
         <table>
-            <thead>
+            <thead class="table-header-analitos">
                 <tr>
                     <th>PARÁMETRO</th>
                     <th>RESULTADO</th>
