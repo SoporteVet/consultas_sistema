@@ -29,6 +29,41 @@ document.addEventListener('DOMContentLoaded', function(){
     setVal('mascotaEdad', p.get('mascotaEdad'));
     setVal('mascotaPeso', p.get('mascotaPeso'));
     
+    // Cambiar el header según el tipo de plantilla
+    const template = p.get('template');
+    const headerElement = document.getElementById('reportHeader');
+    const interferenceSection = document.getElementById('interferenceIndicesSection');
+    const lipasaRow = document.getElementById('lipasaRow');
+    
+    if (headerElement) {
+      if (template === 'analitos_laboratorio') {
+        headerElement.textContent = 'ANALITOS LABORATORIO';
+      } else {
+        headerElement.textContent = 'PERFIL QUIMICO GENERAL';
+      }
+    }
+    
+    // Ocultar sección de Índices de Interferencia para analitos_laboratorio
+    if (interferenceSection) {
+      if (template === 'analitos_laboratorio') {
+        interferenceSection.style.display = 'none';
+      } else {
+        interferenceSection.style.display = 'block';
+      }
+    }
+    
+    // LIPASA siempre visible - se puede eliminar manualmente si es necesario
+    if (lipasaRow) {
+      lipasaRow.style.display = 'table-row';
+    }
+    
+    // Recargar la lista de parámetros después de detectar el template
+    setTimeout(() => {
+      if (typeof cargarListaDeParametros === 'function') {
+        cargarListaDeParametros();
+      }
+    }, 200);
+    
     // Verificar el mensaje del médico después del autollenado
     const medico = p.get('nombreMedico');
     if (medico) {
@@ -38,6 +73,49 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   } catch(e){}
 });
+
+// Función adicional para asegurar que el header se cambie
+function updateHeaderBasedOnTemplate() {
+  const p = new URLSearchParams(location.search);
+  const template = p.get('template');
+  const headerElement = document.getElementById('reportHeader');
+  const interferenceSection = document.getElementById('interferenceIndicesSection');
+  const lipasaRow = document.getElementById('lipasaRow');
+  
+  if (headerElement) {
+    if (template === 'analitos_laboratorio') {
+      headerElement.textContent = 'ANALITOS LABORATORIO';
+    } else {
+      headerElement.textContent = 'PERFIL QUIMICO GENERAL';
+    }
+  }
+  
+  // Ocultar sección de Índices de Interferencia para analitos_laboratorio
+  if (interferenceSection) {
+    if (template === 'analitos_laboratorio') {
+      interferenceSection.style.display = 'none';
+    } else {
+      interferenceSection.style.display = 'block';
+    }
+  }
+  
+  // LIPASA siempre visible - se puede eliminar manualmente si es necesario
+  if (lipasaRow) {
+    lipasaRow.style.display = 'table-row';
+  }
+  
+  // Recargar la lista de parámetros después de detectar el template
+  if (typeof cargarListaDeParametros === 'function') {
+    cargarListaDeParametros();
+  }
+}
+
+// Ejecutar también cuando el DOM esté completamente listo
+document.addEventListener('DOMContentLoaded', updateHeaderBasedOnTemplate);
+
+// Ejecutar también después de un pequeño delay por si hay problemas de timing
+setTimeout(updateHeaderBasedOnTemplate, 100);
+
 </script>
     <body>
         <div class="controls">
@@ -70,7 +148,7 @@ document.addEventListener('DOMContentLoaded', function(){
             <img src="empresa.jpg" alt="Logo de la Empresa" class="small-image">
             <h1>Laboratorio Clínico Veterinario</h1>
         </div>
-        <h3 class="subheader">PERFIL QUIMICO GENERAL</h3>
+        <h3 class="subheader" id="reportHeader">PERFIL QUIMICO GENERAL</h3>
             <table>
                 <thead>
                     <tr>
@@ -916,7 +994,6 @@ function actualizarColor(inputId, refId) {
     const refElement = document.getElementById(refId);
     
     if (!inputElement || !refElement || !refElement.textContent) {
-        console.log(`No se encontró: ${inputId} o ${refId}`);
         return;
     }
     
@@ -985,7 +1062,9 @@ document.addEventListener('DOMContentLoaded', function() {
         { campo: 'Albumina', ref: 'refalbumina' },
         { campo: 'proteinas_totales', ref: 'refproteinas_totales' },
         { campo: 'Globulinas', ref: 'refglobulinas' },
-        { campo: 'alb/glo', ref: 'refalb_glo' }
+        { campo: 'alb/glo', ref: 'refalb_glo' },
+        { campo: 'lipasa', ref: 'reflipasa' }
+
     ];
     
     parametros.forEach(param => {
@@ -1294,29 +1373,31 @@ document.addEventListener('DOMContentLoaded', function() {
             </tbody>
         </table>
     
-        <h3 class="titulos">INDICES DE INTERFERENCIA</h3>
-        <table>
-            <tbody>
-                <tr>
-                    <td>SUERO HEMOLITICO</td>
-                    <td>
-                        <input type="text" id="suero_hemolitico2" list="opcionesInterferencia" style="width:140px;">
-                    </td>
-                </tr>
-                <tr>
-                    <td>SUERO LIPEMICO</td>
-                    <td>
-                        <input type="text" id="suero_lipemico2" list="opcionesInterferencia" style="width:140px;">
-                    </td>
-                </tr>
-                <tr>
-                    <td>SUERO ICTERICO</td>
-                    <td>
-                        <input type="text" id="suero_icterico2" list="opcionesInterferencia" style="width:140px;">
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div id="interferenceIndicesSection">
+            <h3 class="titulos">INDICES DE INTERFERENCIA</h3>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>SUERO HEMOLITICO</td>
+                        <td>
+                            <input type="text" id="suero_hemolitico2" list="opcionesInterferencia" style="width:140px;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>SUERO LIPEMICO</td>
+                        <td>
+                            <input type="text" id="suero_lipemico2" list="opcionesInterferencia" style="width:140px;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>SUERO ICTERICO</td>
+                        <td>
+                            <input type="text" id="suero_icterico2" list="opcionesInterferencia" style="width:140px;">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <datalist id="opcionesInterferencia">
     <option value="No se observa">
     <option value="Se observa">
@@ -1372,7 +1453,9 @@ function moverFoco(event, siguienteId) {
             'Albumina', 
             'proteinas_totales', 
             'Globulinas', 
-            'alb/glo'
+            'alb/glo',
+            'lipasa'
+
         ];
         
         // Encontrar el índice del campo actual
@@ -1410,7 +1493,9 @@ function moverFoco(event, siguienteId) {
             'Albumina', 
             'proteinas_totales', 
             'Globulinas', 
-            'alb/glo'
+            'alb/glo',
+            'lipasa'
+
         ];
         
         // Encontrar el índice del campo actual
@@ -1424,8 +1509,7 @@ function moverFoco(event, siguienteId) {
     }
 }
 document.addEventListener('DOMContentLoaded', () => {
-    cargarListaDeParametros();
-    console.log("Cargando lista de parámetros..."); // Para debugear
+    // No cargar inmediatamente, esperar a que se detecte el template
 });
 // Función mejorada de redondeo que maneja correctamente los IDs de referencia
 function redondearAEntero(id) {
@@ -1569,7 +1653,6 @@ document.addEventListener('DOMContentLoaded', function() {
 function cargarListaDeParametros() {
     const selector = document.getElementById('parameterSelector');
     if (!selector) {
-        console.error("No se encontró el selector de parámetros");
         return;
     }
     
@@ -1580,22 +1663,19 @@ function cargarListaDeParametros() {
     "GLUCOSA", "COLESTEROL TOTAL", "TRIGLICÉRIDOS", "CK",
     "NITROGENO UREICO", "UREA", "CREATININA", "RELACIÓN BUN/CREA", "ÁCIDO ÚRICO", "FOSFORO", "CALCIO", "MAGNESIO",
     "AST", "ALT", "FOSFATASA ALCALINA", "GGT", "BILLIRRUBINA TOTAL",
-    "ALBUMINA", "PROTEINAS TOTALES", "GLOBULINAS TOTALES", "RELACIÓN ALBUMINA/GLOBULINAS", "LIPASA"
+    "ALBUMINA", "PROTEINAS TOTALES", "GLOBULINAS TOTALES", "RELACIÓN ALBUMINA/GLOBULINAS", "LIPASA PANCREATICA"
 ];
     
     const tablas = document.querySelectorAll('#template1 table');
-    console.log(`Encontradas ${tablas.length} tablas`); // Para debugear
     
     tablas.forEach((tabla, tablaIndex) => {
         const filas = tabla.querySelectorAll('tbody tr');
-        console.log(`Tabla ${tablaIndex}: ${filas.length} filas`); // Para debugear
         
         filas.forEach((fila, filaIndex) => {
             if (!fila.cells || fila.cells.length === 0) return;
             
             // Obtener el nombre del parámetro (primera celda)
             const paramName = fila.cells[0]?.textContent.trim();
-            console.log(`Fila ${filaIndex}: "${paramName}"`); // Para debugear
             
             // Solo agregar los parámetros específicos que queremos
             if (parametrosEspecificos.includes(paramName)) {
@@ -1611,8 +1691,6 @@ function cargarListaDeParametros() {
             }
         });
     });
-    
-    console.log(`Total de opciones cargadas: ${selector.options.length - 1}`); // Para debugear
 }
 
 function eliminarParametroSeleccionado() {
@@ -1846,6 +1924,7 @@ function guardarAnalisisActual() {
         proteinas_totales: document.getElementById('proteinas_totales')?.value || '',
         Globulinas: document.getElementById('Globulinas')?.value || '',
         alb_glo: document.getElementById('alb/glo')?.value || '',
+        lipasa: document.getElementById('lipasa')?.value || '',
 
         // Índices de interferencia
         suero_hemolitico: document.getElementById('suero_hemolitico2')?.value || 'No se observa',
@@ -1956,6 +2035,7 @@ function cargarAnalisisDesdeHistorial(index) {
     document.getElementById('proteinas_totales').value = analisis.proteinas_totales || '';
     document.getElementById('Globulinas').value = analisis.Globulinas || '';
     document.getElementById('alb/glo').value = analisis.alb_glo || '';
+    document.getElementById('lipasa').value = analisis.lipasa || '';
     
     document.getElementById('suero_hemolitico2').value = analisis.suero_hemolitico || 'No se observa';
     document.getElementById('suero_lipemico2').value = analisis.suero_lipemico || 'No se observa';
@@ -2003,11 +2083,13 @@ function cargarAnalisisDesdeHistorial(index) {
             const templates = document.querySelectorAll('.container');
             const templateSelector = document.getElementById('templateSelector');
         
-            templateSelector.addEventListener('change', () => {
-                templates.forEach(template => template.style.display = 'none');
-                const selectedTemplate = document.getElementById(templateSelector.value);
-                if (selectedTemplate) selectedTemplate.style.display = 'block';
-            });
+            if (templateSelector) {
+                templateSelector.addEventListener('change', () => {
+                    templates.forEach(template => template.style.display = 'none');
+                    const selectedTemplate = document.getElementById(templateSelector.value);
+                    if (selectedTemplate) selectedTemplate.style.display = 'block';
+                });
+            }
         });
         
         function printTemplate() {
@@ -2061,11 +2143,13 @@ function cargarAnalisisDesdeHistorial(index) {
         const templates = document.querySelectorAll('.container');
         const templateSelector = document.getElementById('templateSelector');
     
-        templateSelector.addEventListener('change', () => {
-            templates.forEach(template => template.style.display = 'none');
-            const selectedTemplate = document.getElementById(templateSelector.value);
-            if (selectedTemplate) selectedTemplate.style.display = 'block';
-        });
+        if (templateSelector) {
+            templateSelector.addEventListener('change', () => {
+                templates.forEach(template => template.style.display = 'none');
+                const selectedTemplate = document.getElementById(templateSelector.value);
+                if (selectedTemplate) selectedTemplate.style.display = 'block';
+            });
+        }
     });
     async function generatePDF() {
     // Mostrar el indicador de carga
@@ -2132,7 +2216,12 @@ function cargarAnalisisDesdeHistorial(index) {
         pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
 
         // Genera el nombre del archivo según la plantilla actual y datos
-        const fileName = `Perfil Quimico General ${mascotaNombre} ${propietarioApellido}.pdf`;
+        // Verificar si viene de analitos_laboratorio
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAnalitosLaboratorio = urlParams.get('template') === 'analitos_laboratorio';
+        const fileName = isAnalitosLaboratorio 
+            ? `Analitos Laboratorio ${mascotaNombre} ${propietarioApellido}.pdf`
+            : `Perfil Quimico General ${mascotaNombre} ${propietarioApellido}.pdf`;
         
         // Generar el blob del PDF
         const pdfBlob = pdf.output('blob');
@@ -2187,7 +2276,6 @@ function deleteLipasaField() {
             if (lipasaInput) {
                 lipasaInput.value = '';
             }
-            console.log('Campo LIPASA eliminado');
         }
     } else {
         alert('El campo LIPASA ya ha sido eliminado');

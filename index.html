@@ -787,6 +787,7 @@
             <div class="template-card" data-template="panel_basico"><h4>Panel Básico</h4><p>Perfil básico</p></div>
             <div class="template-card" data-template="panel_plus"><h4>Panel Plus</h4><p>Perfil ampliado</p></div>
             <div class="template-card" data-template="perfil_quimico"><h4>Perfil Químico</h4><p>Química sanguínea</p></div>
+            <div class="template-card" data-template="analitos_laboratorio"><h4>Analitos Laboratorio</h4><p>Exportar perfil químico como PDF</p></div>
             <div class="template-card" data-template="perfil_renal"><h4>Perfil Renal</h4><p>Función renal</p></div>
             <div class="template-card" data-template="perfil_pre_quirurgico"><h4>Perfil Pre-Quirúrgico</h4><p>Evaluación preoperatoria</p></div>
             <div class="template-card" data-template="heces"><h4>Análisis de Heces</h4><p>Macroscópico/Microscópico</p></div>
@@ -906,13 +907,9 @@
                 <label for="inyDosis"><i class="fas fa-weight"></i> Dosis:</label>
                 <input type="text" id="inyDosis" placeholder="Dosis administrada">
               </div>
-              <div class="form-group checkbox-group">
-                <label for="inyAFavor">
-                  <input type="checkbox" id="inyAFavor" value="A favor">
-                  <span class="checkmark"></span>
-                  A favor
-                </label>
-                <input type="text" id="inyAFavorDosis" placeholder="Cantidad de dosis" class="a-favor-dosis-input" style="display: none;">
+              <div class="form-group">
+                <label for="inyAFavorDosis"><i class="fas fa-check-circle"></i> A favor (dosis):</label>
+                <input type="text" id="inyAFavorDosis" placeholder="Cantidad de dosis a favor" class="a-favor-dosis-input">
               </div>
               <div class="form-group">
                 <label for="inySolicitante"><i class="fas fa-user"></i> Solicitante:</label>

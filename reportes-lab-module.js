@@ -10,6 +10,7 @@ const LAB_REPORT_TEMPLATES = {
   panel_basico: { name: 'Panel Básico', file: 'Panel_Básico.html' },
   panel_plus: { name: 'Panel Plus', file: 'Panel_Plus.html' },
   perfil_quimico: { name: 'Perfil Químico', file: 'perfil_quimico.html' },
+  analitos_laboratorio: { name: 'Analitos Laboratorio', file: 'perfil_quimico.html' },
   perfil_renal: { name: 'Perfil Renal', file: 'perfil_renal.html' },
   perfil_pre_quirurgico: { name: 'Perfil Pre-Quirúrgico', file: 'perfil_pre_quirurgico.html' },
   heces: { name: 'Análisis de Heces', file: 'heces.html' },
@@ -277,28 +278,28 @@ function openLabReportViewer(templateKey) {
 
   // Construir URL con parámetros de autollenado
   let url = template.file;
+  const params = new URLSearchParams({
+    template: templateKey
+  });
+  
   if (labReportSelectedClient) {
     const c = labReportSelectedClient;
-    const params = new URLSearchParams({
-      mascotaNombre: c.mascota || '',
-      propietarioNombre: c.nombre || '',
-      propietarioCedula: c.cedula || '',
-      propietarioTelefono: c.telefono || '',
-      propietarioEmail: c.correo || '',
-      nombreMedico: c.medico || '',
-      mascotaEdad: c.edad || '',
-      mascotaPeso: c.peso || '',
-      mascotaRaza: c.raza || '',
-      mascotaSexo: c.sexo || '',
-      especie: capitalizeFirstLetter(c.tipoMascota || ''),
-      propietarioFecha: c.fecha || '',
-      idPaciente: c.idPaciente || ''
-    });
-    
-   
-    
-    url = `${template.file}?${params.toString()}`;
+    params.set('mascotaNombre', c.mascota || '');
+    params.set('propietarioNombre', c.nombre || '');
+    params.set('propietarioCedula', c.cedula || '');
+    params.set('propietarioTelefono', c.telefono || '');
+    params.set('propietarioEmail', c.correo || '');
+    params.set('nombreMedico', c.medico || '');
+    params.set('mascotaEdad', c.edad || '');
+    params.set('mascotaPeso', c.peso || '');
+    params.set('mascotaRaza', c.raza || '');
+    params.set('mascotaSexo', c.sexo || '');
+    params.set('especie', capitalizeFirstLetter(c.tipoMascota || ''));
+    params.set('propietarioFecha', c.fecha || '');
+    params.set('idPaciente', c.idPaciente || '');
   }
+  
+  url = `${template.file}?${params.toString()}`;
 
   // Asegurar que el iframe tenga las dimensiones correctas
   iframe.style.width = '100%';
