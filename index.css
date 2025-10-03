@@ -2233,6 +2233,228 @@ body:not(.recepcion-role) .menu-toggle {
 body:not(.recepcion-role) .sidebar {
   transition: margin-left 0.3s, width 0.3s;
 }
+
+/* ========== ESTILOS PARA MÓDULO DE INYECTABLES ========== */
+
+.inyectables-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 15px;
+  margin: 20px 0;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+/* Estilos para checkboxes personalizados */
+.checkbox-group {
+  display: flex;
+  align-items: center;
+  margin: 0;
+}
+
+.checkbox-group label {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-weight: 500;
+  color: #2c3e50;
+  margin: 0;
+  padding: 8px 12px;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.checkbox-group label:hover {
+  background: #f8f9fa;
+  border-color: #007bff;
+}
+
+.checkbox-group input[type="checkbox"] {
+  display: none;
+}
+
+.checkbox-group .checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #6c757d;
+  border-radius: 4px;
+  margin-right: 10px;
+  position: relative;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.checkbox-group input[type="checkbox"]:checked + .checkmark {
+  background: #28a745;
+  border-color: #28a745;
+}
+
+.checkbox-group input[type="checkbox"]:checked + .checkmark::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.checkbox-group input[type="checkbox"]:checked + .checkmark + span {
+  color: #28a745;
+  font-weight: 600;
+}
+
+/* Estilos para edición de factura */
+.factura-edit {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.btn-edit-factura, .btn-save-factura, .btn-cancel-factura {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  margin: 0 2px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.3s ease;
+}
+
+.btn-edit-factura {
+  color: #007bff;
+  border: 1px solid #007bff;
+}
+
+.btn-edit-factura:hover {
+  background: #007bff;
+  color: white;
+}
+
+.btn-save-factura {
+  color: #28a745;
+  border: 1px solid #28a745;
+}
+
+.btn-save-factura:hover {
+  background: #28a745;
+  color: white;
+}
+
+.btn-cancel-factura {
+  color: #dc3545;
+  border: 1px solid #dc3545;
+}
+
+.btn-cancel-factura:hover {
+  background: #dc3545;
+  color: white;
+}
+
+.inyectables-table-container {
+  margin-top: 30px;
+}
+
+.table-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.search-controls, .filter-controls {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.inyectables-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.inyectables-table th {
+  background: #2c3e50;
+  color: white;
+  padding: 12px 8px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid #34495e;
+}
+
+.inyectables-table td {
+  padding: 10px 8px;
+  text-align: center;
+  border: 1px solid #e9ecef;
+  font-size: 0.85rem;
+  vertical-align: middle;
+}
+
+.inyectables-table tr:nth-child(even) {
+  background: #f8f9fa;
+}
+
+.inyectables-table tr:hover {
+  background: #e3f2fd;
+}
+
+.a-favor-indicator {
+  color: #28a745;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+.table-responsive {
+  overflow-x: auto;
+  border-radius: 8px;
+}
+
+.no-data {
+  text-align: center;
+  color: #6c757d;
+  font-style: italic;
+  padding: 20px;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  .inyectables-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .search-controls, .filter-controls {
+    justify-content: center;
+  }
+  
+  .inyectables-table {
+    font-size: 0.75rem;
+  }
+  
+  .inyectables-table th,
+  .inyectables-table td {
+    padding: 8px 4px;
+  }
+}
 body:not(.recepcion-role) .main-container.sidebar-hidden .sidebar {
   display: none !important;
 }

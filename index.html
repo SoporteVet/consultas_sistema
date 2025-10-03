@@ -8,6 +8,7 @@
   <link rel="stylesheet" href="index.css">
   <link rel="stylesheet" href="laboratorio.css">
   <link rel="stylesheet" href="consentimientos.css">
+  <link rel="stylesheet" href="internamiento.css">
   <link rel="stylesheet" href="quirofano.css">
   
   <link rel="icon" href="empresa.jpg" type="image/x-icon">
@@ -93,6 +94,9 @@
             </button>
             <button id="reportesLabBtn" class="submenu-btn" onclick="navigateToLab('reportesLabSection', 'reportesLabBtn');">
               <i class="fas fa-file-medical"></i> Reportes Lab
+            </button>
+            <button id="inyectablesBtn" class="submenu-btn" onclick="navigateToInyectables('inyectablesSection', 'inyectablesBtn');">
+              <i class="fas fa-syringe"></i> Control de Inyectables
             </button>
 
           </div>
@@ -812,6 +816,176 @@
         </div>
       </section>
 
+      <!-- Sección para Control de Inyectables -->
+      <section id="inyectablesSection" class="hidden">
+        <h2><i class="fas fa-syringe"></i> Control de Inyectables</h2>
+        
+        <!-- Formulario para agregar inyectables -->
+        <div class="form-container">
+          <form id="inyectablesForm">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inyFecha"><i class="fas fa-calendar"></i> Fecha:</label>
+                <input type="date" id="inyFecha" required>
+              </div>
+              <div class="form-group">
+                <label for="inyMascotaApellido"><i class="fas fa-paw"></i> Mascota y Apellido:</label>
+                <input type="text" id="inyMascotaApellido" placeholder="Ej: Max - García" required>
+              </div>
+            </div>
+            
+            <!-- Inyectables disponibles -->
+            <div class="inyectables-grid">
+              <div class="form-group checkbox-group">
+                <label for="inySelmix">
+                  <input type="checkbox" id="inySelmix" value="Selmix">
+                  <span class="checkmark"></span>
+                  Selmix
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label for="inyConvenia">
+                  <input type="checkbox" id="inyConvenia" value="Convenia">
+                  <span class="checkmark"></span>
+                  Convenia
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label for="inyCerenia">
+                  <input type="checkbox" id="inyCerenia" value="Cerenia">
+                  <span class="checkmark"></span>
+                  Cerenia
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label for="inySoroglobulin">
+                  <input type="checkbox" id="inySoroglobulin" value="Soroglobulin">
+                  <span class="checkmark"></span>
+                  Soroglobulin
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label for="inyNexium">
+                  <input type="checkbox" id="inyNexium" value="Nexium">
+                  <span class="checkmark"></span>
+                  Nexium
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label for="inyOsurnia">
+                  <input type="checkbox" id="inyOsurnia" value="Osurnia">
+                  <span class="checkmark"></span>
+                  Osurnia
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label for="inySueroAutologo">
+                  <input type="checkbox" id="inySueroAutologo" value="Suero Autólogo">
+                  <span class="checkmark"></span>
+                  Suero Autólogo
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label for="inyMetadona">
+                  <input type="checkbox" id="inyMetadona" value="Metadona">
+                  <span class="checkmark"></span>
+                  Metadona
+                </label>
+              </div>
+              <div class="form-group checkbox-group">
+                <label for="inyOndansetron">
+                  <input type="checkbox" id="inyOndansetron" value="Ondansetrón">
+                  <span class="checkmark"></span>
+                  Ondansetrón
+                </label>
+              </div>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="inyDosis"><i class="fas fa-weight"></i> Dosis:</label>
+                <input type="text" id="inyDosis" placeholder="Dosis administrada">
+              </div>
+              <div class="form-group checkbox-group">
+                <label for="inyAFavor">
+                  <input type="checkbox" id="inyAFavor" value="A favor">
+                  <span class="checkmark"></span>
+                  A favor
+                </label>
+              </div>
+              <div class="form-group">
+                <label for="inySolicitante"><i class="fas fa-user"></i> Solicitante:</label>
+                <input type="text" id="inySolicitante" placeholder="Quien solicita">
+              </div>
+              <div class="form-group">
+                <label for="inyQuienDaDosis"><i class="fas fa-user-md"></i> Quien da la dosis:</label>
+                <input type="text" id="inyQuienDaDosis" placeholder="Quien administra">
+              </div>
+              <div class="form-group">
+                <label for="inyFactura"><i class="fas fa-file-invoice"></i> Factura:</label>
+                <input type="text" id="inyFactura" placeholder="Número de factura">
+              </div>
+            </div>
+            
+            <div class="form-actions">
+              <button type="submit" class="btn-submit">
+                <i class="fas fa-save"></i> Registrar Inyectable
+              </button>
+              <button type="button" id="limpiarInyectables" class="btn-cancel">
+                <i class="fas fa-eraser"></i> Limpiar
+              </button>
+            </div>
+          </form>
+        </div>
+        
+        <!-- Tabla de inyectables registrados -->
+        <div class="inyectables-table-container">
+          <h3><i class="fas fa-list"></i> Registro de Inyectables</h3>
+          <div class="table-controls">
+            <div class="search-controls">
+              <input type="text" id="inyectablesSearch" placeholder="Buscar por mascota, solicitante o factura..." class="search-input">
+              <button id="searchInyectablesBtn" class="search-btn">
+                <i class="fas fa-search"></i> Buscar
+              </button>
+            </div>
+            <div class="filter-controls">
+              <input type="date" id="inyectablesDateFilter" placeholder="Filtrar por fecha">
+              <button id="filterInyectablesBtn" class="filter-btn">
+                <i class="fas fa-filter"></i> Filtrar
+              </button>
+            </div>
+          </div>
+          
+          <div class="table-responsive">
+            <table class="inyectables-table">
+                <thead>
+                  <tr>
+                    <th>Fecha</th>
+                    <th>Mascota y Apellido</th>
+                    <th>Selmix</th>
+                    <th>Convenia</th>
+                    <th>Cerenia</th>
+                    <th>Soroglobulin</th>
+                    <th>Nexium</th>
+                    <th>Osurnia</th>
+                    <th>Suero Autólogo</th>
+                    <th>Metadona</th>
+                    <th>Ondansetrón</th>
+                    <th>Dosis</th>
+                    <th>A favor</th>
+                    <th>Solicitante</th>
+                    <th>Quien da la dosis</th>
+                    <th>Factura</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+              <tbody id="inyectablesTableBody">
+                <!-- Los datos se cargarán dinámicamente -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
 
       
       <!-- Sección para ver consentimientos -->
@@ -2199,21 +2373,10 @@
   <script src="services-data.js"></script>
   <script src="auth.js"></script>
   <script src="laboratorio.js"></script>
-
-<script src="consentimientos-module.js"></script>
+  <script src="consentimientos-module.js"></script>
 <script src="quirofano-module.js"></script>
   <script src="reportes-lab-module.js"></script>
   <script src="index.js"></script>
-<script>
-// Verificación simple de carga del módulo de Internamiento
-setTimeout(() => {
-  if (typeof window.navigateToInternamiento === 'function') {
-    console.log('✓ Módulo de Internamiento cargado correctamente');
-  } else {
-    console.error('✗ Error: Módulo de Internamiento no se cargó correctamente');
-  }
-}, 1000);
-</script>
   <script src="fix-wait-time.js"></script>
   <script src="admin-users.js"></script>
   <script src="fix-lab-search.js"></script>

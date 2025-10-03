@@ -73,19 +73,14 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Configure default section based on user role
         const userRole = userData.role;
-        console.log('Configuring default section for role:', userRole);
         
         if (userRole === 'visitas') {
             // Para usuarios visitas, mostrar la sección de ver tickets
-            console.log('Setting up visitas user - showing ver tickets section');
             const verTicketsSection = document.getElementById('verTicketsSection');
             const verTicketsBtn = document.getElementById('verTicketsBtn');
             if (verTicketsSection) {
                 showSection(verTicketsSection);
                 if (verTicketsBtn) verTicketsBtn.classList.add('active');
-                console.log('Ver tickets section shown and button activated');
-            } else {
-                console.log('ERROR: verTicketsSection not found');
             }
             
             // Para usuarios visitas, ocultar el sidebar por defecto
@@ -99,19 +94,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     // En desktop, ocultar el sidebar
                     mainContainer.classList.add('sidebar-hidden');
                 }
-                console.log('Sidebar hidden by default for visitas user');
             }
         } else {
             // Para otros usuarios, mostrar la sección de crear ticket
-            console.log('Setting up non-visitas user - showing crear ticket section');
             const crearTicketSection = document.getElementById('crearTicketSection');
             const crearTicketBtn = document.getElementById('crearTicketBtn');
             if (crearTicketSection) {
                 showSection(crearTicketSection);
                 if (crearTicketBtn) crearTicketBtn.classList.add('active');
-                console.log('Crear ticket section shown and button activated');
-            } else {
-                console.log('ERROR: crearTicketSection not found');
             }
         }
         
@@ -410,21 +400,12 @@ function applyRoleBasedUI(role) {
     const internamientoCategory = internamientoBtn ? internamientoBtn.closest('.nav-category') : null;
     const allowedInternamientoRoles = ['admin', 'quirofano', 'internos', 'recepcion', 'laboratorio', "consulta_externa"];
     
-    // Debug logging
-    console.log('Role:', role);
-    console.log('Allowed internamiento roles:', allowedInternamientoRoles);
-    console.log('Is role in allowed roles:', allowedInternamientoRoles.includes(role));
-    
     if (internamientoCategory) {
         if (allowedInternamientoRoles.includes(role)) {
             internamientoCategory.style.display = 'block';
-            console.log('Showing internamiento button for role:', role);
         } else {
             internamientoCategory.style.display = 'none';
-            console.log('Hiding internamiento button for role:', role);
         }
-    } else {
-        console.log('Internamiento category not found');
     }
     
     // Control de visibilidad del botón de consentimientos basado en roles
@@ -5143,7 +5124,6 @@ function toggleSidebar() {
   if (window.innerWidth <= 980) {
     // En móviles, usar la clase .show
     sidebar.classList.toggle('show');
-    console.log('Sidebar toggled, show class:', sidebar.classList.contains('show'));
   } else {
     // En desktop, usar la clase sidebar-hidden
     mainContainer.classList.toggle('sidebar-hidden');
@@ -5162,7 +5142,6 @@ function closeSidebar() {
   
   if (window.innerWidth <= 980) {
     sidebar.classList.remove('show');
-    console.log('Sidebar closed, show class removed');
   } else {
     mainContainer.classList.remove('sidebar-hidden');
   }
@@ -5236,6 +5215,387 @@ window.addEventListener('DOMContentLoaded', function() {
   const scriptQuirofano = document.createElement('script');
   scriptQuirofano.src = 'quirofano-module.js';
   document.body.appendChild(scriptQuirofano);
+  
+  // ========== MÓDULO DE INTERNAMIENTO ==========
+  
+  // Función de navegación para internamiento
+  window.navigateToInternamiento = function(sectionId, buttonId) {
+    // Ocultar todas las secciones
+    const allSections = document.querySelectorAll('.content section');
+    allSections.forEach(s => {
+      s.classList.add('hidden');
+      s.classList.remove('active');
+    });
+    
+    // Mostrar la sección seleccionada
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.classList.remove('hidden');
+      section.classList.add('active');
+    }
+    
+    // Actualizar botón activo
+    const allButtons = document.querySelectorAll('nav button, .submenu-btn');
+    allButtons.forEach(btn => btn.classList.remove('active'));
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.classList.add('active');
+    }
+    
+    // Cerrar sidebar en móviles
+    if (window.innerWidth <= 980) {
+      closeSidebar();
+    }
+  };
+  
+  // Cargar el módulo de internamiento
+  const scriptInternamiento = document.createElement('script');
+  scriptInternamiento.src = 'internamiento-module.js';
+  scriptInternamiento.async = false; // Cargar de forma síncrona
+  scriptInternamiento.onload = function() {
+    console.log('Módulo de internamiento cargado');
+    // Inicializar el módulo manualmente si DOMContentLoaded ya se disparó
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      console.log('DOM ya está listo, inicializando módulo de internamiento manualmente...');
+      if (typeof initializeInternamientoModule === 'function') {
+        initializeInternamientoModule();
+      }
+    }
+  };
+  document.head.appendChild(scriptInternamiento);
+  
+  // ========== MÓDULO DE INYECTABLES ==========
+  
+  // Función de navegación para inyectables
+  window.navigateToInyectables = function(sectionId, buttonId) {
+    // Ocultar todas las secciones
+    const allSections = document.querySelectorAll('.content section');
+    allSections.forEach(s => {
+      s.classList.add('hidden');
+      s.classList.remove('active');
+    });
+    
+    // Mostrar la sección seleccionada
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.classList.remove('hidden');
+      section.classList.add('active');
+    }
+    
+    // Actualizar botón activo
+    const allButtons = document.querySelectorAll('nav button, .submenu-btn');
+    allButtons.forEach(btn => btn.classList.remove('active'));
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.classList.add('active');
+    }
+    
+    // Cerrar sidebar en móviles
+    if (window.innerWidth <= 980) {
+      closeSidebar();
+    }
+    
+    // Inicializar el módulo de inyectables
+    initializeInyectablesModule();
+  };
+  
+  // Inicializar módulo de inyectables
+  function initializeInyectablesModule() {
+    console.log('Inicializando módulo de inyectables...');
+    
+    // Configurar fecha actual
+    const fechaInput = document.getElementById('inyFecha');
+    if (fechaInput) {
+      fechaInput.value = getLocalDateString();
+    }
+    
+    // Configurar event listeners
+    setupInyectablesEventListeners();
+    
+    // Cargar datos existentes
+    loadInyectablesData();
+  }
+  
+  // Configurar event listeners para inyectables
+  function setupInyectablesEventListeners() {
+    // Formulario de inyectables
+    const form = document.getElementById('inyectablesForm');
+    if (form) {
+      form.addEventListener('submit', handleInyectablesSubmit);
+    }
+    
+    // Botón limpiar
+    const limpiarBtn = document.getElementById('limpiarInyectables');
+    if (limpiarBtn) {
+      limpiarBtn.addEventListener('click', limpiarFormularioInyectables);
+    }
+    
+    // Búsqueda
+    const searchBtn = document.getElementById('searchInyectablesBtn');
+    if (searchBtn) {
+      searchBtn.addEventListener('click', searchInyectables);
+    }
+    
+    // Filtro por fecha
+    const filterBtn = document.getElementById('filterInyectablesBtn');
+    if (filterBtn) {
+      filterBtn.addEventListener('click', filterInyectablesByDate);
+    }
+  }
+  
+  // Manejar envío del formulario de inyectables
+  function handleInyectablesSubmit(event) {
+    event.preventDefault();
+    
+    const formData = {
+      fecha: document.getElementById('inyFecha').value,
+      mascotaApellido: document.getElementById('inyMascotaApellido').value,
+      selmix: document.getElementById('inySelmix').checked ? 'X' : '',
+      convenia: document.getElementById('inyConvenia').checked ? 'X' : '',
+      cerenia: document.getElementById('inyCerenia').checked ? 'X' : '',
+      soroglobulin: document.getElementById('inySoroglobulin').checked ? 'X' : '',
+      nexium: document.getElementById('inyNexium').checked ? 'X' : '',
+      osurnia: document.getElementById('inyOsurnia').checked ? 'X' : '',
+      sueroAutologo: document.getElementById('inySueroAutologo').checked ? 'X' : '',
+      metadona: document.getElementById('inyMetadona').checked ? 'X' : '',
+      ondansetron: document.getElementById('inyOndansetron').checked ? 'X' : '',
+      dosis: document.getElementById('inyDosis').value,
+      aFavor: document.getElementById('inyAFavor').checked ? 'X' : '',
+      solicitante: document.getElementById('inySolicitante').value,
+      quienDaDosis: document.getElementById('inyQuienDaDosis').value,
+      factura: document.getElementById('inyFactura').value,
+      timestamp: Date.now()
+    };
+    
+    // Guardar en Firebase
+    saveInyectableToFirebase(formData);
+  }
+  
+  // Guardar inyectable en Firebase
+  function saveInyectableToFirebase(data) {
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
+      return;
+    }
+    
+    const database = firebase.database();
+    const ref = database.ref('inyectables');
+    
+    ref.push(data)
+      .then(() => {
+        showNotification('Inyectable registrado exitosamente', 'success');
+        limpiarFormularioInyectables();
+        loadInyectablesData(); // Recargar la tabla
+      })
+      .catch((error) => {
+        console.error('Error al guardar inyectable:', error);
+        showNotification('Error al guardar el inyectable', 'error');
+      });
+  }
+  
+  // Cargar datos de inyectables desde Firebase
+  function loadInyectablesData() {
+    if (!firebase || !firebase.database) {
+      console.error('Firebase no está disponible');
+      return;
+    }
+    
+    const database = firebase.database();
+    const ref = database.ref('inyectables');
+    
+    ref.on('value', (snapshot) => {
+      const data = snapshot.val();
+      const inyectables = data ? Object.entries(data).map(([key, value]) => ({ id: key, ...value })) : [];
+      displayInyectablesTable(inyectables);
+    });
+  }
+  
+  // Mostrar tabla de inyectables
+  function displayInyectablesTable(inyectables) {
+    const tbody = document.getElementById('inyectablesTableBody');
+    if (!tbody) return;
+    
+    if (inyectables.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="16" class="no-data">No hay inyectables registrados</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = inyectables.map(inyectable => `
+      <tr data-id="${inyectable.id}">
+        <td>${inyectable.fecha || ''}</td>
+        <td>${inyectable.mascotaApellido || ''}</td>
+        <td>${inyectable.selmix || ''}</td>
+        <td>${inyectable.convenia || ''}</td>
+        <td>${inyectable.cerenia || ''}</td>
+        <td>${inyectable.soroglobulin || ''}</td>
+        <td>${inyectable.nexium || ''}</td>
+        <td>${inyectable.osurnia || ''}</td>
+        <td>${inyectable.sueroAutologo || ''}</td>
+        <td>${inyectable.metadona || ''}</td>
+        <td>${inyectable.ondansetron || ''}</td>
+        <td>${inyectable.dosis || ''}</td>
+        <td>${inyectable.aFavor || ''}</td>
+        <td>${inyectable.solicitante || ''}</td>
+        <td>${inyectable.quienDaDosis || ''}</td>
+        <td>
+          <span class="factura-display">${inyectable.factura || ''}</span>
+          <input type="text" class="factura-edit" value="${inyectable.factura || ''}" style="display: none;">
+        </td>
+        <td>
+          <button class="btn-edit-factura" onclick="editFactura('${inyectable.id}')" title="Editar factura">
+            <i class="fas fa-edit"></i>
+          </button>
+          <button class="btn-save-factura" onclick="saveFactura('${inyectable.id}')" style="display: none;" title="Guardar factura">
+            <i class="fas fa-save"></i>
+          </button>
+          <button class="btn-cancel-factura" onclick="cancelEditFactura('${inyectable.id}')" style="display: none;" title="Cancelar edición">
+            <i class="fas fa-times"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+  }
+  
+  // Limpiar formulario de inyectables
+  function limpiarFormularioInyectables() {
+    const form = document.getElementById('inyectablesForm');
+    if (form) {
+      form.reset();
+      // Restablecer fecha actual
+      const fechaInput = document.getElementById('inyFecha');
+      if (fechaInput) {
+        fechaInput.value = getLocalDateString();
+      }
+    }
+  }
+  
+  // Buscar inyectables
+  function searchInyectables() {
+    const searchTerm = document.getElementById('inyectablesSearch').value.toLowerCase();
+    if (!searchTerm) {
+      loadInyectablesData();
+      return;
+    }
+    
+    if (!firebase || !firebase.database) return;
+    
+    const database = firebase.database();
+    const ref = database.ref('inyectables');
+    
+    ref.once('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      
+      const inyectables = Object.entries(data)
+        .map(([key, value]) => ({ id: key, ...value }))
+        .filter(inyectable => 
+          (inyectable.mascotaApellido || '').toLowerCase().includes(searchTerm) ||
+          (inyectable.solicitante || '').toLowerCase().includes(searchTerm) ||
+          (inyectable.factura || '').toLowerCase().includes(searchTerm)
+        );
+      
+      displayInyectablesTable(inyectables);
+    });
+  }
+  
+  // Filtrar inyectables por fecha
+  function filterInyectablesByDate() {
+    const dateFilter = document.getElementById('inyectablesDateFilter').value;
+    if (!dateFilter) {
+      loadInyectablesData();
+      return;
+    }
+    
+    if (!firebase || !firebase.database) return;
+    
+    const database = firebase.database();
+    const ref = database.ref('inyectables');
+    
+    ref.once('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      
+      const inyectables = Object.entries(data)
+        .map(([key, value]) => ({ id: key, ...value }))
+        .filter(inyectable => inyectable.fecha === dateFilter);
+      
+      displayInyectablesTable(inyectables);
+    });
+  }
+  
+  // Editar factura
+  window.editFactura = function(id) {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (!row) return;
+    
+    const displaySpan = row.querySelector('.factura-display');
+    const editInput = row.querySelector('.factura-edit');
+    const editBtn = row.querySelector('.btn-edit-factura');
+    const saveBtn = row.querySelector('.btn-save-factura');
+    const cancelBtn = row.querySelector('.btn-cancel-factura');
+    
+    // Ocultar display y mostrar input
+    displaySpan.style.display = 'none';
+    editInput.style.display = 'inline-block';
+    editInput.focus();
+    editInput.select();
+    
+    // Cambiar botones
+    editBtn.style.display = 'none';
+    saveBtn.style.display = 'inline-block';
+    cancelBtn.style.display = 'inline-block';
+  };
+  
+  // Guardar factura
+  window.saveFactura = function(id) {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (!row) return;
+    
+    const editInput = row.querySelector('.factura-edit');
+    const newFactura = editInput.value.trim();
+    
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
+      return;
+    }
+    
+    const database = firebase.database();
+    const ref = database.ref(`inyectables/${id}/factura`);
+    
+    ref.set(newFactura)
+      .then(() => {
+        showNotification('Factura actualizada exitosamente', 'success');
+        cancelEditFactura(id);
+      })
+      .catch((error) => {
+        console.error('Error al actualizar factura:', error);
+        showNotification('Error al actualizar la factura', 'error');
+      });
+  };
+  
+  // Cancelar edición de factura
+  window.cancelEditFactura = function(id) {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (!row) return;
+    
+    const displaySpan = row.querySelector('.factura-display');
+    const editInput = row.querySelector('.factura-edit');
+    const editBtn = row.querySelector('.btn-edit-factura');
+    const saveBtn = row.querySelector('.btn-save-factura');
+    const cancelBtn = row.querySelector('.btn-cancel-factura');
+    
+    // Restaurar valores originales
+    editInput.value = displaySpan.textContent;
+    
+    // Mostrar display y ocultar input
+    displaySpan.style.display = 'inline';
+    editInput.style.display = 'none';
+    
+    // Cambiar botones
+    editBtn.style.display = 'inline-block';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
+  };
   
   // Inicializar el sidebar para móviles
   if (window.innerWidth <= 980) {
