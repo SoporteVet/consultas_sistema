@@ -15,6 +15,7 @@ const LAB_REPORT_TEMPLATES = {
   heces: { name: 'Análisis de Heces', file: 'heces.html' },
   urianalisis: { name: 'Urianálisis', file: 'urianalisis.html' },
   frotis: { name: 'Frotis Sanguíneo', file: 'frotis.html' },
+  hisopado_oido: { name: 'Hisopado de Oído', file: 'hisopado_oido.html' },
   reticulocitos: { name: 'Conteo de Reticulocitos', file: 'reticulocitos.html' },
   analisis_liquido_libre: { name: 'Análisis Líquido Libre', file: 'analisis_liquido_libre.html' },
   tests: { name: 'Pruebas Rápidas', file: 'Tests_Laboratorio.html' }

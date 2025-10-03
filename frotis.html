@@ -61,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
   try {
     const params = new URLSearchParams(window.location.search);
     const setVal = (id, val) => { const el = document.getElementById(id); if (el && val != null && val !== '') el.value = val; };
-    // Datos básicos
+    // Datos básicos para plantilla 1
     setVal('mascotaNombre', params.get('mascotaNombre'));
     setVal('propietarioNombre', params.get('propietarioNombre'));
     setVal('propietarioCedula', params.get('propietarioCedula'));
@@ -71,6 +71,18 @@ document.addEventListener('DOMContentLoaded', () => {
     setVal('mascotaRaza', params.get('mascotaRaza'));
     setVal('mascotaEdad', params.get('mascotaEdad'));
     setVal('mascotaPeso', params.get('mascotaPeso'));
+    
+    // Datos básicos para plantilla 2
+    setVal('mascotaNombre2', params.get('mascotaNombre'));
+    setVal('propietarioNombre2', params.get('propietarioNombre'));
+    setVal('propietarioCedula2', params.get('propietarioCedula'));
+    setVal('propietarioTelefono2', params.get('propietarioTelefono'));
+    setVal('propietarioEmail2', params.get('propietarioEmail'));
+    setVal('nombreMedico2', params.get('nombreMedico'));
+    setVal('mascotaRaza2', params.get('mascotaRaza'));
+    setVal('mascotaEdad2', params.get('mascotaEdad'));
+    setVal('mascotaPeso2', params.get('mascotaPeso'));
+    
     // Sexo/Especie
     const sexo = params.get('mascotaSexo');
     const especie = params.get('especie');
@@ -106,6 +118,13 @@ document.addEventListener('DOMContentLoaded', () => {
             <option value="Felino">Felino</option>
             <option value="Lagomorfo">Lagomorfo</option>
             <option value="Cuilo">Cuilo</option>
+        </select>
+        
+        <!-- NUEVO: Selector de plantilla -->
+        <label for="plantillaSelector">Selecciona la plantilla:</label>
+        <select id="plantillaSelector" onchange="cambiarPlantilla()">
+            <option value="template1" selected>Frotis Normal</option>
+            <option value="template2">Frotis Completo</option>
         </select>
       </div>
 
@@ -191,27 +210,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 <script>    
                     function actualizarSexoEnPlantilla() {
                         const sexo = document.getElementById('sexoSelector').value;
-                        document.getElementById('sexoEnPlantilla').value = sexo.charAt(0).toUpperCase() + sexo.slice(1);
+                        const sexoCapitalizado = sexo.charAt(0).toUpperCase() + sexo.slice(1);
+                        document.getElementById('sexoEnPlantilla').value = sexoCapitalizado;
+                        const sexoEnPlantilla2 = document.getElementById('sexoEnPlantilla2');
+                        if (sexoEnPlantilla2) sexoEnPlantilla2.value = sexoCapitalizado;
                     }
                     function actualizarEspecieEnPlantilla() {
                         const especie = document.getElementById('especieSelector').value;
                         document.getElementById('especieEnPlantilla').value = especie;
+                        const especieEnPlantilla2 = document.getElementById('especieEnPlantilla2');
+                        if (especieEnPlantilla2) especieEnPlantilla2.value = especie;
                     }
                     function verificarMedico() {
-                        const medico = document.getElementById('nombreMedico').value;
-                        const mensaje = document.getElementById('mensajeMedico');
+                        // Para plantilla 1
+                        const medico1 = document.getElementById('nombreMedico').value;
+                        const mensaje1 = document.getElementById('mensajeMedico');
                         
                         // Verificar si el médico es N.A en cualquier variante o está vacío
-                        const isNA = !medico || 
-                                   medico.trim() === '' || 
-                                   medico.toUpperCase() === 'N.A' || 
-                                   medico.toUpperCase() === 'NA' || 
-                                   medico.toUpperCase() === 'N.A.';
+                        const isNA1 = !medico1 || 
+                                   medico1.trim() === '' || 
+                                   medico1.toUpperCase() === 'N.A' || 
+                                   medico1.toUpperCase() === 'NA' || 
+                                   medico1.toUpperCase() === 'N.A.';
                         
-                        if (isNA) {
-                            mensaje.style.display = 'none';
+                        if (isNA1) {
+                            if (mensaje1) mensaje1.style.display = 'none';
                         } else {
-                            mensaje.style.display = 'block';
+                            if (mensaje1) mensaje1.style.display = 'block';
+                        }
+                        
+                        // Para plantilla 2
+                        const medico2 = document.getElementById('nombreMedico2');
+                        const mensaje2 = document.getElementById('mensajeMedico2');
+                        
+                        if (medico2 && mensaje2) {
+                            // Verificar si el médico es N.A en cualquier variante o está vacío
+                            const isNA2 = !medico2.value || 
+                                        medico2.value.trim() === '' || 
+                                        medico2.value.toUpperCase() === 'N.A' || 
+                                        medico2.value.toUpperCase() === 'NA' || 
+                                        medico2.value.toUpperCase() === 'N.A.';
+                            
+                            if (isNA2) {
+                                mensaje2.style.display = 'none';
+                            } else {
+                                mensaje2.style.display = 'block';
+                            }
                         }
                     }
 
@@ -484,13 +528,189 @@ document.addEventListener('DOMContentLoaded', function() {
         <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
         <p>Correo: laboratorio@vetsanmartin.com</p>
     </div>
-    <div class="controls">
-        <button id="pdfButton" onclick="generatePDF()">Generar PDF</button>
-        <button id="menuButton" onclick="window.location.href='index.html'">Volver al Menú</button>
-        <div id="loadingPdf" class="loading-indicator" style="display:none;">
-            <div class="spinner"></div>
-            <span>Generando PDF...</span>
-        </div>
+</div>
+</div> <!-- Fin template1 -->
+
+<!-- NUEVA PLANTILLA: Frotis Microbiológico Completo -->
+<div class="container" id="template2" style="display: none;">
+    <div class="header">
+        <img src="empresa.jpg" alt="Logo de la Empresa" class="small-image">
+        <h1>Laboratorio Clínico Veterinario</h1>
+    </div>
+    <h3 class="subheader">FROTIS MICROBIOLÓGICO</h3>
+    <table>
+        <thead>
+            <tr>
+                <th colspan="2">DATOS DE LA MASCOTA</th>
+                <th colspan="2">DATOS DEL PROPIETARIO</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Nombre</td>
+                <td><input type="text" id="mascotaNombre2"></td>
+                <td>Nombre</td>
+                <td><input type="text" id="propietarioNombre2"></td>
+            </tr>
+            <tr>
+                <td>Raza</td>
+                <td><input type="text" id="mascotaRaza2" list="razas2"></td>
+                <datalist id="razas2"></datalist>
+                <td>Cédula</td>
+                <td><input type="text" id="propietarioCedula2"></td>
+            </tr>
+            <tr>
+                <td>Edad</td>
+                <td><input type="text" id="mascotaEdad2" list="edades"></td>
+                <td>Teléfono</td>
+                <td><input type="text" id="propietarioTelefono2"></td>
+            </tr>
+            <tr>
+                <td>Especie</td>
+                <td><input type="text" id="especieEnPlantilla2"></td>
+                <td>Email</td>
+                <td><input type="text" id="propietarioEmail2"></td>
+            </tr>
+            <tr>
+                <td>Sexo</td>
+                <td><input type="text" id="sexoEnPlantilla2"></td>
+                <td>Médico</td>
+                <td>
+                    <input type="text" id="nombreMedico2" list="medicos" oninput="verificarMedico()">
+                </td>
+            </tr>
+            <tr>
+                <td>Peso</td>
+                <td><input type="text" id="mascotaPeso2" list="pesos"></td>
+                <td>Fecha</td>
+                <td><input type="date" id="propietarioFecha2" class="date-input"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table>
+        <thead>
+            <tr><th colspan="2">FROTIS MICROBIOLÓGICO</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="width: 30%;">MUESTRA:</td>
+                <td><input type="text" id="muestra2" value="Citología Superficial Piel"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table>
+        <thead>
+            <tr><th colspan="2">CITOLOGÍA</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="width: 30%;">TÉCNICA DE CELO</td>
+                <td><input type="text" id="tecnicaCelo2"></td>
+            </tr>
+            <tr>
+                <td>BACTERIAS:</td>
+                <td>
+                    <input type="text" id="bacterias2" list="bacteriasOptions2">
+                    <datalist id="bacteriasOptions2">
+                        <option value="Cocos">
+                        <option value="Bacilos">
+                        <option value="Cocos/Bacilos">
+                        <option value="No se observa">
+                    </datalist>
+                </td>
+            </tr>
+            <tr>
+                <td>LEVADURAS:</td>
+                <td>
+                    <input type="text" id="levaduras2" list="levadurasOptions2">
+                    <datalist id="levadurasOptions2">
+                        <option value="Se observa">
+                        <option value="No se observa">
+                    </datalist>
+                </td>
+            </tr>
+            <tr>
+                <td>CÉLULAS:</td>
+                <td><input type="text" id="celulas2"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table>
+        <thead>
+            <tr><th colspan="2">RASPADO PROFUNDO Y SUPERFICIAL</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="width: 30%;">KOH:</td>
+                <td>
+                    <input type="text" id="koh2" value="Se observan estructuras compatibles con dermatofitos">
+                </td>
+            </tr>
+            <tr>
+                <td>ACEITE MINERAL:</td>
+                <td>
+                    <input type="text" id="aceiteMineral2" value="No se observan ácaros">
+                </td>
+            </tr>
+            <tr>
+                <td>TINCIÓN GRAM:</td>
+                <td>
+                    <input type="text" id="tincionGram2" list="gramOptions2">
+                    <datalist id="gramOptions2">
+                        <option value="Bacterias Gram Positivas">
+                        <option value="Bacterias Gram Negativas">
+                    </datalist>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <table>
+        <thead>
+            <tr><th colspan="2">TRICOGRAMA</th></tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td style="width: 30%;">DESCAMACIÓN:</td>
+                <td><input type="text" id="descamacion2"></td>
+            </tr>
+            <tr>
+                <td>DETRITOS CELULARES:</td>
+                <td><input type="text" id="dentroCelulares2"></td>
+            </tr>
+            <tr>
+                <td>MOLDES PILOSOS:</td>
+                <td><input type="text" id="moldesPilosos2"></td>
+            </tr>
+            <tr>
+                <td>PELO ANÁGENO:</td>
+                <td><input type="text" id="peloAnageno2"></td>
+            </tr>
+            <tr>
+                <td>PELO TELÓGENO:</td>
+                <td><input type="text" id="peloTelogeno2"></td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="footer">
+        <p id="mensajeMedico2" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
+        <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
+        <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
+        <p>Correo: laboratorio@vetsanmartin.com</p>
+    </div>
+</div> <!-- Fin template2 -->
+
+<!-- Controles globales -->
+<div class="controls">
+    <button id="pdfButton" onclick="generatePDF()">Generar PDF</button>
+    <button id="menuButton" onclick="window.location.href='index.html'">Volver al Menú</button>
+    <div id="loadingPdf" class="loading-indicator" style="display:none;">
+        <div class="spinner"></div>
+        <span>Generando PDF...</span>
     </div>
 </div>
 
@@ -506,6 +726,89 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <script>
+// Funciones para cambio de plantilla y sincronización de datos
+function cambiarPlantilla() {
+    const seleccion = document.getElementById('plantillaSelector').value;
+    
+    console.log("Cambiando a plantilla: " + seleccion);
+    
+    // Ocultar todas las plantillas
+    document.getElementById('template1').style.display = 'none';
+    document.getElementById('template2').style.display = 'none';
+    
+    // Mostrar solo la plantilla seleccionada
+    document.getElementById(seleccion).style.display = 'block';
+    
+    // Sincronizar datos entre plantillas
+    if (seleccion === 'template2') {
+        sincronizarDatosHaciaMicrobiologico();
+    } else if (seleccion === 'template1') {
+        sincronizarDatosHaciaNormal();
+    }
+}
+
+function sincronizarDatosHaciaMicrobiologico() {
+    console.log("Sincronizando datos hacia plantilla microbiológica");
+    const mappings = [
+        ['mascotaNombre', 'mascotaNombre2'],
+        ['mascotaRaza', 'mascotaRaza2'],
+        ['sexoEnPlantilla', 'sexoEnPlantilla2'],
+        ['especieEnPlantilla', 'especieEnPlantilla2'],
+        ['mascotaEdad', 'mascotaEdad2'],
+        ['mascotaPeso', 'mascotaPeso2'],
+        ['propietarioNombre', 'propietarioNombre2'],
+        ['propietarioCedula', 'propietarioCedula2'],
+        ['propietarioTelefono', 'propietarioTelefono2'],
+        ['propietarioEmail', 'propietarioEmail2'],
+        ['propietarioFecha', 'propietarioFecha2'],
+        ['nombreMedico', 'nombreMedico2']
+    ];
+    mappings.forEach(([from, to]) => {
+        const src = document.getElementById(from);
+        const dst = document.getElementById(to);
+        if (src && dst) dst.value = src.value;
+    });
+}
+
+function sincronizarDatosHaciaNormal() {
+    console.log("Sincronizando datos hacia plantilla normal");
+    const mappings = [
+        ['mascotaNombre2', 'mascotaNombre'],
+        ['mascotaRaza2', 'mascotaRaza'],
+        ['sexoEnPlantilla2', 'sexoEnPlantilla'],
+        ['especieEnPlantilla2', 'especieEnPlantilla'],
+        ['mascotaEdad2', 'mascotaEdad'],
+        ['mascotaPeso2', 'mascotaPeso'],
+        ['propietarioNombre2', 'propietarioNombre'],
+        ['propietarioCedula2', 'propietarioCedula'],
+        ['propietarioTelefono2', 'propietarioTelefono'],
+        ['propietarioEmail2', 'propietarioEmail'],
+        ['propietarioFecha2', 'propietarioFecha'],
+        ['nombreMedico2', 'nombreMedico']
+    ];
+    mappings.forEach(([from, to]) => {
+        const src = document.getElementById(from);
+        const dst = document.getElementById(to);
+        if (src && dst) dst.value = src.value;
+    });
+}
+
+// Inicializar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    const plantillaSelector = document.getElementById('plantillaSelector');
+    if (plantillaSelector) {
+        console.log("Selector de plantillas encontrado");
+        plantillaSelector.addEventListener('change', cambiarPlantilla);
+        
+        const plantillaActual = plantillaSelector.value || 'template1';
+        console.log("Plantilla inicial: " + plantillaActual);
+        
+        document.getElementById('template1').style.display = plantillaActual === 'template1' ? 'block' : 'none';
+        document.getElementById('template2').style.display = plantillaActual === 'template2' ? 'block' : 'none';
+    } else {
+        console.error("Error: no se encontró el selector de plantillas");
+    }
+});
 
 // Generar PDF de toda la hoja (datos + frotis)
 async function generatePDF() {
@@ -528,7 +831,25 @@ async function generatePDF() {
     await new Promise(resolve => setTimeout(resolve, 50)); // Espera a que el DOM oculte el spinner
     try {
         const { jsPDF } = window.jspdf;
-        const hojaElem = document.getElementById('template1');
+        
+        // Detectar qué plantilla está activa
+        const templateSelector = document.getElementById('plantillaSelector');
+        const isNormal = templateSelector && templateSelector.value === 'template1';
+        
+        let hojaElem, petName, ownerFull, testType;
+        
+        if (isNormal) {
+            hojaElem = document.getElementById('template1');
+            petName = document.getElementById('mascotaNombre')?.value.trim() || '';
+            ownerFull = document.getElementById('propietarioNombre')?.value.trim() || '';
+            testType = 'Frotis Sanguíneo';
+        } else {
+            hojaElem = document.getElementById('template2');
+            petName = document.getElementById('mascotaNombre2')?.value.trim() || '';
+            ownerFull = document.getElementById('propietarioNombre2')?.value.trim() || '';
+            testType = 'Frotis Microbiológico';
+        }
+        
         const images = hojaElem.getElementsByTagName('img');
         const loadImages = Array.from(images).map(img => {
             return new Promise((resolve, reject) => {
@@ -544,11 +865,9 @@ async function generatePDF() {
         const pageHeight = 297;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         pdf.addImage(imgData, 'JPEG', 11, 10, imgWidth, imgHeight);
-        const petName = document.getElementById('mascotaNombre')?.value.trim() || '';
-        const ownerFull = document.getElementById('propietarioNombre')?.value.trim() || '';
         const ownerParts = ownerFull.split(/\s+/);
         const firstSurname = ownerParts.length > 1 ? ownerParts[1] : ownerParts[0] || '';
-        const fileName = `Frotis Sanguíneo ${petName} ${firstSurname}.pdf`;
+        const fileName = `${testType} ${petName} ${firstSurname}.pdf`;
         pdf.save(fileName);
     } catch (error) {
         console.error('Error al generar PDF:', error);
