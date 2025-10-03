@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', function(){
     const headerElement = document.getElementById('reportHeader');
     const interferenceSection = document.getElementById('interferenceIndicesSection');
     const lipasaRow = document.getElementById('lipasaRow');
+    const funcionamientoRenalTitle = document.getElementById('funcionamientoRenalTitle');
+    const funcionamientoHepaticoTitle = document.getElementById('funcionamientoHepaticoTitle');
+    const funcionamientoSanguineoTitle = document.getElementById('funcionamientoSanguineoTitle');
     
     if (headerElement) {
       if (template === 'analitos_laboratorio') {
@@ -49,6 +52,31 @@ document.addEventListener('DOMContentLoaded', function(){
         interferenceSection.style.display = 'none';
       } else {
         interferenceSection.style.display = 'block';
+      }
+    }
+    
+    // Ocultar títulos de funcionamiento para analitos_laboratorio
+    if (funcionamientoRenalTitle) {
+      if (template === 'analitos_laboratorio') {
+        funcionamientoRenalTitle.style.display = 'none';
+      } else {
+        funcionamientoRenalTitle.style.display = 'block';
+      }
+    }
+    
+    if (funcionamientoHepaticoTitle) {
+      if (template === 'analitos_laboratorio') {
+        funcionamientoHepaticoTitle.style.display = 'none';
+      } else {
+        funcionamientoHepaticoTitle.style.display = 'block';
+      }
+    }
+    
+    if (funcionamientoSanguineoTitle) {
+      if (template === 'analitos_laboratorio') {
+        funcionamientoSanguineoTitle.style.display = 'none';
+      } else {
+        funcionamientoSanguineoTitle.style.display = 'block';
       }
     }
     
@@ -81,6 +109,9 @@ function updateHeaderBasedOnTemplate() {
   const headerElement = document.getElementById('reportHeader');
   const interferenceSection = document.getElementById('interferenceIndicesSection');
   const lipasaRow = document.getElementById('lipasaRow');
+  const funcionamientoRenalTitle = document.getElementById('funcionamientoRenalTitle');
+  const funcionamientoHepaticoTitle = document.getElementById('funcionamientoHepaticoTitle');
+  const funcionamientoSanguineoTitle = document.getElementById('funcionamientoSanguineoTitle');
   
   if (headerElement) {
     if (template === 'analitos_laboratorio') {
@@ -96,6 +127,31 @@ function updateHeaderBasedOnTemplate() {
       interferenceSection.style.display = 'none';
     } else {
       interferenceSection.style.display = 'block';
+    }
+  }
+  
+  // Ocultar títulos de funcionamiento para analitos_laboratorio
+  if (funcionamientoRenalTitle) {
+    if (template === 'analitos_laboratorio') {
+      funcionamientoRenalTitle.style.display = 'none';
+    } else {
+      funcionamientoRenalTitle.style.display = 'block';
+    }
+  }
+  
+  if (funcionamientoHepaticoTitle) {
+    if (template === 'analitos_laboratorio') {
+      funcionamientoHepaticoTitle.style.display = 'none';
+    } else {
+      funcionamientoHepaticoTitle.style.display = 'block';
+    }
+  }
+  
+  if (funcionamientoSanguineoTitle) {
+    if (template === 'analitos_laboratorio') {
+      funcionamientoSanguineoTitle.style.display = 'none';
+    } else {
+      funcionamientoSanguineoTitle.style.display = 'block';
     }
   }
   
@@ -1125,7 +1181,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </tbody>
         </table>
     
-        <h3 class="titulos">FUNCIONAMIENTO RENAL</h3>
+        <h3 class="titulos" id="funcionamientoRenalTitle">FUNCIONAMIENTO RENAL</h3>
         <table>
             <thead>
                 <tr>
@@ -1211,7 +1267,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </tbody>
         </table>
     
-        <h3 class="titulos">FUNCIONAMIENTO HÉPATICO</h3>
+        <h3 class="titulos" id="funcionamientoHepaticoTitle">FUNCIONAMIENTO HÉPATICO</h3>
         <table>
             <thead>
                 <tr>
@@ -1270,7 +1326,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </tbody>
         </table>
     
-        <h3 class="titulos">FUNCIONAMIENTO SANGUINEO</h3>
+        <h3 class="titulos" id="funcionamientoSanguineoTitle">FUNCIONAMIENTO SANGUINEO</h3>
         <table>
             <thead>
                 <tr>

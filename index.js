@@ -5268,6 +5268,8 @@ window.addEventListener('DOMContentLoaded', function() {
   
   // Función de navegación para inyectables
   window.navigateToInyectables = function(sectionId, buttonId) {
+    console.log('navigateToInyectables llamado con:', sectionId, buttonId);
+    
     // Ocultar todas las secciones
     const allSections = document.querySelectorAll('.content section');
     allSections.forEach(s => {
@@ -5280,6 +5282,9 @@ window.addEventListener('DOMContentLoaded', function() {
     if (section) {
       section.classList.remove('hidden');
       section.classList.add('active');
+      console.log('Sección inyectables mostrada');
+    } else {
+      console.error('No se encontró la sección:', sectionId);
     }
     
     // Actualizar botón activo
@@ -5288,6 +5293,9 @@ window.addEventListener('DOMContentLoaded', function() {
     const button = document.getElementById(buttonId);
     if (button) {
       button.classList.add('active');
+      console.log('Botón inyectables activado');
+    } else {
+      console.error('No se encontró el botón:', buttonId);
     }
     
     // Cerrar sidebar en móviles
@@ -5307,6 +5315,9 @@ window.addEventListener('DOMContentLoaded', function() {
     const fechaInput = document.getElementById('inyFecha');
     if (fechaInput) {
       fechaInput.value = getLocalDateString();
+      console.log('Fecha configurada:', fechaInput.value);
+    } else {
+      console.error('No se encontró el input de fecha');
     }
     
     // Configurar event listeners
@@ -5318,51 +5329,51 @@ window.addEventListener('DOMContentLoaded', function() {
   
   // Configurar event listeners para inyectables
   function setupInyectablesEventListeners() {
+    console.log('Configurando event listeners para inyectables...');
+    
     // Formulario de inyectables
     const form = document.getElementById('inyectablesForm');
     if (form) {
       form.addEventListener('submit', handleInyectablesSubmit);
+      console.log('Event listener del formulario configurado');
+    } else {
+      console.error('No se encontró el formulario de inyectables');
     }
     
     // Botón limpiar
     const limpiarBtn = document.getElementById('limpiarInyectables');
     if (limpiarBtn) {
       limpiarBtn.addEventListener('click', limpiarFormularioInyectables);
+      console.log('Event listener del botón limpiar configurado');
+    } else {
+      console.error('No se encontró el botón limpiar');
     }
     
     // Búsqueda
     const searchBtn = document.getElementById('searchInyectablesBtn');
     if (searchBtn) {
       searchBtn.addEventListener('click', searchInyectables);
+      console.log('Event listener de búsqueda configurado');
+    } else {
+      console.error('No se encontró el botón de búsqueda');
     }
     
     // Filtro por fecha
     const filterBtn = document.getElementById('filterInyectablesBtn');
     if (filterBtn) {
       filterBtn.addEventListener('click', filterInyectablesByDate);
+      console.log('Event listener de filtro configurado');
+    } else {
+      console.error('No se encontró el botón de filtro');
     }
     
-    // Checkbox A favor - mostrar/ocultar campo de dosis
-    const aFavorCheckbox = document.getElementById('inyAFavor');
-    const aFavorDosisInput = document.getElementById('inyAFavorDosis');
-    
-    if (aFavorCheckbox && aFavorDosisInput) {
-      aFavorCheckbox.addEventListener('change', function() {
-        if (this.checked) {
-          aFavorDosisInput.style.display = 'block';
-          aFavorDosisInput.required = true;
-        } else {
-          aFavorDosisInput.style.display = 'none';
-          aFavorDosisInput.required = false;
-          aFavorDosisInput.value = '';
-        }
-      });
-    }
+    // Campo de dosis A favor siempre visible - no necesita lógica especial
   }
   
   // Manejar envío del formulario de inyectables
   function handleInyectablesSubmit(event) {
     event.preventDefault();
+    console.log('Formulario de inyectables enviado');
     
     const formData = {
       fecha: document.getElementById('inyFecha').value,
@@ -5377,7 +5388,6 @@ window.addEventListener('DOMContentLoaded', function() {
       metadona: document.getElementById('inyMetadona').checked ? 'X' : '',
       ondansetron: document.getElementById('inyOndansetron').checked ? 'X' : '',
       dosis: document.getElementById('inyDosis').value,
-      aFavor: document.getElementById('inyAFavor').checked ? 'X' : '',
       aFavorDosis: document.getElementById('inyAFavorDosis').value,
       solicitante: document.getElementById('inySolicitante').value,
       quienDaDosis: document.getElementById('inyQuienDaDosis').value,
@@ -5385,22 +5395,31 @@ window.addEventListener('DOMContentLoaded', function() {
       timestamp: Date.now()
     };
     
+    console.log('Datos del formulario:', formData);
+    
     // Guardar en Firebase
     saveInyectableToFirebase(formData);
   }
   
   // Guardar inyectable en Firebase
   function saveInyectableToFirebase(data) {
+    console.log('Intentando guardar inyectable en Firebase...');
+    console.log('Firebase disponible:', !!firebase);
+    console.log('Firebase database disponible:', !!(firebase && firebase.database));
+    
     if (!firebase || !firebase.database) {
+      console.error('Firebase no está disponible');
       showNotification('Error: Firebase no está disponible', 'error');
       return;
     }
     
     const database = firebase.database();
     const ref = database.ref('inyectables');
+    console.log('Referencia de Firebase creada:', ref);
     
     ref.push(data)
       .then(() => {
+        console.log('Inyectable guardado exitosamente');
         showNotification('Inyectable registrado exitosamente', 'success');
         limpiarFormularioInyectables();
         loadInyectablesData(); // Recargar la tabla
@@ -5452,7 +5471,12 @@ window.addEventListener('DOMContentLoaded', function() {
         <td>${inyectable.metadona || ''}</td>
         <td>${inyectable.ondansetron || ''}</td>
         <td>${inyectable.dosis || ''}</td>
-        <td>${inyectable.aFavor || ''}</td>
+        <td>
+          <label class="table-checkbox-label">
+            <input type="checkbox" class="table-checkbox" ${inyectable.aFavor === 'X' ? 'checked' : ''} onchange="toggleAFavor('${inyectable.id}', this.checked)">
+            <span class="table-checkmark"></span>
+          </label>
+        </td>
         <td>${inyectable.aFavorDosis || ''}</td>
         <td>${inyectable.solicitante || ''}</td>
         <td>${inyectable.quienDaDosis || ''}</td>
@@ -5614,6 +5638,28 @@ window.addEventListener('DOMContentLoaded', function() {
     editBtn.style.display = 'inline-block';
     saveBtn.style.display = 'none';
     cancelBtn.style.display = 'none';
+  };
+  
+  // Toggle A favor checkbox en la tabla
+  window.toggleAFavor = function(id, isChecked) {
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
+      return;
+    }
+    
+    const database = firebase.database();
+    const ref = database.ref(`inyectables/${id}/aFavor`);
+    
+    const value = isChecked ? 'X' : '';
+    
+    ref.set(value)
+      .then(() => {
+        showNotification(`A favor ${isChecked ? 'marcado' : 'desmarcado'} exitosamente`, 'success');
+      })
+      .catch((error) => {
+        console.error('Error al actualizar A favor:', error);
+        showNotification('Error al actualizar A favor', 'error');
+      });
   };
   
   // Inicializar el sidebar para móviles
