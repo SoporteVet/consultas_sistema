@@ -5341,6 +5341,23 @@ window.addEventListener('DOMContentLoaded', function() {
     if (filterBtn) {
       filterBtn.addEventListener('click', filterInyectablesByDate);
     }
+    
+    // Checkbox A favor - mostrar/ocultar campo de dosis
+    const aFavorCheckbox = document.getElementById('inyAFavor');
+    const aFavorDosisInput = document.getElementById('inyAFavorDosis');
+    
+    if (aFavorCheckbox && aFavorDosisInput) {
+      aFavorCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+          aFavorDosisInput.style.display = 'block';
+          aFavorDosisInput.required = true;
+        } else {
+          aFavorDosisInput.style.display = 'none';
+          aFavorDosisInput.required = false;
+          aFavorDosisInput.value = '';
+        }
+      });
+    }
   }
   
   // Manejar envío del formulario de inyectables
@@ -5361,6 +5378,7 @@ window.addEventListener('DOMContentLoaded', function() {
       ondansetron: document.getElementById('inyOndansetron').checked ? 'X' : '',
       dosis: document.getElementById('inyDosis').value,
       aFavor: document.getElementById('inyAFavor').checked ? 'X' : '',
+      aFavorDosis: document.getElementById('inyAFavorDosis').value,
       solicitante: document.getElementById('inySolicitante').value,
       quienDaDosis: document.getElementById('inyQuienDaDosis').value,
       factura: document.getElementById('inyFactura').value,
@@ -5435,6 +5453,7 @@ window.addEventListener('DOMContentLoaded', function() {
         <td>${inyectable.ondansetron || ''}</td>
         <td>${inyectable.dosis || ''}</td>
         <td>${inyectable.aFavor || ''}</td>
+        <td>${inyectable.aFavorDosis || ''}</td>
         <td>${inyectable.solicitante || ''}</td>
         <td>${inyectable.quienDaDosis || ''}</td>
         <td>

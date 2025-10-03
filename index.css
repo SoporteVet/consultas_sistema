@@ -2359,6 +2359,29 @@ body:not(.recepcion-role) .sidebar {
   color: white;
 }
 
+/* Estilos para campo de dosis A favor */
+.a-favor-dosis-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid #28a745;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-top: 8px;
+  background: #f8fff9;
+  transition: all 0.3s ease;
+}
+
+.a-favor-dosis-input:focus {
+  outline: none;
+  border-color: #28a745;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+}
+
+.a-favor-dosis-input::placeholder {
+  color: #6c757d;
+  font-style: italic;
+}
+
 .inyectables-table-container {
   margin-top: 30px;
 }
