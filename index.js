@@ -71,6 +71,50 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show the UI elements based on user role
         applyRoleBasedUI(userData.role);
         
+        // Configure default section based on user role
+        const userRole = userData.role;
+        console.log('Configuring default section for role:', userRole);
+        
+        if (userRole === 'visitas') {
+            // Para usuarios visitas, mostrar la sección de ver tickets
+            console.log('Setting up visitas user - showing ver tickets section');
+            const verTicketsSection = document.getElementById('verTicketsSection');
+            const verTicketsBtn = document.getElementById('verTicketsBtn');
+            if (verTicketsSection) {
+                showSection(verTicketsSection);
+                if (verTicketsBtn) verTicketsBtn.classList.add('active');
+                console.log('Ver tickets section shown and button activated');
+            } else {
+                console.log('ERROR: verTicketsSection not found');
+            }
+            
+            // Para usuarios visitas, ocultar el sidebar por defecto
+            const sidebar = document.querySelector('.sidebar');
+            const mainContainer = document.querySelector('.main-container');
+            if (sidebar && mainContainer) {
+                if (window.innerWidth <= 980) {
+                    // En móviles, asegurar que el sidebar esté oculto
+                    sidebar.classList.remove('show');
+                } else {
+                    // En desktop, ocultar el sidebar
+                    mainContainer.classList.add('sidebar-hidden');
+                }
+                console.log('Sidebar hidden by default for visitas user');
+            }
+        } else {
+            // Para otros usuarios, mostrar la sección de crear ticket
+            console.log('Setting up non-visitas user - showing crear ticket section');
+            const crearTicketSection = document.getElementById('crearTicketSection');
+            const crearTicketBtn = document.getElementById('crearTicketBtn');
+            if (crearTicketSection) {
+                showSection(crearTicketSection);
+                if (crearTicketBtn) crearTicketBtn.classList.add('active');
+                console.log('Crear ticket section shown and button activated');
+            } else {
+                console.log('ERROR: crearTicketSection not found');
+            }
+        }
+        
         // Continue with loading data
         showLoading();
         
@@ -92,11 +136,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 hideLoading();
                 isDataLoaded = true;
                 
-                // Mostrar por defecto la sección de crear ticket si existe
-                if (crearTicketSection) {
-                    showSection(crearTicketSection);
-                    if (crearTicketBtn) crearTicketBtn.classList.add('active');
-                }
+                // La configuración de sección por defecto ya se hizo arriba
                 
                 // Establecer fecha actual en el formulario
                 const fechaInput = document.getElementById('fecha');
@@ -118,7 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     : 1;
 
                 // Mostrar solo tickets EN ESPERA al cargar para todos menos admin
-                const userRole = sessionStorage.getItem('userRole');
+                // userRole ya está declarado arriba
                 document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
                 if (userRole === 'admin') {
                     renderTickets('todos');
@@ -365,6 +405,28 @@ function applyRoleBasedUI(role) {
         }
     }
     
+    // Control de visibilidad del botón de internamiento basado en roles
+    const internamientoBtn = document.getElementById('internamientoBtn');
+    const internamientoCategory = internamientoBtn ? internamientoBtn.closest('.nav-category') : null;
+    const allowedInternamientoRoles = ['admin', 'quirofano', 'internos', 'recepcion', 'laboratorio', "consulta_externa"];
+    
+    // Debug logging
+    console.log('Role:', role);
+    console.log('Allowed internamiento roles:', allowedInternamientoRoles);
+    console.log('Is role in allowed roles:', allowedInternamientoRoles.includes(role));
+    
+    if (internamientoCategory) {
+        if (allowedInternamientoRoles.includes(role)) {
+            internamientoCategory.style.display = 'block';
+            console.log('Showing internamiento button for role:', role);
+        } else {
+            internamientoCategory.style.display = 'none';
+            console.log('Hiding internamiento button for role:', role);
+        }
+    } else {
+        console.log('Internamiento category not found');
+    }
+    
     // Control de visibilidad del botón de consentimientos basado en roles
     const consentimientosBtn = document.getElementById('consentimientosBtn');
     const consentimientosCategory = consentimientosBtn ? consentimientosBtn.closest('.nav-category') : null;
@@ -389,7 +451,7 @@ function applyRoleBasedUI(role) {
     }
 }
 
-// Mostrar/ocultar sidebar para todos los usuarios excepto recepción
+// Mostrar/ocultar sidebar para todos los usuarios excepto recepción y visitas
 function setupVisitasSidebarToggle() {
   const btn = document.getElementById('menuToggleBtn');
   const sidebar = document.querySelector('.sidebar');
@@ -951,6 +1013,15 @@ function showSectionById(sectionId) {
     } else {
         // Section with ID not found
     }
+}
+
+// Function to hide all sections
+function hideAllSections() {
+    const sections = document.querySelectorAll('.content section');
+    sections.forEach(s => {
+        s.classList.add('hidden');
+        s.classList.remove('active');
+    });
 }
 
 function setActiveButton(button) {

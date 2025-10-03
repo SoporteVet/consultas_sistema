@@ -699,7 +699,7 @@ section h2 i {
 
 .estado-terminado {
   background-color: rgba(102, 187, 106, 0.1);
-  color: var(--terminado-color);
+  color: white;
 }
 
 .expediente-badge {
@@ -2078,6 +2078,7 @@ body.visitas-role .estado-consultorio {
 body.visitas-role .estado-terminado {
   background-color: rgba(102, 187, 106, 0.2);
   border: 2px solid var(--terminado-color);
+  color: white;
 }
 
 /* Admin Panel Styles */
