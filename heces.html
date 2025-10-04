@@ -445,6 +445,20 @@ function cambiarPlantilla() {
         edadSelectorContainer.style.display = 'inline';
     }
     
+    // Mostrar/ocultar botones de PDF según la plantilla seleccionada
+    const pdfButton = document.getElementById('pdfButton');
+    const pdfButtonSeriado = document.getElementById('pdfButtonSeriado');
+    
+    if (seleccion === 'template3') {
+        // Para plantilla 3 (seriado), mostrar solo el botón del seriado
+        pdfButton.style.display = 'none';
+        pdfButtonSeriado.style.display = 'inline-block';
+    } else {
+        // Para plantillas 1 y 2, mostrar solo el botón normal
+        pdfButton.style.display = 'inline-block';
+        pdfButtonSeriado.style.display = 'none';
+    }
+    
     // Mostrar solo la plantilla seleccionada
     document.getElementById(seleccion).style.display = 'block';
     
@@ -575,6 +589,21 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     } else {
         console.error("Error: no se encontró el selector de plantillas");
+    }
+    
+    // Configurar botones de PDF según la plantilla inicial
+    const pdfButton = document.getElementById('pdfButton');
+    const pdfButtonSeriado = document.getElementById('pdfButtonSeriado');
+    const plantillaActual = plantillaSelector ? plantillaSelector.value || 'template1' : 'template1';
+    
+    if (plantillaActual === 'template3') {
+        // Para plantilla 3 (seriado), mostrar solo el botón del seriado
+        if (pdfButton) pdfButton.style.display = 'none';
+        if (pdfButtonSeriado) pdfButtonSeriado.style.display = 'inline-block';
+    } else {
+        // Para plantillas 1 y 2, mostrar solo el botón normal
+        if (pdfButton) pdfButton.style.display = 'inline-block';
+        if (pdfButtonSeriado) pdfButtonSeriado.style.display = 'none';
     }
     
     document.addEventListener('click', function(event) {
@@ -708,14 +737,8 @@ async function generatePDF() {
             petName = document.getElementById('mascotaNombre2')?.value.trim() || '';
             ownerFull = document.getElementById('propietarioNombre2')?.value.trim() || '';
             testType = 'Análisis General';
-        } else if (plantillaActual === 'template3') {
-            selectedTemplate = document.getElementById('template3');
-            page1Content = document.getElementById('page3_1Content');
-            page2Content = document.getElementById('page3_2Content');
-            page3Content = document.getElementById('page3_3Content');
-            petName = document.getElementById('mascotaNombre3')?.value.trim() || '';
-            ownerFull = document.getElementById('propietarioNombre3')?.value.trim() || '';
-            testType = 'Análisis Seriado';
+        } else {
+            throw new Error('Esta función solo maneja plantillas 1 y 2. Use generatePDFSeriado() para el análisis seriado.');
         }
         const ownerParts = ownerFull.split(/\s+/);
         const firstSurname = ownerParts.length > 1 ? ownerParts[1] : ownerParts[0] || '';
@@ -740,7 +763,7 @@ async function generatePDF() {
             useCORS: true,
             backgroundColor: '#ffffff'
         });
-        const imgWidth = 170;
+        const imgWidth = 158;
         const imgHeight = (canvas1.height * imgWidth) / canvas1.width;
         const pdf = new jsPDF('p', 'mm', 'a4');
         const marginLeft = (210 - imgWidth) / 2;
@@ -759,23 +782,9 @@ async function generatePDF() {
             pdf.addImage(canvas2.toDataURL('image/jpeg', 1.0), 'JPEG', marginLeft, 10, imgWidth, imgHeight2);
         }
         
-        // --- CAPTURAR TERCERA PÁGINA SI EXISTE (SOLO PARA TEMPLATE3) ---
-        if (page3Content && plantillaActual === 'template3') {
-            page2Content.style.display = 'none';
-            page3Content.style.display = 'block';
-            pdf.addPage();
-            const canvas3 = await html2canvas(page3Content, {
-                scale: 3,
-                useCORS: true,
-                backgroundColor: '#ffffff'
-            });
-            const imgHeight3 = (canvas3.height * imgWidth) / canvas3.width;
-            pdf.addImage(canvas3.toDataURL('image/jpeg', 1.0), 'JPEG', marginLeft, 10, imgWidth, imgHeight3);
-        }
         // Restaurar visibilidad - solo mostrar primera página por defecto
         if (page1Content) page1Content.style.display = 'block';
         if (page2Content) page2Content.style.display = 'none';
-        if (page3Content) page3Content.style.display = 'none';
         document.querySelectorAll('.pdf-hide').forEach(el => {
             el.style.display = 'block';
         });
@@ -810,6 +819,139 @@ async function generatePDF() {
         const page2Content = document.getElementById('page2Content') || document.getElementById('page2_2Content');
         if (page1Content) page1Content.style.display = 'block';
         if (page2Content) page2Content.style.display = 'none';
+        document.querySelectorAll('.pdf-hide').forEach(el => {
+            el.style.display = 'block';
+        });
+        document.querySelectorAll('.analysis-box').forEach(box => {
+            box.style.display = 'block';
+        });
+        loadingIndicator.style.display = 'none';
+        pdfButton.disabled = false;
+    }
+}
+
+async function generatePDFSeriado() {
+    const loadingIndicator = document.getElementById('loadingPdfSeriado');
+    const pdfButton = document.getElementById('pdfButtonSeriado');
+    loadingIndicator.style.display = 'flex';
+    pdfButton.disabled = true;
+    try {
+        const selectedTemplate = document.getElementById('template3');
+        const page1Content = document.getElementById('page3_1Content');
+        const page2Content = document.getElementById('page3_2Content');
+        const page3Content = document.getElementById('page3_3Content');
+        const petName = document.getElementById('mascotaNombre3')?.value.trim() || '';
+        const ownerFull = document.getElementById('propietarioNombre3')?.value.trim() || '';
+        const testType = 'Análisis Seriado';
+        
+        if (!selectedTemplate || !page1Content) {
+            throw new Error('No se pudo encontrar la plantilla de seriado o contenido de página');
+        }
+        
+        const ownerParts = ownerFull.split(/\s+/);
+        const firstSurname = ownerParts.length > 1 ? ownerParts[1] : ownerParts[0] || '';
+        
+        // Ocultar elementos no deseados
+        document.querySelectorAll('.pdf-hide').forEach(el => {
+            el.style.display = 'none';
+        });
+        
+        // Ocultar caja de análisis si no hay imagen
+        document.querySelectorAll('.image-container').forEach(container => {
+            const analysisBox = container.querySelector('.analysis-box');
+            const preview = analysisBox?.querySelector('img');
+            if (preview && preview.style.display !== 'block') {
+                const uploadBox = analysisBox?.querySelector('.pdf-hide')?.parentElement;
+                if (uploadBox) uploadBox.style.display = 'none';
+            }
+        });
+        
+        // --- CAPTURAR PRIMERA PÁGINA ---
+        if (page2Content) page2Content.style.display = 'none';
+        if (page3Content) page3Content.style.display = 'none';
+        if (page1Content) page1Content.style.display = 'block';
+        const canvas1 = await html2canvas(page1Content, {
+            scale: 3,
+            useCORS: true,
+            backgroundColor: '#ffffff'
+        });
+        const imgWidth = 137; // Reducido de 158 a 137 para menos ancho en seriado
+        const imgHeight = (canvas1.height * imgWidth) / canvas1.width;
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const marginLeft = (210 - imgWidth) / 2;
+        pdf.addImage(canvas1.toDataURL('image/jpeg', 1.0), 'JPEG', marginLeft, 5, imgWidth, imgHeight); // Reducido margen superior de 10 a 5 para más altura
+        
+        // --- CAPTURAR SEGUNDA PÁGINA SI EXISTE ---
+        if (page2Content) {
+            page1Content.style.display = 'none';
+            page3Content.style.display = 'none';
+            page2Content.style.display = 'block';
+            pdf.addPage();
+            const canvas2 = await html2canvas(page2Content, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            });
+            const imgHeight2 = (canvas2.height * imgWidth) / canvas2.width;
+            pdf.addImage(canvas2.toDataURL('image/jpeg', 1.0), 'JPEG', marginLeft, 5, imgWidth, imgHeight2); // Reducido margen superior de 10 a 5 para más altura
+        }
+        
+        // --- CAPTURAR TERCERA PÁGINA SI EXISTE ---
+        if (page3Content) {
+            page1Content.style.display = 'none';
+            page2Content.style.display = 'none';
+            page3Content.style.display = 'block';
+            pdf.addPage();
+            const canvas3 = await html2canvas(page3Content, {
+                scale: 3,
+                useCORS: true,
+                backgroundColor: '#ffffff'
+            });
+            const imgHeight3 = (canvas3.height * imgWidth) / canvas3.width;
+            pdf.addImage(canvas3.toDataURL('image/jpeg', 1.0), 'JPEG', marginLeft, 5, imgWidth, imgHeight3); // Reducido margen superior de 10 a 5 para más altura
+        }
+        
+        // Restaurar visibilidad - solo mostrar primera página por defecto
+        if (page1Content) page1Content.style.display = 'block';
+        if (page2Content) page2Content.style.display = 'none';
+        if (page3Content) page3Content.style.display = 'none';
+        document.querySelectorAll('.pdf-hide').forEach(el => {
+            el.style.display = 'block';
+        });
+        document.querySelectorAll('.analysis-box').forEach(box => {
+            box.style.display = 'block';
+        });
+        
+        const fileName = `${testType} de Heces ${petName} ${firstSurname}.pdf`;
+        if ('showSaveFilePicker' in window) {
+            try {
+                const handle = await window.showSaveFilePicker({
+                    suggestedName: fileName,
+                    types: [{
+                        description: 'PDF Files',
+                        accept: {'application/pdf': ['.pdf']},
+                    }],
+                });
+                const writable = await handle.createWritable();
+                await writable.write(pdf.output('blob'));
+                await writable.close();
+            } catch (err) {
+                pdf.save(fileName);
+            }
+        } else {
+            pdf.save(fileName);
+        }
+    } catch (error) {
+        console.error('Error al generar PDF del seriado:', error);
+        alert('Ocurrió un error al generar el PDF del seriado: ' + error.message);
+    } finally {
+        // Restaurar visibilidad
+        const page1Content = document.getElementById('page3_1Content');
+        const page2Content = document.getElementById('page3_2Content');
+        const page3Content = document.getElementById('page3_3Content');
+        if (page1Content) page1Content.style.display = 'block';
+        if (page2Content) page2Content.style.display = 'none';
+        if (page3Content) page3Content.style.display = 'none';
         document.querySelectorAll('.pdf-hide').forEach(el => {
             el.style.display = 'block';
         });
@@ -1039,6 +1181,34 @@ document.addEventListener('DOMContentLoaded', adjustImageLayout);
                     </tr>
                 </tbody>
             </table>
+               <!-- Segunda página de la plantilla dos para imágenes -->
+               <div id="page_1Content">
+                <!-- Imagen de análisis para plantilla simple -->
+                <div class="image-container" style="display: flex; justify-content: center; margin: 20px 0;">
+                    <div class="image-box reference-box" style="text-align: center; margin: 0 10px; max-width: 70%;">
+                        <h4>Imagen de Referencia</h4>
+                        <img src="heces.png" alt="Escala de Bristol" style="max-width: 100%; max-height: 200px; border: 1px solid #ddd; padding: 5px;">
+                    </div>
+                    <div class="image-box analysis-box" style="text-align: center; margin: 0 10px; max-width: 50%;">
+                        <h4>Imagen del Análisis</h4>
+                        <div class="pdf-hide" style="margin-bottom: 10px;">
+                            <label for="upload2-simple">Seleccionar imagen:</label>
+                            <input type="file" id="upload2-simple" accept="image/*" onchange="previewImage(event, 'preview2-simple')" style="display: inline-block;">
+                        </div>
+                        <div style="margin-top: 10px; min-height: 200px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center;">
+                            <img id="preview2-simple" alt="Imagen del Análisis" style="max-width: 100%; max-height: 200px; display: none;">
+                            <span id="noImageText2-simple" class="pdf-hide">Sin imagen</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="footer">
+                    <p id="mensajeMedico" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
+                    <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
+                    <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
+                    <p>Correo: laboratorio@vetsanmartin.com</p>
+                </div>
+            </div> <!-- Fin page2_2Content -->
          </div> <!-- end page1Content -->
 
          <!-- Page 2 wrapper -->
@@ -1832,11 +2002,16 @@ document.addEventListener('DOMContentLoaded', adjustImageLayout);
         </div>
 
         <div class="controls">
-            <button id="pdfButton" onclick="generatePDF()">Generar PDF</button>
+            <button id="pdfButton" onclick="generatePDF()">Generar PDF (Plantillas 1 y 2)</button>
+            <button id="pdfButtonSeriado" onclick="generatePDFSeriado()" style="display: none;">Generar PDF Seriado</button>
             <button id="menuButton" onclick="window.location.href='index.html'">Volver al Menú</button>
             <div id="loadingPdf" class="loading-indicator">
                 <div class="spinner"></div>
                 <span>Generando PDF...</span>
+            </div>
+            <div id="loadingPdfSeriado" class="loading-indicator" style="display: none;">
+                <div class="spinner"></div>
+                <span>Generando PDF Seriado...</span>
             </div>
         </div>
 
