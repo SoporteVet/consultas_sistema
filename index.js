@@ -2765,6 +2765,7 @@ function editTicket(randomId) {
                         <option value="perfil_quimico_general" ${safeTicket.tipoServicio === 'perfil_quimico_general' ? 'selected' : ''}>Perfil quimico general</option>
                         <option value="perfil_pre_quirurgico" ${safeTicket.tipoServicio === 'perfil_pre_quirurgico' ? 'selected' : ''}>Perfil pre quirurgico</option>
                         <option value="perfil_renal" ${safeTicket.tipoServicio === 'perfil_renal' ? 'selected' : ''}>Perfil renal</option>
+                        <option value="perfil_hepatico" ${safeTicket.tipoServicio === 'perfil_hepatico' ? 'selected' : ''}>Perfil hepatico</option>
                         <option value="cirugia" ${safeTicket.tipoServicio === 'cirugia' ? 'selected' : ''}>Cirugía</option>
                         <option value="muestra_test" ${safeTicket.tipoServicio === 'muestra_test' ? 'selected' : ''}>Muestra para test</option>
                         <option value="tiempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selected' : ''}>Tiempos de coagulación</option>
@@ -4362,6 +4363,7 @@ function getNombreServicio(tipoServicio) {
         'perfil_quimico_general': 'Perfil quimico general',
         'perfil_pre_quirurgico': 'Perfil pre quirurgico',
         'perfil_renal': 'Perfil renal',
+        'perfil_hepatico': 'Perfil hepatico',
         'cirugia': 'Cirugía',
         'muestra_test': 'Muestra para test',
         'tiempos_coagulacion': 'Tiempos de coagulación',
@@ -4528,6 +4530,7 @@ document.addEventListener('DOMContentLoaded', function() {
         t.tipoServicio.includes('panel') ||
         t.tipoServicio.includes('perfil') ||
         t.tipoServicio.includes('hemograma') ||
+        t.tipoServicio.includes('hepatico') ||
         t.tipoServicio.includes('quimica') ||
         t.tipoServicio.includes('test') ||
         t.tipoServicio.includes('analito') ||
@@ -5375,9 +5378,46 @@ window.addEventListener('DOMContentLoaded', function() {
     event.preventDefault();
     console.log('Formulario de inyectables enviado');
     
+    // Validar que al menos un inyectable esté seleccionado
+    const checkboxes = [
+      document.getElementById('inySelmix'),
+      document.getElementById('inyConvenia'),
+      document.getElementById('inyCerenia'),
+      document.getElementById('inySoroglobulin'),
+      document.getElementById('inyNexium'),
+      document.getElementById('inyOsurnia'),
+      document.getElementById('inySueroAutologo'),
+      document.getElementById('inyMetadona'),
+      document.getElementById('inyOndansetron')
+    ];
+    
+    const alMenosUnoSeleccionado = checkboxes.some(checkbox => checkbox.checked);
+    
+    if (!alMenosUnoSeleccionado) {
+      showNotification('Debe seleccionar al menos un inyectable', 'error');
+      return;
+    }
+    
+    // Validar que el campo mascota y apellido contenga el apellido (debe tener un guion)
+    const mascotaApellido = document.getElementById('inyMascotaApellido').value.trim();
+    if (!mascotaApellido.includes('-')) {
+      showNotification('Debe incluir el apellido del dueño. Use el formato: Nombre Mascota - Apellido', 'error');
+      return;
+    }
+    
+    // Validar que los campos requeridos no estén vacíos
+    const dosis = document.getElementById('inyDosis').value.trim();
+    const solicitante = document.getElementById('inySolicitante').value.trim();
+    const quienDaDosis = document.getElementById('inyQuienDaDosis').value.trim();
+    
+    if (!dosis || !solicitante || !quienDaDosis) {
+      showNotification('Debe completar todos los campos obligatorios marcados con *', 'error');
+      return;
+    }
+    
     const formData = {
       fecha: document.getElementById('inyFecha').value,
-      mascotaApellido: document.getElementById('inyMascotaApellido').value,
+      mascotaApellido: mascotaApellido,
       selmix: document.getElementById('inySelmix').checked ? 'X' : '',
       convenia: document.getElementById('inyConvenia').checked ? 'X' : '',
       cerenia: document.getElementById('inyCerenia').checked ? 'X' : '',
@@ -5387,10 +5427,10 @@ window.addEventListener('DOMContentLoaded', function() {
       sueroAutologo: document.getElementById('inySueroAutologo').checked ? 'X' : '',
       metadona: document.getElementById('inyMetadona').checked ? 'X' : '',
       ondansetron: document.getElementById('inyOndansetron').checked ? 'X' : '',
-      dosis: document.getElementById('inyDosis').value,
+      dosis: dosis,
       aFavorDosis: document.getElementById('inyAFavorDosis').value,
-      solicitante: document.getElementById('inySolicitante').value,
-      quienDaDosis: document.getElementById('inyQuienDaDosis').value,
+      solicitante: solicitante,
+      quienDaDosis: quienDaDosis,
       factura: document.getElementById('inyFactura').value,
       timestamp: Date.now()
     };

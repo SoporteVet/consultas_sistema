@@ -13,6 +13,8 @@ const LAB_REPORT_TEMPLATES = {
   analitos_laboratorio: { name: 'Analitos Laboratorio', file: 'perfil_quimico.html' },
   perfil_renal: { name: 'Perfil Renal', file: 'perfil_renal.html' },
   perfil_pre_quirurgico: { name: 'Perfil Pre-Quirúrgico', file: 'perfil_pre_quirurgico.html' },
+  perfil_hepatico: { name: 'Perfil Hepático', file: 'perfil_hepatico.html' },
+  electrolitos: { name: 'Electrolitos', file: 'electrolitos.html' },
   heces: { name: 'Análisis de Heces', file: 'heces.html' },
   urianalisis: { name: 'Urianálisis', file: 'urianalisis.html' },
   frotis: { name: 'Frotis Sanguíneo', file: 'frotis.html' },

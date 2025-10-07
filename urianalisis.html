@@ -696,7 +696,12 @@ document.addEventListener('DOMContentLoaded', function() {
       <option value="Abundante">
     </datalist>
     <!-- Tinción gram -->
-    <tr><td>Tinción gram</td><td colspan="2"><input type="text" id="tincion_gram15" list="tincionGramList15" style="width:98%"></td></tr>
+    <tr id="row_tincion_gram15">
+      <td>Tinción gram</td>
+      <td colspan="2">
+        <input type="text" id="tincion_gram15" list="tincionGramList15" style="width:85%">
+      </td>
+    </tr>
     <datalist id="tincionGramList15">
       <option value="Bacterias Gram Positivas">
       <option value="Bacterias Gram Negativas">
@@ -704,7 +709,12 @@ document.addEventListener('DOMContentLoaded', function() {
     <script>
     function eliminarTincionGram15() {
       var row = document.getElementById('row_tincion_gram15');
-      if(row) row.remove();
+      if(row) {
+        row.remove();
+        console.log('Tinción gram eliminada');
+      } else {
+        console.error('No se encontró la fila de tinción gram');
+      }
     }
     </script>
     <tr><td>Comentario:</td><td colspan="2"><input type="text" id="comentario" style="width:98%"></td></tr>
@@ -960,13 +970,11 @@ function moverFocoUrianalisis(event, siguienteId, anteriorId) {
     <div class="controls">
     <button id="pdfButton" onclick="generatePDF()">Generar PDF</button>
     <button id="menuButton" onclick="window.location.href='index.html'">Volver al Menú</button>
+    <button type="button" onclick="eliminarTincionGram15()" title="Eliminar Tinción Gram" style="margin-left: 5px; padding: 5px 10px; background-color: #dc3545; color: white; border: none; border-radius: 4px; cursor: pointer;">🗑️</button>
     <div id="loadingPdf" class="loading-indicator" style="display:none;">
         <div class="spinner"></div>
         <span>Generando PDF...</span>
     </div>
-     <tr id="tincion_gram15">
-      <td><button type="button" onclick="eliminarTincionGram15()" title="Eliminar">🗑️</button></td>
-    </tr>
 </div>
 
 <script>

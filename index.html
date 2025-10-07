@@ -309,6 +309,7 @@
                   <option value="perfil_quimico_general">Perfil quimico general</option>
                   <option value="perfil_pre_quirurgico">Perfil pre quirurgico</option>
                   <option value="perfil_renal">Perfil renal</option>
+                  <option value="perfil_hepatico">Perfil hepatico</option>
                   <option value="cirugia">Cirugía</option>
                   <option value="muestra_test">Muestra para test</option>
                   <option value="tiempos_coagulacion">Tiempos de coagulación</option>
@@ -790,6 +791,8 @@
             <div class="template-card" data-template="analitos_laboratorio"><h4>Analitos Laboratorio</h4><p>Exportar perfil químico como PDF</p></div>
             <div class="template-card" data-template="perfil_renal"><h4>Perfil Renal</h4><p>Función renal</p></div>
             <div class="template-card" data-template="perfil_pre_quirurgico"><h4>Perfil Pre-Quirúrgico</h4><p>Evaluación preoperatoria</p></div>
+            <div class="template-card" data-template="perfil_hepatico"><h4>Perfil Hepático</h4><p>Función hepática completa</p></div>
+            <div class="template-card" data-template="electrolitos"><h4>Electrolitos</h4><p>Perfil de electrolitos séricos</p></div>
             <div class="template-card" data-template="heces"><h4>Análisis de Heces</h4><p>Macroscópico/Microscópico</p></div>
             <div class="template-card" data-template="urianalisis"><h4>Urianálisis</h4><p>Análisis de orina</p></div>
             <div class="template-card" data-template="frotis"><h4>Frotis Sanguíneo</h4><p>Morfología sanguínea</p></div>
@@ -826,12 +829,12 @@
           <form id="inyectablesForm">
             <div class="form-row">
               <div class="form-group">
-                <label for="inyFecha"><i class="fas fa-calendar"></i> Fecha:</label>
+                <label for="inyFecha"><i class="fas fa-calendar"></i> Fecha: *</label>
                 <input type="date" id="inyFecha" required>
               </div>
               <div class="form-group">
-                <label for="inyMascotaApellido"><i class="fas fa-paw"></i> Mascota y Apellido:</label>
-                <input type="text" id="inyMascotaApellido" placeholder="Ej: Max - García" required>
+                <label for="inyMascotaApellido"><i class="fas fa-paw"></i> Nombre Mascota - Apellido Dueño: *</label>
+                <input type="text" id="inyMascotaApellido" placeholder="Ej: Max - García (obligatorio incluir apellido)" required>
               </div>
             </div>
             
@@ -904,24 +907,24 @@
             
             <div class="form-row">
               <div class="form-group">
-                <label for="inyDosis"><i class="fas fa-weight"></i> Dosis:</label>
-                <input type="text" id="inyDosis" placeholder="Dosis administrada">
+                <label for="inyDosis"><i class="fas fa-weight"></i> Dosis: *</label>
+                <input type="text" id="inyDosis" placeholder="Dosis administrada" required>
               </div>
               <div class="form-group">
                 <label for="inyAFavorDosis"><i class="fas fa-check-circle"></i> A favor (dosis):</label>
                 <input type="text" id="inyAFavorDosis" placeholder="Cantidad de dosis a favor" class="a-favor-dosis-input">
               </div>
               <div class="form-group">
-                <label for="inySolicitante"><i class="fas fa-user"></i> Solicitante:</label>
-                <input type="text" id="inySolicitante" placeholder="Quien solicita">
+                <label for="inySolicitante"><i class="fas fa-user"></i> Solicitante: *</label>
+                <input type="text" id="inySolicitante" placeholder="Quien solicita" required>
               </div>
               <div class="form-group">
-                <label for="inyQuienDaDosis"><i class="fas fa-user-md"></i> Quien da la dosis:</label>
-                <input type="text" id="inyQuienDaDosis" placeholder="Quien administra">
+                <label for="inyQuienDaDosis"><i class="fas fa-user-md"></i> Quien da la dosis: *</label>
+                <input type="text" id="inyQuienDaDosis" placeholder="Quien administra" required>
               </div>
               <div class="form-group">
                 <label for="inyFactura"><i class="fas fa-file-invoice"></i> Factura:</label>
-                <input type="text" id="inyFactura" placeholder="Número de factura">
+                <input type="text" id="inyFactura" placeholder="Número de factura (opcional)">
               </div>
             </div>
             
