@@ -218,25 +218,6 @@ document.addEventListener('DOMContentLoaded', function(){
                                     mensaje3.style.display = isNA3 ? 'none' : 'block';
                                 }
                             }
-                            
-                            function previewImage(event, previewId) {
-                                const file = event.target.files[0];
-                                if (file) {
-                                    const reader = new FileReader();
-                                    reader.onload = function(e) {
-                                        const preview = document.getElementById(previewId);
-                                        const noImageText = document.getElementById('noImageText' + previewId.replace('preview', ''));
-                                        if (preview) {
-                                            preview.src = e.target.result;
-                                            preview.style.display = 'block';
-                                        }
-                                        if (noImageText) {
-                                            noImageText.style.display = 'none';
-                                        }
-                                    };
-                                    reader.readAsDataURL(file);
-                                }
-                            }
 
             function moverFocoConFlechas(event, derechaId, izquierdaId, arribaId, abajoId) {
                     switch (event.key) {
@@ -652,13 +633,29 @@ function agregarSufijoCampo(input) {
 
 document.addEventListener('DOMContentLoaded', function() {
     const preview1 = document.getElementById('preview2');
-    const preview2 = document.getElementById('preview2-simple');
+    const preview2 = document.getElementById('preview2-general');
+    const preview3_1 = document.getElementById('preview3_1');
+    const preview3_2 = document.getElementById('preview3_2');
+    const preview3_3 = document.getElementById('preview3_3');
+    
     if (preview1) {
         preview1.parentElement.setAttribute('data-has-image', 'false');
         adjustImageLayout(); // Asegurar que el layout inicial sea correcto
     }
     if (preview2) {
         preview2.parentElement.setAttribute('data-has-image', 'false');
+        adjustImageLayout();
+    }
+    if (preview3_1) {
+        preview3_1.parentElement.setAttribute('data-has-image', 'false');
+        adjustImageLayout();
+    }
+    if (preview3_2) {
+        preview3_2.parentElement.setAttribute('data-has-image', 'false');
+        adjustImageLayout();
+    }
+    if (preview3_3) {
+        preview3_3.parentElement.setAttribute('data-has-image', 'false');
         adjustImageLayout();
     }
 });
@@ -668,7 +665,7 @@ function adjustImageLayout() {
     containers.forEach(container => {
         const analysisBox = container.querySelector('.analysis-box');
         const referenceBox = container.querySelector('.reference-box');
-        const preview = container.querySelector('img[id^="preview2"]'); // Matches preview2 and preview2-simple
+        const preview = container.querySelector('img[id^="preview"]'); // Matches all preview images
         
         if (preview && preview.style.display === 'block') {
             // Image uploaded: show side by side
@@ -688,26 +685,50 @@ function previewImage(event, previewId) {
     const preview = document.getElementById(previewId);
     // Buscar el span de "Sin imagen" de forma robusta
     let noImageText = null;
+    let miniPreview = null;
+    let previewContainer = null;
+    
     if (previewId === 'preview2') {
         noImageText = document.getElementById('noImageText2');
-    } else if (previewId === 'preview2-simple') {
-        noImageText = document.getElementById('noImageText2-simple');
+        miniPreview = document.getElementById('preview2-mini');
+        previewContainer = document.getElementById('image2-preview-container');
+    } else if (previewId === 'preview2-general') {
+        noImageText = document.getElementById('noImageText2-general');
+    } else if (previewId === 'preview3_1') {
+        noImageText = document.getElementById('noImageText3_1');
+    } else if (previewId === 'preview3_2') {
+        noImageText = document.getElementById('noImageText3_2');
+    } else if (previewId === 'preview3_3') {
+        noImageText = document.getElementById('noImageText3_3');
     } else {
         // fallback: buscar el primer span dentro del padre
         noImageText = preview?.parentElement?.querySelector('span');
     }
+    
     if (file) {
         const reader = new FileReader();
         reader.onload = function() {
-            preview.src = reader.result;
-            preview.style.display = 'block';
+            if (preview) {
+                preview.src = reader.result;
+                preview.style.display = 'block';
+            }
             if (noImageText) noImageText.style.display = 'none';
+            
+            // Mostrar la miniatura en la sección visible
+            if (miniPreview) {
+                miniPreview.src = reader.result;
+            }
+            if (previewContainer) {
+                previewContainer.style.display = 'block';
+            }
+            
             adjustImageLayout();
         }
         reader.readAsDataURL(file);
     } else {
-        preview.style.display = 'none';
+        if (preview) preview.style.display = 'none';
         if (noImageText) noImageText.style.display = 'block';
+        if (previewContainer) previewContainer.style.display = 'none';
         adjustImageLayout();
     }
 }
@@ -744,6 +765,10 @@ async function generatePDF() {
         const firstSurname = ownerParts.length > 1 ? ownerParts[1] : ownerParts[0] || '';
         // Ocultar elementos no deseados
         document.querySelectorAll('.pdf-hide').forEach(el => {
+            el.style.display = 'none';
+        });
+        // Ocultar las secciones de carga de imagen visibles
+        document.querySelectorAll('.image-upload-section').forEach(el => {
             el.style.display = 'none';
         });
         // Ocultar caja de análisis si no hay imagen
@@ -788,6 +813,9 @@ async function generatePDF() {
         document.querySelectorAll('.pdf-hide').forEach(el => {
             el.style.display = 'block';
         });
+        document.querySelectorAll('.image-upload-section').forEach(el => {
+            el.style.display = 'block';
+        });
         document.querySelectorAll('.analysis-box').forEach(box => {
             box.style.display = 'block';
         });
@@ -822,6 +850,9 @@ async function generatePDF() {
         document.querySelectorAll('.pdf-hide').forEach(el => {
             el.style.display = 'block';
         });
+        document.querySelectorAll('.image-upload-section').forEach(el => {
+            el.style.display = 'block';
+        });
         document.querySelectorAll('.analysis-box').forEach(box => {
             box.style.display = 'block';
         });
@@ -853,6 +884,11 @@ async function generatePDFSeriado() {
         
         // Ocultar elementos no deseados
         document.querySelectorAll('.pdf-hide').forEach(el => {
+            el.style.display = 'none';
+        });
+        
+        // Ocultar las secciones de carga de imagen visibles
+        document.querySelectorAll('.image-upload-section').forEach(el => {
             el.style.display = 'none';
         });
         
@@ -916,6 +952,9 @@ async function generatePDFSeriado() {
         if (page2Content) page2Content.style.display = 'none';
         if (page3Content) page3Content.style.display = 'none';
         document.querySelectorAll('.pdf-hide').forEach(el => {
+            el.style.display = 'block';
+        });
+        document.querySelectorAll('.image-upload-section').forEach(el => {
             el.style.display = 'block';
         });
         document.querySelectorAll('.analysis-box').forEach(box => {
@@ -1181,34 +1220,20 @@ document.addEventListener('DOMContentLoaded', adjustImageLayout);
                     </tr>
                 </tbody>
             </table>
-               <!-- Segunda página de la plantilla dos para imágenes -->
-               <div id="page_1Content">
-                <!-- Imagen de análisis para plantilla simple -->
-                <div class="image-container" style="display: flex; justify-content: center; margin: 20px 0;">
-                    <div class="image-box reference-box" style="text-align: center; margin: 0 10px; max-width: 70%;">
-                        <h4>Imagen de Referencia</h4>
-                        <img src="heces.png" alt="Escala de Bristol" style="max-width: 100%; max-height: 200px; border: 1px solid #ddd; padding: 5px;">
-                    </div>
-                    <div class="image-box analysis-box" style="text-align: center; margin: 0 10px; max-width: 50%;">
-                        <h4>Imagen del Análisis</h4>
-                        <div class="pdf-hide" style="margin-bottom: 10px;">
-                            <label for="upload2-simple">Seleccionar imagen:</label>
-                            <input type="file" id="upload2-simple" accept="image/*" onchange="previewImage(event, 'preview2-simple')" style="display: inline-block;">
-                        </div>
-                        <div style="margin-top: 10px; min-height: 200px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center;">
-                            <img id="preview2-simple" alt="Imagen del Análisis" style="max-width: 100%; max-height: 200px; display: none;">
-                            <span id="noImageText2-simple" class="pdf-hide">Sin imagen</span>
-                        </div>
-                    </div>
+            
+            <!-- Sección de carga de imagen visible en template1 -->
+            <div class="image-upload-section" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+                <h4 style="margin-bottom: 10px;">📷 Cargar Imagen del Análisis</h4>
+                <p style="font-size: 14px; color: #666; margin-bottom: 10px;">La imagen aparecerá en la segunda página del PDF junto con la Escala de Bristol</p>
+                <label for="image2-visible" style="display: inline-block; padding: 10px 20px; background: #007bff; color: white; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                    Seleccionar Imagen
+                </label>
+                <input type="file" id="image2-visible" accept="image/*" onchange="previewImage(event, 'preview2')" style="display: none;">
+                <div id="image2-preview-container" style="margin-top: 15px; display: none;">
+                    <p style="color: #28a745; font-weight: bold;">✓ Imagen cargada correctamente</p>
+                    <img id="preview2-mini" style="max-width: 200px; max-height: 150px; border: 2px solid #28a745; border-radius: 5px; margin-top: 10px;">
                 </div>
-                
-                <div class="footer">
-                    <p id="mensajeMedico" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
-                    <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
-                    <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
-                    <p>Correo: laboratorio@vetsanmartin.com</p>
-                </div>
-            </div> <!-- Fin page2_2Content -->
+            </div>
          </div> <!-- end page1Content -->
 
          <!-- Page 2 wrapper -->
@@ -1457,7 +1482,7 @@ document.addEventListener('DOMContentLoaded', adjustImageLayout);
             
             <!-- Segunda página de la plantilla dos para imágenes -->
             <div id="page2_2Content">
-                <!-- Imagen de análisis para plantilla simple -->
+                <!-- Imagen de análisis para plantilla general -->
                 <div class="image-container" style="display: flex; justify-content: center; margin: 20px 0;">
                     <div class="image-box reference-box" style="text-align: center; margin: 0 10px; max-width: 70%;">
                         <h4>Imagen de Referencia</h4>
@@ -1466,18 +1491,18 @@ document.addEventListener('DOMContentLoaded', adjustImageLayout);
                     <div class="image-box analysis-box" style="text-align: center; margin: 0 10px; max-width: 50%;">
                         <h4>Imagen del Análisis</h4>
                         <div class="pdf-hide" style="margin-bottom: 10px;">
-                            <label for="upload2-simple">Seleccionar imagen:</label>
-                            <input type="file" id="upload2-simple" accept="image/*" onchange="previewImage(event, 'preview2-simple')" style="display: inline-block;">
+                            <label for="upload2-general">Seleccionar imagen:</label>
+                            <input type="file" id="upload2-general" accept="image/*" onchange="previewImage(event, 'preview2-general')" style="display: inline-block;">
                         </div>
                         <div style="margin-top: 10px; min-height: 200px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center;">
-                            <img id="preview2-simple" alt="Imagen del Análisis" style="max-width: 100%; max-height: 200px; display: none;">
-                            <span id="noImageText2-simple" class="pdf-hide">Sin imagen</span>
+                            <img id="preview2-general" alt="Imagen del Análisis" style="max-width: 100%; max-height: 200px; display: none;">
+                            <span id="noImageText2-general" class="pdf-hide">Sin imagen</span>
                         </div>
                     </div>
                 </div>
                 
                 <div class="footer">
-                    <p id="mensajeMedico" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
+                    <p id="mensajeMedico2-2" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
                     <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
                     <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
                     <p>Correo: laboratorio@vetsanmartin.com</p>
