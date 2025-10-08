@@ -130,6 +130,7 @@ body {
   margin-top: 12px;
   letter-spacing: 0.5px;
   text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
+  color: white;
 }
 
 nav {
@@ -277,6 +278,7 @@ nav button.active {
   font-size: 0.8rem;
   text-align: center;
   opacity: 0.8;
+  color: white;
 }
 
 /* Content Styles */
@@ -2009,11 +2011,13 @@ section h2 i {
 .user-details p {
   font-weight: 500;
   margin-bottom: 2px;
+  color: white;
 }
 
 .user-details span {
   font-size: 0.8rem;
   opacity: 0.8;
+  color: white;
 }
 
 .btn-logout {
@@ -2382,6 +2386,51 @@ body:not(.recepcion-role) .sidebar {
   font-style: italic;
 }
 
+/* Estilos para checkbox en tabla */
+.table-checkbox-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin: 0;
+  padding: 4px;
+}
+
+.table-checkbox {
+  display: none;
+}
+
+.table-checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #6c757d;
+  border-radius: 4px;
+  position: relative;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.table-checkbox:checked + .table-checkmark {
+  background: #28a745;
+  border-color: #28a745;
+}
+
+.table-checkbox:checked + .table-checkmark::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.table-checkbox-label:hover .table-checkmark {
+  border-color: #28a745;
+  box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.25);
+}
+
 .inyectables-table-container {
   margin-top: 30px;
 }
@@ -2525,7 +2574,8 @@ body:not(.recepcion-role) .main-container {
     visibility: hidden;
     transform: translateY(-20px);
     transition: opacity 0.3s ease, visibility 0.3s ease, transform 0.3s ease;
-    background: rgba(255, 255, 255, 0.98);
+    background: var(--primary-color);
+    background: linear-gradient(135deg, var(--primary-color) 0%, #5a9cf2 100%);
     backdrop-filter: blur(10px);
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
   }

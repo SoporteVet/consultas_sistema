@@ -5249,6 +5249,20 @@ window.addEventListener('DOMContentLoaded', function() {
     if (window.innerWidth <= 980) {
       closeSidebar();
     }
+    
+    // Reconfigurar eventos de búsqueda cuando se muestra el formulario de registro
+    if (sectionId === 'crearInternamientoSection') {
+      setTimeout(function() {
+        if (typeof window.reinicializarBusquedaInternamiento === 'function') {
+          window.reinicializarBusquedaInternamiento();
+        }
+      }, 100);
+    }
+    
+    // Cargar datos cuando se muestra la vista de pacientes
+    if (sectionId === 'verInternamientoSection' && typeof window.cargarInternamientos === 'function') {
+      window.cargarInternamientos();
+    }
   };
   
   // Cargar el módulo de internamiento

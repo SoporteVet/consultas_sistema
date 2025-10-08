@@ -1770,7 +1770,7 @@ nav button#verLabBtn:hover::before {
 
 .consulta-estado.estado-terminado {
     background: #d4edda;
-    color: #155724;
+    color: white;
 }
 
 .consulta-estado.estado-cliente_se_fue {

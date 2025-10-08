@@ -131,12 +131,6 @@
             <button id="verInternamientoBtn" class="submenu-btn" onclick="navigateToInternamiento('verInternamientoSection', 'verInternamientoBtn');">
               <i class="fas fa-list-alt"></i> Ver Pacientes
             </button>
-            <button id="monitoreoInternamientoBtn" class="submenu-btn" onclick="navigateToInternamiento('monitoreoInternamientoSection', 'monitoreoInternamientoBtn');">
-              <i class="fas fa-heartbeat"></i> Monitoreo
-            </button>
-            <button id="medicamentosInternamientoBtn" class="submenu-btn" onclick="navigateToInternamiento('medicamentosInternamientoSection', 'medicamentosInternamientoBtn');">
-              <i class="fas fa-pills"></i> Medicamentos
-            </button>
           </div>
         </div>
 
@@ -1291,20 +1285,16 @@
               <h3><i class="fas fa-paw"></i> Información del Paciente</h3>
               <div class="form-row">
                 <div class="form-group">
-                  <label for="intNombre">Nombre del Cliente</label>
-                  <input type="text" id="intNombre" required>
-                </div>
-                <div class="form-group">
                   <label for="intCedula">Cédula</label>
                   <input type="text" id="intCedula" required>
                 </div>
-              </div>
-
-              <div class="form-row">
                 <div class="form-group">
                   <label for="intMascota">Nombre de la Mascota</label>
                   <input type="text" id="intMascota" required>
                 </div>
+              </div>
+
+              <div class="form-row">
                 <div class="form-group">
                   <label for="intTipoMascota">Tipo de Mascota</label>
                   <select id="intTipoMascota" required>
@@ -1319,7 +1309,252 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="intEdad">Edad</label>
-                  <input type="text" id="intEdad" placeholder="Ej: 2 años, 6 meses" required>
+                  <input type="text" id="intEdad" list="edadOptions" placeholder="Selecciona o escribe la edad" required>
+                  <datalist id="edadOptions">
+                    <!-- Opciones de meses -->
+                    <option value="1 mes">
+                    <option value="2 meses">
+                    <option value="3 meses">
+                    <option value="4 meses">
+                    <option value="5 meses">
+                    <option value="6 meses">
+                    <option value="7 meses">
+                    <option value="8 meses">
+                    <option value="9 meses">
+                    <option value="10 meses">
+                    <option value="11 meses">
+                    <option value="12 meses">
+                    <!-- Opciones de años -->
+                    <option value="1 año">
+                    <option value="1 año 1 mes">
+                    <option value="1 año 2 meses">
+                    <option value="1 año 3 meses">
+                    <option value="1 año 4 meses">
+                    <option value="1 año 5 meses">
+                    <option value="1 año 6 meses">
+                    <option value="1 año 7 meses">
+                    <option value="1 año 8 meses">
+                    <option value="1 año 9 meses">
+                    <option value="1 año 10 meses">
+                    <option value="1 año 11 meses">
+                    <option value="2 años">
+                    <option value="2 años 1 mes">
+                    <option value="2 años 2 meses">
+                    <option value="2 años 3 meses">
+                    <option value="2 años 4 meses">
+                    <option value="2 años 5 meses">
+                    <option value="2 años 6 meses">
+                    <option value="2 años 7 meses">
+                    <option value="2 años 8 meses">
+                    <option value="2 años 9 meses">
+                    <option value="2 años 10 meses">
+                    <option value="2 años 11 meses">
+                    <option value="3 años">
+                    <option value="3 años 1 mes">
+                    <option value="3 años 2 meses">
+                    <option value="3 años 3 meses">
+                    <option value="3 años 4 meses">
+                    <option value="3 años 5 meses">
+                    <option value="3 años 6 meses">
+                    <option value="3 años 7 meses">
+                    <option value="3 años 8 meses">
+                    <option value="3 años 9 meses">
+                    <option value="3 años 10 meses">
+                    <option value="3 años 11 meses">
+                    <option value="4 años">
+                    <option value="4 años 1 mes">
+                    <option value="4 años 2 meses">
+                    <option value="4 años 3 meses">
+                    <option value="4 años 4 meses">
+                    <option value="4 años 5 meses">
+                    <option value="4 años 6 meses">
+                    <option value="4 años 7 meses">
+                    <option value="4 años 8 meses">
+                    <option value="4 años 9 meses">
+                    <option value="4 años 10 meses">
+                    <option value="4 años 11 meses">
+                    <option value="5 años">
+                    <option value="5 años 1 mes">
+                    <option value="5 años 2 meses">
+                    <option value="5 años 3 meses">
+                    <option value="5 años 4 meses">
+                    <option value="5 años 5 meses">
+                    <option value="5 años 6 meses">
+                    <option value="5 años 7 meses">
+                    <option value="5 años 8 meses">
+                    <option value="5 años 9 meses">
+                    <option value="5 años 10 meses">
+                    <option value="5 años 11 meses">
+                    <option value="6 años">
+                    <option value="6 años 1 mes">
+                    <option value="6 años 2 meses">
+                    <option value="6 años 3 meses">
+                    <option value="6 años 4 meses">
+                    <option value="6 años 5 meses">
+                    <option value="6 años 6 meses">
+                    <option value="6 años 7 meses">
+                    <option value="6 años 8 meses">
+                    <option value="6 años 9 meses">
+                    <option value="6 años 10 meses">
+                    <option value="6 años 11 meses">
+                    <option value="7 años">
+                    <option value="7 años 1 mes">
+                    <option value="7 años 2 meses">
+                    <option value="7 años 3 meses">
+                    <option value="7 años 4 meses">
+                    <option value="7 años 5 meses">
+                    <option value="7 años 6 meses">
+                    <option value="7 años 7 meses">
+                    <option value="7 años 8 meses">
+                    <option value="7 años 9 meses">
+                    <option value="7 años 10 meses">
+                    <option value="7 años 11 meses">
+                    <option value="8 años">
+                    <option value="8 años 1 mes">
+                    <option value="8 años 2 meses">
+                    <option value="8 años 3 meses">
+                    <option value="8 años 4 meses">
+                    <option value="8 años 5 meses">
+                    <option value="8 años 6 meses">
+                    <option value="8 años 7 meses">
+                    <option value="8 años 8 meses">
+                    <option value="8 años 9 meses">
+                    <option value="8 años 10 meses">
+                    <option value="8 años 11 meses">
+                    <option value="9 años">
+                    <option value="9 años 1 mes">
+                    <option value="9 años 2 meses">
+                    <option value="9 años 3 meses">
+                    <option value="9 años 4 meses">
+                    <option value="9 años 5 meses">
+                    <option value="9 años 6 meses">
+                    <option value="9 años 7 meses">
+                    <option value="9 años 8 meses">
+                    <option value="9 años 9 meses">
+                    <option value="9 años 10 meses">
+                    <option value="9 años 11 meses">
+                    <option value="10 años">
+                    <option value="10 años 1 mes">
+                    <option value="10 años 2 meses">
+                    <option value="10 años 3 meses">
+                    <option value="10 años 4 meses">
+                    <option value="10 años 5 meses">
+                    <option value="10 años 6 meses">
+                    <option value="10 años 7 meses">
+                    <option value="10 años 8 meses">
+                    <option value="10 años 9 meses">
+                    <option value="10 años 10 meses">
+                    <option value="10 años 11 meses">
+                    <option value="11 años">
+                    <option value="11 años 1 mes">
+                    <option value="11 años 2 meses">
+                    <option value="11 años 3 meses">
+                    <option value="11 años 4 meses">
+                    <option value="11 años 5 meses">
+                    <option value="11 años 6 meses">
+                    <option value="11 años 7 meses">
+                    <option value="11 años 8 meses">
+                    <option value="11 años 9 meses">
+                    <option value="11 años 10 meses">
+                    <option value="11 años 11 meses">
+                    <option value="12 años">
+                    <option value="12 años 1 mes">
+                    <option value="12 años 2 meses">
+                    <option value="12 años 3 meses">
+                    <option value="12 años 4 meses">
+                    <option value="12 años 5 meses">
+                    <option value="12 años 6 meses">
+                    <option value="12 años 7 meses">
+                    <option value="12 años 8 meses">
+                    <option value="12 años 9 meses">
+                    <option value="12 años 10 meses">
+                    <option value="12 años 11 meses">
+                    <option value="13 años">
+                    <option value="13 años 1 mes">
+                    <option value="13 años 2 meses">
+                    <option value="13 años 3 meses">
+                    <option value="13 años 4 meses">
+                    <option value="13 años 5 meses">
+                    <option value="13 años 6 meses">
+                    <option value="13 años 7 meses">
+                    <option value="13 años 8 meses">
+                    <option value="13 años 9 meses">
+                    <option value="13 años 10 meses">
+                    <option value="13 años 11 meses">
+                    <option value="14 años">
+                    <option value="14 años 1 mes">
+                    <option value="14 años 2 meses">
+                    <option value="14 años 3 meses">
+                    <option value="14 años 4 meses">
+                    <option value="14 años 5 meses">
+                    <option value="14 años 6 meses">
+                    <option value="14 años 7 meses">
+                    <option value="14 años 8 meses">
+                    <option value="14 años 9 meses">
+                    <option value="14 años 10 meses">
+                    <option value="14 años 11 meses">
+                    <option value="15 años">
+                    <option value="15 años 1 mes">
+                    <option value="15 años 2 meses">
+                    <option value="15 años 3 meses">
+                    <option value="15 años 4 meses">
+                    <option value="15 años 5 meses">
+                    <option value="15 años 6 meses">
+                    <option value="15 años 7 meses">
+                    <option value="15 años 8 meses">
+                    <option value="15 años 9 meses">
+                    <option value="15 años 10 meses">
+                    <option value="15 años 11 meses">
+                    <option value="16 años">
+                    <option value="16 años 1 mes">
+                    <option value="16 años 2 meses">
+                    <option value="16 años 3 meses">
+                    <option value="16 años 4 meses">
+                    <option value="16 años 5 meses">
+                    <option value="16 años 6 meses">
+                    <option value="16 años 7 meses">
+                    <option value="16 años 8 meses">
+                    <option value="16 años 9 meses">
+                    <option value="16 años 10 meses">
+                    <option value="16 años 11 meses">
+                    <option value="17 años">
+                    <option value="17 años 1 mes">
+                    <option value="17 años 2 meses">
+                    <option value="17 años 3 meses">
+                    <option value="17 años 4 meses">
+                    <option value="17 años 5 meses">
+                    <option value="17 años 6 meses">
+                    <option value="17 años 7 meses">
+                    <option value="17 años 8 meses">
+                    <option value="17 años 9 meses">
+                    <option value="17 años 10 meses">
+                    <option value="17 años 11 meses">
+                    <option value="18 años">
+                    <option value="18 años 1 mes">
+                    <option value="18 años 2 meses">
+                    <option value="18 años 3 meses">
+                    <option value="18 años 4 meses">
+                    <option value="18 años 5 meses">
+                    <option value="18 años 6 meses">
+                    <option value="18 años 7 meses">
+                    <option value="18 años 8 meses">
+                    <option value="18 años 9 meses">
+                    <option value="18 años 10 meses">
+                    <option value="18 años 11 meses">
+                    <option value="19 años">
+                    <option value="19 años 1 mes">
+                    <option value="19 años 2 meses">
+                    <option value="19 años 3 meses">
+                    <option value="19 años 4 meses">
+                    <option value="19 años 5 meses">
+                    <option value="19 años 6 meses">
+                    <option value="19 años 7 meses">
+                    <option value="19 años 8 meses">
+                    <option value="19 años 9 meses">
+                    <option value="19 años 10 meses">
+                    <option value="19 años 11 meses">
+                    <option value="20 años">
+                  </datalist>
                 </div>
                 <div class="form-group">
                   <label for="intRaza">Raza</label>
@@ -1371,7 +1606,7 @@
               <div class="form-row">
                 <div class="form-group">
                   <label for="intEmail">Email</label>
-                  <input type="email" id="intEmail">
+                  <input type="text" id="intEmail">
                 </div>
                 <div class="form-group">
                   <label for="intFactura">Número de Factura</label>
@@ -1404,6 +1639,31 @@
                 <div class="form-group">
                   <label for="intFechaIngreso">Fecha de Ingreso</label>
                   <input type="date" id="intFechaIngreso" required>
+                </div>
+              </div>
+
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="intEstadoPaciente"><i class="fas fa-heartbeat"></i> Estado del Paciente</label>
+                  <select id="intEstadoPaciente">
+                    <option value="estable">Estable</option>
+                    <option value="critico">Crítico</option>
+                    <option value="observacion">En Observación</option>
+                    <option value="mejorando">Mejorando</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label for="intNumeroJaula"><i class="fas fa-hashtag"></i> Número de Jaula</label>
+                  <input type="text" id="intNumeroJaula" placeholder="Ej: J-01, A3, etc.">
+                </div>
+                <div class="form-group">
+                  <label for="intCuarto"><i class="fas fa-door-open"></i> Cuarto</label>
+                  <select id="intCuarto">
+                    <option value="">Seleccionar cuarto</option>
+                    <option value="Cuarto de gatos">Cuarto de gatos</option>
+                    <option value="Infecciosos">Infecciosos</option>
+                    <option value="Críticos">Críticos</option>
+                  </select>
                 </div>
               </div>
 
@@ -1461,29 +1721,41 @@
       <section id="verInternamientoSection" class="hidden">
         <h2><i class="fas fa-list"></i> Pacientes Internados</h2>
         
-        <!-- Filtros -->
-        <div class="internamiento-filters" style="margin-bottom: 20px;">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="intFilterDate"><i class="fas fa-calendar-alt"></i> Filtrar por fecha:</label>
-              <input type="date" id="intFilterDate">
-            </div>
-            <div class="form-group">
-              <label for="intFilterEstado"><i class="fas fa-filter"></i> Estado:</label>
-              <select id="intFilterEstado">
-                <option value="todos">Todos</option>
-                <option value="internado">Internado</option>
-                <option value="alta">Dado de Alta</option>
-                <option value="critico">Crítico</option>
-                <option value="estable">Estable</option>
-              </select>
-            </div>
+        <!-- Filtros y Búsqueda -->
+        <div class="int-filters-container" style="margin-bottom: 24px;">
+          <!-- Filtros por estado -->
+          <div class="int-filter-buttons" style="margin-bottom: 16px;">
+            <button class="int-filter-btn active" data-filter="activos" onclick="filtrarInternamiento('activos')">
+              <i class="fas fa-bed"></i> Ingresados
+            </button>
+            <button class="int-filter-btn" data-filter="observacion" onclick="filtrarInternamiento('observacion')">
+              <i class="fas fa-eye"></i> En Observación
+            </button>
+            <button class="int-filter-btn" data-filter="critico" onclick="filtrarInternamiento('critico')">
+              <i class="fas fa-exclamation-triangle"></i> Críticos
+            </button>
+            <button class="int-filter-btn" data-filter="alta" onclick="filtrarInternamiento('alta')">
+              <i class="fas fa-check-circle"></i> Dados de Alta
+            </button>
+            <button class="int-filter-btn" data-filter="todos" onclick="filtrarInternamiento('todos')">
+              <i class="fas fa-list"></i> Todos
+            </button>
           </div>
-        </div>
-
-        <!-- Barra de búsqueda -->
-        <div class="search-bar" style="margin-bottom: 15px;">
-          <input type="text" id="intSearchInput" placeholder="Buscar por cliente, mascota, ID paciente..." autocomplete="off">
+          
+          <!-- Filtro por fecha y búsqueda -->
+          <div class="form-row" style="align-items: center;">
+            <div class="form-group" style="flex: 0 0 200px;">
+              <label for="intFilterDate"><i class="fas fa-calendar-alt"></i> Fecha de Ingreso:</label>
+              <input type="date" id="intFilterDate" onchange="aplicarFiltrosInternamiento()">
+            </div>
+            <div class="form-group" style="flex: 1;">
+              <label for="intSearchInput"><i class="fas fa-search"></i> Buscar:</label>
+              <input type="text" id="intSearchInput" placeholder="Cliente, mascota, ID, cédula..." autocomplete="off" oninput="aplicarFiltrosInternamiento()">
+            </div>
+            <button class="int-action-btn int-btn-clear-filters" onclick="limpiarFiltrosInternamiento()" style="margin-top: 24px;">
+              <i class="fas fa-redo"></i> Limpiar Filtros
+            </button>
+          </div>
         </div>
 
         <!-- Contenedor de pacientes internados -->
@@ -1492,9 +1764,9 @@
         </div>
       </section>
 
-      <!-- Sección de monitoreo de parámetros vitales -->
-      <section id="monitoreoInternamientoSection" class="hidden">
-        <h2><i class="fas fa-heartbeat"></i> Control de Internamiento</h2>
+      <!-- Sección de control de medicamentos -->
+      <section id="medicamentosInternamientoSection" class="hidden">
+        <h2><i class="fas fa-pills"></i> Control de Medicamentos</h2>
         
         <!-- Selector de paciente -->
         <div class="form-row" style="margin-bottom: 20px;">
@@ -1814,7 +2086,7 @@
             </div>
 
             <div class="form-actions">
-              <button type="button" class="btn btn-secondary" onclick="agregarMedicamentoHorizontal()">
+              <button type="button" class="int-action-btn int-btn-add-medicine" onclick="agregarMedicamentoHorizontal()">
                 <i class="fas fa-plus"></i> Agregar Medicamento
               </button>
               <button type="button" class="btn btn-secondary" onclick="imprimirFormulario()">
@@ -1896,7 +2168,7 @@
                 </div>
               </div>
 
-              <button type="button" id="intAgregarMedicamento" class="btn-secondary">
+              <button type="button" id="intAgregarMedicamento" class="int-action-btn int-btn-add-medicine">
                 <i class="fas fa-plus"></i> Agregar Medicamento
               </button>
             </div>
@@ -1963,6 +2235,478 @@
           </form>
         </div>
       </section>
+
+      <!-- Modal de Detalle del Paciente -->
+      <div id="modalDetalleInternamiento" class="int-modal-overlay" style="display: none;">
+        <div class="int-modal-container">
+          <!-- Header del Modal -->
+          <div class="int-modal-header">
+            <h2><i class="fas fa-paw"></i> Detalle del Paciente</h2>
+            <button class="int-modal-close" onclick="cerrarModalDetalle()">
+              <i class="fas fa-times"></i>
+            </button>
+          </div>
+
+          <!-- Body del Modal -->
+          <div class="int-modal-body">
+            <!-- Tabs de navegación -->
+            <div class="int-tabs">
+              <button class="int-tab active" data-tab="info" onclick="cambiarTabDetalle('info')">
+                <i class="fas fa-info-circle"></i> Información General
+              </button>
+              <button class="int-tab" data-tab="bitacora" onclick="cambiarTabDetalle('bitacora')">
+                <i class="fas fa-clipboard-list"></i> Bitácora
+              </button>
+              <button class="int-tab" data-tab="monitoreo" onclick="cambiarTabDetalle('monitoreo')">
+                <i class="fas fa-heartbeat"></i> Monitoreo
+              </button>
+              <button class="int-tab" data-tab="medicamentos" onclick="cambiarTabDetalle('medicamentos')">
+                <i class="fas fa-pills"></i> Medicamentos
+              </button>
+            </div>
+
+            <!-- Contenido de los tabs -->
+            <div class="int-tab-content">
+              <!-- Tab: Información General -->
+              <div id="tabInfo" class="int-tab-pane active">
+                <!-- Botón de editar -->
+                <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+                  <button id="btnEditarInfo" class="int-action-btn int-btn-edit" onclick="toggleModoEdicion()">
+                    <i class="fas fa-edit"></i> Editar Información
+                  </button>
+                </div>
+
+                <!-- Modo Lectura -->
+                <div id="infoModoLectura" class="int-info-grid">
+                  <div class="int-info-section">
+                    <h3><i class="fas fa-paw"></i> Información del Paciente</h3>
+                    <div class="int-info-row">
+                      <span class="int-label">Mascota:</span>
+                      <span id="detMascota" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">ID Paciente:</span>
+                      <span id="detIdPaciente" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Tipo:</span>
+                      <span id="detTipoMascota" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Raza:</span>
+                      <span id="detRaza" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Edad:</span>
+                      <span id="detEdad" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Sexo:</span>
+                      <span id="detSexo" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Peso:</span>
+                      <span id="detPeso" class="int-value">-</span>
+                    </div>
+                  </div>
+
+                  <div class="int-info-section">
+                    <h3><i class="fas fa-user"></i> Información del Propietario</h3>
+                    <div class="int-info-row">
+                      <span class="int-label">Propietario:</span>
+                      <span id="detPropietario" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Cédula:</span>
+                      <span id="detCedula" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Teléfono:</span>
+                      <span id="detTelefono" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Email:</span>
+                      <span id="detEmail" class="int-value">-</span>
+                    </div>
+                  </div>
+
+                  <div class="int-info-section">
+                    <h3><i class="fas fa-stethoscope"></i> Información Médica</h3>
+                    <div class="int-info-row">
+                      <span class="int-label">Médico Encargado:</span>
+                      <span id="detMedicoEncargado" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Fecha de Ingreso:</span>
+                      <span id="detFechaIngreso" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Días Internado:</span>
+                      <span id="detDiasInternado" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Estado:</span>
+                      <span id="detEstado" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Número de Jaula:</span>
+                      <span id="detNumeroJaula" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Cuarto:</span>
+                      <span id="detCuarto" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Diagnóstico Presuntivo:</span>
+                      <span id="detDiagnostico" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Historia Clínica:</span>
+                      <span id="detHistoriaClinica" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Tratamiento Indicado:</span>
+                      <span id="detTratamiento" class="int-value">-</span>
+                    </div>
+                    <div class="int-info-row">
+                      <span class="int-label">Padecimientos Previos:</span>
+                      <span id="detPadecimientos" class="int-value">-</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Modo Edición -->
+                <div id="infoModoEdicion" style="display: none;">
+                  <div class="int-edit-form">
+                    <h3 style="margin-bottom: 24px; color: var(--int-primary);"><i class="fas fa-edit"></i> Editar Información del Paciente</h3>
+                    
+                    <div class="int-form-grid">
+                      <!-- Estado del Paciente -->
+                      <div class="int-form-group">
+                        <label for="editEstado"><i class="fas fa-heartbeat"></i> Estado del Paciente *</label>
+                        <select id="editEstado" required>
+                          <option value="estable">Estable</option>
+                          <option value="critico">Crítico</option>
+                          <option value="observacion">En Observación</option>
+                          <option value="mejorando">Mejorando</option>
+                        </select>
+                      </div>
+
+                      <!-- Número de Jaula -->
+                      <div class="int-form-group">
+                        <label for="editNumeroJaula"><i class="fas fa-hashtag"></i> Número de Jaula</label>
+                        <input type="text" id="editNumeroJaula" placeholder="Ej: J-01, A3, etc.">
+                      </div>
+
+                      <!-- Cuarto -->
+                      <div class="int-form-group">
+                        <label for="editCuarto"><i class="fas fa-door-open"></i> Cuarto *</label>
+                        <select id="editCuarto" required>
+                          <option value="">Seleccionar cuarto</option>
+                          <option value="Cuarto de gatos">Cuarto de gatos</option>
+                          <option value="Infecciosos">Infecciosos</option>
+                          <option value="Críticos">Críticos</option>
+                        </select>
+                      </div>
+
+                      <!-- Médico Encargado -->
+                      <div class="int-form-group">
+                        <label for="editMedicoEncargado"><i class="fas fa-user-md"></i> Médico Encargado</label>
+                        <input type="text" id="editMedicoEncargado" placeholder="Nombre del médico">
+                      </div>
+
+                      <!-- Diagnóstico Presuntivo -->
+                      <div class="int-form-group int-form-full">
+                        <label for="editDiagnostico"><i class="fas fa-stethoscope"></i> Diagnóstico Presuntivo</label>
+                        <textarea id="editDiagnostico" rows="3" placeholder="Diagnóstico inicial..."></textarea>
+                      </div>
+
+                      <!-- Historia Clínica -->
+                      <div class="int-form-group int-form-full">
+                        <label for="editHistoriaClinica"><i class="fas fa-file-medical"></i> Historia Clínica</label>
+                        <textarea id="editHistoriaClinica" rows="3" placeholder="Historia clínica del paciente..."></textarea>
+                      </div>
+
+                      <!-- Tratamiento Indicado -->
+                      <div class="int-form-group int-form-full">
+                        <label for="editTratamiento"><i class="fas fa-prescription"></i> Tratamiento Indicado</label>
+                        <textarea id="editTratamiento" rows="3" placeholder="Tratamiento prescrito..."></textarea>
+                      </div>
+
+                      <!-- Padecimientos Previos -->
+                      <div class="int-form-group int-form-full">
+                        <label for="editPadecimientos"><i class="fas fa-notes-medical"></i> Padecimientos Previos</label>
+                        <textarea id="editPadecimientos" rows="3" placeholder="Padecimientos anteriores..."></textarea>
+                      </div>
+                    </div>
+
+                    <!-- Botones de acción -->
+                    <div class="int-form-actions">
+                      <button class="btn-cancel" onclick="toggleModoEdicion()">
+                        <i class="fas fa-times"></i> Cancelar
+                      </button>
+                      <button class="btn-save" onclick="guardarEdicionInformacion()">
+                        <i class="fas fa-save"></i> Guardar Cambios
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Tab: Bitácora -->
+              <div id="tabBitacora" class="int-tab-pane" style="display: none;">
+                <div class="int-bitacora-header">
+                  <h3><i class="fas fa-clipboard-list"></i> Bitácora de Seguimiento</h3>
+                  <button class="int-action-btn int-btn-new-entry" onclick="toggleFormularioBitacora()">
+                    <i class="fas fa-plus"></i> <span id="btnTextoBitacora">Nueva Entrada</span>
+                  </button>
+                </div>
+
+                <!-- Formulario para nueva entrada -->
+                <div id="formularioBitacora" class="int-bitacora-form" style="display: none;">
+                  <div class="form-group">
+                    <label><i class="fas fa-file-alt"></i> Descripción de la Entrada</label>
+                    <textarea id="bitacoraDescripcion" rows="6" placeholder="Describe detalladamente lo que sucedió o se observó en el paciente. Puedes incluir signos vitales, comportamiento, alimentación, medicamentos administrados, etc..."></textarea>
+                    <small style="color: #666; font-size: 0.85rem; margin-top: 4px; display: block;">
+                      <i class="fas fa-info-circle"></i> Puedes escribir textos largos y detallados. Usa Enter para saltos de línea.
+                    </small>
+                  </div>
+
+                  <div class="form-group">
+                    <label><i class="fas fa-tasks"></i> Checklist de Tareas/Observaciones</label>
+                    <div id="checklistContainer" class="checklist-container">
+                      <!-- Los items del checklist se agregarán aquí -->
+                    </div>
+                    <div class="add-checklist-row">
+                      <input type="text" id="nuevoChecklistItem" placeholder="Escribe una tarea u observación..." onkeypress="if(event.key === 'Enter') { event.preventDefault(); agregarItemChecklist(); }" />
+                      <button type="button" class="btn-add-item" onclick="agregarItemChecklist()">
+                        <i class="fas fa-plus-circle"></i> Agregar
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="form-actions">
+                    <button class="btn-secondary" onclick="cancelarEntradaBitacora()">
+                      <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="btn-primary" onclick="guardarEntradaBitacora()">
+                      <i class="fas fa-save"></i> Guardar Entrada
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Contenedor de entradas guardadas -->
+                <div id="bitacoraContainer" class="int-bitacora-container">
+                  <!-- Las entradas de la bitácora se cargarán aquí -->
+                </div>
+              </div>
+
+              <!-- Tab: Monitoreo -->
+              <div id="tabMonitoreo" class="int-tab-pane" style="display: none;">
+                <div class="int-monitoreo-header">
+                  <h3><i class="fas fa-heartbeat"></i> Historial de Monitoreo</h3>
+                  <button class="int-action-btn int-btn-new-turn" onclick="toggleFormularioMonitoreo()">
+                    <i class="fas fa-plus"></i> <span id="btnTextoMonitoreo">Nuevo Turno</span>
+                  </button>
+                </div>
+
+                <!-- Formulario para nuevo turno de monitoreo -->
+                <div id="formularioMonitoreo" class="int-monitoreo-form" style="display: none;">
+                  <form id="turnoMonitoreoForm" onsubmit="return false;">
+                    <div class="form-row">
+                      <div class="form-group">
+                        <label><i class="fas fa-clock"></i> Turno</label>
+                        <select id="monTurno" required>
+                          <option value="">Seleccionar turno</option>
+                          <option value="mañana">Mañana</option>
+                          <option value="tarde">Tarde</option>
+                          <option value="noche">Noche</option>
+                        </select>
+                      </div>
+                      <div class="form-group">
+                        <label><i class="fas fa-calendar"></i> Fecha</label>
+                        <input type="date" id="monFecha" required>
+                      </div>
+                      <div class="form-group">
+                        <label><i class="fas fa-weight"></i> Peso</label>
+                        <input type="text" id="monPeso" placeholder="kg">
+                      </div>
+                    </div>
+
+                    <!-- Signos Vitales -->
+                    <div class="form-section">
+                      <h4><i class="fas fa-heartbeat"></i> Signos Vitales</h4>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>FC</label>
+                          <input type="text" id="monFC" placeholder="lpm">
+                        </div>
+                        <div class="form-group">
+                          <label>Temp</label>
+                          <input type="text" id="monTemp" placeholder="°C">
+                        </div>
+                        <div class="form-group">
+                          <label>Mucosas</label>
+                          <input type="text" id="monMucosas">
+                        </div>
+                        <div class="form-group">
+                          <label>FR</label>
+                          <input type="text" id="monFR" placeholder="rpm">
+                        </div>
+                        <div class="form-group">
+                          <label>TLLC</label>
+                          <input type="text" id="monTLLC" placeholder="seg">
+                        </div>
+                        <div class="form-group">
+                          <label>% Deshidratación</label>
+                          <input type="text" id="monDeshidratacion" placeholder="%">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Estado y Dolor -->
+                    <div class="form-section">
+                      <h4><i class="fas fa-user-md"></i> Estado General</h4>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>Estado</label>
+                          <div class="radio-group">
+                            <label><input type="radio" name="monEstado" value="alerta"> Alerta</label>
+                            <label><input type="radio" name="monEstado" value="tranquilo"> Tranquilo</label>
+                            <label><input type="radio" name="monEstado" value="deprimido"> Deprimido</label>
+                            <label><input type="radio" name="monEstado" value="excitado"> Excitado</label>
+                            <label><input type="radio" name="monEstado" value="agresivo"> Agresivo</label>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label>Nivel de Dolor</label>
+                          <div class="radio-group">
+                            <label><input type="radio" name="monDolor" value="sin_dolor"> Sin dolor</label>
+                            <label><input type="radio" name="monDolor" value="leve"> Leve</label>
+                            <label><input type="radio" name="monDolor" value="moderado"> Moderado</label>
+                            <label><input type="radio" name="monDolor" value="fuerte"> Fuerte</label>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Fluidoterapia -->
+                    <div class="form-section">
+                      <h4><i class="fas fa-tint"></i> Fluidoterapia</h4>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>Fluidoterapia</label>
+                          <div class="radio-group">
+                            <label><input type="radio" name="monFluidoterapia" value="si"> SI</label>
+                            <label><input type="radio" name="monFluidoterapia" value="no"> NO</label>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label>Tipo</label>
+                          <input type="text" id="monFluidoterapiaTipo" placeholder="Tipo de fluido">
+                        </div>
+                        <div class="form-group">
+                          <label>Frecuencia</label>
+                          <input type="text" id="monFluidoterapiaFrec" placeholder="Frecuencia">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Ingesta y Eliminación -->
+                    <div class="form-section">
+                      <h4><i class="fas fa-utensils"></i> Ingesta y Eliminación</h4>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>Ing. de agua</label>
+                          <div class="radio-group">
+                            <label><input type="radio" name="monIngAgua" value="si"> SI</label>
+                            <label><input type="radio" name="monIngAgua" value="no"> NO</label>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label>Apetito</label>
+                          <div class="radio-group">
+                            <label><input type="radio" name="monApetito" value="si"> SI</label>
+                            <label><input type="radio" name="monApetito" value="no"> NO</label>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label>Cantidad y tipo</label>
+                          <input type="text" id="monApetitoCantidad">
+                        </div>
+                      </div>
+                      <div class="form-row">
+                        <div class="form-group">
+                          <label>Diarreas</label>
+                          <div class="radio-group">
+                            <label><input type="radio" name="monDiarreas" value="si"> SI</label>
+                            <label><input type="radio" name="monDiarreas" value="no"> NO</label>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label>Descripción</label>
+                          <input type="text" id="monDiarreasDesc">
+                        </div>
+                        <div class="form-group">
+                          <label>Vómitos</label>
+                          <div class="radio-group">
+                            <label><input type="radio" name="monVomitos" value="si"> SI</label>
+                            <label><input type="radio" name="monVomitos" value="no"> NO</label>
+                          </div>
+                        </div>
+                        <div class="form-group">
+                          <label>Descripción</label>
+                          <input type="text" id="monVomitosDesc">
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Notas -->
+                    <div class="form-group">
+                      <label><i class="fas fa-sticky-note"></i> Notas del Turno</label>
+                      <textarea id="monNotas" rows="3" placeholder="Observaciones y notas del turno..."></textarea>
+                    </div>
+
+                    <div class="form-actions">
+                      <button type="button" class="btn-secondary" onclick="cancelarTurnoMonitoreo()">
+                        <i class="fas fa-times"></i> Cancelar
+                      </button>
+                      <button type="button" class="btn-primary" onclick="guardarTurnoMonitoreo()">
+                        <i class="fas fa-save"></i> Guardar Turno
+                      </button>
+                    </div>
+                  </form>
+                </div>
+
+                <!-- Contenedor de turnos guardados -->
+                <div id="monitoreoContainer" class="int-monitoreo-container">
+                  <!-- Los turnos se cargarán aquí -->
+                </div>
+              </div>
+
+              <!-- Tab: Medicamentos -->
+              <div id="tabMedicamentos" class="int-tab-pane" style="display: none;">
+                <div class="int-medicamentos-header">
+                  <h3><i class="fas fa-pills"></i> Plan de Medicación</h3>
+                </div>
+                <div id="medicamentosContainer" class="int-medicamentos-container">
+                  <!-- Los medicamentos se cargarán aquí -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Footer del Modal -->
+          <div class="int-modal-footer">
+            <button class="btn-secondary" onclick="cerrarModalDetalle()">
+              <i class="fas fa-times"></i> Cerrar
+            </button>
+            <button class="btn-primary" onclick="imprimirDetalleInternamiento()">
+              <i class="fas fa-print"></i> Imprimir
+            </button>
+          </div>
+        </div>
+      </div>
       
       <!-- Sección de estadísticas -->
       <section id="estadisticasSection" class="hidden">
@@ -2376,7 +3120,8 @@
   <script src="auth.js"></script>
   <script src="laboratorio.js"></script>
   <script src="consentimientos-module.js"></script>
-<script src="quirofano-module.js"></script>
+  <script src="quirofano-module.js"></script>
+  <script src="internamiento.js"></script>
   <script src="reportes-lab-module.js"></script>
   <script src="index.js"></script>
   <script src="fix-wait-time.js"></script>
