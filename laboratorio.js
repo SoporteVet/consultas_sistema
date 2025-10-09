@@ -26,8 +26,8 @@ const razasCaninas = [
     "Dogo Argentino", "Dogo de Burdeos", "French Poodle", "Galgo Español", 
     "Galgo Inglés-español", "Golden Retriever", "Gran Danés", "Greyhound", 
     "Husky Siberiano", "Jack Russell Terrier", "Labrador Retriever", "Maltés", 
-    "Pastor Alemán", "Pequinés", "Pomerania", "Pug", "Rottweiler", "Samoyedo", 
-    "San Bernardo", "Schnauzer", "Shih Tzu", "SRD", "Yorkshire Terrier", "Weimaraner", "Fila Brasileiro" 
+    "Pastor Alemán", "Pastor Australiano", "Pequinés", "Pomerania", "Pug", "Rottweiler", "Samoyedo", 
+    "San Bernardo", "Schnauzer", "Shih Tzu", "Shar Pei", "SRD", "Yorkshire Terrier", "Weimaraner", "Fila Brasileiro" 
 ];
 
 const razasFelinas = [
@@ -44,23 +44,31 @@ const razasOtras = [
 
 // Inicializar el sistema de laboratorio
 function initLaboratorioSystem() {
+    console.log('🔧 Iniciando sistema de laboratorio...');
+    
     // Verificar acceso al módulo de laboratorio
     if (!hasLabAccess()) {
+        console.warn('⚠️ Usuario sin acceso al módulo de laboratorio');
         return;
     }
     
     try {
         // Configurar referencia de Firebase
         if (window.database) {
+            console.log('✅ Firebase database disponible');
             labTicketsRef = window.database.ref('lab_tickets');
+            console.log('✅ Referencia lab_tickets creada');
             setupLabFirebaseListeners();
         } else {
+            console.error('❌ Firebase database NO disponible');
             return;
         }
         
         // Configurar event listeners primero
         setupLabEventListeners();
-          // Establecer fecha por defecto
+        console.log('✅ Event listeners configurados');
+        
+        // Establecer fecha por defecto
         setDefaultLabDate();
         
         // Exponer variables globales inmediatamente (aunque estén vacías inicialmente)
@@ -69,8 +77,9 @@ function initLaboratorioSystem() {
         // Configurar actualización en tiempo real de clientes
         setupClientesDataListener();
         
+        console.log('✅ Sistema de laboratorio inicializado correctamente');
     } catch (error) {
-        // Error silencioso
+        console.error('❌ Error al inicializar sistema de laboratorio:', error);
     }
 }
 
@@ -309,12 +318,16 @@ async function loadClientesData() {
 
 // Configurar listeners de Firebase para laboratorio
 function setupLabFirebaseListeners() {
+    console.log('📡 Configurando listeners de Firebase para laboratorio...');
+    
     labTicketsRef.on('value', (snapshot) => {
+        console.log('📥 Datos recibidos de Firebase');
         labTickets = [];
         currentLabTicketId = 1;
         
         if (snapshot.exists()) {
             const data = snapshot.val();
+            console.log('📊 Procesando datos de Firebase...');
             Object.keys(data).forEach(key => {
                 const ticket = { ...data[key], firebaseKey: key };
                 labTickets.push(ticket);
@@ -324,6 +337,9 @@ function setupLabFirebaseListeners() {
                     currentLabTicketId = ticket.id + 1;
                 }
             });
+            console.log(`✅ ${labTickets.length} tickets cargados de Firebase`);
+        } else {
+            console.log('ℹ️ No hay tickets en Firebase');
         }
         
 
@@ -331,23 +347,32 @@ function setupLabFirebaseListeners() {
         // Actualizar la vista si está activa
         const labSection = document.getElementById('verLabSection');
         if (labSection && !labSection.classList.contains('hidden')) {
+            console.log('🔄 Actualizando vista de laboratorio (sección visible)');
             // Obtener filtros activos
             const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
             const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
             const medicoFilter = document.getElementById('labMedicoFilter');
             const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
             
+            console.log(`Filtro activo: ${currentStateFilter}`);
             renderLabTickets(currentStateFilter, currentMedicoFilter);
             updateLabStats();
+        } else {
+            console.log('ℹ️ Sección de laboratorio no visible, no se actualiza la vista');
         }
         
         // Exportar globalmente para otros módulos (Reportes Lab)
         try {
             window.labTickets = labTickets;
+            console.log('✅ labTickets exportado globalmente');
         } catch (e) {
-            // Error silencioso
+            console.error('❌ Error al exportar labTickets:', e);
         }
+    }, (error) => {
+        console.error('❌ Error en listener de Firebase:', error);
     });
+    
+    console.log('✅ Listeners configurados correctamente');
 }
 
 // Verificar si el usuario tiene acceso al módulo de laboratorio
@@ -1125,6 +1150,8 @@ function getQuirofanoEstadoLabel(estado) {
 
 // Mostrar sección de laboratorio
 function showLabSection(sectionId) {
+    console.log(`📍 showLabSection llamado con sectionId: ${sectionId}`);
+    
     try {
         // Ocultar todas las secciones
         document.querySelectorAll('.content section').forEach(section => {
@@ -1137,7 +1164,9 @@ function showLabSection(sectionId) {
         if (targetSection) {
             targetSection.classList.remove('hidden');
             setTimeout(() => targetSection.classList.add('active'), 50);
+            console.log(`✅ Sección ${sectionId} mostrada`);
         } else {
+            console.error(`❌ Sección ${sectionId} no encontrada`);
             return;
         }
         
@@ -1172,6 +1201,8 @@ function showLabSection(sectionId) {
                     }, 500);
                 }
             }, 100);        } else if (sectionId === 'verLabSection') {
+            console.log('👁️ Mostrando sección Ver Tickets Lab');
+            
             const verBtn = document.getElementById('verLabBtn');
             if (verBtn) {
                 verBtn.classList.add('active');
@@ -1185,16 +1216,19 @@ function showLabSection(sectionId) {
             const labFilterDate = document.getElementById('labFilterDate');
             if (labFilterDate && !labFilterDate.value) {
                 labFilterDate.value = getLocalDateString();
+                console.log(`📅 Fecha establecida: ${labFilterDate.value}`);
             }
             
             // Determinar el filtro por defecto según el rol del usuario
             const userRole = sessionStorage.getItem('userRole');
             const defaultFilter = userRole === 'admin' ? 'todos' : 'pendiente';
+            console.log(`👤 Rol de usuario: ${userRole}, Filtro por defecto: ${defaultFilter}`);
             
             // Configurar visibilidad de filtros según el filtro por defecto
             toggleMedicoFilter(defaultFilter);
             toggleDateFilter(defaultFilter);
             
+            console.log('🔄 Llamando a renderLabTickets...');
             renderLabTickets(defaultFilter);
             updateLabStats();
         } else if (sectionId === 'reportesLabSection') {
@@ -1422,16 +1456,25 @@ function filterTicketsByUserRole(tickets) {
 
 // Renderizar tickets de laboratorio
 function renderLabTickets(filter = 'todos', medicoFilter = '') {
+    console.log(`🎨 renderLabTickets llamado - Filtro: ${filter}, Médico: ${medicoFilter}`);
+    
     const container = document.getElementById('labTicketContainer');
-    if (!container) return;
+    if (!container) {
+        console.error('❌ Contenedor labTicketContainer no encontrado');
+        return;
+    }
+    
+    console.log(`📊 Total de tickets disponibles: ${labTickets.length}`);
     
     container.innerHTML = '';
     
     // Filtrar tickets por estado
     let filteredTickets = filterLabTickets(labTickets, filter);
+    console.log(`🔍 Tickets después de filtro de estado: ${filteredTickets.length}`);
     
     // Aplicar filtro por departamento según el rol del usuario
     filteredTickets = filterTicketsByUserRole(filteredTickets);
+    console.log(`👤 Tickets después de filtro por rol: ${filteredTickets.length}`);
 
     // Solo aplicar filtro de fecha para reportado_cliente
     // Para "reportado" y "cliente_no_contesta", NO aplicar filtro de fecha - mostrar todos
@@ -1469,6 +1512,7 @@ function renderLabTickets(filter = 'todos', medicoFilter = '') {
     }
     
     if (filteredTickets.length === 0) {
+        console.log('ℹ️ No hay tickets para mostrar con los filtros actuales');
         container.innerHTML = `
             <div class="no-tickets">
                 <i class="fas fa-vials" style="font-size: 3rem; color: #bdc3c7; margin-bottom: 15px;"></i>
@@ -1478,6 +1522,8 @@ function renderLabTickets(filter = 'todos', medicoFilter = '') {
         `;
         return;
     }
+    
+    console.log(`✅ Renderizando ${filteredTickets.length} tickets...`);
     
     // Ordenar tickets por fecha y hora de creación (más recientes primero)
     filteredTickets.sort((a, b) => {

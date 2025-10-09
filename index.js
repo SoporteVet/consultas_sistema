@@ -395,6 +395,18 @@ function applyRoleBasedUI(role) {
         }
     }
     
+    // Control de visibilidad del botón de internamiento basado en roles
+    const internamientoBtn = document.getElementById('internamientoBtn');
+    const internamientoCategory = internamientoBtn ? internamientoBtn.closest('.nav-category') : null;
+    const allowedInternamientoRoles = ['admin', 'quirofano', 'internos', 'recepcion', 'laboratorio', "consulta_externa"];
+    
+    if (internamientoCategory) {
+        if (allowedInternamientoRoles.includes(role)) {
+            internamientoCategory.style.display = 'block';
+        } else {
+            internamientoCategory.style.display = 'none';
+        }
+    }
     
     // Control de visibilidad del botón de consentimientos basado en roles
     const consentimientosBtn = document.getElementById('consentimientosBtn');
@@ -1433,31 +1445,14 @@ function renderTickets(filter = 'todos', date = null) {
     const searchInput = document.getElementById('ticketSearchInput');
     const searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
 
-    // VALIDACIÓN: Filtrar tickets con estados de internamiento Y tickets con tipoServicio = internamiento
-    // Los estados válidos de consulta son: espera, consultorio1-5, rayosx, quirofano, cliente_se_fue, terminado
-    const estadosInternamientoInvalidos = ['estable', 'critico', 'observacion', 'mejorando', 'internado'];
-    const ticketsValidos = tickets.filter(ticket => {
-        // ⭐ CRÍTICO: Excluir TODOS los tickets con tipoServicio = internamiento
-        if (ticket.tipoServicio === 'internamiento') {
-            console.warn(`⚠️ Ticket de internamiento excluido de consultas: ${ticket.id || ticket.randomId}`);
-            return false;
-        }
-        // Excluir tickets con estados de internamiento
-        if (estadosInternamientoInvalidos.includes(ticket.estado)) {
-            console.warn(`⚠️ Ticket con estado de internamiento detectado: ${ticket.id} - Estado: ${ticket.estado}`);
-            return false;
-        }
-        return true;
-    });
-
     if (filter === 'todos') {
         // Mostrar todos menos terminados y cliente_se_fue
-        filteredTickets = ticketsValidos.filter(t => t.fechaConsulta === selectedDate && t.estado !== 'terminado' && t.estado !== 'cliente_se_fue');
+        filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate && t.estado !== 'terminado' && t.estado !== 'cliente_se_fue');
     } else if (filter === 'espera') {
         // Para tickets de consulta en espera, mostrar todos sin importar la fecha
-        filteredTickets = ticketsValidos.filter(ticket => ticket.estado === 'espera');
+        filteredTickets = tickets.filter(ticket => ticket.estado === 'espera');
     } else if (filter === 'consultorio') {
-        filteredTickets = ticketsValidos.filter(ticket => 
+        filteredTickets = tickets.filter(ticket => 
             (
                 ticket.estado === 'consultorio1' || 
                 ticket.estado === 'consultorio2' || 
@@ -1470,14 +1465,14 @@ function renderTickets(filter = 'todos', date = null) {
             ticket.fechaConsulta === selectedDate
         );
     } else if (filter === 'terminado') {
-        filteredTickets = ticketsValidos.filter(ticket => (ticket.estado === 'terminado' || ticket.estado === 'cliente_se_fue') && ticket.fechaConsulta === selectedDate);
+        filteredTickets = tickets.filter(ticket => (ticket.estado === 'terminado' || ticket.estado === 'cliente_se_fue') && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'urgentes') {
-        filteredTickets = ticketsValidos.filter(ticket => ticket.urgencia === 'alta' && ticket.fechaConsulta === selectedDate);
+        filteredTickets = tickets.filter(ticket => ticket.urgencia === 'alta' && ticket.fechaConsulta === selectedDate);
     } else if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
         // Filtro lista: igual que 'todos' pero en formato tabla
-        filteredTickets = ticketsValidos.filter(t => t.fechaConsulta === selectedDate);
+        filteredTickets = tickets.filter(t => t.fechaConsulta === selectedDate);
     } else if (filter === 'porFacturar') {
-        filteredTickets = ticketsValidos.filter(ticket => {
+        filteredTickets = tickets.filter(ticket => {
             // Solo mostrar tickets que:
             // 1. No tengan número de factura (numFactura es undefined, null, o string vacío)
             // 2. No estén marcados como "sin costo"
@@ -1487,7 +1482,7 @@ function renderTickets(filter = 'todos', date = null) {
                    (!ticket.sinCosto || ticket.sinCosto !== true);
         });
     } else {
-        filteredTickets = ticketsValidos.filter(ticket => ticket.fechaConsulta === selectedDate);
+        filteredTickets = tickets.filter(ticket => ticket.fechaConsulta === selectedDate);
     }
 
     // Aplicar filtro de búsqueda si hay texto
@@ -2011,15 +2006,8 @@ function formatTime12Hour(timeString) {
 function mostrarHorario() {
     const fecha = fechaHorario.value;
     
-    // VALIDACIÓN: Filtrar tickets con estados de internamiento
-    const estadosInternamientoInvalidos = ['estable', 'critico', 'observacion', 'mejorando', 'internado'];
-    const ticketsConsultaValidos = tickets.filter(ticket => {
-        // Excluir tickets con estados de internamiento
-        return !estadosInternamientoInvalidos.includes(ticket.estado);
-    });
-    
     // Filtrar tickets de consulta por fecha
-    const ticketsDelDia = ticketsConsultaValidos.filter(ticket => {
+    const ticketsDelDia = tickets.filter(ticket => {
         // Si el ticket tiene los campos nuevos de fecha y hora
         if (ticket.fechaConsulta) {
             return ticket.fechaConsulta === fecha;
@@ -2439,12 +2427,6 @@ function editTicket(randomId) {
         return;
     }
     
-    // ⭐ VALIDACIÓN: Verificar si es un ticket de internamiento
-    if (ticket.tipoServicio === 'internamiento') {
-        showNotification('❌ Este ticket es de internamiento. Edítelo desde el módulo de Internamiento.', 'error');
-        return;
-    }
-    
     // Cerrar cualquier modal existente primero
     closeModal();
     
@@ -2787,7 +2769,7 @@ function editTicket(randomId) {
                         <option value="cirugia" ${safeTicket.tipoServicio === 'cirugia' ? 'selected' : ''}>Cirugía</option>
                         <option value="muestra_test" ${safeTicket.tipoServicio === 'muestra_test' ? 'selected' : ''}>Muestra para test</option>
                         <option value="tiempos_coagulacion" ${safeTicket.tipoServicio === 'tiempos_coagulacion' ? 'selected' : ''}>Tiempos de coagulación</option>
-                        <!-- ⭐ ELIMINADO: internamiento - usar módulo de internamiento -->
+                        <option value="internamiento" ${safeTicket.tipoServicio === 'internamiento' ? 'selected' : ''}>Internamiento</option>
                         <option value="test_sida_leucemia" ${safeTicket.tipoServicio === 'test_sida_leucemia' ? 'selected' : ''}>Test sida leucemia</option>
                         <option value="corteUnas" ${safeTicket.tipoServicio === 'corteUnas' ? 'selected' : ''}>Corte de uñas</option>
                         <option value="emergencia" ${safeTicket.tipoServicio === 'emergencia' ? 'selected' : ''}>Emergencia</option>
@@ -3237,29 +3219,9 @@ function saveEditedTicket(ticket) {
             return; // Abortar transacción
         }
         
-        // ⭐⭐⭐ CRÍTICO: ELIMINAR TODOS LOS CAMPOS DE INTERNAMIENTO
-        const cleanCurrentData = {...currentData};
-        if (ticketToSave.tipoServicio !== 'internamiento') {
-            delete cleanCurrentData.estadoPaciente;
-            delete cleanCurrentData.numeroJaula;
-            delete cleanCurrentData.cuarto;
-            delete cleanCurrentData.diagnosticoPresuntivo;
-            delete cleanCurrentData.historiaClinica;
-            delete cleanCurrentData.tratamientoIndicado;
-            delete cleanCurrentData.padecimientosPrevios;
-            delete cleanCurrentData.medicoEncargado;
-            delete cleanCurrentData.fechaIngreso;
-            delete cleanCurrentData.horaIngreso;
-            delete cleanCurrentData.muestras;
-            delete cleanCurrentData.examenes;
-            delete cleanCurrentData.ultrasonido;
-            delete cleanCurrentData.castrado;
-            delete cleanCurrentData.vacunaDesparasitacion;
-        }
-        
         // Merge simple sin validaciones complejas
         const mergedData = {
-            ...cleanCurrentData,
+            ...currentData,
             ...ticketToSave,
             lastModified: new Date().toISOString(),
             lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
@@ -3269,34 +3231,14 @@ function saveEditedTicket(ticket) {
     }, (error, committed, snapshot) => {
         if (error) {
             // RESPALDO: Intentar guardado directo si la transacción falla
-            // ⭐⭐⭐ CRÍTICO: ELIMINAR TODOS LOS CAMPOS DE INTERNAMIENTO ANTES DEL RESPALDO
-            const cleanTicketToSave = {...ticketToSave};
-            if (cleanTicketToSave.tipoServicio !== 'internamiento') {
-                delete cleanTicketToSave.estadoPaciente;
-                delete cleanTicketToSave.numeroJaula;
-                delete cleanTicketToSave.cuarto;
-                delete cleanTicketToSave.diagnosticoPresuntivo;
-                delete cleanTicketToSave.historiaClinica;
-                delete cleanTicketToSave.tratamientoIndicado;
-                delete cleanTicketToSave.padecimientosPrevios;
-                delete cleanTicketToSave.medicoEncargado;
-                delete cleanTicketToSave.fechaIngreso;
-                delete cleanTicketToSave.horaIngreso;
-                delete cleanTicketToSave.muestras;
-                delete cleanTicketToSave.examenes;
-                delete cleanTicketToSave.ultrasonido;
-                delete cleanTicketToSave.castrado;
-                delete cleanTicketToSave.vacunaDesparasitacion;
-            }
-            
-            ticketsRef.child(ticket.firebaseKey).update(cleanTicketToSave)
+            ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
                 .then(() => {
                     // Actualizar el array local con los nuevos datos
                     const localTicketIndex = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
                     if (localTicketIndex !== -1) {
                         tickets[localTicketIndex] = {
                             ...tickets[localTicketIndex],
-                            ...cleanTicketToSave,
+                            ...ticketToSave,
                             firebaseKey: ticket.firebaseKey
                         };
                     }
@@ -3333,27 +3275,7 @@ function saveEditedTicket(ticket) {
                 });
         } else if (!committed) {
             // RESPALDO: Si la transacción se abortó por validaciones muy estrictas, intentar guardado directo
-            // ⭐⭐⭐ CRÍTICO: ELIMINAR TODOS LOS CAMPOS DE INTERNAMIENTO ANTES DEL RESPALDO
-            const cleanTicketToSave = {...ticketToSave};
-            if (cleanTicketToSave.tipoServicio !== 'internamiento') {
-                delete cleanTicketToSave.estadoPaciente;
-                delete cleanTicketToSave.numeroJaula;
-                delete cleanTicketToSave.cuarto;
-                delete cleanTicketToSave.diagnosticoPresuntivo;
-                delete cleanTicketToSave.historiaClinica;
-                delete cleanTicketToSave.tratamientoIndicado;
-                delete cleanTicketToSave.padecimientosPrevios;
-                delete cleanTicketToSave.medicoEncargado;
-                delete cleanTicketToSave.fechaIngreso;
-                delete cleanTicketToSave.horaIngreso;
-                delete cleanTicketToSave.muestras;
-                delete cleanTicketToSave.examenes;
-                delete cleanTicketToSave.ultrasonido;
-                delete cleanTicketToSave.castrado;
-                delete cleanTicketToSave.vacunaDesparasitacion;
-            }
-            
-            ticketsRef.child(ticket.firebaseKey).update(cleanTicketToSave)
+            ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
                 .then(() => {
                     // Actualizar el array local con los nuevos datos
                     const localTicketIndex = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
@@ -3439,12 +3361,6 @@ function changeStatus(randomId) {
     const ticket = tickets.find(t => t.randomId === randomId);
     if (!ticket) return;
     
-    // ⭐ VALIDACIÓN: Verificar si es un ticket de internamiento
-    if (ticket.tipoServicio === 'internamiento') {
-        showNotification('❌ Este ticket es de internamiento. Edítelo desde el módulo de Internamiento.', 'error');
-        return;
-    }
-    
     // Mostrar modal para cambiar estado
     const modal = document.createElement('div');
     modal.className = 'edit-modal';
@@ -3500,26 +3416,6 @@ function changeStatus(randomId) {
             // Guardar en Firebase inmediatamente
             const ticketToSave = {...ticket};
             delete ticketToSave.firebaseKey;
-            
-            // ⭐⭐⭐ CRÍTICO: ELIMINAR TODOS LOS CAMPOS DE INTERNAMIENTO
-            if (ticketToSave.tipoServicio !== 'internamiento') {
-                delete ticketToSave.estadoPaciente;
-                delete ticketToSave.numeroJaula;
-                delete ticketToSave.cuarto;
-                delete ticketToSave.diagnosticoPresuntivo;
-                delete ticketToSave.historiaClinica;
-                delete ticketToSave.tratamientoIndicado;
-                delete ticketToSave.padecimientosPrevios;
-                delete ticketToSave.medicoEncargado;
-                delete ticketToSave.fechaIngreso;
-                delete ticketToSave.horaIngreso;
-                delete ticketToSave.muestras;
-                delete ticketToSave.examenes;
-                delete ticketToSave.ultrasonido;
-                delete ticketToSave.castrado;
-                delete ticketToSave.vacunaDesparasitacion;
-            }
-            
             ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
                 .then(() => {
                     // Refrescar la tabla después de guardar
@@ -3542,25 +3438,6 @@ function changeStatus(randomId) {
         // Actualizar en Firebase
         const ticketToSave = {...ticket};
         delete ticketToSave.firebaseKey;
-        
-        // ⭐⭐⭐ CRÍTICO: ELIMINAR TODOS LOS CAMPOS DE INTERNAMIENTO
-        if (ticketToSave.tipoServicio !== 'internamiento') {
-            delete ticketToSave.estadoPaciente;
-            delete ticketToSave.numeroJaula;
-            delete ticketToSave.cuarto;
-            delete ticketToSave.diagnosticoPresuntivo;
-            delete ticketToSave.historiaClinica;
-            delete ticketToSave.tratamientoIndicado;
-            delete ticketToSave.padecimientosPrevios;
-            delete ticketToSave.medicoEncargado;
-            delete ticketToSave.fechaIngreso;
-            delete ticketToSave.horaIngreso;
-            delete ticketToSave.muestras;
-            delete ticketToSave.examenes;
-            delete ticketToSave.ultrasonido;
-            delete ticketToSave.castrado;
-            delete ticketToSave.vacunaDesparasitacion;
-        }
         
         ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
             .then(() => {
@@ -3784,13 +3661,7 @@ function showNotification(message, type = 'info') {
 
 // --- Actualizar estadísticas usando el filtro global ---
 function updateStatsGlobal() {
-  // VALIDACIÓN: Filtrar tickets con estados de internamiento
-  const estadosInternamientoInvalidos = ['estable', 'critico', 'observacion', 'mejorando', 'internado'];
-  const ticketsConsultaValidos = tickets.filter(ticket => {
-    return !estadosInternamientoInvalidos.includes(ticket.estado);
-  });
-  
-  const filtered = filtrarTicketsPorPeriodoGlobal(ticketsConsultaValidos);
+  const filtered = filtrarTicketsPorPeriodoGlobal(tickets);
   
   
   // Actualizar contadores
@@ -4944,25 +4815,6 @@ function confirmEndConsultationByFirebaseKey(firebaseKey) {
     }
 
     delete ticketToSave.firebaseKey;
-    
-    // ⭐⭐⭐ CRÍTICO: ELIMINAR TODOS LOS CAMPOS DE INTERNAMIENTO
-    if (ticketToSave.tipoServicio !== 'internamiento') {
-        delete ticketToSave.estadoPaciente;
-        delete ticketToSave.numeroJaula;
-        delete ticketToSave.cuarto;
-        delete ticketToSave.diagnosticoPresuntivo;
-        delete ticketToSave.historiaClinica;
-        delete ticketToSave.tratamientoIndicado;
-        delete ticketToSave.padecimientosPrevios;
-        delete ticketToSave.medicoEncargado;
-        delete ticketToSave.fechaIngreso;
-        delete ticketToSave.horaIngreso;
-        delete ticketToSave.muestras;
-        delete ticketToSave.examenes;
-        delete ticketToSave.ultrasonido;
-        delete ticketToSave.castrado;
-        delete ticketToSave.vacunaDesparasitacion;
-    }
 
     ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
         .then(() => {
@@ -5366,6 +5218,68 @@ window.addEventListener('DOMContentLoaded', function() {
   const scriptQuirofano = document.createElement('script');
   scriptQuirofano.src = 'quirofano-module.js';
   document.body.appendChild(scriptQuirofano);
+  
+  // ========== MÓDULO DE INTERNAMIENTO ==========
+  
+  // Función de navegación para internamiento
+  window.navigateToInternamiento = function(sectionId, buttonId) {
+    // Ocultar todas las secciones
+    const allSections = document.querySelectorAll('.content section');
+    allSections.forEach(s => {
+      s.classList.add('hidden');
+      s.classList.remove('active');
+    });
+    
+    // Mostrar la sección seleccionada
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.classList.remove('hidden');
+      section.classList.add('active');
+    }
+    
+    // Actualizar botón activo
+    const allButtons = document.querySelectorAll('nav button, .submenu-btn');
+    allButtons.forEach(btn => btn.classList.remove('active'));
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.classList.add('active');
+    }
+    
+    // Cerrar sidebar en móviles
+    if (window.innerWidth <= 980) {
+      closeSidebar();
+    }
+    
+    // Reconfigurar eventos de búsqueda cuando se muestra el formulario de registro
+    if (sectionId === 'crearInternamientoSection') {
+      setTimeout(function() {
+        if (typeof window.reinicializarBusquedaInternamiento === 'function') {
+          window.reinicializarBusquedaInternamiento();
+        }
+      }, 100);
+    }
+    
+    // Cargar datos cuando se muestra la vista de pacientes
+    if (sectionId === 'verInternamientoSection' && typeof window.cargarInternamientos === 'function') {
+      window.cargarInternamientos();
+    }
+  };
+  
+  // Cargar el módulo de internamiento
+  const scriptInternamiento = document.createElement('script');
+  scriptInternamiento.src = 'internamiento-module.js';
+  scriptInternamiento.async = false; // Cargar de forma síncrona
+  scriptInternamiento.onload = function() {
+    console.log('Módulo de internamiento cargado');
+    // Inicializar el módulo manualmente si DOMContentLoaded ya se disparó
+    if (document.readyState === 'complete' || document.readyState === 'interactive') {
+      console.log('DOM ya está listo, inicializando módulo de internamiento manualmente...');
+      if (typeof initializeInternamientoModule === 'function') {
+        initializeInternamientoModule();
+      }
+    }
+  };
+  document.head.appendChild(scriptInternamiento);
   
   // ========== MÓDULO DE INYECTABLES ==========
   
