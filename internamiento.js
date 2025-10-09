@@ -45,7 +45,8 @@ function loadTicketsConsulta() {
     // Función para actualizar tickets desde window.tickets
     function actualizarDesdeTicketsGlobales() {
         if (typeof window.tickets !== 'undefined' && window.tickets && window.tickets.length > 0) {
-            ticketsConsulta = [...window.tickets];
+            // FILTRAR: Excluir tickets con tipoServicio = 'internamiento'
+            ticketsConsulta = window.tickets.filter(ticket => ticket.tipoServicio !== 'internamiento');
             return true;
         }
         return false;
@@ -85,10 +86,15 @@ function cargarTicketsDesdeFirebase() {
         if (data) {
             ticketsConsulta = [];
             Object.keys(data).forEach(key => {
-                ticketsConsulta.push({
-                    firebaseKey: key,
-                    ...data[key]
-                });
+                const ticket = data[key];
+                // FILTRAR: Excluir tickets con tipoServicio = 'internamiento'
+                // Estos deben manejarse solo desde la tabla 'internamiento'
+                if (ticket.tipoServicio !== 'internamiento') {
+                    ticketsConsulta.push({
+                        firebaseKey: key,
+                        ...ticket
+                    });
+                }
             });
         } else {
             ticketsConsulta = [];
@@ -103,10 +109,15 @@ function cargarTicketsDesdeFirebase() {
         if (data) {
             ticketsConsulta = [];
             Object.keys(data).forEach(key => {
-                ticketsConsulta.push({
-                    firebaseKey: key,
-                    ...data[key]
-                });
+                const ticket = data[key];
+                // FILTRAR: Excluir tickets con tipoServicio = 'internamiento'
+                // Estos deben manejarse solo desde la tabla 'internamiento'
+                if (ticket.tipoServicio !== 'internamiento') {
+                    ticketsConsulta.push({
+                        firebaseKey: key,
+                        ...ticket
+                    });
+                }
             });
         }
     });
