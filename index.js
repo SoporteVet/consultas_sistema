@@ -5507,50 +5507,146 @@ window.addEventListener('DOMContentLoaded', function() {
     if (!tbody) return;
     
     if (inyectables.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="16" class="no-data">No hay inyectables registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="17" class="no-data">No hay inyectables registrados</td></tr>';
       return;
     }
     
-    tbody.innerHTML = inyectables.map(inyectable => `
-      <tr data-id="${inyectable.id}">
-        <td>${inyectable.fecha || ''}</td>
-        <td>${inyectable.mascotaApellido || ''}</td>
-        <td>${inyectable.selmix || ''}</td>
-        <td>${inyectable.convenia || ''}</td>
-        <td>${inyectable.cerenia || ''}</td>
-        <td>${inyectable.soroglobulin || ''}</td>
-        <td>${inyectable.nexium || ''}</td>
-        <td>${inyectable.osurnia || ''}</td>
-        <td>${inyectable.sueroAutologo || ''}</td>
-        <td>${inyectable.metadona || ''}</td>
-        <td>${inyectable.ondansetron || ''}</td>
-        <td>${inyectable.dosis || ''}</td>
-        <td>
-          <label class="table-checkbox-label">
-            <input type="checkbox" class="table-checkbox" ${inyectable.aFavor === 'X' ? 'checked' : ''} onchange="toggleAFavor('${inyectable.id}', this.checked)">
-            <span class="table-checkmark"></span>
-          </label>
-        </td>
-        <td>${inyectable.aFavorDosis || ''}</td>
-        <td>${inyectable.solicitante || ''}</td>
-        <td>${inyectable.quienDaDosis || ''}</td>
-        <td>
-          <span class="factura-display">${inyectable.factura || ''}</span>
-          <input type="text" class="factura-edit" value="${inyectable.factura || ''}" style="display: none;">
-        </td>
-        <td>
-          <button class="btn-edit-factura" onclick="editFactura('${inyectable.id}')" title="Editar factura">
-            <i class="fas fa-edit"></i>
-          </button>
-          <button class="btn-save-factura" onclick="saveFactura('${inyectable.id}')" style="display: none;" title="Guardar factura">
-            <i class="fas fa-save"></i>
-          </button>
-          <button class="btn-cancel-factura" onclick="cancelEditFactura('${inyectable.id}')" style="display: none;" title="Cancelar edición">
-            <i class="fas fa-times"></i>
-          </button>
-        </td>
-      </tr>
-    `).join('');
+    // Obtener el rol del usuario
+    const userRole = sessionStorage.getItem('userRole');
+    const isLabUser = userRole === 'laboratorio';
+    
+    tbody.innerHTML = inyectables.map(inyectable => {
+      if (isLabUser) {
+        // Versión editable para usuarios laboratorio
+        return `
+          <tr data-id="${inyectable.id}">
+            <td>
+              <span class="field-display">${inyectable.fecha || ''}</span>
+              <input type="date" class="field-edit" value="${inyectable.fecha || ''}" style="display: none;" data-field="fecha">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.mascotaApellido || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.mascotaApellido || ''}" style="display: none;" data-field="mascotaApellido">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.selmix || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.selmix || ''}" style="display: none;" data-field="selmix">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.convenia || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.convenia || ''}" style="display: none;" data-field="convenia">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.cerenia || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.cerenia || ''}" style="display: none;" data-field="cerenia">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.soroglobulin || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.soroglobulin || ''}" style="display: none;" data-field="soroglobulin">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.nexium || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.nexium || ''}" style="display: none;" data-field="nexium">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.osurnia || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.osurnia || ''}" style="display: none;" data-field="osurnia">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.sueroAutologo || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.sueroAutologo || ''}" style="display: none;" data-field="sueroAutologo">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.metadona || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.metadona || ''}" style="display: none;" data-field="metadona">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.ondansetron || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.ondansetron || ''}" style="display: none;" data-field="ondansetron">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.dosis || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.dosis || ''}" style="display: none;" data-field="dosis">
+            </td>
+            <td>
+              <label class="table-checkbox-label">
+                <input type="checkbox" class="table-checkbox" ${inyectable.aFavor === 'X' ? 'checked' : ''} onchange="toggleAFavor('${inyectable.id}', this.checked)">
+                <span class="table-checkmark"></span>
+              </label>
+            </td>
+            <td>
+              <span class="field-display">${inyectable.aFavorDosis || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.aFavorDosis || ''}" style="display: none;" data-field="aFavorDosis">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.solicitante || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.solicitante || ''}" style="display: none;" data-field="solicitante">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.quienDaDosis || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.quienDaDosis || ''}" style="display: none;" data-field="quienDaDosis">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.factura || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.factura || ''}" style="display: none;" data-field="factura">
+            </td>
+            <td>
+              <button class="btn-edit-inyectable" onclick="editInyectableRow('${inyectable.id}')" title="Editar registro">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-save-inyectable" onclick="saveInyectableRow('${inyectable.id}')" style="display: none;" title="Guardar cambios">
+                <i class="fas fa-save"></i>
+              </button>
+              <button class="btn-cancel-inyectable" onclick="cancelEditInyectableRow('${inyectable.id}')" style="display: none;" title="Cancelar edición">
+                <i class="fas fa-times"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      } else {
+        // Versión solo lectura para otros usuarios
+        return `
+          <tr data-id="${inyectable.id}">
+            <td>${inyectable.fecha || ''}</td>
+            <td>${inyectable.mascotaApellido || ''}</td>
+            <td>${inyectable.selmix || ''}</td>
+            <td>${inyectable.convenia || ''}</td>
+            <td>${inyectable.cerenia || ''}</td>
+            <td>${inyectable.soroglobulin || ''}</td>
+            <td>${inyectable.nexium || ''}</td>
+            <td>${inyectable.osurnia || ''}</td>
+            <td>${inyectable.sueroAutologo || ''}</td>
+            <td>${inyectable.metadona || ''}</td>
+            <td>${inyectable.ondansetron || ''}</td>
+            <td>${inyectable.dosis || ''}</td>
+            <td>
+              <label class="table-checkbox-label">
+                <input type="checkbox" class="table-checkbox" ${inyectable.aFavor === 'X' ? 'checked' : ''} onchange="toggleAFavor('${inyectable.id}', this.checked)">
+                <span class="table-checkmark"></span>
+              </label>
+            </td>
+            <td>${inyectable.aFavorDosis || ''}</td>
+            <td>${inyectable.solicitante || ''}</td>
+            <td>${inyectable.quienDaDosis || ''}</td>
+            <td>
+              <span class="factura-display">${inyectable.factura || ''}</span>
+              <input type="text" class="factura-edit" value="${inyectable.factura || ''}" style="display: none;">
+            </td>
+            <td>
+              <button class="btn-edit-factura" onclick="editFactura('${inyectable.id}')" title="Editar factura">
+                <i class="fas fa-edit"></i>
+              </button>
+              <button class="btn-save-factura" onclick="saveFactura('${inyectable.id}')" style="display: none;" title="Guardar factura">
+                <i class="fas fa-save"></i>
+              </button>
+              <button class="btn-cancel-factura" onclick="cancelEditFactura('${inyectable.id}')" style="display: none;" title="Cancelar edición">
+                <i class="fas fa-times"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+      }
+    }).join('');
   }
   
   // Limpiar formulario de inyectables
@@ -5714,6 +5810,101 @@ window.addEventListener('DOMContentLoaded', function() {
         console.error('Error al actualizar A favor:', error);
         showNotification('Error al actualizar A favor', 'error');
       });
+  };
+
+  // Editar fila completa de inyectable (solo para usuarios laboratorio)
+  window.editInyectableRow = function(id) {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (!row) return;
+    
+    // Ocultar todos los displays y mostrar todos los inputs
+    const displays = row.querySelectorAll('.field-display');
+    const inputs = row.querySelectorAll('.field-edit');
+    
+    displays.forEach(display => {
+      display.style.display = 'none';
+    });
+    
+    inputs.forEach(input => {
+      input.style.display = 'inline-block';
+    });
+    
+    // Cambiar botones
+    const editBtn = row.querySelector('.btn-edit-inyectable');
+    const saveBtn = row.querySelector('.btn-save-inyectable');
+    const cancelBtn = row.querySelector('.btn-cancel-inyectable');
+    
+    editBtn.style.display = 'none';
+    saveBtn.style.display = 'inline-block';
+    cancelBtn.style.display = 'inline-block';
+  };
+
+  // Guardar fila completa de inyectable
+  window.saveInyectableRow = function(id) {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (!row) return;
+    
+    // Obtener todos los valores de los inputs
+    const inputs = row.querySelectorAll('.field-edit');
+    const updates = {};
+    
+    inputs.forEach(input => {
+      const field = input.getAttribute('data-field');
+      updates[field] = input.value.trim();
+    });
+    
+    console.log('Actualizando registro con:', updates);
+    
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
+      return;
+    }
+    
+    const database = firebase.database();
+    const ref = database.ref(`inyectables/${id}`);
+    
+    ref.update(updates)
+      .then(() => {
+        showNotification('Registro actualizado exitosamente', 'success');
+        cancelEditInyectableRow(id);
+        loadInyectablesData(); // Recargar la tabla
+      })
+      .catch((error) => {
+        console.error('Error al actualizar registro:', error);
+        showNotification('Error al actualizar el registro', 'error');
+      });
+  };
+
+  // Cancelar edición de fila completa de inyectable
+  window.cancelEditInyectableRow = function(id) {
+    const row = document.querySelector(`tr[data-id="${id}"]`);
+    if (!row) return;
+    
+    // Mostrar todos los displays y ocultar todos los inputs
+    const displays = row.querySelectorAll('.field-display');
+    const inputs = row.querySelectorAll('.field-edit');
+    
+    displays.forEach(display => {
+      display.style.display = 'inline';
+    });
+    
+    inputs.forEach(input => {
+      input.style.display = 'none';
+      // Restaurar valor original del display correspondiente
+      const display = input.parentElement.querySelector('.field-display');
+      if (display) {
+        input.value = display.textContent;
+      }
+    });
+    
+    // Cambiar botones
+    const editBtn = row.querySelector('.btn-edit-inyectable');
+    const saveBtn = row.querySelector('.btn-save-inyectable');
+    const cancelBtn = row.querySelector('.btn-cancel-inyectable');
+    
+    editBtn.style.display = 'inline-block';
+    saveBtn.style.display = 'none';
+    cancelBtn.style.display = 'none';
   };
   
   // Inicializar el sidebar para móviles

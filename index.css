@@ -2322,7 +2322,8 @@ body:not(.recepcion-role) .sidebar {
   font-size: 14px;
 }
 
-.btn-edit-factura, .btn-save-factura, .btn-cancel-factura {
+.btn-edit-factura, .btn-save-factura, .btn-cancel-factura,
+.btn-edit-inyectable, .btn-save-inyectable, .btn-cancel-inyectable {
   background: none;
   border: none;
   padding: 4px 8px;
@@ -2333,34 +2334,67 @@ body:not(.recepcion-role) .sidebar {
   transition: all 0.3s ease;
 }
 
-.btn-edit-factura {
+.btn-edit-factura, .btn-edit-inyectable {
   color: #007bff;
   border: 1px solid #007bff;
 }
 
-.btn-edit-factura:hover {
+.btn-edit-factura:hover, .btn-edit-inyectable:hover {
   background: #007bff;
   color: white;
 }
 
-.btn-save-factura {
+.btn-save-factura, .btn-save-inyectable {
   color: #28a745;
   border: 1px solid #28a745;
 }
 
-.btn-save-factura:hover {
+.btn-save-factura:hover, .btn-save-inyectable:hover {
   background: #28a745;
   color: white;
 }
 
-.btn-cancel-factura {
+.btn-cancel-factura, .btn-cancel-inyectable {
   color: #dc3545;
   border: 1px solid #dc3545;
 }
 
-.btn-cancel-factura:hover {
+.btn-cancel-factura:hover, .btn-cancel-inyectable:hover {
   background: #dc3545;
   color: white;
+}
+
+/* Estilos para campos editables en la tabla de inyectables */
+.inyectables-table .field-edit {
+  width: 100%;
+  padding: 4px 8px;
+  border: 1px solid #007bff;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  box-sizing: border-box;
+  background: #fff;
+  transition: all 0.3s ease;
+}
+
+.inyectables-table .field-edit:focus {
+  outline: none;
+  border-color: #0056b3;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.inyectables-table .field-display {
+  display: inline-block;
+  min-width: 50px;
+  padding: 2px;
+}
+
+.inyectables-table td {
+  position: relative;
+}
+
+/* Estilos específicos para inputs de fecha en la tabla */
+.inyectables-table input[type="date"].field-edit {
+  min-width: 130px;
 }
 
 /* Estilos para campo de dosis A favor */
