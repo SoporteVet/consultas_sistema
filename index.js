@@ -5402,7 +5402,8 @@ window.addEventListener('DOMContentLoaded', function() {
       document.getElementById('inyOsurnia'),
       document.getElementById('inySueroAutologo'),
       document.getElementById('inyMetadona'),
-      document.getElementById('inyOndansetron')
+      document.getElementById('inyOndansetron'),
+      document.getElementById('inySerentis')
     ];
     
     const alMenosUnoSeleccionado = checkboxes.some(checkbox => checkbox.checked);
@@ -5441,6 +5442,7 @@ window.addEventListener('DOMContentLoaded', function() {
       sueroAutologo: document.getElementById('inySueroAutologo').checked ? 'X' : '',
       metadona: document.getElementById('inyMetadona').checked ? 'X' : '',
       ondansetron: document.getElementById('inyOndansetron').checked ? 'X' : '',
+      serentis: document.getElementById('inySerentis').checked ? 'X' : '',
       dosis: dosis,
       aFavorDosis: document.getElementById('inyAFavorDosis').value,
       solicitante: solicitante,
@@ -5507,7 +5509,7 @@ window.addEventListener('DOMContentLoaded', function() {
     if (!tbody) return;
     
     if (inyectables.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="17" class="no-data">No hay inyectables registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="18" class="no-data">No hay inyectables registrados</td></tr>';
       return;
     }
     
@@ -5565,6 +5567,10 @@ window.addEventListener('DOMContentLoaded', function() {
               <input type="text" class="field-edit" value="${inyectable.ondansetron || ''}" style="display: none;" data-field="ondansetron">
             </td>
             <td>
+              <span class="field-display">${inyectable.serentis || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.serentis || ''}" style="display: none;" data-field="serentis">
+            </td>
+            <td>
               <span class="field-display">${inyectable.dosis || ''}</span>
               <input type="text" class="field-edit" value="${inyectable.dosis || ''}" style="display: none;" data-field="dosis">
             </td>
@@ -5618,6 +5624,7 @@ window.addEventListener('DOMContentLoaded', function() {
             <td>${inyectable.sueroAutologo || ''}</td>
             <td>${inyectable.metadona || ''}</td>
             <td>${inyectable.ondansetron || ''}</td>
+            <td>${inyectable.serentis || ''}</td>
             <td>${inyectable.dosis || ''}</td>
             <td>
               <label class="table-checkbox-label">
