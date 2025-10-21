@@ -5971,6 +5971,13 @@ window.addEventListener('DOMContentLoaded', function() {
   // Variables globales para el módulo de vacunas
   let currentVacunasFecha = '';
   let currentVacunasTurno = '';
+  let inventarioActual = {};
+  
+  // Lista de vacunas disponibles
+  const vacunasDisponibles = {
+    anual: ['Mult', 'Puppy', 'Rab', 'Tos', 'Giardia', 'C4', 'C6'],
+    trimestral: ['Trip/Leu', 'Trip/Rab', 'Leu']
+  };
   
   // Inicializar módulo de vacunas
   function initializeVacunasModule() {
@@ -6028,6 +6035,14 @@ window.addEventListener('DOMContentLoaded', function() {
       document.getElementById('guardarVacunasNotas').addEventListener('click', guardarVacunasNotas);
       console.log('Event listener del botón guardar notas configurado');
     }
+    
+    // Botón abrir turno
+    const abrirTurnoBtn = document.getElementById('abrirTurnoBtn');
+    if (abrirTurnoBtn) {
+      abrirTurnoBtn.replaceWith(abrirTurnoBtn.cloneNode(true));
+      document.getElementById('abrirTurnoBtn').addEventListener('click', abrirTurno);
+      console.log('Event listener del botón abrir turno configurado');
+    }
   }
   
   // Cargar datos del turno seleccionado
@@ -6053,6 +6068,9 @@ window.addEventListener('DOMContentLoaded', function() {
     
     // Cargar datos del turno desde Firebase
     loadVacunasData(fecha, turno);
+    
+    // Verificar si el turno ya está abierto
+    verificarEstadoTurno(fecha, turno);
   }
   
   // Manejar envío del formulario de vacunas
@@ -6093,8 +6111,15 @@ window.addEventListener('DOMContentLoaded', function() {
     
     console.log('Datos del formulario:', formData);
     
-    // Guardar en Firebase
-    saveVacunaToFirebase(formData);
+    // Verificar inventario antes de guardar
+    if (verificarInventario(formData.vacunaColocada)) {
+      // Guardar en Firebase
+      saveVacunaToFirebase(formData);
+      // Actualizar inventario
+      actualizarInventario(formData.vacunaColocada, -1);
+    } else {
+      showNotification('No hay suficiente inventario de la vacuna seleccionada', 'error');
+    }
   }
   
   // Guardar vacuna en Firebase
@@ -6509,6 +6534,201 @@ window.addEventListener('DOMContentLoaded', function() {
       });
   }
   
+  // ==================== FUNCIONES DEL SISTEMA DE INVENTARIO ====================
+  
+  // Verificar estado del turno (si ya está abierto)
+  function verificarEstadoTurno(fecha, turno) {
+    const turnoKey = `${fecha}_${turno}`;
+    const database = firebase.database();
+    const ref = database.ref(`inventarioTurnos/${turnoKey}`);
+    
+    ref.once('value', (snapshot) => {
+      const turnoData = snapshot.val();
+      if (turnoData) {
+        // El turno ya está abierto
+        mostrarInventarioActual(turnoData);
+        inventarioActual = turnoData.inventario || {};
+      } else {
+        // El turno no está abierto
+        mostrarFormularioApertura();
+      }
+    });
+  }
+  
+  // Mostrar formulario de apertura de turno
+  function mostrarFormularioApertura() {
+    const abrirSection = document.getElementById('abrirTurnoSection');
+    const inventarioSection = document.getElementById('inventarioActualSection');
+    
+    if (abrirSection) abrirSection.style.display = 'block';
+    if (inventarioSection) inventarioSection.style.display = 'none';
+  }
+  
+  // Mostrar inventario actual
+  function mostrarInventarioActual(turnoData) {
+    const abrirSection = document.getElementById('abrirTurnoSection');
+    const inventarioSection = document.getElementById('inventarioActualSection');
+    
+    if (abrirSection) abrirSection.style.display = 'none';
+    if (inventarioSection) inventarioSection.style.display = 'block';
+    
+    // Actualizar información del responsable
+    const responsableActual = document.getElementById('responsableActual');
+    const horaApertura = document.getElementById('horaApertura');
+    
+    if (responsableActual) responsableActual.textContent = turnoData.responsable || 'No especificado';
+    if (horaApertura) horaApertura.textContent = turnoData.horaApertura || 'No especificado';
+    
+    // Actualizar inventario
+    inventarioActual = turnoData.inventario || {};
+    actualizarVistaInventario();
+  }
+  
+  // Abrir turno con inventario inicial
+  function abrirTurno() {
+    const responsable = document.getElementById('responsableApertura').value.trim();
+    
+    if (!responsable) {
+      showNotification('Debe especificar el responsable de apertura', 'error');
+      return;
+    }
+    
+    // Recopilar inventario inicial
+    const inventarioInicial = {};
+    
+    // Vacunas anuales
+    vacunasDisponibles.anual.forEach(vacuna => {
+      const input = document.getElementById(`inventario${vacuna.replace('/', '')}`);
+      inventarioInicial[vacuna] = input ? parseInt(input.value) || 0 : 0;
+    });
+    
+    // Vacunas trimestrales
+    vacunasDisponibles.trimestral.forEach(vacuna => {
+      const inputId = `inventario${vacuna.replace('/', '').replace('/', '')}`;
+      const input = document.getElementById(inputId);
+      inventarioInicial[vacuna] = input ? parseInt(input.value) || 0 : 0;
+    });
+    
+    // Crear datos del turno
+    const turnoData = {
+      responsable: responsable,
+      fecha: currentVacunasFecha,
+      turno: currentVacunasTurno,
+      horaApertura: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+      timestamp: Date.now(),
+      inventario: inventarioInicial
+    };
+    
+    // Guardar en Firebase
+    const turnoKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
+    const database = firebase.database();
+    const ref = database.ref(`inventarioTurnos/${turnoKey}`);
+    
+    ref.set(turnoData)
+      .then(() => {
+        showNotification('Turno abierto exitosamente', 'success');
+        inventarioActual = inventarioInicial;
+        mostrarInventarioActual(turnoData);
+        actualizarVistaInventario();
+      })
+      .catch((error) => {
+        console.error('Error al abrir turno:', error);
+        showNotification('Error al abrir el turno', 'error');
+      });
+  }
+  
+  // Actualizar vista del inventario
+  function actualizarVistaInventario() {
+    // Actualizar inventario anual
+    const gridAnual = document.querySelector('#inventarioAnual .inventario-grid-actual');
+    if (gridAnual) {
+      gridAnual.innerHTML = vacunasDisponibles.anual.map(vacuna => {
+        const cantidad = inventarioActual[vacuna] || 0;
+        const claseStock = cantidad === 0 ? 'sin-stock' : (cantidad <= 2 ? 'bajo-stock' : '');
+        const claseCantidad = cantidad === 0 ? 'sin-stock' : (cantidad <= 2 ? 'bajo-stock' : '');
+        
+        return `
+          <div class="inventario-item-actual ${claseStock}">
+            <span class="vacuna-nombre">${vacuna}</span>
+            <span class="vacuna-cantidad ${claseCantidad}">${cantidad}</span>
+          </div>
+        `;
+      }).join('');
+    }
+    
+    // Actualizar inventario trimestral
+    const gridTrimestral = document.querySelector('#inventarioTrimestral .inventario-grid-actual');
+    if (gridTrimestral) {
+      gridTrimestral.innerHTML = vacunasDisponibles.trimestral.map(vacuna => {
+        const cantidad = inventarioActual[vacuna] || 0;
+        const claseStock = cantidad === 0 ? 'sin-stock' : (cantidad <= 2 ? 'bajo-stock' : '');
+        const claseCantidad = cantidad === 0 ? 'sin-stock' : (cantidad <= 2 ? 'bajo-stock' : '');
+        
+        return `
+          <div class="inventario-item-actual ${claseStock}">
+            <span class="vacuna-nombre">${vacuna}</span>
+            <span class="vacuna-cantidad ${claseCantidad}">${cantidad}</span>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+  
+  // Verificar inventario disponible
+  function verificarInventario(vacuna) {
+    const cantidad = inventarioActual[vacuna] || 0;
+    return cantidad > 0;
+  }
+  
+  // Actualizar inventario (restar o sumar)
+  function actualizarInventario(vacuna, cantidad) {
+    if (!inventarioActual[vacuna]) {
+      inventarioActual[vacuna] = 0;
+    }
+    
+    inventarioActual[vacuna] += cantidad;
+    
+    // Actualizar en Firebase
+    const turnoKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
+    const database = firebase.database();
+    const ref = database.ref(`inventarioTurnos/${turnoKey}/inventario`);
+    
+    ref.update(inventarioActual)
+      .then(() => {
+        actualizarVistaInventario();
+      })
+      .catch((error) => {
+        console.error('Error al actualizar inventario:', error);
+      });
+  }
+  
+  // Función para cambiar tabs del inventario
+  window.mostrarInventarioTab = function(tipo) {
+    // Ocultar todos los contenidos
+    document.querySelectorAll('.inventario-tab-content').forEach(content => {
+      content.style.display = 'none';
+    });
+    
+    // Remover clase active de todos los botones
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    
+    // Mostrar contenido seleccionado
+    const content = document.getElementById(`inventario${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
+    if (content) {
+      content.style.display = 'block';
+    }
+    
+    // Activar botón seleccionado
+    const btn = document.querySelector(`[onclick="mostrarInventarioTab('${tipo}')"]`);
+    if (btn) {
+      btn.classList.add('active');
+    }
+  };
+  
+  // ==================== FIN FUNCIONES DEL SISTEMA DE INVENTARIO ====================
+
   // ==================== FIN MÓDULO DE CONTROL DE VACUNAS ====================
 
   // Inicializar el sidebar para móviles

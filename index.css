@@ -3736,4 +3736,340 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   }
 }
 
+/* ==================== ESTILOS PARA SISTEMA DE INVENTARIO DE VACUNAS ==================== */
+
+/* Contenedor de apertura de turno */
+.apertura-turno-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
+}
+
+.apertura-turno-container h3 {
+  color: #2c3e50;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #4285f4 0%, #5a9cf2 100%);
+  color: white;
+  border-radius: 8px 8px 0 0;
+  margin: -20px -20px 20px -20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 2px 4px rgba(66, 133, 244, 0.2);
+}
+
+/* Categorías de vacunas */
+.vacunas-categoria {
+  margin-bottom: 25px;
+}
+
+.vacunas-categoria h5 {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 10px 15px;
+  border-radius: 6px;
+  border-left: 4px solid #4285f4;
+  margin-bottom: 15px;
+}
+
+/* Grid de inventario */
+.inventario-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #ffffff;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
+}
+
+.inventario-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border: 1px solid #e9ecef;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.inventario-item:hover {
+  background: #e9ecef;
+  border-color: #4285f4;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(66, 133, 244, 0.1);
+}
+
+.inventario-item label {
+  font-weight: 500;
+  color: #495057;
+  min-width: 70px;
+  margin: 0;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+
+.inventario-input {
+  width: 80px;
+  padding: 8px 10px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  text-align: center;
+  background: white;
+  font-weight: 500;
+  color: #495057;
+}
+
+.inventario-input:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+/* Inventario actual */
+.inventario-actual {
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.inventario-header {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  padding: 15px 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.inventario-header h4 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.responsable-info {
+  display: flex;
+  gap: 20px;
+  font-size: 14px;
+}
+
+.responsable-info span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+/* Tabs de inventario */
+.inventario-tabs {
+  display: flex;
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.tab-btn {
+  flex: 1;
+  padding: 12px 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: #6c757d;
+  transition: all 0.3s ease;
+  border-bottom: 3px solid transparent;
+}
+
+.tab-btn.active {
+  color: #4285f4;
+  background: white;
+  border-bottom-color: #4285f4;
+}
+
+.tab-btn:hover:not(.active) {
+  color: #495057;
+  background: #e9ecef;
+}
+
+/* Contenido de tabs */
+.inventario-tab-content {
+  padding: 20px;
+}
+
+.inventario-grid-actual {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 15px;
+}
+
+.inventario-item-actual {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border-left: 4px solid #4285f4;
+  transition: all 0.3s ease;
+}
+
+.inventario-item-actual:hover {
+  background: #e9ecef;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.inventario-item-actual.bajo-stock {
+  border-left-color: #dc3545;
+  background: #fff5f5;
+}
+
+.inventario-item-actual.sin-stock {
+  border-left-color: #6c757d;
+  background: #f8f9fa;
+  opacity: 0.6;
+}
+
+.vacuna-nombre {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 14px;
+}
+
+.vacuna-cantidad {
+  font-size: 18px;
+  font-weight: 700;
+  color: #4285f4;
+}
+
+.vacuna-cantidad.bajo-stock {
+  color: #dc3545;
+}
+
+.vacuna-cantidad.sin-stock {
+  color: #6c757d;
+}
+
+/* Select personalizado para vacunas */
+#vacunaColocada {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  background: white;
+  transition: all 0.3s ease;
+  width: 100%;
+}
+
+#vacunaColocada:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+#vacunaColocada optgroup {
+  font-weight: 600;
+  color: #4285f4;
+  background: #f8f9fa;
+}
+
+#vacunaColocada option {
+  padding: 8px;
+  background: white;
+}
+
+/* Responsive para inventario */
+@media (max-width: 1200px) {
+  .inventario-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+  }
+  
+  .inventario-item {
+    padding: 10px;
+  }
+  
+  .inventario-item label {
+    min-width: 60px;
+    font-size: 12px;
+  }
+  
+  .inventario-input {
+    width: 70px;
+    padding: 6px 8px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 768px) {
+  .inventario-grid {
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    padding: 10px;
+  }
+  
+  .inventario-item {
+    padding: 8px;
+    flex-direction: column;
+    text-align: center;
+    gap: 5px;
+  }
+  
+  .inventario-item label {
+    min-width: auto;
+    font-size: 11px;
+  }
+  
+  .inventario-input {
+    width: 100%;
+    max-width: 80px;
+    padding: 6px;
+    font-size: 12px;
+  }
+  
+  .inventario-grid-actual {
+    grid-template-columns: 1fr;
+  }
+  
+  .inventario-header {
+    flex-direction: column;
+    text-align: center;
+  }
+  
+  .responsable-info {
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .inventario-tabs {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 480px) {
+  .inventario-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 6px;
+    padding: 8px;
+  }
+  
+  .inventario-item {
+    padding: 6px;
+  }
+}
+
+/* ==================== FIN ESTILOS PARA SISTEMA DE INVENTARIO DE VACUNAS ==================== */
+
 /* ==================== FIN ESTILOS PARA CONTROL DE VACUNAS ==================== */

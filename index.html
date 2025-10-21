@@ -1027,6 +1027,118 @@
         <!-- Área para mostrar el registro del turno seleccionado -->
         <div id="vacunasRegistroArea" style="display: none;">
           
+          <!-- Apertura de Turno e Inventario -->
+          <div class="apertura-turno-container" style="margin-bottom: 30px;">
+            <h3><i class="fas fa-clipboard-check"></i> Apertura de Turno e Inventario</h3>
+            
+            <!-- Botón para abrir turno si no existe -->
+            <div id="abrirTurnoSection" style="display: none;">
+              <div class="form-container">
+                <p style="margin-bottom: 15px; color: #666; font-style: italic;">
+                  <i class="fas fa-info-circle"></i> Este turno aún no ha sido abierto. Configure el inventario inicial para comenzar.
+                </p>
+                <div class="form-group">
+                  <label for="responsableApertura"><i class="fas fa-user"></i> Responsable de Apertura: *</label>
+                  <input type="text" id="responsableApertura" placeholder="Nombre del responsable" required>
+                </div>
+                
+                <h4 style="color: #2c3e50; margin: 20px 0 15px 0; font-size: 16px;">
+                  <i class="fas fa-syringe"></i> Conteo Inicial de Vacunas
+                </h4>
+                
+                <!-- Vacunas Anuales -->
+                <div class="vacunas-categoria">
+                  <h5 style="color: #4285f4; margin: 15px 0 10px 0; font-weight: 600;">Vacunas:</h5>
+                  <div class="inventario-grid">
+                    <div class="inventario-item">
+                      <label for="inventarioMult">Mult:</label>
+                      <input type="number" id="inventarioMult" min="0" value="0" class="inventario-input">
+                    </div>
+                    <div class="inventario-item">
+                      <label for="inventarioPuppy">Puppy:</label>
+                      <input type="number" id="inventarioPuppy" min="0" value="0" class="inventario-input">
+                    </div>
+                    <div class="inventario-item">
+                      <label for="inventarioRab">Rab:</label>
+                      <input type="number" id="inventarioRab" min="0" value="0" class="inventario-input">
+                    </div>
+                    <div class="inventario-item">
+                      <label for="inventarioTos">Tos:</label>
+                      <input type="number" id="inventarioTos" min="0" value="0" class="inventario-input">
+                    </div>
+                    <div class="inventario-item">
+                      <label for="inventarioGiardia">Giardia:</label>
+                      <input type="number" id="inventarioGiardia" min="0" value="0" class="inventario-input">
+                    </div>
+                    <div class="inventario-item">
+                      <label for="inventarioC4">C4:</label>
+                      <input type="number" id="inventarioC4" min="0" value="0" class="inventario-input">
+                    </div>
+                    <div class="inventario-item">
+                      <label for="inventarioC6">C6:</label>
+                      <input type="number" id="inventarioC6" min="0" value="0" class="inventario-input">
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Vacunas Trimestrales -->
+                <div class="vacunas-categoria">
+                  <h5 style="color: #4285f4; margin: 15px 0 10px 0; font-weight: 600;">Vacunas:</h5>
+                  <div class="inventario-grid">
+                    <div class="inventario-item">
+                      <label for="inventarioTripLeu">Trip/Leu:</label>
+                      <input type="number" id="inventarioTripLeu" min="0" value="0" class="inventario-input">
+                    </div>
+                    <div class="inventario-item">
+                      <label for="inventarioTripRab">Trip/Rab:</label>
+                      <input type="number" id="inventarioTripRab" min="0" value="0" class="inventario-input">
+                    </div>
+                    <div class="inventario-item">
+                      <label for="inventarioLeu">Leu:</label>
+                      <input type="number" id="inventarioLeu" min="0" value="0" class="inventario-input">
+                    </div>
+                  </div>
+                </div>
+                
+                <div class="form-actions">
+                  <button type="button" id="abrirTurnoBtn" class="btn-submit">
+                    <i class="fas fa-play-circle"></i> Abrir Turno
+                  </button>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Mostrar inventario actual si el turno ya está abierto -->
+            <div id="inventarioActualSection" style="display: none;">
+              <div class="inventario-actual">
+                <div class="inventario-header">
+                  <h4><i class="fas fa-boxes"></i> Inventario Actual del Turno</h4>
+                  <div class="responsable-info">
+                    <span><i class="fas fa-user"></i> Responsable: <strong id="responsableActual"></strong></span>
+                    <span><i class="fas fa-clock"></i> Abierto: <strong id="horaApertura"></strong></span>
+                  </div>
+                </div>
+                
+                <div class="inventario-tabs">
+                  <button class="tab-btn active" onclick="mostrarInventarioTab('anual')">Vacunas Anuales</button>
+                  <button class="tab-btn" onclick="mostrarInventarioTab('trimestral')">Vacunas Trimestrales</button>
+                </div>
+                
+                <div id="inventarioAnual" class="inventario-tab-content">
+                  <div class="inventario-grid-actual">
+                    <!-- Se llenará dinámicamente -->
+                  </div>
+                </div>
+                
+                <div id="inventarioTrimestral" class="inventario-tab-content" style="display: none;">
+                  <div class="inventario-grid-actual">
+                    <!-- Se llenará dinámicamente -->
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
           <!-- Formulario para agregar vacuna -->
           <div class="form-container" style="margin-top: 20px;">
             <h3><i class="fas fa-plus-circle"></i> Agregar Registro de Vacuna</h3>
@@ -1060,7 +1172,23 @@
                 </div>
                 <div class="form-group">
                   <label for="vacunaColocada"><i class="fas fa-syringe"></i> Vacuna Colocada: *</label>
-                  <input type="text" id="vacunaColocada" placeholder="Nombre de la vacuna" required>
+                  <select id="vacunaColocada" required>
+                    <option value="">Seleccionar vacuna</option>
+                    <optgroup label="Vacunas Anuales">
+                      <option value="Mult">Mult</option>
+                      <option value="Puppy">Puppy</option>
+                      <option value="Rab">Rab</option>
+                      <option value="Tos">Tos</option>
+                      <option value="Giardia">Giardia</option>
+                      <option value="C4">C4</option>
+                      <option value="C6">C6</option>
+                    </optgroup>
+                    <optgroup label="Vacunas Trimestrales">
+                      <option value="Trip/Leu">Trip/Leu</option>
+                      <option value="Trip/Rab">Trip/Rab</option>
+                      <option value="Leu">Leu</option>
+                    </optgroup>
+                  </select>
                 </div>
               </div>
               
