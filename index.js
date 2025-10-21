@@ -420,15 +420,15 @@ function applyRoleBasedUI(role) {
         }
     }
     
-    // Control de visibilidad del botón de Control de Vacunas basado en roles
-    const controlVacunasBtn = document.getElementById('controlVacunasBtn');
+    // Control de visibilidad del botón de vacunas basado en roles
+    const vacunasBtn = document.getElementById('vacunasBtn');
     const allowedVacunasRoles = ['admin', 'consulta_externa'];
     
-    if (controlVacunasBtn) {
+    if (vacunasBtn) {
         if (allowedVacunasRoles.includes(role)) {
-            controlVacunasBtn.style.display = 'block';
+            vacunasBtn.style.display = 'block';
         } else {
-            controlVacunasBtn.style.display = 'none';
+            vacunasBtn.style.display = 'none';
         }
     }
     
@@ -5335,48 +5335,6 @@ window.addEventListener('DOMContentLoaded', function() {
     // Inicializar el módulo de inyectables
     initializeInyectablesModule();
   };
-
-  // Función de navegación para Control de Vacunas
-  window.navigateToVacunas = function(sectionId, buttonId) {
-    // Verificar permisos
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole !== 'admin' && userRole !== 'consulta_externa') {
-      showNotification('No tiene permisos para acceder a esta sección', 'error');
-      return;
-    }
-    
-    // Ocultar todas las secciones
-    const allSections = document.querySelectorAll('.content section');
-    allSections.forEach(s => {
-      s.classList.add('hidden');
-      s.classList.remove('active');
-    });
-    
-    // Mostrar la sección seleccionada
-    const section = document.getElementById(sectionId);
-    if (section) {
-      section.classList.remove('hidden');
-      section.classList.add('active');
-    }
-    
-    // Actualizar botón activo
-    const allButtons = document.querySelectorAll('nav button, .submenu-btn');
-    allButtons.forEach(btn => btn.classList.remove('active'));
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.classList.add('active');
-    }
-    
-    // Cerrar sidebar en móviles
-    if (window.innerWidth <= 980) {
-      closeSidebar();
-    }
-    
-    // Inicializar el módulo de vacunas
-    if (window.initVacunasSystem) {
-      window.initVacunasSystem();
-    }
-  };
   
   // Inicializar módulo de inyectables
   function initializeInyectablesModule() {
@@ -5967,166 +5925,134 @@ window.addEventListener('DOMContentLoaded', function() {
     saveBtn.style.display = 'none';
     cancelBtn.style.display = 'none';
   };
-
-  // ==========================================
-  // CONTROL DE VACUNAS
-  // ==========================================
   
-  // Inicializar Control de Vacunas
-  window.initVacunasSystem = function() {
-    console.log('Inicializando sistema de Control de Vacunas...');
+  // ==================== MÓDULO DE CONTROL DE VACUNAS ====================
+  
+  // Función de navegación a la sección de vacunas
+  window.navigateToVacunas = function(sectionId, buttonId) {
+    console.log('Navegando a Control de Vacunas...');
     
-    // Establecer fecha actual
+    // Ocultar todas las secciones
+    document.querySelectorAll('.content section').forEach(section => {
+      section.classList.remove('active');
+      section.classList.add('hidden');
+    });
+    
+    // Mostrar la sección de vacunas
+    const section = document.getElementById(sectionId);
+    if (section) {
+      section.classList.remove('hidden');
+      section.classList.add('active');
+      console.log('Sección vacunas mostrada');
+    } else {
+      console.error('No se encontró la sección:', sectionId);
+    }
+    
+    // Actualizar botón activo
+    const allButtons = document.querySelectorAll('nav button, .submenu-btn');
+    allButtons.forEach(btn => btn.classList.remove('active'));
+    const button = document.getElementById(buttonId);
+    if (button) {
+      button.classList.add('active');
+      console.log('Botón vacunas activado');
+    } else {
+      console.error('No se encontró el botón:', buttonId);
+    }
+    
+    // Cerrar sidebar en móviles
+    if (window.innerWidth <= 980) {
+      closeSidebar();
+    }
+    
+    // Inicializar el módulo de vacunas
+    initializeVacunasModule();
+  };
+  
+  // Variables globales para el módulo de vacunas
+  let currentVacunasFecha = '';
+  let currentVacunasTurno = '';
+  
+  // Inicializar módulo de vacunas
+  function initializeVacunasModule() {
+    console.log('Inicializando módulo de vacunas...');
+    
+    // Configurar fecha actual
     const fechaInput = document.getElementById('vacunasFecha');
-    if (fechaInput) {
+    if (fechaInput && !fechaInput.value) {
       fechaInput.value = getLocalDateString();
+      console.log('Fecha configurada:', fechaInput.value);
     }
     
-    // Establecer hora actual
-    const horaInput = document.getElementById('vacunaHora');
-    if (horaInput) {
-      const now = new Date();
-      horaInput.value = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    // Ocultar el área de registro inicialmente
+    const registroArea = document.getElementById('vacunasRegistroArea');
+    if (registroArea) {
+      registroArea.style.display = 'none';
     }
-    
-    // Actualizar badge del turno
-    updateTurnoBadge();
     
     // Configurar event listeners
     setupVacunasEventListeners();
-    
-    // Cargar turno actual
-    loadVacunasTurno();
-    
-    // Cargar notas del turno actual
-    setTimeout(() => {
-      const fecha = document.getElementById('vacunasFecha').value;
-      const turno = document.getElementById('vacunasTurno').value;
-      loadNotasTurno(fecha, turno);
-    }, 100);
-  };
-  
-  // Actualizar badge del turno
-  function updateTurnoBadge() {
-    const turnoSelect = document.getElementById('vacunasTurno');
-    const turnoBadge = document.getElementById('turnoBadge');
-    
-    if (turnoSelect && turnoBadge) {
-      const turnoLabels = {
-        'manana': '🌅 Mañana',
-        'tarde': '☀️ Tarde',
-        'noche': '🌙 Noche'
-      };
-      turnoBadge.textContent = turnoLabels[turnoSelect.value] || 'Turno';
-    }
-  }
-  
-  // Configurar tabs del módulo de vacunas
-  function setupVacunasTabs() {
-    const section = document.getElementById('controlVacunasSection');
-    if (!section) {
-      return;
-    }
-    
-    const tabButtons = section.querySelectorAll('[data-vacunas-tab]');
-    const tabContents = section.querySelectorAll('.vacunas-tab-content');
-    
-    if (!tabButtons.length || !tabContents.length) {
-      return;
-    }
-    
-    const activateTab = (targetId) => {
-      tabButtons.forEach((button) => {
-        const isActive = button.getAttribute('data-vacunas-tab') === targetId;
-        button.classList.toggle('active', isActive);
-      });
-      
-      tabContents.forEach((content) => {
-        const isActive = content.id === targetId;
-        content.classList.toggle('active', isActive);
-      });
-    };
-    
-    if (section.dataset.vacunasTabsReady !== 'true') {
-      tabButtons.forEach((button) => {
-        button.addEventListener('click', () => {
-          const targetId = button.getAttribute('data-vacunas-tab');
-          if (targetId) {
-            activateTab(targetId);
-          }
-        });
-      });
-      
-      section.dataset.vacunasTabsReady = 'true';
-    }
-    
-    const initialButton = section.querySelector('[data-vacunas-tab].active') || tabButtons[0];
-    if (initialButton) {
-      const targetId = initialButton.getAttribute('data-vacunas-tab');
-      if (targetId) {
-        activateTab(targetId);
-      }
-    }
   }
   
   // Configurar event listeners para vacunas
   function setupVacunasEventListeners() {
     console.log('Configurando event listeners para vacunas...');
     
-    setupVacunasTabs();
+    // Botón para cargar el turno
+    const cargarTurnoBtn = document.getElementById('cargarVacunasTurno');
+    if (cargarTurnoBtn) {
+      cargarTurnoBtn.replaceWith(cargarTurnoBtn.cloneNode(true));
+      document.getElementById('cargarVacunasTurno').addEventListener('click', cargarVacunasTurno);
+      console.log('Event listener del botón cargar turno configurado');
+    }
     
     // Formulario de vacunas
     const form = document.getElementById('vacunasForm');
     if (form) {
+      form.removeEventListener('submit', handleVacunasSubmit);
       form.addEventListener('submit', handleVacunasSubmit);
+      console.log('Event listener del formulario configurado');
     }
     
-    // Botón limpiar
-    const limpiarBtn = document.getElementById('limpiarVacunas');
+    // Botón limpiar formulario
+    const limpiarBtn = document.getElementById('limpiarVacunasForm');
     if (limpiarBtn) {
-      limpiarBtn.addEventListener('click', limpiarFormularioVacunas);
-    }
-    
-    // Cargar automáticamente cuando cambie fecha o turno
-    const fechaInput = document.getElementById('vacunasFecha');
-    const turnoSelect = document.getElementById('vacunasTurno');
-    
-    if (fechaInput) {
-      fechaInput.addEventListener('change', () => {
-        loadVacunasTurno();
-        // También cargar las notas cuando cambie la fecha
-        setTimeout(() => {
-          const fecha = document.getElementById('vacunasFecha').value;
-          const turno = document.getElementById('vacunasTurno').value;
-          loadNotasTurno(fecha, turno);
-        }, 100);
-      });
-    }
-    
-    if (turnoSelect) {
-      turnoSelect.addEventListener('change', () => {
-        updateTurnoBadge(); // Actualizar badge del turno
-        loadVacunasTurno();
-        // También cargar las notas cuando cambie el turno
-        setTimeout(() => {
-          const fecha = document.getElementById('vacunasFecha').value;
-          const turno = document.getElementById('vacunasTurno').value;
-          loadNotasTurno(fecha, turno);
-        }, 100);
-      });
+      limpiarBtn.replaceWith(limpiarBtn.cloneNode(true));
+      document.getElementById('limpiarVacunasForm').addEventListener('click', limpiarFormularioVacunas);
+      console.log('Event listener del botón limpiar configurado');
     }
     
     // Botón guardar notas
-    const guardarNotasBtn = document.getElementById('guardarNotasVacunas');
+    const guardarNotasBtn = document.getElementById('guardarVacunasNotas');
     if (guardarNotasBtn) {
-      guardarNotasBtn.addEventListener('click', guardarNotasVacunas);
+      guardarNotasBtn.replaceWith(guardarNotasBtn.cloneNode(true));
+      document.getElementById('guardarVacunasNotas').addEventListener('click', guardarVacunasNotas);
+      console.log('Event listener del botón guardar notas configurado');
+    }
+  }
+  
+  // Cargar datos del turno seleccionado
+  function cargarVacunasTurno() {
+    const fecha = document.getElementById('vacunasFecha').value;
+    const turno = document.getElementById('vacunasTurno').value;
+    
+    if (!fecha || !turno) {
+      showNotification('Debe seleccionar una fecha y un turno', 'error');
+      return;
     }
     
-    // Búsqueda
-    const searchBtn = document.getElementById('searchVacunasBtn');
-    if (searchBtn) {
-      searchBtn.addEventListener('click', searchVacunas);
+    console.log('Cargando turno:', fecha, turno);
+    
+    currentVacunasFecha = fecha;
+    currentVacunasTurno = turno;
+    
+    // Mostrar el área de registro
+    const registroArea = document.getElementById('vacunasRegistroArea');
+    if (registroArea) {
+      registroArea.style.display = 'block';
     }
+    
+    // Cargar datos del turno desde Firebase
+    loadVacunasData(fecha, turno);
   }
   
   // Manejar envío del formulario de vacunas
@@ -6134,43 +6060,35 @@ window.addEventListener('DOMContentLoaded', function() {
     event.preventDefault();
     console.log('Formulario de vacunas enviado');
     
-    // Obtener el rol del usuario
-    const userRole = sessionStorage.getItem('userRole');
-    
-    // Solo admin puede registrar vacunas (consulta_externa solo puede ver y editar factura)
-    if (userRole !== 'admin') {
-      showNotification('Solo el administrador puede registrar vacunas', 'error');
+    if (!currentVacunasFecha || !currentVacunasTurno) {
+      showNotification('Debe seleccionar una fecha y turno primero', 'error');
       return;
     }
     
     // Validar campos requeridos
     const nombrePaciente = document.getElementById('vacunaNombrePaciente').value.trim();
     const apellidoCliente = document.getElementById('vacunaApellidoCliente').value.trim();
-    const idPaciente = document.getElementById('vacunaIdPaciente').value.trim();
-    const medicoEncargado = document.getElementById('vacunaMedicoEncargado').value;
+    const idPaciente = document.getElementById('vacunaID').value.trim();
+    const medico = document.getElementById('vacunaMedico').value.trim();
     const hora = document.getElementById('vacunaHora').value;
     const vacunaColocada = document.getElementById('vacunaColocada').value.trim();
     
-    if (!nombrePaciente || !apellidoCliente || !idPaciente || !medicoEncargado || !hora || !vacunaColocada) {
+    if (!nombrePaciente || !apellidoCliente || !idPaciente || !medico || !hora || !vacunaColocada) {
       showNotification('Debe completar todos los campos obligatorios marcados con *', 'error');
       return;
     }
     
-    const fecha = document.getElementById('vacunasFecha').value;
-    const turno = document.getElementById('vacunasTurno').value;
-    
     const formData = {
-      fecha: fecha,
-      turno: turno,
-      hora: hora,
+      fecha: currentVacunasFecha,
+      turno: currentVacunasTurno,
       nombrePaciente: nombrePaciente,
       apellidoCliente: apellidoCliente,
-      idPaciente: idPaciente,
-      medicoEncargado: medicoEncargado,
+      id: idPaciente,
+      medico: medico,
+      hora: hora,
       vacunaColocada: vacunaColocada,
-      factura: document.getElementById('vacunaFactura').value,
-      timestamp: Date.now(),
-      registradoPor: sessionStorage.getItem('userName') || 'Usuario'
+      factura: document.getElementById('vacunaFactura').value.trim(),
+      timestamp: Date.now()
     };
     
     console.log('Datos del formulario:', formData);
@@ -6191,13 +6109,14 @@ window.addEventListener('DOMContentLoaded', function() {
     
     const database = firebase.database();
     const ref = database.ref('vacunas');
+    console.log('Referencia de Firebase creada:', ref);
     
     ref.push(data)
       .then(() => {
         console.log('Vacuna guardada exitosamente');
         showNotification('Vacuna registrada exitosamente', 'success');
         limpiarFormularioVacunas();
-        loadVacunasTurno(); // Recargar la tabla del turno
+        loadVacunasData(currentVacunasFecha, currentVacunasTurno);
       })
       .catch((error) => {
         console.error('Error al guardar vacuna:', error);
@@ -6205,35 +6124,29 @@ window.addEventListener('DOMContentLoaded', function() {
       });
   }
   
-  // Cargar vacunas del turno seleccionado
-  function loadVacunasTurno() {
+  // Cargar datos de vacunas desde Firebase
+  function loadVacunasData(fecha, turno) {
     if (!firebase || !firebase.database) {
       console.error('Firebase no está disponible');
       return;
     }
     
-    const fecha = document.getElementById('vacunasFecha').value;
-    const turno = document.getElementById('vacunasTurno').value;
-    
     const database = firebase.database();
     const ref = database.ref('vacunas');
     
-    ref.once('value', (snapshot) => {
+    ref.orderByChild('fecha').equalTo(fecha).on('value', (snapshot) => {
       const data = snapshot.val();
-      if (!data) {
-        displayVacunasTable([]);
-        loadNotasTurno(fecha, turno);
-        return;
-      }
-      
-      const vacunas = Object.entries(data)
-        .map(([key, value]) => ({ id: key, ...value }))
-        .filter(vacuna => vacuna.fecha === fecha && vacuna.turno === turno)
-        .sort((a, b) => (a.hora || '').localeCompare(b.hora || ''));
-      
+      const vacunas = data 
+        ? Object.entries(data)
+            .map(([key, value]) => ({ id: key, ...value }))
+            .filter(v => v.turno === turno)
+            .sort((a, b) => a.hora.localeCompare(b.hora))
+        : [];
       displayVacunasTable(vacunas);
-      loadNotasTurno(fecha, turno);
     });
+    
+    // Cargar notas del turno
+    loadVacunasNotas(fecha, turno);
   }
   
   // Mostrar tabla de vacunas
@@ -6242,38 +6155,19 @@ window.addEventListener('DOMContentLoaded', function() {
     if (!tbody) return;
     
     if (vacunas.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="10" class="no-data">No hay vacunas registradas para este turno</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="8" class="no-data">No hay vacunas registradas para este turno</td></tr>';
       return;
     }
     
     // Obtener el rol del usuario
     const userRole = sessionStorage.getItem('userRole');
-    const isAdmin = userRole === 'admin';
-    const isConsultaExterna = userRole === 'consulta_externa';
+    const canEdit = userRole === 'admin';
     
     tbody.innerHTML = vacunas.map(vacuna => {
-      const turnoLabel = {
-        'manana': 'Mañana',
-        'tarde': 'Tarde',
-        'noche': 'Noche'
-      }[vacuna.turno] || vacuna.turno;
-      
-      if (isAdmin) {
-        // Versión editable completa para admin
+      if (canEdit) {
+        // Versión editable para admin
         return `
           <tr data-id="${vacuna.id}">
-            <td>
-              <span class="field-display">${vacuna.fecha || ''}</span>
-              <input type="date" class="field-edit" value="${vacuna.fecha || ''}" style="display: none;" data-field="fecha">
-            </td>
-            <td>
-              <span class="field-display">${turnoLabel}</span>
-              <select class="field-edit" style="display: none;" data-field="turno">
-                <option value="manana" ${vacuna.turno === 'manana' ? 'selected' : ''}>Mañana</option>
-                <option value="tarde" ${vacuna.turno === 'tarde' ? 'selected' : ''}>Tarde</option>
-                <option value="noche" ${vacuna.turno === 'noche' ? 'selected' : ''}>Noche</option>
-              </select>
-            </td>
             <td>
               <span class="field-display">${vacuna.hora || ''}</span>
               <input type="time" class="field-edit" value="${vacuna.hora || ''}" style="display: none;" data-field="hora">
@@ -6287,12 +6181,12 @@ window.addEventListener('DOMContentLoaded', function() {
               <input type="text" class="field-edit" value="${vacuna.apellidoCliente || ''}" style="display: none;" data-field="apellidoCliente">
             </td>
             <td>
-              <span class="field-display">${vacuna.idPaciente || ''}</span>
-              <input type="text" class="field-edit" value="${vacuna.idPaciente || ''}" style="display: none;" data-field="idPaciente">
+              <span class="field-display">${vacuna.id || ''}</span>
+              <input type="text" class="field-edit" value="${vacuna.id || ''}" style="display: none;" data-field="id">
             </td>
             <td>
-              <span class="field-display">${vacuna.medicoEncargado || ''}</span>
-              <input type="text" class="field-edit" value="${vacuna.medicoEncargado || ''}" style="display: none;" data-field="medicoEncargado">
+              <span class="field-display">${vacuna.medico || ''}</span>
+              <input type="text" class="field-edit" value="${vacuna.medico || ''}" style="display: none;" data-field="medico">
             </td>
             <td>
               <span class="field-display">${vacuna.vacunaColocada || ''}</span>
@@ -6312,133 +6206,53 @@ window.addEventListener('DOMContentLoaded', function() {
               <button class="btn-cancel-vacuna" onclick="cancelEditVacunaRow('${vacuna.id}')" style="display: none;" title="Cancelar edición">
                 <i class="fas fa-times"></i>
               </button>
-              <button class="btn-delete-vacuna" onclick="deleteVacuna('${vacuna.id}')" title="Eliminar registro">
+              <button class="btn-delete-vacuna" onclick="deleteVacunaRow('${vacuna.id}')" title="Eliminar registro">
                 <i class="fas fa-trash"></i>
               </button>
             </td>
           </tr>
         `;
-      } else if (isConsultaExterna) {
-        // Versión solo lectura con edición de factura para consulta externa
+      } else {
+        // Versión solo lectura para consulta externa (solo puede editar factura)
         return `
           <tr data-id="${vacuna.id}">
-            <td>${vacuna.fecha || ''}</td>
-            <td>${turnoLabel}</td>
             <td>${vacuna.hora || ''}</td>
             <td>${vacuna.nombrePaciente || ''}</td>
             <td>${vacuna.apellidoCliente || ''}</td>
-            <td>${vacuna.idPaciente || ''}</td>
-            <td>${vacuna.medicoEncargado || ''}</td>
+            <td>${vacuna.id || ''}</td>
+            <td>${vacuna.medico || ''}</td>
             <td>${vacuna.vacunaColocada || ''}</td>
             <td>
               <span class="factura-display">${vacuna.factura || ''}</span>
               <input type="text" class="factura-edit" value="${vacuna.factura || ''}" style="display: none;">
             </td>
             <td>
-              <button class="btn-edit-factura-vacuna" onclick="editFacturaVacuna('${vacuna.id}')" title="Editar factura">
+              <button class="btn-edit-factura-vacuna" onclick="editVacunaFactura('${vacuna.id}')" title="Editar factura">
                 <i class="fas fa-edit"></i>
               </button>
-              <button class="btn-save-factura-vacuna" onclick="saveFacturaVacuna('${vacuna.id}')" style="display: none;" title="Guardar factura">
+              <button class="btn-save-factura-vacuna" onclick="saveVacunaFactura('${vacuna.id}')" style="display: none;" title="Guardar factura">
                 <i class="fas fa-save"></i>
               </button>
-              <button class="btn-cancel-factura-vacuna" onclick="cancelEditFacturaVacuna('${vacuna.id}')" style="display: none;" title="Cancelar edición">
+              <button class="btn-cancel-factura-vacuna" onclick="cancelEditVacunaFactura('${vacuna.id}')" style="display: none;" title="Cancelar edición">
                 <i class="fas fa-times"></i>
               </button>
             </td>
-          </tr>
-        `;
-      } else {
-        // Versión solo lectura para otros roles (no deberían ver esto, pero por si acaso)
-        return `
-          <tr data-id="${vacuna.id}">
-            <td>${vacuna.fecha || ''}</td>
-            <td>${turnoLabel}</td>
-            <td>${vacuna.hora || ''}</td>
-            <td>${vacuna.nombrePaciente || ''}</td>
-            <td>${vacuna.apellidoCliente || ''}</td>
-            <td>${vacuna.idPaciente || ''}</td>
-            <td>${vacuna.medicoEncargado || ''}</td>
-            <td>${vacuna.vacunaColocada || ''}</td>
-            <td>${vacuna.factura || ''}</td>
-            <td>-</td>
           </tr>
         `;
       }
     }).join('');
   }
   
-  // Limpiar formulario de vacunas
-  function limpiarFormularioVacunas() {
-    const form = document.getElementById('vacunasForm');
-    if (form) {
-      form.reset();
-      // Restablecer hora actual
-      const horaInput = document.getElementById('vacunaHora');
-      if (horaInput) {
-        const now = new Date();
-        horaInput.value = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-      }
-    }
-  }
-  
-  // Buscar vacunas
-  function searchVacunas() {
-    const searchTerm = document.getElementById('vacunasSearchInput').value.toLowerCase();
-    if (!searchTerm) {
-      loadVacunasTurno();
-      return;
-    }
-    
-    if (!firebase || !firebase.database) return;
-    
-    const fecha = document.getElementById('vacunasFecha').value;
-    const turno = document.getElementById('vacunasTurno').value;
-    
-    const database = firebase.database();
-    const ref = database.ref('vacunas');
-    
-    ref.once('value', (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
-      
-      const vacunas = Object.entries(data)
-        .map(([key, value]) => ({ id: key, ...value }))
-        .filter(vacuna => 
-          vacuna.fecha === fecha && 
-          vacuna.turno === turno &&
-          (
-            (vacuna.nombrePaciente || '').toLowerCase().includes(searchTerm) ||
-            (vacuna.apellidoCliente || '').toLowerCase().includes(searchTerm) ||
-            (vacuna.idPaciente || '').toLowerCase().includes(searchTerm) ||
-            (vacuna.vacunaColocada || '').toLowerCase().includes(searchTerm) ||
-            (vacuna.factura || '').toLowerCase().includes(searchTerm)
-          )
-        );
-      
-      displayVacunasTable(vacunas);
-    });
-  }
-  
   // Editar fila de vacuna (solo admin)
-  window.editVacunaRow = function(id) {
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole !== 'admin') {
-      showNotification('Solo el administrador puede editar registros', 'error');
-      return;
-    }
-    
-    const row = document.querySelector(`tr[data-id="${id}"]`);
+  window.editVacunaRow = function(vacunaId) {
+    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
     if (!row) return;
     
-    // Ocultar todos los displays y mostrar todos los inputs
-    const displays = row.querySelectorAll('.field-display');
-    const inputs = row.querySelectorAll('.field-edit');
-    
-    displays.forEach(display => {
+    // Mostrar inputs y ocultar displays
+    row.querySelectorAll('.field-display').forEach(display => {
       display.style.display = 'none';
     });
-    
-    inputs.forEach(input => {
+    row.querySelectorAll('.field-edit').forEach(input => {
       input.style.display = 'inline-block';
     });
     
@@ -6454,61 +6268,81 @@ window.addEventListener('DOMContentLoaded', function() {
     if (deleteBtn) deleteBtn.style.display = 'none';
   };
   
-  // Guardar edición de vacuna (solo admin)
-  window.saveVacunaRow = function(id) {
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole !== 'admin') {
-      showNotification('Solo el administrador puede guardar cambios', 'error');
-      return;
-    }
-    
-    const row = document.querySelector(`tr[data-id="${id}"]`);
+  // Guardar cambios de fila de vacuna
+  window.saveVacunaRow = function(vacunaId) {
+    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
     if (!row) return;
     
-    // Obtener todos los valores de los inputs
-    const inputs = row.querySelectorAll('.field-edit');
-    const updates = {};
-    
-    inputs.forEach(input => {
+    const updatedData = {};
+    row.querySelectorAll('.field-edit').forEach(input => {
       const field = input.getAttribute('data-field');
-      if (input.tagName === 'SELECT') {
-        updates[field] = input.value;
-      } else {
-        updates[field] = input.value.trim();
-      }
+      updatedData[field] = input.value;
     });
     
     // Actualizar en Firebase
-    if (!firebase || !firebase.database) return;
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
+      return;
+    }
     
     const database = firebase.database();
-    const ref = database.ref(`vacunas/${id}`);
+    const ref = database.ref(`vacunas/${vacunaId}`);
     
-    ref.update(updates)
+    ref.update(updatedData)
       .then(() => {
-        showNotification('Registro actualizado exitosamente', 'success');
-        loadVacunasTurno(); // Recargar la tabla
+        showNotification('Vacuna actualizada exitosamente', 'success');
+        // Actualizar displays con nuevos valores
+        row.querySelectorAll('.field-edit').forEach(input => {
+          const field = input.getAttribute('data-field');
+          const display = input.parentElement.querySelector('.field-display');
+          if (display) {
+            display.textContent = input.value;
+          }
+        });
+        
+        // Ocultar inputs y mostrar displays
+        row.querySelectorAll('.field-display').forEach(display => {
+          display.style.display = 'inline';
+        });
+        row.querySelectorAll('.field-edit').forEach(input => {
+          input.style.display = 'none';
+        });
+        
+        // Cambiar botones
+        const editBtn = row.querySelector('.btn-edit-vacuna');
+        const saveBtn = row.querySelector('.btn-save-vacuna');
+        const cancelBtn = row.querySelector('.btn-cancel-vacuna');
+        const deleteBtn = row.querySelector('.btn-delete-vacuna');
+        
+        editBtn.style.display = 'inline-block';
+        saveBtn.style.display = 'none';
+        cancelBtn.style.display = 'none';
+        if (deleteBtn) deleteBtn.style.display = 'inline-block';
       })
       .catch((error) => {
-        console.error('Error al actualizar registro:', error);
-        showNotification('Error al actualizar el registro', 'error');
+        console.error('Error al actualizar vacuna:', error);
+        showNotification('Error al actualizar la vacuna', 'error');
       });
   };
   
-  // Cancelar edición de vacuna
-  window.cancelEditVacunaRow = function(id) {
-    const row = document.querySelector(`tr[data-id="${id}"]`);
+  // Cancelar edición de fila de vacuna
+  window.cancelEditVacunaRow = function(vacunaId) {
+    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
     if (!row) return;
     
-    // Mostrar todos los displays y ocultar todos los inputs
-    const displays = row.querySelectorAll('.field-display');
-    const inputs = row.querySelectorAll('.field-edit');
-    
-    displays.forEach(display => {
-      display.style.display = 'inline';
+    // Restaurar valores originales
+    row.querySelectorAll('.field-edit').forEach(input => {
+      const display = input.parentElement.querySelector('.field-display');
+      if (display) {
+        input.value = display.textContent;
+      }
     });
     
-    inputs.forEach(input => {
+    // Ocultar inputs y mostrar displays
+    row.querySelectorAll('.field-display').forEach(display => {
+      display.style.display = 'inline';
+    });
+    row.querySelectorAll('.field-edit').forEach(input => {
       input.style.display = 'none';
     });
     
@@ -6524,73 +6358,71 @@ window.addEventListener('DOMContentLoaded', function() {
     if (deleteBtn) deleteBtn.style.display = 'inline-block';
   };
   
-  // Eliminar vacuna (solo admin)
-  window.deleteVacuna = function(id) {
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole !== 'admin') {
-      showNotification('Solo el administrador puede eliminar registros', 'error');
+  // Eliminar registro de vacuna
+  window.deleteVacunaRow = function(vacunaId) {
+    if (!confirm('¿Está seguro de que desea eliminar este registro de vacuna?')) {
       return;
     }
     
-    if (!confirm('¿Está seguro que desea eliminar este registro?')) {
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
       return;
     }
-    
-    if (!firebase || !firebase.database) return;
     
     const database = firebase.database();
-    const ref = database.ref(`vacunas/${id}`);
+    const ref = database.ref(`vacunas/${vacunaId}`);
     
     ref.remove()
       .then(() => {
-        showNotification('Registro eliminado exitosamente', 'success');
-        loadVacunasTurno(); // Recargar la tabla
+        showNotification('Vacuna eliminada exitosamente', 'success');
+        loadVacunasData(currentVacunasFecha, currentVacunasTurno);
       })
       .catch((error) => {
-        console.error('Error al eliminar registro:', error);
-        showNotification('Error al eliminar el registro', 'error');
+        console.error('Error al eliminar vacuna:', error);
+        showNotification('Error al eliminar la vacuna', 'error');
       });
   };
   
-  // Editar factura de vacuna (consulta externa)
-  window.editFacturaVacuna = function(id) {
-    const row = document.querySelector(`tr[data-id="${id}"]`);
+  // Editar solo factura (para consulta externa)
+  window.editVacunaFactura = function(vacunaId) {
+    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
     if (!row) return;
     
-    const displaySpan = row.querySelector('.factura-display');
-    const editInput = row.querySelector('.factura-edit');
+    const facturaDisplay = row.querySelector('.factura-display');
+    const facturaEdit = row.querySelector('.factura-edit');
     const editBtn = row.querySelector('.btn-edit-factura-vacuna');
     const saveBtn = row.querySelector('.btn-save-factura-vacuna');
     const cancelBtn = row.querySelector('.btn-cancel-factura-vacuna');
     
-    // Ocultar display y mostrar input
-    displaySpan.style.display = 'none';
-    editInput.style.display = 'inline-block';
-    
-    // Cambiar botones
-    editBtn.style.display = 'none';
-    saveBtn.style.display = 'inline-block';
-    cancelBtn.style.display = 'inline-block';
+    if (facturaDisplay) facturaDisplay.style.display = 'none';
+    if (facturaEdit) facturaEdit.style.display = 'inline-block';
+    if (editBtn) editBtn.style.display = 'none';
+    if (saveBtn) saveBtn.style.display = 'inline-block';
+    if (cancelBtn) cancelBtn.style.display = 'inline-block';
   };
   
-  // Guardar factura de vacuna (consulta externa)
-  window.saveFacturaVacuna = function(id) {
-    const row = document.querySelector(`tr[data-id="${id}"]`);
+  // Guardar factura
+  window.saveVacunaFactura = function(vacunaId) {
+    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
     if (!row) return;
     
-    const editInput = row.querySelector('.factura-edit');
-    const newFactura = editInput.value.trim();
+    const facturaEdit = row.querySelector('.factura-edit');
+    const newFactura = facturaEdit ? facturaEdit.value : '';
     
-    // Actualizar en Firebase
-    if (!firebase || !firebase.database) return;
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
+      return;
+    }
     
     const database = firebase.database();
-    const ref = database.ref(`vacunas/${id}`);
+    const ref = database.ref(`vacunas/${vacunaId}`);
     
     ref.update({ factura: newFactura })
       .then(() => {
         showNotification('Factura actualizada exitosamente', 'success');
-        loadVacunasTurno(); // Recargar la tabla
+        const facturaDisplay = row.querySelector('.factura-display');
+        if (facturaDisplay) facturaDisplay.textContent = newFactura;
+        cancelEditVacunaFactura(vacunaId);
       })
       .catch((error) => {
         console.error('Error al actualizar factura:', error);
@@ -6598,102 +6430,87 @@ window.addEventListener('DOMContentLoaded', function() {
       });
   };
   
-  // Cancelar edición de factura de vacuna
-  window.cancelEditFacturaVacuna = function(id) {
-    const row = document.querySelector(`tr[data-id="${id}"]`);
+  // Cancelar edición de factura
+  window.cancelEditVacunaFactura = function(vacunaId) {
+    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
     if (!row) return;
     
-    const displaySpan = row.querySelector('.factura-display');
-    const editInput = row.querySelector('.factura-edit');
+    const facturaDisplay = row.querySelector('.factura-display');
+    const facturaEdit = row.querySelector('.factura-edit');
     const editBtn = row.querySelector('.btn-edit-factura-vacuna');
     const saveBtn = row.querySelector('.btn-save-factura-vacuna');
     const cancelBtn = row.querySelector('.btn-cancel-factura-vacuna');
     
-    // Mostrar display y ocultar input
-    displaySpan.style.display = 'inline';
-    editInput.style.display = 'none';
-    editInput.value = displaySpan.textContent; // Restaurar valor original
+    // Restaurar valor original
+    if (facturaDisplay && facturaEdit) {
+      facturaEdit.value = facturaDisplay.textContent;
+    }
     
-    // Cambiar botones
-    editBtn.style.display = 'inline-block';
-    saveBtn.style.display = 'none';
-    cancelBtn.style.display = 'none';
+    if (facturaDisplay) facturaDisplay.style.display = 'inline';
+    if (facturaEdit) facturaEdit.style.display = 'none';
+    if (editBtn) editBtn.style.display = 'inline-block';
+    if (saveBtn) saveBtn.style.display = 'none';
+    if (cancelBtn) cancelBtn.style.display = 'none';
   };
   
-  // Guardar notas del turno
-  function guardarNotasVacunas() {
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole !== 'admin') {
-      showNotification('Solo el administrador puede guardar notas', 'error');
-      return;
+  // Limpiar formulario de vacunas
+  function limpiarFormularioVacunas() {
+    const form = document.getElementById('vacunasForm');
+    if (form) {
+      form.reset();
     }
-    
-    const fecha = document.getElementById('vacunasFecha').value;
-    const turno = document.getElementById('vacunasTurno').value;
-    const notasTextarea = document.getElementById('vacunasNotasTurno');
-    
-    if (!notasTextarea) {
-      showNotification('No se encontró el área de notas', 'error');
-      return;
-    }
-    
-    const notas = notasTextarea.value.trim();
-    
-    if (!firebase || !firebase.database) {
-      showNotification('Error de conexión con la base de datos', 'error');
-      return;
-    }
-    
-    const database = firebase.database();
-    const notasKey = `${fecha}_${turno}`;
-    const ref = database.ref(`vacunas_notas/${notasKey}`);
-    
-    const notasData = {
-      fecha: fecha,
-      turno: turno,
-      notas: notas,
-      modificadoPor: sessionStorage.getItem('userName') || 'Usuario',
-      timestamp: Date.now()
-    };
-    
-    console.log('Guardando notas:', notasData);
-    
-    ref.set(notasData)
-      .then(() => {
-        showNotification('Notas guardadas exitosamente', 'success');
-        console.log('Notas guardadas correctamente');
-      })
-      .catch((error) => {
-        console.error('Error al guardar notas:', error);
-        showNotification('Error al guardar las notas: ' + error.message, 'error');
-      });
   }
   
   // Cargar notas del turno
-  function loadNotasTurno(fecha, turno) {
-    if (!firebase || !firebase.database) return;
+  function loadVacunasNotas(fecha, turno) {
+    if (!firebase || !firebase.database) {
+      return;
+    }
     
-    const database = firebase.database();
     const notasKey = `${fecha}_${turno}`;
-    const ref = database.ref(`vacunas_notas/${notasKey}`);
+    const database = firebase.database();
+    const ref = database.ref(`vacunasNotas/${notasKey}`);
     
     ref.once('value', (snapshot) => {
-      const data = snapshot.val();
+      const notas = snapshot.val();
       const notasTextarea = document.getElementById('vacunasNotasTurno');
-      
       if (notasTextarea) {
-        const notas = data ? (data.notas || '') : '';
-        notasTextarea.value = notas;
+        notasTextarea.value = notas || '';
       }
-    }).catch((error) => {
-      console.error('Error al cargar notas:', error);
     });
   }
   
-  // ==========================================
-  // FIN CONTROL DE VACUNAS
-  // ==========================================
+  // Guardar notas del turno
+  function guardarVacunasNotas() {
+    if (!currentVacunasFecha || !currentVacunasTurno) {
+      showNotification('Debe seleccionar una fecha y turno primero', 'error');
+      return;
+    }
+    
+    const notasTextarea = document.getElementById('vacunasNotasTurno');
+    const notas = notasTextarea ? notasTextarea.value : '';
+    
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
+      return;
+    }
+    
+    const notasKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
+    const database = firebase.database();
+    const ref = database.ref(`vacunasNotas/${notasKey}`);
+    
+    ref.set(notas)
+      .then(() => {
+        showNotification('Notas guardadas exitosamente', 'success');
+      })
+      .catch((error) => {
+        console.error('Error al guardar notas:', error);
+        showNotification('Error al guardar las notas', 'error');
+      });
+  }
   
+  // ==================== FIN MÓDULO DE CONTROL DE VACUNAS ====================
+
   // Inicializar el sidebar para móviles
   if (window.innerWidth <= 980) {
     const sidebar = document.querySelector('.sidebar');

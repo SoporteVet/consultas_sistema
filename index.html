@@ -63,6 +63,9 @@
             <button id="verTicketsBtn" class="submenu-btn" onclick="navigateToConsultas();">
               <i class="fas fa-list-alt"></i> Ver Consultas
             </button>
+            <button id="vacunasBtn" class="submenu-btn" onclick="navigateToVacunas('vacunasSection', 'vacunasBtn');">
+              <i class="fas fa-syringe"></i> Control de Vacunas
+            </button>
           </div>
         </div>
 
@@ -992,6 +995,134 @@
         </div>
       </section>
 
+      <!-- Sección para Control de Vacunas -->
+      <section id="vacunasSection" class="hidden">
+        <h2><i class="fas fa-syringe"></i> Control de Vacunas</h2>
+        
+        <!-- Selección de Fecha y Turno -->
+        <div class="form-container">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="vacunasFecha"><i class="fas fa-calendar"></i> Fecha: *</label>
+              <input type="date" id="vacunasFecha" required>
+            </div>
+            <div class="form-group">
+              <label for="vacunasTurno"><i class="fas fa-clock"></i> Turno: *</label>
+              <select id="vacunasTurno" required>
+                <option value="">Seleccionar turno</option>
+                <option value="Mañana">Mañana</option>
+                <option value="Tarde">Tarde</option>
+                <option value="Noche">Noche</option>
+              </select>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" id="cargarVacunasTurno" class="btn-submit">
+              <i class="fas fa-eye"></i> Ver Registro del Turno
+            </button>
+          </div>
+        </div>
+
+        <!-- Área para mostrar el registro del turno seleccionado -->
+        <div id="vacunasRegistroArea" style="display: none;">
+          
+          <!-- Formulario para agregar vacuna -->
+          <div class="form-container" style="margin-top: 20px;">
+            <h3><i class="fas fa-plus-circle"></i> Agregar Registro de Vacuna</h3>
+            <form id="vacunasForm">
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="vacunaNombrePaciente"><i class="fas fa-paw"></i> Nombre del Paciente: *</label>
+                  <input type="text" id="vacunaNombrePaciente" placeholder="Nombre del paciente" required>
+                </div>
+                <div class="form-group">
+                  <label for="vacunaApellidoCliente"><i class="fas fa-user"></i> Apellido del Cliente: *</label>
+                  <input type="text" id="vacunaApellidoCliente" placeholder="Apellido del dueño" required>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="vacunaID"><i class="fas fa-id-card"></i> ID/Registro: *</label>
+                  <input type="text" id="vacunaID" placeholder="ID del paciente" required>
+                </div>
+                <div class="form-group">
+                  <label for="vacunaMedico"><i class="fas fa-user-md"></i> Médico/Asistente: *</label>
+                  <input type="text" id="vacunaMedico" placeholder="Médico encargado o asistente" required>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="vacunaHora"><i class="fas fa-clock"></i> Hora: *</label>
+                  <input type="time" id="vacunaHora" required>
+                </div>
+                <div class="form-group">
+                  <label for="vacunaColocada"><i class="fas fa-syringe"></i> Vacuna Colocada: *</label>
+                  <input type="text" id="vacunaColocada" placeholder="Nombre de la vacuna" required>
+                </div>
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="vacunaFactura"><i class="fas fa-file-invoice"></i> Factura:</label>
+                  <input type="text" id="vacunaFactura" placeholder="Número de factura (opcional)">
+                </div>
+              </div>
+              
+              <div class="form-actions">
+                <button type="submit" class="btn-submit">
+                  <i class="fas fa-save"></i> Registrar Vacuna
+                </button>
+                <button type="button" id="limpiarVacunasForm" class="btn-cancel">
+                  <i class="fas fa-eraser"></i> Limpiar
+                </button>
+              </div>
+            </form>
+          </div>
+
+          <!-- Tabla de vacunas del turno -->
+          <div class="vacunas-table-container" style="margin-top: 20px;">
+            <h3><i class="fas fa-list"></i> Registro de Vacunas del Turno</h3>
+            
+            <div class="table-responsive">
+              <table class="vacunas-table">
+                <thead>
+                  <tr>
+                    <th>Hora</th>
+                    <th>Nombre Paciente</th>
+                    <th>Apellido Cliente</th>
+                    <th>ID</th>
+                    <th>Médico/Asistente</th>
+                    <th>Vacuna Colocada</th>
+                    <th>Factura</th>
+                    <th>Acciones</th>
+                  </tr>
+                </thead>
+                <tbody id="vacunasTableBody">
+                  <!-- Los datos se cargarán dinámicamente -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Área de notas del turno -->
+          <div class="notas-turno-container" style="margin-top: 20px;">
+            <h3><i class="fas fa-sticky-note"></i> Notas del Turno</h3>
+            <div class="form-group">
+              <label for="vacunasNotasTurno"><i class="fas fa-comment"></i> Agregar o editar notas:</label>
+              <textarea id="vacunasNotasTurno" rows="4" placeholder="Escriba las notas para este turno..."></textarea>
+            </div>
+            <div class="form-actions">
+              <button type="button" id="guardarVacunasNotas" class="btn-submit">
+                <i class="fas fa-save"></i> Guardar Notas
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </section>
       
       <!-- Sección para ver consentimientos -->
       <section id="verConsentimientosSection" class="hidden">

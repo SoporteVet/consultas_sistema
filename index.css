@@ -3451,311 +3451,65 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   }
 }
 
-/* ========================================
-   ESTILOS PARA CONTROL DE VACUNAS - NUEVO DISEÑO
-   ======================================== */
+/* ==================== ESTILOS PARA CONTROL DE VACUNAS ==================== */
 
-/* Header de la sección */
-.vacunas-header {
-  margin-bottom: 25px;
-}
-
-.vacunas-header h2 {
-  color: #333;
-  font-size: 2rem;
-  margin-bottom: 8px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.vacunas-header h2 i {
+/* Títulos principales del módulo de vacunas */
+#vacunasSection h2 {
   color: #4285f4;
-  font-size: 1.8rem;
-}
-
-.vacunas-subtitle {
-  color: #666;
-  font-size: 1rem;
-  margin-left: 44px;
-}
-
-/* Card de Filtros */
-.vacunas-filters-card {
-  background: linear-gradient(135deg, #4285f4 0%, #5a9cf2 100%);
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
+  font-size: 28px;
+  font-weight: 700;
   margin-bottom: 25px;
-}
-
-.filters-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 20px;
-}
-
-.filter-item {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.filter-item label {
-  color: white;
-  font-weight: 600;
-  font-size: 0.95rem;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.filter-input {
-  padding: 12px 16px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
-  border-radius: 8px;
-  font-size: 1rem;
-  background: rgba(255, 255, 255, 0.95);
-  transition: all 0.3s ease;
-  font-weight: 500;
-}
-
-.filter-input:focus {
-  outline: none;
-  border-color: white;
-  background: white;
-  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
-  transform: translateY(-1px);
-}
-
-/* Grid Layout - 2 columnas */
-.vacunas-grid-layout {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 25px;
-  margin-bottom: 25px;
-}
-
-/* Contenedor principal con tabs */
-.vacunas-panel-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  margin-bottom: 25px;
-}
-
-.vacunas-tabs-content {
-  background: white;
-}
-
-.vacunas-panel-card .tab-content {
-  padding: 0;
-}
-
-.vacunas-panel-card .vacunas-form-card,
-.vacunas-panel-card .vacunas-notas-card {
-  box-shadow: none;
-  border-radius: 0;
-  transform: none;
-}
-
-.vacunas-panel-card .vacunas-form-card:hover,
-.vacunas-panel-card .vacunas-notas-card:hover {
-  transform: none;
-  box-shadow: none;
-}
-
-/* Tabs */
-.vacunas-tabs {
-  display: flex;
-  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-  border-bottom: 1px solid #dee2e6;
-  margin: 0;
-  position: relative;
-}
-
-.tab-button {
-  flex: 1;
-  padding: 18px 24px;
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 15px;
-  font-weight: 500;
-  color: #6c757d;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(66, 133, 244, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  position: relative;
-  border-radius: 0;
+  gap: 12px;
 }
 
-.tab-button::before {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 50%;
-  width: 0;
-  height: 3px;
-  background: linear-gradient(135deg, #4285f4, #34a853);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  transform: translateX(-50%);
-  border-radius: 2px;
-}
-
-.tab-button:hover {
-  background: rgba(66, 133, 244, 0.08);
-  color: #4285f4;
-  transform: translateY(-1px);
-}
-
-.tab-button:hover::before {
-  width: 60%;
-}
-
-.tab-button.active {
-  background: white;
-  color: #4285f4;
+#vacunasSection h3 {
+  color: #2c3e50;
+  font-size: 20px;
   font-weight: 600;
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1);
-  transform: translateY(-1px);
-}
-
-.tab-button.active::before {
-  width: 80%;
-}
-
-.tab-button i {
-  font-size: 18px;
-  transition: transform 0.3s ease;
-}
-
-.tab-button:hover i {
-  transform: scale(1.1);
-}
-
-/* Contenido de tabs */
-.tab-content {
-  display: none;
-  padding: 30px;
-  min-height: 400px;
-  animation: slideInUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.tab-content.active {
-  display: block !important;
-  visibility: visible !important;
-  opacity: 1 !important;
-}
-
-@keyframes slideInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Contenedor de notas */
-.vacunas-notas-container {
-  background: linear-gradient(135deg, #fff8e1 0%, #fffbf0 100%);
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(255, 193, 7, 0.15);
-  margin: 0;
-  border: 1px solid rgba(255, 193, 7, 0.2);
-  position: relative;
-  overflow: hidden;
-  display: block !important;
-  visibility: visible !important;
-}
-
-.vacunas-notas-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 4px;
-  background: linear-gradient(135deg, #ffc107, #ff8f00);
-}
-
-.vacunas-notas-container h3 {
   margin-bottom: 20px;
-  color: #333;
-  font-size: 1.2rem;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #4285f4;
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 600;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 15px 20px;
+  border-radius: 8px 8px 0 0;
+  margin: 0 0 20px 0;
 }
 
-.vacunas-notas-container h3 i {
-  color: #ff8f00;
-  font-size: 1.3rem;
-}
-
-.vacunas-notas-container textarea {
-  width: 100%;
-  min-height: 200px;
-  padding: 16px;
-  border: 2px solid rgba(255, 193, 7, 0.3);
-  border-radius: 8px;
-  font-size: 14px;
-  font-family: inherit;
-  resize: vertical;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.8);
-  line-height: 1.6;
-}
-
-.vacunas-notas-container textarea:focus {
-  outline: none;
-  border-color: #ff8f00;
-  box-shadow: 0 0 0 3px rgba(255, 143, 0, 0.2);
-  background: white;
-  transform: translateY(-1px);
-}
-
-.vacunas-notas-container textarea::placeholder {
-  color: #999;
-  font-style: italic;
-}
-
-/* Tabla de vacunas */
+/* Contenedor de la tabla de vacunas */
 .vacunas-table-container {
   background: white;
-  padding: 25px;
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
-  margin-top: 0;
-  border: 1px solid rgba(66, 133, 244, 0.1);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  margin-bottom: 20px;
 }
 
 .vacunas-table-container h3 {
-  margin-bottom: 20px;
-  color: #333;
-  font-size: 1.3rem;
+  color: #2c3e50;
+  margin-bottom: 15px;
   display: flex;
   align-items: center;
   gap: 10px;
-  font-weight: 600;
-  border-bottom: 2px solid #f8f9fa;
-  padding-bottom: 10px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 15px 20px;
+  border-radius: 8px 8px 0 0;
+  margin: -20px -20px 20px -20px;
+  border-bottom: 2px solid #4285f4;
 }
 
+/* Tabla de vacunas */
 .vacunas-table {
   width: 100%;
   border-collapse: collapse;
-  background: white;
-  border-radius: 8px;
-  overflow: hidden;
+  font-size: 14px;
 }
 
 .vacunas-table thead {
@@ -3767,59 +3521,37 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   padding: 12px;
   text-align: left;
   font-weight: 600;
-  font-size: 0.9rem;
-  white-space: nowrap;
+  border-bottom: 2px solid #ddd;
 }
 
 .vacunas-table td {
   padding: 10px 12px;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 0.85rem;
-  position: relative;
+  border-bottom: 1px solid #eee;
+  vertical-align: middle;
 }
 
 .vacunas-table tbody tr:hover {
-  background: #f8f9fa;
+  background-color: #f8f9fa;
+  transition: background-color 0.2s;
 }
 
-.vacunas-table tbody tr:last-child td {
-  border-bottom: none;
+.vacunas-table .no-data {
+  text-align: center;
+  color: #999;
+  font-style: italic;
+  padding: 30px;
 }
 
-/* Estilos para campos editables en la tabla de vacunas */
-.vacunas-table .field-edit {
-  width: 100%;
-  padding: 4px 8px;
-  border: 1px solid #007bff;
-  border-radius: 4px;
-  font-size: 0.85rem;
-  box-sizing: border-box;
-  background: #fff;
-  transition: all 0.3s ease;
-}
-
-.vacunas-table .field-edit:focus {
-  outline: none;
-  border-color: #0056b3;
-  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-.vacunas-table .field-display {
-  display: inline-block;
-  min-width: 50px;
-  padding: 2px;
-}
-
-/* Estilos para botones de acción en vacunas */
+/* Botones de acciones para vacunas */
 .btn-edit-vacuna, .btn-save-vacuna, .btn-cancel-vacuna, .btn-delete-vacuna,
 .btn-edit-factura-vacuna, .btn-save-factura-vacuna, .btn-cancel-factura-vacuna {
   background: none;
   border: none;
-  padding: 4px 8px;
-  margin: 0 2px;
+  padding: 6px 10px;
+  margin: 0 3px;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 13px;
   transition: all 0.3s ease;
 }
 
@@ -3863,69 +3595,145 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   color: white;
 }
 
-/* Estilos para edición de factura en vacunas */
+/* Inputs editables en la tabla */
+.vacunas-table .field-edit,
 .vacunas-table .factura-edit {
   width: 100%;
   padding: 4px 8px;
-  border: 1px solid #007bff;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  font-size: 14px;
+  font-size: 13px;
 }
 
-/* Responsive para Control de Vacunas */
-@media (max-width: 768px) {
-  .vacunas-turno-selector .form-row {
-    flex-direction: column;
+.vacunas-table .field-edit:focus,
+.vacunas-table .factura-edit:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+}
+
+/* Contenedor de notas del turno */
+.notas-turno-container {
+  background: white;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.notas-turno-container h3 {
+  color: #2c3e50;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 15px 20px;
+  border-radius: 8px 8px 0 0;
+  margin: -20px -20px 20px -20px;
+  border-bottom: 2px solid #4285f4;
+}
+
+.notas-turno-container textarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 100px;
+}
+
+.notas-turno-container textarea:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+/* Títulos del formulario de vacunas */
+#vacunasRegistroArea h3 {
+  color: #2c3e50;
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  padding: 15px 20px;
+  background: linear-gradient(135deg, #4285f4 0%, #5a9cf2 100%);
+  color: white;
+  border-radius: 8px 8px 0 0;
+  margin: 0 0 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 2px 4px rgba(66, 133, 244, 0.2);
+}
+
+/* Área de registro de vacunas */
+#vacunasRegistroArea {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
   }
-  
-  .vacunas-tabs {
-    flex-direction: column;
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
-  
-  .tab-button {
-    padding: 15px 20px;
-    border-bottom: 1px solid rgba(222, 226, 230, 0.5);
-  }
-  
-  .tab-button::before {
-    display: none;
-  }
-  
-  .tab-button.active {
-    border-left: 4px solid #4285f4;
-    border-bottom: 1px solid rgba(222, 226, 230, 0.5);
-    background: linear-gradient(135deg, rgba(66, 133, 244, 0.1), rgba(52, 168, 83, 0.1));
-  }
-  
-  .tab-content {
-    padding: 20px;
-    min-height: 300px;
-  }
-  
-  .vacunas-notas-container {
-    padding: 20px;
-  }
-  
-  .vacunas-notas-container textarea {
-    min-height: 150px;
-  }
-  
-  .vacunas-table-container {
-    padding: 20px;
-  }
-  
+}
+
+/* Select de turno personalizado */
+#vacunasTurno {
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  background: white;
+  transition: all 0.3s ease;
+}
+
+#vacunasTurno:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+#vacunasTurno option {
+  padding: 10px;
+}
+
+/* Responsive para tabla de vacunas */
+@media (max-width: 1200px) {
   .vacunas-table {
-    font-size: 0.75rem;
+    font-size: 12px;
   }
   
   .vacunas-table th,
   .vacunas-table td {
-    padding: 8px 6px;
+    padding: 8px;
   }
   
   .btn-edit-vacuna, .btn-save-vacuna, .btn-cancel-vacuna, .btn-delete-vacuna,
   .btn-edit-factura-vacuna, .btn-save-factura-vacuna, .btn-cancel-factura-vacuna {
-    font-size: 10px;
-    padding: 3px 6px;
+    padding: 4px 8px;
+    font-size: 11px;
   }
 }
+
+@media (max-width: 768px) {
+  .vacunas-table-container {
+    overflow-x: auto;
+  }
+  
+  .vacunas-table {
+    min-width: 800px;
+  }
+  
+  .notas-turno-container {
+    padding: 15px;
+  }
+}
+
+/* ==================== FIN ESTILOS PARA CONTROL DE VACUNAS ==================== */
