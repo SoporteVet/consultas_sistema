@@ -1,0 +1,531 @@
+/* ========================================
+   ESTILOS PARA CONTROL DE VACUNAS - NUEVO DISEÑO
+   ======================================== */
+
+/* Header de la sección */
+.vacunas-header {
+  margin-bottom: 25px;
+}
+
+.vacunas-header h2 {
+  color: #333;
+  font-size: 2rem;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.vacunas-header h2 i {
+  color: #4285f4;
+  font-size: 1.8rem;
+}
+
+.vacunas-subtitle {
+  color: #666;
+  font-size: 1rem;
+  margin-left: 44px;
+}
+
+/* Card de Filtros */
+.vacunas-filters-card {
+  background: linear-gradient(135deg, #4285f4 0%, #5a9cf2 100%);
+  padding: 25px;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
+  margin-bottom: 25px;
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.filter-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-item label {
+  color: white;
+  font-weight: 600;
+  font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-input {
+  padding: 12px 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 8px;
+  font-size: 1rem;
+  background: rgba(255, 255, 255, 0.95);
+  transition: all 0.3s ease;
+  font-weight: 500;
+}
+
+.filter-input:focus {
+  outline: none;
+  border-color: white;
+  background: white;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.3);
+  transform: translateY(-1px);
+}
+
+/* Grid Layout - 2 columnas */
+.vacunas-grid-layout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 25px;
+  margin-bottom: 25px;
+}
+
+/* Contenedor principal con tabs */
+.vacunas-panel-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  margin-bottom: 25px;
+}
+
+.vacunas-tabs-content {
+  background: white;
+}
+
+.vacunas-panel-card .tab-content {
+  padding: 0;
+}
+
+.vacunas-panel-card .vacunas-form-card,
+.vacunas-panel-card .vacunas-notas-card {
+  box-shadow: none;
+  border-radius: 0;
+  transform: none;
+}
+
+.vacunas-panel-card .vacunas-form-card:hover,
+.vacunas-panel-card .vacunas-notas-card:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+/* Cards Base */
+.vacunas-form-card,
+.vacunas-notas-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.vacunas-form-card:hover,
+.vacunas-notas-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* Headers de Cards */
+.card-header {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  padding: 20px 25px;
+  border-bottom: 2px solid #4285f4;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-header h3 {
+  margin: 0;
+  color: #333;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.card-header h3 i {
+  color: #4285f4;
+}
+
+/* Badge del turno */
+.turno-badge {
+  background: #4285f4;
+  color: white;
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* Formulario de Vacunas */
+.vacunas-form {
+  padding: 25px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-field.full-width {
+  grid-column: 1 / -1;
+}
+
+.form-field label {
+  font-weight: 600;
+  color: #555;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.form-field label i {
+  color: #4285f4;
+  font-size: 0.95rem;
+}
+
+.form-field input,
+.form-field select {
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  transition: all 0.3s ease;
+}
+
+.form-field input:focus,
+.form-field select:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+/* Botones del formulario */
+.form-actions-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.btn-vacunas-submit,
+.btn-vacunas-clear {
+  padding: 14px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-vacunas-submit {
+  background: #4285f4;
+  color: white;
+}
+
+.btn-vacunas-submit:hover {
+  background: #3367d6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.btn-vacunas-clear {
+  background: #f8f9fa;
+  color: #666;
+  border: 2px solid #e0e0e0;
+}
+
+.btn-vacunas-clear:hover {
+  background: #e9ecef;
+  border-color: #c0c0c0;
+}
+
+/* Card de Notas */
+.notas-content {
+  padding: 25px;
+}
+
+.notas-content textarea {
+  width: 100%;
+  min-height: 300px;
+  padding: 16px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-family: inherit;
+  resize: vertical;
+  transition: all 0.3s ease;
+  margin-bottom: 15px;
+  line-height: 1.6;
+}
+
+.notas-content textarea:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+.btn-guardar-notas {
+  width: 100%;
+  padding: 14px 24px;
+  background: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-guardar-notas:hover {
+  background: #3367d6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+/* Card de Tabla */
+.vacunas-table-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.vacunas-table-card .card-header {
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.table-search {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.table-search input {
+  padding: 10px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  min-width: 250px;
+  transition: all 0.3s ease;
+}
+
+.table-search input:focus {
+  outline: none;
+  border-color: #4285f4;
+  box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+.btn-search {
+  padding: 10px 18px;
+  background: #4285f4;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+}
+
+.btn-search:hover {
+  background: #3367d6;
+  transform: translateY(-1px);
+}
+
+/* Tabla */
+.table-wrapper {
+  overflow-x: auto;
+  padding: 25px;
+}
+
+.vacunas-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.vacunas-table thead {
+  background: linear-gradient(135deg, #4285f4, #5a9cf2);
+  color: white;
+}
+
+.vacunas-table th {
+  padding: 14px 12px;
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.vacunas-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 0.9rem;
+}
+
+.vacunas-table tbody tr {
+  transition: background 0.2s ease;
+}
+
+.vacunas-table tbody tr:hover {
+  background: #f8f9fa;
+}
+
+.vacunas-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Botones de acciones de tabla */
+.btn-edit-vacuna, .btn-save-vacuna, .btn-cancel-vacuna, .btn-delete-vacuna,
+.btn-edit-factura-vacuna, .btn-save-factura-vacuna, .btn-cancel-factura-vacuna {
+  padding: 6px 10px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  margin: 0 3px;
+}
+
+.btn-edit-vacuna, .btn-edit-factura-vacuna {
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+.btn-edit-vacuna:hover, .btn-edit-factura-vacuna:hover {
+  background: #1976d2;
+  color: white;
+}
+
+.btn-save-vacuna, .btn-save-factura-vacuna {
+  background: #e8f5e9;
+  color: #388e3c;
+}
+
+.btn-save-vacuna:hover, .btn-save-factura-vacuna:hover {
+  background: #388e3c;
+  color: white;
+}
+
+.btn-cancel-vacuna, .btn-cancel-factura-vacuna {
+  background: #ffebee;
+  color: #d32f2f;
+}
+
+.btn-cancel-vacuna:hover, .btn-cancel-factura-vacuna:hover {
+  background: #d32f2f;
+  color: white;
+}
+
+.btn-delete-vacuna {
+  background: #fff3e0;
+  color: #f57c00;
+}
+
+.btn-delete-vacuna:hover {
+  background: #f57c00;
+  color: white;
+}
+
+/* Campos editables en tabla */
+.vacunas-table .field-edit {
+  width: 100%;
+  padding: 6px 10px;
+  border: 2px solid #4285f4;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.vacunas-table .field-display {
+  display: inline-block;
+  min-width: 50px;
+}
+
+.vacunas-table .factura-edit {
+  width: 100%;
+  padding: 6px 10px;
+  border: 2px solid #4285f4;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+/* Responsive */
+@media (max-width: 1200px) {
+  .vacunas-grid-layout {
+    grid-template-columns: 1fr;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 768px) {
+  .vacunas-header h2 {
+    font-size: 1.5rem;
+  }
+  
+  .filters-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .vacunas-filters-card {
+    padding: 20px;
+  }
+  
+  .form-actions-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .table-search {
+    flex-direction: column;
+    width: 100%;
+  }
+  
+  .table-search input {
+    width: 100%;
+    min-width: auto;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .vacunas-table {
+    font-size: 0.8rem;
+  }
+  
+  .vacunas-table th,
+  .vacunas-table td {
+    padding: 8px 6px;
+  }
+}
+
