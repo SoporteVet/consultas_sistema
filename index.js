@@ -69,7 +69,11 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         // Show the UI elements based on user role
+        console.log('=== INICIANDO APLICACIÓN DE ROLES ===');
+        console.log('Datos de usuario:', userData);
+        console.log('Rol del usuario:', userData.role);
         applyRoleBasedUI(userData.role);
+        console.log('=== FIN APLICACIÓN DE ROLES ===');
         
         // Configure default section based on user role
         const userRole = userData.role;
@@ -295,9 +299,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Improved version of applyRoleBasedUI with better debugging and role detection
 function applyRoleBasedUI(role) {
+    console.log('=== FUNCIÓN applyRoleBasedUI INICIADA ===');
+    console.log('Rol recibido:', role);
+    console.log('Tipo de rol:', typeof role);
     
-    
-    // Set user info in UI
+    try {
+        // Set user info in UI
     const userNameElement = document.getElementById('userName');
     const userRoleElement = document.getElementById('userRole');
     
@@ -422,14 +429,27 @@ function applyRoleBasedUI(role) {
     
     // Control de visibilidad del botón de vacunas basado en roles
     const vacunasBtn = document.getElementById('vacunasBtn');
-    const allowedVacunasRoles = ['admin', 'consulta_externa'];
+    const allowedVacunasRoles = ['admin'];
+    
+    console.log('Configurando visibilidad del botón de vacunas...');
+    console.log('Rol actual:', role);
+    console.log('Roles permitidos:', allowedVacunasRoles);
     
     if (vacunasBtn) {
         if (allowedVacunasRoles.includes(role)) {
+            console.log('Mostrando botón de vacunas para rol:', role);
             vacunasBtn.style.display = 'block';
         } else {
+            console.log('Ocultando botón de vacunas para rol:', role);
             vacunasBtn.style.display = 'none';
+            vacunasBtn.style.visibility = 'hidden';
+            vacunasBtn.style.opacity = '0';
+            vacunasBtn.style.height = '0';
+            vacunasBtn.style.overflow = 'hidden';
+            console.log('Botón ocultado con múltiples métodos');
         }
+    } else {
+        console.error('No se encontró el botón de vacunas');
     }
     
     // Add logout button event listener
@@ -441,6 +461,24 @@ function applyRoleBasedUI(role) {
     // Actualizar controles de filtro de quirófano según el rol
     if (typeof setupQuirofanoFilterAccess === 'function') {
         setupQuirofanoFilterAccess();
+    }
+    
+    console.log('=== FUNCIÓN applyRoleBasedUI COMPLETADA ===');
+    
+    // Verificación adicional después de un delay
+    setTimeout(() => {
+        const vacunasBtnCheck = document.getElementById('vacunasBtn');
+        if (vacunasBtnCheck && !allowedVacunasRoles.includes(role)) {
+            console.log('Verificación adicional: ocultando botón de vacunas');
+            vacunasBtnCheck.style.display = 'none';
+            vacunasBtnCheck.style.visibility = 'hidden';
+            vacunasBtnCheck.style.opacity = '0';
+        }
+    }, 100);
+    
+    } catch (error) {
+        console.error('ERROR en applyRoleBasedUI:', error);
+        console.error('Stack trace:', error.stack);
     }
 }
 
@@ -6335,6 +6373,9 @@ window.addEventListener('DOMContentLoaded', function() {
     
     // Verificar permisos de edición
     const canEdit = hasPermission('canEditTurnos');
+    
+    // Verificar permisos para mostrar botón de eliminar (solo admin y consulta externa)
+    const canDelete = userRole === 'admin' || userRole === 'consulta_externa';
     
     tbody.innerHTML = vacunas.map(vacuna => {
       if (canEdit) {
