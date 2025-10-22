@@ -1010,9 +1010,9 @@
               <label for="vacunasTurno"><i class="fas fa-clock"></i> Turno: *</label>
               <select id="vacunasTurno" required>
                 <option value="">Seleccionar turno</option>
-                <option value="Mañana">Mañana</option>
-                <option value="Tarde">Tarde</option>
-                <option value="Noche">Noche</option>
+                <option value="Mañana">Apertura de turno</option>
+                <option value="Tarde">Entrega de turno</option>
+                <option value="Noche">Cierre de turno</option>
               </select>
             </div>
           </div>
@@ -1078,6 +1078,14 @@
                       <label for="inventarioC6">C6:</label>
                       <input type="number" id="inventarioC6" min="0" value="0" class="inventario-input">
                     </div>
+                    <div class="inventario-item">
+                      <label for="inventarioTripleFelina">Triple Felina:</label>
+                      <input type="number" id="inventarioTripleFelina" min="0" value="0" class="inventario-input">
+                    </div>
+                    <div class="inventario-item">
+                      <label for="inventarioVacunaAnual">Vacuna Anual:</label>
+                      <input type="number" id="inventarioVacunaAnual" min="0" value="0" class="inventario-input">
+                    </div>
                   </div>
                 </div>
                 
@@ -1120,8 +1128,8 @@
                 </div>
                 
                 <div class="inventario-tabs">
-                  <button class="tab-btn active" onclick="mostrarInventarioTab('anual')">Vacunas Anuales</button>
-                  <button class="tab-btn" onclick="mostrarInventarioTab('trimestral')">Vacunas Trimestrales</button>
+                  <button class="tab-btn active" onclick="mostrarInventarioTab('anual')">Vacunas</button>
+                  <button class="tab-btn" onclick="mostrarInventarioTab('trimestral')">Vacunas</button>
                 </div>
                 
                 <div id="inventarioAnual" class="inventario-tab-content">
@@ -1174,7 +1182,7 @@
                   <label for="vacunaColocada"><i class="fas fa-syringe"></i> Vacuna Colocada: *</label>
                   <select id="vacunaColocada" required>
                     <option value="">Seleccionar vacuna</option>
-                    <optgroup label="Vacunas Anuales">
+                    <optgroup label="Vacunas">
                       <option value="Mult">Mult</option>
                       <option value="Puppy">Puppy</option>
                       <option value="Rab">Rab</option>
@@ -1182,8 +1190,10 @@
                       <option value="Giardia">Giardia</option>
                       <option value="C4">C4</option>
                       <option value="C6">C6</option>
+                      <option value="Triple Felina">Triple Felina</option>
+                      <option value="Vacuna Anual">Vacuna Anual</option>
                     </optgroup>
-                    <optgroup label="Vacunas Trimestrales">
+                    <optgroup label="Vacunas">
                       <option value="Trip/Leu">Trip/Leu</option>
                       <option value="Trip/Rab">Trip/Rab</option>
                       <option value="Leu">Leu</option>

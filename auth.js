@@ -14,7 +14,8 @@ const PERMISSIONS = {
     canExportData: true,
     canViewConsentForms: true,
     canViewVacunas: true,
-    canEditVacunas: true
+    canEditVacunas: true,
+    canEditTurnos: true
   },
   recepcion: {
     canViewTickets: true,
@@ -28,7 +29,8 @@ const PERMISSIONS = {
     canExportData: false,
     canViewConsentForms: true,
     canViewVacunas: false,
-    canEditVacunas: false
+    canEditVacunas: false,
+    canEditTurnos: false
   },
   consulta_externa: {
     canViewTickets: true,
@@ -42,7 +44,8 @@ const PERMISSIONS = {
     canExportData: false,
     canViewConsentForms: true,
     canViewVacunas: true,
-    canEditVacunas: false
+    canEditVacunas: false,
+    canEditTurnos: false
   },
   laboratorio: {
     canViewTickets: true,
@@ -56,7 +59,8 @@ const PERMISSIONS = {
     canExportData: false,
     canViewConsentForms: true,
     canViewVacunas: false,
-    canEditVacunas: false
+    canEditVacunas: false,
+    canEditTurnos: false
   },
   quirofano: {
     canViewTickets: true,
@@ -70,7 +74,8 @@ const PERMISSIONS = {
     canExportData: false,
     canViewConsentForms: true,
     canViewVacunas: false,
-    canEditVacunas: false
+    canEditVacunas: false,
+    canEditTurnos: false
   },
   internos: {
     canViewTickets: true,
@@ -84,7 +89,8 @@ const PERMISSIONS = {
     canExportData: false,
     canViewConsentForms: true,
     canViewVacunas: false,
-    canEditVacunas: false
+    canEditVacunas: false,
+    canEditTurnos: false
   },
   visitas: {
     canViewTickets: true,
@@ -98,7 +104,8 @@ const PERMISSIONS = {
     canExportData: false,
     canViewConsentForms: false,
     canViewVacunas: false,
-    canEditVacunas: false
+    canEditVacunas: false,
+    canEditTurnos: false
   }
 };
 
