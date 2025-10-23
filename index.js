@@ -429,7 +429,7 @@ function applyRoleBasedUI(role) {
     
     // Control de visibilidad del botón de vacunas basado en roles
     const vacunasBtn = document.getElementById('vacunasBtn');
-    const allowedVacunasRoles = ['admin'];
+    const allowedVacunasRoles = ['admin', 'consulta_externa'];
     
     console.log('Configurando visibilidad del botón de vacunas...');
     console.log('Rol actual:', role);
