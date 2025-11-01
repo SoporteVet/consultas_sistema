@@ -1,0 +1,1078 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Plantillas</title>
+    <link rel="stylesheet" href="../css/index_lab.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=ABeeZee:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=League+Spartan:wght@100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+
+    <style>
+        .historial-container {
+            margin: 10px 0;
+        }
+
+        .historial-container label {
+            margin-right: 10px;
+        }
+
+        .historial-container select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+        }
+    </style>
+</head>
+
+<body>
+<script>
+// Autollenado desde parámetros URL
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    const p = new URLSearchParams(location.search);
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v!=null && v!=='') el.value = v; };
+    setVal('mascotaNombre', p.get('mascotaNombre'));
+    setVal('propietarioNombre', p.get('propietarioNombre'));
+    setVal('propietarioCedula', p.get('propietarioCedula'));
+    setVal('propietarioTelefono', p.get('propietarioTelefono'));
+    setVal('propietarioEmail', p.get('propietarioEmail'));
+    setVal('nombreMedico', p.get('nombreMedico'));
+    setVal('mascotaRaza', p.get('mascotaRaza'));
+    setVal('mascotaEdad', p.get('mascotaEdad'));
+    setVal('mascotaPeso', p.get('mascotaPeso'));
+    
+    // Verificar el mensaje del médico después del autollenado
+    const medico = p.get('nombreMedico');
+    if (medico) {
+      setTimeout(() => {
+        verificarMedico();
+      }, 100);
+    }
+    
+    const especie = p.get('especie');
+    const sexo = p.get('mascotaSexo');
+    if (especie) {
+      const especieSelector = document.getElementById('especieSelector');
+      if (especieSelector) {
+        especieSelector.value = capitalize(especie);
+        const evt = new Event('change'); especieSelector.dispatchEvent(evt);
+      }
+    }
+    if (sexo) {
+      const sexoSelector = document.getElementById('sexoSelector');
+      if (sexoSelector) {
+        sexoSelector.value = capitalize(sexo);
+        const evt = new Event('change'); sexoSelector.dispatchEvent(evt);
+      }
+    }
+  } catch(e) { console.warn('Autollenado falló:', e); }
+  function capitalize(s){ if(!s) return s; return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
+});
+</script>
+    <div class="controls">
+        <label for="sexoSelector">Selecciona el sexo:</label>
+        <select id="sexoSelector" onchange="actualizarSexoEnPlantilla()">
+            <option value="Seleccionar" selected>-- Seleccionar --</option>
+            <option value="Macho">Macho</option>
+            <option value="Hembra">Hembra</option>
+        </select>
+        <label for="especieSelector">Selecciona la especie:</label>
+        <select id="especieSelector" onchange="actualizarEspecieEnPlantilla()">
+            <option value="Seleccionar" selected>-- Seleccionar --</option>
+            <option value="Canino">Canino</option>
+            <option value="Felino">Felino</option>
+            <option value="Lagomorfo">Lagomorfo</option>
+            <option value="Cuilo">Cuilo</option>
+        </select>
+        
+        <!-- Selector de plantilla -->
+        <label for="plantillaSelector">Selecciona la plantilla:</label>
+        <select id="plantillaSelector" onchange="cambiarPlantilla()">
+            <option value="template1" selected>11 Parámetros</option>
+            <option value="template2">15 Parámetros</option>
+        </select>
+    </div>
+
+<!-- PLANTILLA 1: 11 Parámetros -->
+<div class="container" id="template1" style="display: block;">
+    <div class="header">
+        <img src="../img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
+        <h1>Laboratorio Clínico Veterinario</h1>
+    </div>
+    <h3 class="subheader">TIRA REACTIVA</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan="2">DATOS DE LA MASCOTA</th>
+                    <th colspan="2">DATOS DEL PROPIETARIO</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Nombre</td>
+                    <td><input type="text" id="mascotaNombre" onkeydown="moverFocoConFlechas(event, 'propietarioNombre', 'propietarioNombre', 'mascotaNombre', 'mascotaRaza')"></td>
+                    <td>Nombre</td>
+                    <td><input type="text" id="propietarioNombre"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaNombre', 'mascotaNombre', 'propietarioCedula')"></td>
+                </tr>
+                <tr>
+                    <td>Raza</td>
+                    <td><input type="text" id="mascotaRaza" list="razas"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaNombre', 'mascotaNombre', 'mascotaSexo')"></td>
+                    <datalist id="razas">
+                    </datalist>
+                    
+                    <td>Cédula</td>
+                    <td><input type="text" id="propietarioCedula"  onkeydown="moverFocoConFlechas(event, 'propietarioTelefono', 'mascotaRaza', 'propietarioNombre', 'propietarioTelefono')"></td>
+                </tr>
+                <tr>
+                    <td>Sexo</td>
+                    <td><input type="text" id="sexoEnPlantilla"></td>
+                    <td>Teléfono</td>
+                    <td><input type="text" id="propietarioTelefono" onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaSexo', 'propietarioCedula', 'propietarioEmail')"></td>
+                </tr>
+                <tr>
+                    <td>Especie</td>
+                    <td><input type="text" id="especieEnPlantilla"></td>
+                    <td>Email</td>
+                    <td><input type="text" id="propietarioEmail"  onkeydown="moverFocoConFlechas(event, 'mascotaEspecie', 'mascotaEspecie', 'propietarioTelefono', 'nombreMedico')"></td>
+                </tr>
+                <tr>
+                    <td>Edad</td>
+                    <td><input type="text" id="mascotaEdad" list="edades"  onkeydown="moverFocoConFlechas(event, 'nombreMedico', 'mascotaEspecie', 'mascotaEspecie', 'mascotaPeso')"></td>
+                    <datalist id="edades">
+                        <option value="1 mes"><option value="2 meses"><option value="3 meses"><option value="4 meses">
+                        <option value="5 meses"><option value="6 meses"><option value="7 meses"><option value="8 meses"><option value="9 meses">
+                        <option value="10 meses"><option value="11 meses"><option value="12 meses">
+                        <option value="1 año"><option value="2 años"><option value="3 años"><option value="4 años">
+                        <option value="5 años"><option value="6 años"><option value="7 años"><option value="8 años"><option value="9 años">
+                        <option value="10 años"><option value="11 años"><option value="12 años"><option value="13 años"></option><option value="14 años"></option>
+                        <option value="15 años"><option value="16 años"><option value="17 años"><option value="18 años"></option>
+                        <option value="19 años"><option value="20 años"></option>    
+                    </datalist>
+                    </datalist>
+                    <td>Médico</td>
+                    <td>
+                        <input type="text" id="nombreMedico" list="medicos" 
+                            onkeydown="moverFocoConFlechas(event, 'propietarioFecha', 'mascotaEdad', 'propietarioEmail', 'propietarioFecha')" 
+                            oninput="verificarMedico()">
+                    </td>
+                    <datalist id="medicos">
+                        <option value="N.A">
+                        <option value="Dr. Randall Azofeifa">
+                        <option value="Dr. Luis Coto">
+                        <option value="Dr. Gustavo Gónzalez">
+                        <option value="Dra. Daniela Sancho">
+                        <option value="Dra. Sofia Carrillo">
+                        <option value="Dra. Franciny Nuñez">
+                        <option value="Dra. Lourdes Chacón">
+                        <option value="Dra. Alejandra León">
+                        <option value="Dra. Karla Quesada">
+                        <option value="Dra. Kharen Moreno">
+                        <option value="Dra. Karina Madrigal">
+                        <option value="Dra. Natalia Alvarado">
+                    </datalist>
+                </tr>
+                <script>    
+                        function actualizarSexoEnPlantilla() {
+                            const sexo = document.getElementById('sexoSelector').value;
+                            document.getElementById('sexoEnPlantilla').value = sexo.charAt(0).toUpperCase() + sexo.slice(1);
+                            document.getElementById('sexoEnPlantilla2').value = sexo.charAt(0).toUpperCase() + sexo.slice(1);
+                        }
+                        function actualizarEspecieEnPlantilla() {
+                            const especie = document.getElementById('especieSelector').value;
+                            document.getElementById('especieEnPlantilla').value = especie;
+                            document.getElementById('especieEnPlantilla2').value = especie;
+                            actualizarRazasPorEspecie();
+                        }
+                        function verificarMedico() {
+                            const medico = document.getElementById('nombreMedico').value;
+                            const mensaje = document.getElementById('mensajeMedico');
+                            const mensaje2 = document.getElementById('mensajeMedico2');
+                            if (medico === 'N.A' || medico === 'NA' || medico === '' || medico === 'N.A.' || medico.toLowerCase() === 'na') {
+                                if (mensaje) mensaje.style.display = 'none';
+                                if (mensaje2) mensaje2.style.display = 'none';
+                            } else {
+                                if (mensaje) mensaje.style.display = 'block';
+                                if (mensaje2) mensaje2.style.display = 'block';
+                            }
+                        }
+                        </script>
+                </tr>
+                <tr>
+                    <td>Peso</td>
+<td><input type="text" id="mascotaPeso" list="pesos" onkeydown="moverFocoConFlechas(event, 'propietarioFecha', 'mascotaEdad', 'mascotaEdad', 'mascotaPeso')"></td>
+
+    <datalist id="pesos">
+        <option value="N.A">N.A</option><option value="0,1 kg">0,1 kg</option><option value="0,2 kg">0,2 kg</option><option value="0,3 kg">0,3 kg</option><option value="0,4 kg">0,4 kg</option>
+        <option value="0,5 kg">0,5 kg</option><option value="0,6 kg">0,6 kg</option><option value="0,7 kg">0,7 kg</option><option value="0,8 kg">0,8 kg</option><option value="0,9 kg">0,9 kg</option>
+        <option value="1,0 kg">1,0 kg</option><option value="1,1 kg">1,1 kg</option><option value="1,2 kg">1,2 kg</option><option value="1,3 kg">1,3 kg</option><option value="1,4 kg">1,4 kg</option>
+        <option value="1,5 kg">1,5 kg</option><option value="1,6 kg">1,6 kg</option><option value="1,7 kg">1,7 kg</option><option value="1,8 kg">1,8 kg</option><option value="1,9 kg">1,9 kg</option>
+        <option value="2,0 kg">2,0 kg</option><option value="2,1 kg">2,1 kg</option><option value="2,2 kg">2,2 kg</option><option value="2,3 kg">2,3 kg</option><option value="2,4 kg">2,4 kg</option>
+        <option value="2,5 kg">2,5 kg</option><option value="2,6 kg">2,6 kg</option><option value="2,7 kg">2,7 kg</option><option value="2,8 kg">2,8 kg</option><option value="2,9 kg">2,9 kg</option>
+        <option value="3,0 kg">3,0 kg</option><option value="3,1 kg">3,1 kg</option><option value="3,2 kg">3,2 kg</option><option value="3,3 kg">3,3 kg</option><option value="3,4 kg">3,4 kg</option>
+        <option value="3,5 kg">3,5 kg</option><option value="3,6 kg">3,6 kg</option><option value="3,7 kg">3,7 kg</option><option value="3,8 kg">3,8 kg</option><option value="3,9 kg">3,9 kg</option>
+        <option value="4,0 kg">4,0 kg</option><option value="4,1 kg">4,1 kg</option><option value="4,2 kg">4,2 kg</option><option value="4,3 kg">4,3 kg</option><option value="4,4 kg">4,4 kg</option>
+        <option value="4,5 kg">4,5 kg</option><option value="4,6 kg">4,6 kg</option><option value="4,7 kg">4,7 kg</option><option value="4,8 kg">4,8 kg</option><option value="4,9 kg">4,9 kg</option>
+        <option value="5,0 kg">5,0 kg</option><option value="5,1 kg">5,1 kg</option><option value="5,2 kg">5,2 kg</option><option value="5,3 kg">5,3 kg</option><option value="5,4 kg">5,4 kg</option>
+        <option value="5,5 kg">5,5 kg</option><option value="5,6 kg">5,6 kg</option><option value="5,7 kg">5,7 kg</option><option value="5,8 kg">5,8 kg</option><option value="5,9 kg">5,9 kg</option>
+        <option value="6,0 kg">6,0 kg</option><option value="6,1 kg">6,1 kg</option><option value="6,2 kg">6,2 kg</option><option value="6,3 kg">6,3 kg</option><option value="6,4 kg">6,4 kg</option>
+        <option value="6,5 kg">6,5 kg</option><option value="6,6 kg">6,6 kg</option><option value="6,7 kg">6,7 kg</option><option value="6,8 kg">6,8 kg</option><option value="6,9 kg">6,9 kg</option>
+        <option value="7,0 kg">7,0 kg</option><option value="7,1 kg">7,1 kg</option><option value="7,2 kg">7,2 kg</option><option value="7,3 kg">7,3 kg</option><option value="7,4 kg">7,4 kg</option>
+        <option value="7,5 kg">7,5 kg</option><option value="7,6 kg">7,6 kg</option><option value="7,7 kg">7,7 kg</option><option value="7,8 kg">7,8 kg</option><option value="7,9 kg">7,9 kg</option>
+        <option value="8,0 kg">8,0 kg</option><option value="8,1 kg">8,1 kg</option><option value="8,2 kg">8,2 kg</option><option value="8,3 kg">8,3 kg</option><option value="8,4 kg">8,4 kg</option>
+        <option value="8,5 kg">8,5 kg</option><option value="8,6 kg">8,6 kg</option><option value="8,7 kg">8,7 kg</option><option value="8,8 kg">8,8 kg</option><option value="8,9 kg">8,9 kg</option>
+        <option value="9,0 kg">9,0 kg</option><option value="9,1 kg">9,1 kg</option><option value="9,2 kg">9,2 kg</option><option value="9,3 kg">9,3 kg</option><option value="9,4 kg">9,4 kg</option>
+        <option value="9,5 kg">9,5 kg</option><option value="9,6 kg">9,6 kg</option><option value="9,7 kg">9,7 kg</option><option value="9,8 kg">9,8 kg</option><option value="9,9 kg">9,9 kg</option>
+        <option value="10,0 kg">10,0 kg</option><option value="10,1 kg">10,1 kg</option><option value="10,2 kg">10,2 kg</option><option value="10,3 kg">10,3 kg</option><option value="10,4 kg">10,4 kg</option>
+        <option value="10,5 kg">10,5 kg</option><option value="10,6 kg">10,6 kg</option><option value="10,7 kg">10,7 kg</option><option value="10,8 kg">10,8 kg</option><option value="10,9 kg">10,9 kg</option>
+        <option value="11,0 kg">11,0 kg</option><option value="11,1 kg">11,1 kg</option><option value="11,2 kg">11,2 kg</option><option value="11,3 kg">11,3 kg</option><option value="11,4 kg">11,4 kg</option>
+        <option value="11,5 kg">11,5 kg</option><option value="11,6 kg">11,6 kg</option><option value="11,7 kg">11,7 kg</option><option value="11,8 kg">11,8 kg</option><option value="11,9 kg">11,9 kg</option>
+        <option value="12,0 kg">12,0 kg</option>
+        
+    </datalist>
+        <td>Fecha</td>
+        <td><input type="date" id="propietarioFecha" class="date-input" onkeydown="moverFocoConFlechas(event, 'nombreMedico', 'mascotaPeso', 'nombreMedico', 'propietarioFecha')"></td>
+                </tr>
+                
+                <script>
+                function moverFocoConFlechas(event, derechaId, izquierdaId, arribaId, abajoId) {
+                    switch (event.key) {
+                        case 'ArrowRight':
+                            event.preventDefault();
+                            document.getElementById(derechaId).focus();
+                            break;
+                        case 'ArrowLeft':
+                            event.preventDefault();
+                            document.getElementById(izquierdaId).focus();
+                            break;
+                        case 'ArrowUp':
+                            event.preventDefault();
+                            document.getElementById(arribaId).focus();
+                            break;
+                        case 'ArrowDown':
+                            event.preventDefault();
+                            document.getElementById(abajoId).focus();
+                            break;
+                    }
+                }
+                
+                // Lista de razas caninas
+                const razasCaninas = [
+                    "SRD", "Labrador Retriever", "Golden Retriever", "Pastor Alemán", "Bulldog", 
+                    "Beagle", "French Bulldog", "Rottweiler", "Yorkshire Terrier", "Boxer",
+                    "Dachshund", "Siberian Husky", "Great Dane", "Doberman Pinscher", "Shih Tzu",
+                    "Border Collie", "Australian Shepherd", "Pomeranian", "Chihuahua", "Maltese"
+                ];
+                
+                // Lista de razas felinas
+                const razasFelinas = [
+                    "SRD", "Persa", "Maine Coon", "Siames", "Ragdoll", "British Shorthair",
+                    "Abyssinian", "Bengal", "Scottish Fold", "American Shorthair", "Russian Blue"
+                ];
+                
+                function actualizarRazasPorEspecie() {
+                    const especie = document.getElementById('especieSelector').value;
+                    const datalistRazas = document.getElementById('razas');
+                    
+                    // Limpiar opciones anteriores
+                    datalistRazas.innerHTML = '';
+                    
+                    const campoRaza = document.getElementById('mascotaRaza');
+                    
+                    // Restablecer el campo de raza si se cambia la especie
+                    if (campoRaza.value && campoRaza.value !== "SRD") {
+                        campoRaza.value = '';
+                    }
+                    
+                    // Agregar las razas según la especie seleccionada
+                    if (especie === "Canino") {
+                        razasCaninas.forEach(raza => {
+                            const option = document.createElement('option');
+                            option.value = raza;
+                            datalistRazas.appendChild(option);
+                        });
+                    } else if (especie === "Felino") {
+                        razasFelinas.forEach(raza => {
+                            const option = document.createElement('option');
+                            option.value = raza;
+                            datalistRazas.appendChild(option);
+                        });
+                    }
+                }
+                </script>
+            </tbody>
+        </table>
+
+        <h3 class="titulos">EXAMEN FÍSICO</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th>VALOR DE REFERENCIA</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Color</td>
+                    <td><input type="text" id="color11" onkeydown="moverFoco(event, 'apariencia11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Apariencia</td>
+                    <td><input type="text" id="apariencia11" onkeydown="moverFoco(event, 'densidad11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Densidad</td>
+                    <td><input type="text" id="densidad11" onkeydown="moverFoco(event, 'ph_urinario11')"></td>
+                    <td>(1.005-1.040)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 class="titulos">EXAMEN QUÍMICO</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th>VALOR DE REFERENCIA</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>pH urinario</td>
+                    <td><input type="text" id="ph_urinario11" onkeydown="moverFoco(event, 'proteinas11')"></td>
+                    <td>(5.0-7.0)</td>
+                </tr>
+                <tr>
+                    <td>Proteínas</td>
+                    <td><input type="text" id="proteinas11" onkeydown="moverFoco(event, 'cetonas11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Cetonas</td>
+                    <td><input type="text" id="cetonas11" onkeydown="moverFoco(event, 'nitritos11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Nitritos</td>
+                    <td><input type="text" id="nitritos11" onkeydown="moverFoco(event, 'leucocitos11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Leucocitos</td>
+                    <td><input type="text" id="leucocitos11" onkeydown="moverFoco(event, 'glucosa11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Glucosa</td>
+                    <td><input type="text" id="glucosa11" onkeydown="moverFoco(event, 'bilirrubina11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Bilirrubina</td>
+                    <td><input type="text" id="bilirrubina11" onkeydown="moverFoco(event, 'urobilinogeno11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Urobilinógeno</td>
+                    <td><input type="text" id="urobilinogeno11" onkeydown="moverFoco(event, 'eritrocitos_hemoglobina11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Eritrocitos/hemoglobina</td>
+                    <td><input type="text" id="eritrocitos_hemoglobina11" onkeydown="moverFoco(event, 'asc11')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>ASC</td>
+                    <td><input type="text" id="asc11" onkeydown="moverFoco(event, 'color11')"></td>
+                    <td></td>
+                </tr>
+                
+                <script>
+                function moverFoco(event, siguienteId) {
+                    if (event.key === 'Enter') {
+                        event.preventDefault();
+                        document.getElementById(siguienteId).focus();
+                    }
+                }
+                </script>
+            </tbody>
+        </table>
+        
+  <div class="footer">
+    <p id="mensajeMedico" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
+    <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
+    <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
+    <p>Correo: laboratorio@vetsanmartin.com</p>
+</div>
+</div>
+
+<!-- PLANTILLA 2: 15 Parámetros -->
+<div class="container" id="template2" style="display: none;">
+    <div class="header">
+        <img src="../img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
+        <h1>Laboratorio Clínico Veterinario</h1>
+    </div>
+    <h3 class="subheader">TIRA REACTIVA</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan="2">DATOS DE LA MASCOTA</th>
+                    <th colspan="2">DATOS DEL PROPIETARIO</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Nombre</td>
+                    <td><input type="text" id="mascotaNombre2" onkeydown="moverFocoConFlechas(event, 'propietarioNombre2', 'propietarioNombre2', 'mascotaNombre2', 'mascotaRaza2')"></td>
+                    <td>Nombre</td>
+                    <td><input type="text" id="propietarioNombre2"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula2', 'mascotaNombre2', 'mascotaNombre2', 'propietarioCedula2')"></td>
+                </tr>
+                <tr>
+                    <td>Raza</td>
+                    <td><input type="text" id="mascotaRaza2" list="razas2"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula2', 'mascotaNombre2', 'mascotaNombre2', 'mascotaSexo2')"></td>
+                    <datalist id="razas2">
+                    </datalist>
+                    
+                    <td>Cédula</td>
+                    <td><input type="text" id="propietarioCedula2"  onkeydown="moverFocoConFlechas(event, 'propietarioTelefono2', 'mascotaRaza2', 'propietarioNombre2', 'propietarioTelefono2')"></td>
+                </tr>
+                <tr>
+                    <td>Sexo</td>
+                    <td><input type="text" id="sexoEnPlantilla2"></td>
+                    <td>Teléfono</td>
+                    <td><input type="text" id="propietarioTelefono2" onkeydown="moverFocoConFlechas(event, 'propietarioCedula2', 'mascotaSexo2', 'propietarioCedula2', 'propietarioEmail2')"></td>
+                </tr>
+                <tr>
+                    <td>Especie</td>
+                    <td><input type="text" id="especieEnPlantilla2"></td>
+                    <td>Email</td>
+                    <td><input type="text" id="propietarioEmail2"  onkeydown="moverFocoConFlechas(event, 'mascotaEspecie2', 'mascotaEspecie2', 'propietarioTelefono2', 'nombreMedico2')"></td>
+                </tr>
+                <tr>
+                    <td>Edad</td>
+                    <td><input type="text" id="mascotaEdad2" list="edades2"  onkeydown="moverFocoConFlechas(event, 'nombreMedico2', 'mascotaEspecie2', 'mascotaEspecie2', 'mascotaPeso2')"></td>
+                    <datalist id="edades2">
+                        <option value="1 mes"><option value="2 meses"><option value="3 meses"><option value="4 meses">
+                        <option value="5 meses"><option value="6 meses"><option value="7 meses"><option value="8 meses"><option value="9 meses">
+                        <option value="10 meses"><option value="11 meses"><option value="12 meses">
+                        <option value="1 año"><option value="2 años"><option value="3 años"><option value="4 años">
+                        <option value="5 años"><option value="6 años"><option value="7 años"><option value="8 años"><option value="9 años">
+                        <option value="10 años"><option value="11 años"><option value="12 años"><option value="13 años"></option><option value="14 años"></option>
+                        <option value="15 años"><option value="16 años"><option value="17 años"><option value="18 años"></option>
+                        <option value="19 años"><option value="20 años"></option>    
+                    </datalist>
+                    </datalist>
+                    <td>Médico</td>
+                    <td>
+                        <input type="text" id="nombreMedico2" list="medicos2" 
+                            onkeydown="moverFocoConFlechas(event, 'propietarioFecha2', 'mascotaEdad2', 'propietarioEmail2', 'propietarioFecha2')" 
+                            oninput="verificarMedico()">
+                    </td>
+                    <datalist id="medicos2">
+                        <option value="N.A">
+                        <option value="Dr. Randall Azofeifa">
+                        <option value="Dr. Luis Coto">
+                        <option value="Dr. Gustavo Gónzalez">
+                        <option value="Dra. Daniela Sancho">
+                        <option value="Dra. Sofia Carrillo">
+                        <option value="Dra. Franciny Nuñez">
+                        <option value="Dra. Lourdes Chacón">
+                        <option value="Dra. Alejandra León">
+                        <option value="Dra. Karla Quesada">
+                        <option value="Dra. Kharen Moreno">
+                        <option value="Dra. Karina Madrigal">
+                        <option value="Dra. Natalia Alvarado">
+                    </datalist>
+                </tr>
+                <tr>
+                    <td>Peso</td>
+<td><input type="text" id="mascotaPeso2" list="pesos2" onkeydown="moverFocoConFlechas(event, 'propietarioFecha2', 'mascotaEdad2', 'mascotaEdad2', 'mascotaPeso2')"></td>
+
+    <datalist id="pesos2">
+        <option value="N.A">N.A</option><option value="0,1 kg">0,1 kg</option><option value="0,2 kg">0,2 kg</option><option value="0,3 kg">0,3 kg</option><option value="0,4 kg">0,4 kg</option>
+        <option value="0,5 kg">0,5 kg</option><option value="0,6 kg">0,6 kg</option><option value="0,7 kg">0,7 kg</option><option value="0,8 kg">0,8 kg</option><option value="0,9 kg">0,9 kg</option>
+        <option value="1,0 kg">1,0 kg</option><option value="1,1 kg">1,1 kg</option><option value="1,2 kg">1,2 kg</option><option value="1,3 kg">1,3 kg</option><option value="1,4 kg">1,4 kg</option>
+        <option value="1,5 kg">1,5 kg</option><option value="1,6 kg">1,6 kg</option><option value="1,7 kg">1,7 kg</option><option value="1,8 kg">1,8 kg</option><option value="1,9 kg">1,9 kg</option>
+        <option value="2,0 kg">2,0 kg</option><option value="2,1 kg">2,1 kg</option><option value="2,2 kg">2,2 kg</option><option value="2,3 kg">2,3 kg</option><option value="2,4 kg">2,4 kg</option>
+        <option value="2,5 kg">2,5 kg</option><option value="2,6 kg">2,6 kg</option><option value="2,7 kg">2,7 kg</option><option value="2,8 kg">2,8 kg</option><option value="2,9 kg">2,9 kg</option>
+        <option value="3,0 kg">3,0 kg</option><option value="3,1 kg">3,1 kg</option><option value="3,2 kg">3,2 kg</option><option value="3,3 kg">3,3 kg</option><option value="3,4 kg">3,4 kg</option>
+        <option value="3,5 kg">3,5 kg</option><option value="3,6 kg">3,6 kg</option><option value="3,7 kg">3,7 kg</option><option value="3,8 kg">3,8 kg</option><option value="3,9 kg">3,9 kg</option>
+        <option value="4,0 kg">4,0 kg</option><option value="4,1 kg">4,1 kg</option><option value="4,2 kg">4,2 kg</option><option value="4,3 kg">4,3 kg</option><option value="4,4 kg">4,4 kg</option>
+        <option value="4,5 kg">4,5 kg</option><option value="4,6 kg">4,6 kg</option><option value="4,7 kg">4,7 kg</option><option value="4,8 kg">4,8 kg</option><option value="4,9 kg">4,9 kg</option>
+        <option value="5,0 kg">5,0 kg</option><option value="5,1 kg">5,1 kg</option><option value="5,2 kg">5,2 kg</option><option value="5,3 kg">5,3 kg</option><option value="5,4 kg">5,4 kg</option>
+        <option value="5,5 kg">5,5 kg</option><option value="5,6 kg">5,6 kg</option><option value="5,7 kg">5,7 kg</option><option value="5,8 kg">5,8 kg</option><option value="5,9 kg">5,9 kg</option>
+        <option value="6,0 kg">6,0 kg</option><option value="6,1 kg">6,1 kg</option><option value="6,2 kg">6,2 kg</option><option value="6,3 kg">6,3 kg</option><option value="6,4 kg">6,4 kg</option>
+        <option value="6,5 kg">6,5 kg</option><option value="6,6 kg">6,6 kg</option><option value="6,7 kg">6,7 kg</option><option value="6,8 kg">6,8 kg</option><option value="6,9 kg">6,9 kg</option>
+        <option value="7,0 kg">7,0 kg</option><option value="7,1 kg">7,1 kg</option><option value="7,2 kg">7,2 kg</option><option value="7,3 kg">7,3 kg</option><option value="7,4 kg">7,4 kg</option>
+        <option value="7,5 kg">7,5 kg</option><option value="7,6 kg">7,6 kg</option><option value="7,7 kg">7,7 kg</option><option value="7,8 kg">7,8 kg</option><option value="7,9 kg">7,9 kg</option>
+        <option value="8,0 kg">8,0 kg</option><option value="8,1 kg">8,1 kg</option><option value="8,2 kg">8,2 kg</option><option value="8,3 kg">8,3 kg</option><option value="8,4 kg">8,4 kg</option>
+        <option value="8,5 kg">8,5 kg</option><option value="8,6 kg">8,6 kg</option><option value="8,7 kg">8,7 kg</option><option value="8,8 kg">8,8 kg</option><option value="8,9 kg">8,9 kg</option>
+        <option value="9,0 kg">9,0 kg</option><option value="9,1 kg">9,1 kg</option><option value="9,2 kg">9,2 kg</option><option value="9,3 kg">9,3 kg</option><option value="9,4 kg">9,4 kg</option>
+        <option value="9,5 kg">9,5 kg</option><option value="9,6 kg">9,6 kg</option><option value="9,7 kg">9,7 kg</option><option value="9,8 kg">9,8 kg</option><option value="9,9 kg">9,9 kg</option>
+        <option value="10,0 kg">10,0 kg</option><option value="10,1 kg">10,1 kg</option><option value="10,2 kg">10,2 kg</option><option value="10,3 kg">10,3 kg</option><option value="10,4 kg">10,4 kg</option>
+        <option value="10,5 kg">10,5 kg</option><option value="10,6 kg">10,6 kg</option><option value="10,7 kg">10,7 kg</option><option value="10,8 kg">10,8 kg</option><option value="10,9 kg">10,9 kg</option>
+        <option value="11,0 kg">11,0 kg</option><option value="11,1 kg">11,1 kg</option><option value="11,2 kg">11,2 kg</option><option value="11,3 kg">11,3 kg</option><option value="11,4 kg">11,4 kg</option>
+        <option value="11,5 kg">11,5 kg</option><option value="11,6 kg">11,6 kg</option><option value="11,7 kg">11,7 kg</option><option value="11,8 kg">11,8 kg</option><option value="11,9 kg">11,9 kg</option>
+        <option value="12,0 kg">12,0 kg</option>
+        
+    </datalist>
+        <td>Fecha</td>
+        <td><input type="date" id="propietarioFecha2" class="date-input" onkeydown="moverFocoConFlechas(event, 'nombreMedico2', 'mascotaPeso2', 'nombreMedico2', 'propietarioFecha2')"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 class="titulos">EXAMEN FÍSICO</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th>VALOR DE REFERENCIA</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Color</td>
+                    <td><input type="text" id="color15" onkeydown="moverFoco(event, 'apariencia15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Apariencia</td>
+                    <td><input type="text" id="apariencia15" onkeydown="moverFoco(event, 'densidad15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Densidad</td>
+                    <td><input type="text" id="densidad15" onkeydown="moverFoco(event, 'ph_urinario15')"></td>
+                    <td>(1.005-1.040)</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3 class="titulos">EXAMEN QUÍMICO</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th>VALOR DE REFERENCIA</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>pH urinario</td>
+                    <td><input type="text" id="ph_urinario15" onkeydown="moverFoco(event, 'proteinas15')"></td>
+                    <td>(5.0-7.0)</td>
+                </tr>
+                <tr>
+                    <td>Proteínas</td>
+                    <td><input type="text" id="proteinas15" onkeydown="moverFoco(event, 'cetonas15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Cetonas</td>
+                    <td><input type="text" id="cetonas15" onkeydown="moverFoco(event, 'nitritos15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Nitritos</td>
+                    <td><input type="text" id="nitritos15" onkeydown="moverFoco(event, 'leucocitos15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Leucocitos</td>
+                    <td><input type="text" id="leucocitos15" onkeydown="moverFoco(event, 'glucosa15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Glucosa</td>
+                    <td><input type="text" id="glucosa15" onkeydown="moverFoco(event, 'bilirrubina15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Bilirrubina</td>
+                    <td><input type="text" id="bilirrubina15" onkeydown="moverFoco(event, 'urobilinogeno15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Urobilinógeno</td>
+                    <td><input type="text" id="urobilinogeno15" onkeydown="moverFoco(event, 'eritrocitos_hemoglobina15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Eritrocitos/hemoglobina</td>
+                    <td><input type="text" id="eritrocitos_hemoglobina15" onkeydown="moverFoco(event, 'asc15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>ASC</td>
+                    <td><input type="text" id="asc15" onkeydown="moverFoco(event, 'albumina15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Albumina</td>
+                    <td><input type="text" id="albumina15" onkeydown="moverFoco(event, 'creatinina15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Creatinina</td>
+                    <td><input type="text" id="creatinina15" onkeydown="moverFoco(event, 'calcio15')"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Calcio</td>
+                    <td><input type="text" id="calcio15" onkeydown="moverFoco(event, 'color15')"></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+        
+  <div class="footer">
+    <p id="mensajeMedico2" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
+    <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
+    <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
+    <p>Correo: laboratorio@vetsanmartin.com</p>
+</div>
+</div>
+
+<div class="controls">
+    <button id="pdfButton" onclick="generatePDF()">Generar PDF</button>
+    <button id="menuButton" onclick="window.location.href='index.html'">Volver al Menú</button>
+    <div id="loadingPdf" class="loading-indicator">
+        <div class="spinner"></div>
+        <span>Generando PDF...</span>
+    </div>
+</div>
+  <script>
+// Función para cambiar entre plantillas
+function cambiarPlantilla() {
+    const seleccion = document.getElementById('plantillaSelector').value;
+    
+    // Ocultar todas las plantillas
+    document.getElementById('template1').style.display = 'none';
+    document.getElementById('template2').style.display = 'none';
+    
+    // Mostrar solo la plantilla seleccionada
+    document.getElementById(seleccion).style.display = 'block';
+    
+    // Sincronizar datos entre plantillas
+    if (seleccion === 'template2') {
+        sincronizarDatosHacia15();
+    } else if (seleccion === 'template1') {
+        sincronizarDatosHacia11();
+    }
+}
+
+function sincronizarDatosHacia15() {
+    const mappings = [
+        ['mascotaNombre', 'mascotaNombre2'],
+        ['mascotaRaza', 'mascotaRaza2'],
+        ['sexoEnPlantilla', 'sexoEnPlantilla2'],
+        ['especieEnPlantilla', 'especieEnPlantilla2'],
+        ['mascotaEdad', 'mascotaEdad2'],
+        ['mascotaPeso', 'mascotaPeso2'],
+        ['propietarioNombre', 'propietarioNombre2'],
+        ['propietarioCedula', 'propietarioCedula2'],
+        ['propietarioTelefono', 'propietarioTelefono2'],
+        ['propietarioEmail', 'propietarioEmail2'],
+        ['propietarioFecha', 'propietarioFecha2'],
+        ['nombreMedico', 'nombreMedico2'],
+        // Sincronizar resultados de examen físico
+        ['color11', 'color15'],
+        ['apariencia11', 'apariencia15'],
+        ['densidad11', 'densidad15'],
+        // Sincronizar resultados de examen químico (comunes)
+        ['ph_urinario11', 'ph_urinario15'],
+        ['proteinas11', 'proteinas15'],
+        ['cetonas11', 'cetonas15'],
+        ['nitritos11', 'nitritos15'],
+        ['leucocitos11', 'leucocitos15'],
+        ['glucosa11', 'glucosa15'],
+        ['bilirrubina11', 'bilirrubina15'],
+        ['urobilinogeno11', 'urobilinogeno15'],
+        ['eritrocitos_hemoglobina11', 'eritrocitos_hemoglobina15'],
+        ['asc11', 'asc15']
+    ];
+    mappings.forEach(([from, to]) => {
+        const src = document.getElementById(from);
+        const dst = document.getElementById(to);
+        if (src && dst) dst.value = src.value;
+    });
+}
+
+function sincronizarDatosHacia11() {
+    const mappings = [
+        ['mascotaNombre2', 'mascotaNombre'],
+        ['mascotaRaza2', 'mascotaRaza'],
+        ['sexoEnPlantilla2', 'sexoEnPlantilla'],
+        ['especieEnPlantilla2', 'especieEnPlantilla'],
+        ['mascotaEdad2', 'mascotaEdad'],
+        ['mascotaPeso2', 'mascotaPeso'],
+        ['propietarioNombre2', 'propietarioNombre'],
+        ['propietarioCedula2', 'propietarioCedula'],
+        ['propietarioTelefono2', 'propietarioTelefono'],
+        ['propietarioEmail2', 'propietarioEmail'],
+        ['propietarioFecha2', 'propietarioFecha'],
+        ['nombreMedico2', 'nombreMedico'],
+        // Sincronizar resultados de examen físico
+        ['color15', 'color11'],
+        ['apariencia15', 'apariencia11'],
+        ['densidad15', 'densidad11'],
+        // Sincronizar resultados de examen químico (comunes)
+        ['ph_urinario15', 'ph_urinario11'],
+        ['proteinas15', 'proteinas11'],
+        ['cetonas15', 'cetonas11'],
+        ['nitritos15', 'nitritos11'],
+        ['leucocitos15', 'leucocitos11'],
+        ['glucosa15', 'glucosa11'],
+        ['bilirrubina15', 'bilirrubina11'],
+        ['urobilinogeno15', 'urobilinogeno11'],
+        ['eritrocitos_hemoglobina15', 'eritrocitos_hemoglobina11'],
+        ['asc15', 'asc11']
+    ];
+    mappings.forEach(([from, to]) => {
+        const src = document.getElementById(from);
+        const dst = document.getElementById(to);
+        if (src && dst) dst.value = src.value;
+    });
+}
+
+// Inicializar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    const plantillaSelector = document.getElementById('plantillaSelector');
+    if (plantillaSelector) {
+        plantillaSelector.addEventListener('change', cambiarPlantilla);
+        
+        const plantillaActual = plantillaSelector.value || 'template1';
+        document.getElementById('template1').style.display = plantillaActual === 'template1' ? 'block' : 'none';
+        document.getElementById('template2').style.display = plantillaActual === 'template2' ? 'block' : 'none';
+    }
+    
+    // Actualizar razas por especie
+    const especieSelector = document.getElementById('especieSelector');
+    if (especieSelector) {
+        if (especieSelector.value !== "Seleccionar") {
+            actualizarRazasPorEspecie();
+        }
+        especieSelector.addEventListener('change', actualizarRazasPorEspecie);
+    }
+});
+
+async function generatePDF() {
+    const loadingIndicator = document.getElementById('loadingPdf');
+    const pdfButton = document.getElementById('pdfButton');
+    
+    loadingIndicator.style.display = 'flex';
+    pdfButton.disabled = true;
+    
+    try {
+        const { jsPDF } = window.jspdf;
+        
+        // Detectar qué plantilla está activa
+        const templateSelector = document.getElementById('plantillaSelector');
+        const is11 = templateSelector && templateSelector.value === 'template1';
+        
+        let selectedTemplate, mascotaNombre, propietarioNombre, testType;
+        
+        if (is11) {
+            selectedTemplate = document.getElementById('template1');
+            mascotaNombre = document.getElementById('mascotaNombre')?.value || 'Sin_nombre';
+            propietarioNombre = document.getElementById('propietarioNombre')?.value || 'Sin_apellido';
+            testType = 'Tira Reactiva 11 Parámetros';
+        } else {
+            selectedTemplate = document.getElementById('template2');
+            mascotaNombre = document.getElementById('mascotaNombre2')?.value || 'Sin_nombre';
+            propietarioNombre = document.getElementById('propietarioNombre2')?.value || 'Sin_apellido';
+            testType = 'Tira Reactiva 15 Parámetros';
+        }
+
+        if (!selectedTemplate) {
+            alert('No se encontró la plantilla.');
+            return;
+        }
+
+        const propietarioApellido = propietarioNombre.split(' ').pop();
+
+        // Espera a que todas las imágenes se carguen
+        const images = selectedTemplate.getElementsByTagName('img');
+        const loadImages = Array.from(images).map(img => {
+            return new Promise((resolve, reject) => {
+                if (img.complete) {
+                    resolve();
+                } else {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                }
+            });
+        });
+
+        await Promise.all(loadImages);
+
+        // Genera el canvas
+        const canvas = await html2canvas(selectedTemplate, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            allowTaint: true,
+            backgroundColor: '#ffffff'
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 150; 
+        const pageHeight = 297;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        // Calcular la posición para centrar la imagen
+        const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
+        const y = 5;
+
+        // Agrega la imagen de la plantilla
+        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+
+        // Genera el nombre del archivo
+        const fileName = `${testType} ${mascotaNombre} ${propietarioApellido}.pdf`;
+
+        // Guarda el PDF
+        pdf.save(fileName);
+    } catch (error) {
+        console.error('Error al generar el PDF:', error);
+        alert('Ocurrió un error al generar el PDF: ' + error.message);
+    } finally {
+        loadingIndicator.style.display = 'none';
+        pdfButton.disabled = false;
+    }
+}
+
+// Configurar historial de análisis
+document.addEventListener('DOMContentLoaded', function() {
+    setupHistorial();
+    
+    const pdfButton = document.getElementById('pdfButton');
+    if (pdfButton) {
+        const originalHandler = pdfButton.onclick;
+        pdfButton.onclick = async function() {
+            guardarAnalisisActual();
+            if (originalHandler) {
+                return originalHandler.apply(this, arguments);
+            }
+        };
+    }
+});
+
+function setupHistorial() {
+    const controlsDiv = document.querySelector('.controls');
+    
+    if (controlsDiv) {
+        const historialContainer = document.createElement('div');
+        historialContainer.className = 'historial-container';
+        
+        const label = document.createElement('label');
+        label.htmlFor = 'historialSelector';
+        label.textContent = 'Historial de análisis:';
+        
+        const select = document.createElement('select');
+        select.id = 'historialSelector';
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Seleccionar análisis anterior --';
+        defaultOption.selected = true;
+        select.appendChild(defaultOption);
+        
+        cargarOpcionesHistorial(select);
+        
+        select.addEventListener('change', function() {
+            if (this.value) {
+                cargarAnalisisDesdeHistorial(this.value);
+            }
+        });
+        
+        historialContainer.appendChild(label);
+        historialContainer.appendChild(select);
+        controlsDiv.appendChild(historialContainer);
+        
+        const borrarHistorialBtn = document.createElement('button');
+        borrarHistorialBtn.id = 'borrarHistorialBtn';
+        borrarHistorialBtn.textContent = 'Borrar Historial';
+        borrarHistorialBtn.onclick = function() {
+            if (confirm('¿Estás seguro de que quieres borrar todo el historial de análisis?')) {
+                localStorage.removeItem('tiraReactivaHistorial');
+                cargarOpcionesHistorial(document.getElementById('historialSelector'));
+                alert('Historial borrado correctamente');
+            }
+        };
+        controlsDiv.appendChild(borrarHistorialBtn);
+    }
+}
+
+function cargarOpcionesHistorial(selectElement) {
+    while (selectElement.options.length > 1) {
+        selectElement.remove(1);
+    }
+    
+    const historial = JSON.parse(localStorage.getItem('tiraReactivaHistorial') || '[]');
+    
+    historial.forEach((analisis, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        
+        const fecha = new Date(analisis.timestamp);
+        const fechaStr = fecha.toLocaleDateString();
+        const horaStr = fecha.toLocaleTimeString();
+        
+        option.textContent = `${analisis.mascotaNombre} - ${analisis.propietarioNombre} (${fechaStr} ${horaStr})`;
+        
+        selectElement.appendChild(option);
+    });
+}
+
+function guardarAnalisisActual() {
+    const getValueSafe = (id) => {
+        const element = document.getElementById(id);
+        return element ? element.value : '';
+    };
+
+    const templateSelector = document.getElementById('plantillaSelector');
+    const is11 = templateSelector && templateSelector.value === 'template1';
+
+    const formData = {
+        mascotaNombre: getValueSafe(is11 ? 'mascotaNombre' : 'mascotaNombre2'),
+        mascotaRaza: getValueSafe(is11 ? 'mascotaRaza' : 'mascotaRaza2'),
+        mascotaEspecie: getValueSafe(is11 ? 'especieEnPlantilla' : 'especieEnPlantilla2'),
+        mascotaSexo: getValueSafe(is11 ? 'sexoEnPlantilla' : 'sexoEnPlantilla2'),
+        mascotaEdad: getValueSafe(is11 ? 'mascotaEdad' : 'mascotaEdad2'),
+        mascotaPeso: getValueSafe(is11 ? 'mascotaPeso' : 'mascotaPeso2'),
+        
+        propietarioNombre: getValueSafe(is11 ? 'propietarioNombre' : 'propietarioNombre2'),
+        propietarioCedula: getValueSafe(is11 ? 'propietarioCedula' : 'propietarioCedula2'),
+        propietarioTelefono: getValueSafe(is11 ? 'propietarioTelefono' : 'propietarioTelefono2'),
+        propietarioEmail: getValueSafe(is11 ? 'propietarioEmail' : 'propietarioEmail2'),
+        propietarioFecha: getValueSafe(is11 ? 'propietarioFecha' : 'propietarioFecha2'),
+        nombreMedico: getValueSafe(is11 ? 'nombreMedico' : 'nombreMedico2'),
+        
+        // Resultados examen físico
+        color: getValueSafe(is11 ? 'color11' : 'color15'),
+        apariencia: getValueSafe(is11 ? 'apariencia11' : 'apariencia15'),
+        densidad: getValueSafe(is11 ? 'densidad11' : 'densidad15'),
+        
+        // Resultados examen químico (comunes)
+        ph_urinario: getValueSafe(is11 ? 'ph_urinario11' : 'ph_urinario15'),
+        proteinas: getValueSafe(is11 ? 'proteinas11' : 'proteinas15'),
+        cetonas: getValueSafe(is11 ? 'cetonas11' : 'cetonas15'),
+        nitritos: getValueSafe(is11 ? 'nitritos11' : 'nitritos15'),
+        leucocitos: getValueSafe(is11 ? 'leucocitos11' : 'leucocitos15'),
+        glucosa: getValueSafe(is11 ? 'glucosa11' : 'glucosa15'),
+        bilirrubina: getValueSafe(is11 ? 'bilirrubina11' : 'bilirrubina15'),
+        urobilinogeno: getValueSafe(is11 ? 'urobilinogeno11' : 'urobilinogeno15'),
+        eritrocitos_hemoglobina: getValueSafe(is11 ? 'eritrocitos_hemoglobina11' : 'eritrocitos_hemoglobina15'),
+        asc: getValueSafe(is11 ? 'asc11' : 'asc15'),
+        
+        // Resultados adicionales para 15 parámetros
+        albumina: getValueSafe('albumina15'),
+        creatinina: getValueSafe('creatinina15'),
+        calcio: getValueSafe('calcio15'),
+        
+        especieSelector: getValueSafe('especieSelector'),
+        sexoSelector: getValueSafe('sexoSelector'),
+        plantillaSelector: getValueSafe('plantillaSelector'),
+        
+        timestamp: new Date().toISOString()
+    };
+
+    let historial = JSON.parse(localStorage.getItem('tiraReactivaHistorial') || '[]');
+    historial.push(formData);
+    
+    if (historial.length > 50) {
+        historial = historial.slice(-50);
+    }
+    
+    localStorage.setItem('tiraReactivaHistorial', JSON.stringify(historial));
+    cargarOpcionesHistorial(document.getElementById('historialSelector'));
+}
+
+function cargarAnalisisDesdeHistorial(index) {
+    const historial = JSON.parse(localStorage.getItem('tiraReactivaHistorial') || '[]');
+    
+    if (!historial[index]) return;
+    
+    const analisis = historial[index];
+    
+    // Establecer plantilla primero
+    if (analisis.plantillaSelector) {
+        document.getElementById('plantillaSelector').value = analisis.plantillaSelector;
+        cambiarPlantilla();
+    }
+    
+    // Usar IDs según la plantilla seleccionada
+    const is11 = analisis.plantillaSelector === 'template1';
+    
+    document.getElementById(is11 ? 'mascotaNombre' : 'mascotaNombre2').value = analisis.mascotaNombre || '';
+    document.getElementById(is11 ? 'mascotaRaza' : 'mascotaRaza2').value = analisis.mascotaRaza || '';
+    document.getElementById(is11 ? 'especieEnPlantilla' : 'especieEnPlantilla2').value = analisis.mascotaEspecie || '';
+    document.getElementById(is11 ? 'sexoEnPlantilla' : 'sexoEnPlantilla2').value = analisis.mascotaSexo || '';
+    document.getElementById(is11 ? 'mascotaEdad' : 'mascotaEdad2').value = analisis.mascotaEdad || '';
+    document.getElementById(is11 ? 'mascotaPeso' : 'mascotaPeso2').value = analisis.mascotaPeso || '';
+    
+    document.getElementById(is11 ? 'propietarioNombre' : 'propietarioNombre2').value = analisis.propietarioNombre || '';
+    document.getElementById(is11 ? 'propietarioCedula' : 'propietarioCedula2').value = analisis.propietarioCedula || '';
+    document.getElementById(is11 ? 'propietarioTelefono' : 'propietarioTelefono2').value = analisis.propietarioTelefono || '';
+    document.getElementById(is11 ? 'propietarioEmail' : 'propietarioEmail2').value = analisis.propietarioEmail || '';
+    document.getElementById(is11 ? 'propietarioFecha' : 'propietarioFecha2').value = analisis.propietarioFecha || '';
+    document.getElementById(is11 ? 'nombreMedico' : 'nombreMedico2').value = analisis.nombreMedico || '';
+    
+    // Resultados examen físico
+    document.getElementById(is11 ? 'color11' : 'color15').value = analisis.color || '';
+    document.getElementById(is11 ? 'apariencia11' : 'apariencia15').value = analisis.apariencia || '';
+    document.getElementById(is11 ? 'densidad11' : 'densidad15').value = analisis.densidad || '';
+    
+    // Resultados examen químico (comunes)
+    document.getElementById(is11 ? 'ph_urinario11' : 'ph_urinario15').value = analisis.ph_urinario || '';
+    document.getElementById(is11 ? 'proteinas11' : 'proteinas15').value = analisis.proteinas || '';
+    document.getElementById(is11 ? 'cetonas11' : 'cetonas15').value = analisis.cetonas || '';
+    document.getElementById(is11 ? 'nitritos11' : 'nitritos15').value = analisis.nitritos || '';
+    document.getElementById(is11 ? 'leucocitos11' : 'leucocitos15').value = analisis.leucocitos || '';
+    document.getElementById(is11 ? 'glucosa11' : 'glucosa15').value = analisis.glucosa || '';
+    document.getElementById(is11 ? 'bilirrubina11' : 'bilirrubina15').value = analisis.bilirrubina || '';
+    document.getElementById(is11 ? 'urobilinogeno11' : 'urobilinogeno15').value = analisis.urobilinogeno || '';
+    document.getElementById(is11 ? 'eritrocitos_hemoglobina11' : 'eritrocitos_hemoglobina15').value = analisis.eritrocitos_hemoglobina || '';
+    document.getElementById(is11 ? 'asc11' : 'asc15').value = analisis.asc || '';
+    
+    // Resultados adicionales para 15 parámetros
+    if (!is11) {
+        document.getElementById('albumina15').value = analisis.albumina || '';
+        document.getElementById('creatinina15').value = analisis.creatinina || '';
+        document.getElementById('calcio15').value = analisis.calcio || '';
+    }
+    
+    if (analisis.especieSelector) {
+        document.getElementById('especieSelector').value = analisis.especieSelector;
+        const event = new Event('change');
+        document.getElementById('especieSelector').dispatchEvent(event);
+    }
+    
+    if (analisis.sexoSelector) {
+        document.getElementById('sexoSelector').value = analisis.sexoSelector;
+        const event = new Event('change');
+        document.getElementById('sexoSelector').dispatchEvent(event);
+    }
+    
+    verificarMedico();
+    
+    alert(`Datos de ${analisis.mascotaNombre} cargados correctamente`);
+}
+</script>
+</body>
+</html>
+

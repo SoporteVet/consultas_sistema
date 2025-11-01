@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hisopado de Oído</title>
-    <link rel="stylesheet" href="index_lab.css">
+    <link rel="stylesheet" href="../css/index_lab.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script type="text/javascript">window.jsPDF = window.jspdf.jsPDF;</script>
@@ -70,7 +70,7 @@
 
     <div class="container" style="display: block;">
         <div class="header">
-            <img src="empresa.jpg" alt="Logo de la Empresa" class="small-image">
+            <img src="../img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
             <h1>Laboratorio Clínico Veterinario</h1>
         </div>
         <h3 class="subheader">HISOPADO DE OÍDO</h3>
@@ -218,6 +218,34 @@
             </tbody>
         </table>
 
+        <!-- Sección de carga de imagen -->
+        <div class="image-upload-section" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+            <h4 style="margin-bottom: 10px;">📷 Cargar Imagen del Análisis</h4>
+            <label for="imageHisopado" style="display: inline-block; padding: 10px 20px; background: #007bff; color: white; border-radius: 5px; cursor: pointer; font-weight: bold;">
+                Seleccionar Imagen
+            </label>
+            <input type="file" id="imageHisopado" accept="image/*" onchange="previewImage(event, 'previewHisopado')" style="display: none;">
+            <div id="hisopado-preview-container" style="margin-top: 15px; display: none;">
+                <p style="color: #28a745; font-weight: bold;">✓ Imagen cargada correctamente</p>
+                <img id="previewHisopado-mini" style="max-width: 200px; max-height: 150px; border: 2px solid #28a745; border-radius: 5px; margin-top: 10px;">
+            </div>
+        </div>
+
+        <!-- Sección de visualización de imagen para el PDF -->
+        <div class="image-container" style="display: flex; justify-content: center; margin: 20px 0;">
+            <div class="image-box analysis-box" style="text-align: center; max-width: 50%;">
+                <h4>Imagen del Análisis</h4>
+                <div class="pdf-hide" style="margin-bottom: 10px;">
+                    <label for="uploadHisopado">Seleccionar imagen:</label>
+                    <input type="file" id="uploadHisopado" accept="image/*" onchange="previewImage(event, 'previewHisopado')" style="display: inline-block;">
+                </div>
+                <div style="margin-top: 10px; min-height: 200px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center;">
+                    <img id="previewHisopado" alt="Imagen del Análisis" style="max-width: 100%; max-height: 200px; display: none;">
+                    <span id="noImageHisopado" class="pdf-hide">Sin imagen</span>
+                </div>
+            </div>
+        </div>
+
         <div class="footer">
             <p id="mensajeMedico" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
             <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
@@ -362,6 +390,46 @@
             }
         });
 
+        // Función para previsualizar imágenes
+        function previewImage(event, previewId) {
+            const file = event.target.files[0];
+            const preview = document.getElementById(previewId);
+            let noImageText = null;
+            let miniPreview = null;
+            let previewContainer = null;
+            
+            if (previewId === 'previewHisopado') {
+                noImageText = document.getElementById('noImageHisopado');
+                miniPreview = document.getElementById('previewHisopado-mini');
+                previewContainer = document.getElementById('hisopado-preview-container');
+            } else {
+                noImageText = preview?.parentElement?.querySelector('span');
+            }
+            
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function() {
+                    if (preview) {
+                        preview.src = reader.result;
+                        preview.style.display = 'block';
+                    }
+                    if (noImageText) noImageText.style.display = 'none';
+                    
+                    if (miniPreview) {
+                        miniPreview.src = reader.result;
+                    }
+                    if (previewContainer) {
+                        previewContainer.style.display = 'block';
+                    }
+                }
+                reader.readAsDataURL(file);
+            } else {
+                if (preview) preview.style.display = 'none';
+                if (noImageText) noImageText.style.display = 'block';
+                if (previewContainer) previewContainer.style.display = 'none';
+            }
+        }
+
         // Generar PDF
         async function generatePDF() {
             const loadingIndicator = document.getElementById('loadingPdf');
@@ -375,6 +443,29 @@
             try {
                 const { jsPDF } = window.jspdf;
                 const container = document.querySelector('.container');
+                
+                // PRIMERO: Asegurar que la imagen se muestre si está cargada (antes de ocultar controles)
+                const previewImage = document.getElementById('previewHisopado');
+                if (previewImage && previewImage.src && previewImage.src !== '' && !previewImage.src.includes(window.location.href)) {
+                    previewImage.style.display = 'block';
+                    previewImage.style.visibility = 'visible';
+                }
+                
+                // AHORA: Ocultar elementos no deseados
+                document.querySelectorAll('.pdf-hide').forEach(el => {
+                    el.style.display = 'none';
+                });
+                
+                // Asegurar que la imagen siga visible después de ocultar controles
+                if (previewImage && previewImage.src && previewImage.src !== '' && !previewImage.src.includes(window.location.href)) {
+                    previewImage.style.display = 'block';
+                    previewImage.style.visibility = 'visible';
+                }
+                // Ocultar las secciones de carga de imagen visibles
+                document.querySelectorAll('.image-upload-section').forEach(el => {
+                    el.style.display = 'none';
+                });
+                
                 const images = container.getElementsByTagName('img');
                 const loadImages = Array.from(images).map(img => {
                     return new Promise((resolve, reject) => {
@@ -398,6 +489,14 @@
                 
                 pdf.addImage(imgData, 'JPEG', marginLeft, 10, imgWidth, imgHeight);
                 
+                // Restaurar visibilidad
+                document.querySelectorAll('.pdf-hide').forEach(el => {
+                    el.style.display = 'block';
+                });
+                document.querySelectorAll('.image-upload-section').forEach(el => {
+                    el.style.display = 'block';
+                });
+                
                 const petName = document.getElementById('mascotaNombre')?.value.trim() || '';
                 const ownerFull = document.getElementById('propietarioNombre')?.value.trim() || '';
                 const ownerParts = ownerFull.split(/\s+/);
@@ -412,6 +511,13 @@
                 loadingIndicator.style.display = 'none';
                 pdfButton.disabled = false;
                 menuButton.disabled = false;
+                // Restaurar visibilidad en caso de error
+                document.querySelectorAll('.pdf-hide').forEach(el => {
+                    el.style.display = 'block';
+                });
+                document.querySelectorAll('.image-upload-section').forEach(el => {
+                    el.style.display = 'block';
+                });
             }
         }
     </script>

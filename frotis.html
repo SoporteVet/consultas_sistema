@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Plantillas</title>
-    <link rel="stylesheet" href="index_lab.css">
+    <link rel="stylesheet" href="../css/index_lab.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 </script>
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 <div class="container" id="template1" style="display: block;">
     <div class="header">
-        <img src="empresa.jpg" alt="Logo de la Empresa" class="small-image">
+        <img src="../img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
         <h1>Laboratorio Clínico Veterinario</h1>
     </div>
     <h3 class="subheader">FROTIS DE SANGRE PERIFÉRICA</h3>
@@ -534,7 +534,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- NUEVA PLANTILLA: Frotis Microbiológico Completo -->
 <div class="container" id="template2" style="display: none;">
     <div class="header">
-        <img src="empresa.jpg" alt="Logo de la Empresa" class="small-image">
+        <img src="../img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
         <h1>Laboratorio Clínico Veterinario</h1>
     </div>
     <h3 class="subheader">FROTIS MICROBIOLÓGICO</h3>
@@ -696,6 +696,34 @@ document.addEventListener('DOMContentLoaded', function() {
         </tbody>
     </table>
 
+    <!-- Sección de carga de imagen -->
+    <div class="image-upload-section" style="margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; text-align: center;">
+        <h4 style="margin-bottom: 10px;">📷 Cargar Imagen del Análisis</h4>
+        <label for="imageFrotisCompleto" style="display: inline-block; padding: 10px 20px; background: #007bff; color: white; border-radius: 5px; cursor: pointer; font-weight: bold;">
+            Seleccionar Imagen
+        </label>
+        <input type="file" id="imageFrotisCompleto" accept="image/*" onchange="previewImage(event, 'previewFrotisCompleto')" style="display: none;">
+        <div id="frotisCompleto-preview-container" style="margin-top: 15px; display: none;">
+            <p style="color: #28a745; font-weight: bold;">✓ Imagen cargada correctamente</p>
+            <img id="previewFrotisCompleto-mini" style="max-width: 200px; max-height: 150px; border: 2px solid #28a745; border-radius: 5px; margin-top: 10px;">
+        </div>
+    </div>
+
+    <!-- Sección de visualización de imagen para el PDF -->
+    <div class="image-container" style="display: flex; justify-content: center; margin: 20px 0;">
+        <div class="image-box analysis-box" style="text-align: center; max-width: 50%;">
+            <h4>Imagen del Análisis</h4>
+            <div class="pdf-hide" style="margin-bottom: 10px;">
+                <label for="uploadFrotisCompleto">Seleccionar imagen:</label>
+                <input type="file" id="uploadFrotisCompleto" accept="image/*" onchange="previewImage(event, 'previewFrotisCompleto')" style="display: inline-block;">
+            </div>
+            <div style="margin-top: 10px; min-height: 200px; border: 1px dashed #ccc; display: flex; align-items: center; justify-content: center;">
+                <img id="previewFrotisCompleto" alt="Imagen del Análisis" style="max-width: 100%; max-height: 200px; display: none;">
+                <span id="noImageFrotisCompleto" class="pdf-hide">Sin imagen</span>
+            </div>
+        </div>
+    </div>
+
     <div class="footer">
         <p id="mensajeMedico2" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
         <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
@@ -810,6 +838,46 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Función para previsualizar imágenes
+function previewImage(event, previewId) {
+    const file = event.target.files[0];
+    const preview = document.getElementById(previewId);
+    let noImageText = null;
+    let miniPreview = null;
+    let previewContainer = null;
+    
+    if (previewId === 'previewFrotisCompleto') {
+        noImageText = document.getElementById('noImageFrotisCompleto');
+        miniPreview = document.getElementById('previewFrotisCompleto-mini');
+        previewContainer = document.getElementById('frotisCompleto-preview-container');
+    } else {
+        noImageText = preview?.parentElement?.querySelector('span');
+    }
+    
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            if (preview) {
+                preview.src = reader.result;
+                preview.style.display = 'block';
+            }
+            if (noImageText) noImageText.style.display = 'none';
+            
+            if (miniPreview) {
+                miniPreview.src = reader.result;
+            }
+            if (previewContainer) {
+                previewContainer.style.display = 'block';
+            }
+        }
+        reader.readAsDataURL(file);
+    } else {
+        if (preview) preview.style.display = 'none';
+        if (noImageText) noImageText.style.display = 'block';
+        if (previewContainer) previewContainer.style.display = 'none';
+    }
+}
+
 // Generar PDF de toda la hoja (datos + frotis)
 async function generatePDF() {
     const loadingIndicator = document.getElementById('loadingPdf');
@@ -850,6 +918,24 @@ async function generatePDF() {
             testType = 'Frotis Microbiológico';
         }
         
+        // Ocultar elementos no deseados
+        document.querySelectorAll('.pdf-hide').forEach(el => {
+            el.style.display = 'none';
+        });
+        // Ocultar las secciones de carga de imagen visibles
+        document.querySelectorAll('.image-upload-section').forEach(el => {
+            el.style.display = 'none';
+        });
+        // Ocultar caja de análisis si no hay imagen
+        document.querySelectorAll('.image-container').forEach(container => {
+            const analysisBox = container.querySelector('.analysis-box');
+            const preview = analysisBox?.querySelector('img');
+            if (preview && preview.style.display !== 'block') {
+                const uploadBox = analysisBox?.querySelector('.pdf-hide')?.parentElement;
+                if (uploadBox) uploadBox.style.display = 'none';
+            }
+        });
+        
         const images = hojaElem.getElementsByTagName('img');
         const loadImages = Array.from(images).map(img => {
             return new Promise((resolve, reject) => {
@@ -861,13 +947,24 @@ async function generatePDF() {
         const canvas = await html2canvas(hojaElem, { scale: 3, useCORS: true, backgroundColor: '#ffffff' });
         const imgData = canvas.toDataURL('image/jpeg', 1.0);
         const pdf = new jsPDF('p', 'mm', 'a4');
-        const imgWidth = 180;
+        const imgWidth = 160; // Reducido aún más para más margen a los lados
         const pageHeight = 297;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        pdf.addImage(imgData, 'JPEG', 11, 10, imgWidth, imgHeight);
+        const marginLeft = 25; // Aumentado aún más para más espacio izquierdo
+        const marginTop = 20; // Aumentado aún más para más espacio superior
+        pdf.addImage(imgData, 'JPEG', marginLeft, marginTop, imgWidth, imgHeight);
         const ownerParts = ownerFull.split(/\s+/);
         const firstSurname = ownerParts.length > 1 ? ownerParts[1] : ownerParts[0] || '';
         const fileName = `${testType} ${petName} ${firstSurname}.pdf`;
+        
+        // Restaurar visibilidad
+        document.querySelectorAll('.pdf-hide').forEach(el => {
+            el.style.display = 'block';
+        });
+        document.querySelectorAll('.image-upload-section').forEach(el => {
+            el.style.display = 'block';
+        });
+        
         pdf.save(fileName);
     } catch (error) {
         console.error('Error al generar PDF:', error);
@@ -881,6 +978,13 @@ async function generatePDF() {
         pdfButton.disabled = false;
         // Restaurar visibilidad de botones de eliminar filas
         deleteBtns.forEach(btn => btn.classList.remove('pdf-hide'));
+        // Restaurar visibilidad en caso de error
+        document.querySelectorAll('.pdf-hide').forEach(el => {
+            el.style.display = 'block';
+        });
+        document.querySelectorAll('.image-upload-section').forEach(el => {
+            el.style.display = 'block';
+        });
     }
 }
 
