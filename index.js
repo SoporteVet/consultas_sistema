@@ -2704,7 +2704,6 @@ function editTicket(randomId) {
                             <option value="">Seleccione un doctor</option>
                             <option value="Dr. Luis Coto" ${doctorSeleccionado === "Dr. Luis Coto" ? 'selected' : ''}>Dr. Luis Coto</option>
                             <option value="Dr. Randall Azofeifa" ${doctorSeleccionado === "Dr. Randall Azofeifa" ? 'selected' : ''}>Dr. Randall Azofeifa</option>
-                            <option value="Dr. Gustavo González" ${doctorSeleccionado === "Dr. Gustavo González" ? 'selected' : ''}>Dr. Gustavo González</option>
                             <option value="Dra. Daniela Sancho" ${doctorSeleccionado === "Dra. Daniela Sancho" ? 'selected' : ''}>Dra. Daniela Sancho</option>
                             <option value="Dra. Francinny Nuñez" ${doctorSeleccionado === "Dra. Francinny Nuñez" ? 'selected' : ''}>Dra. Francinny Nuñez</option>
                             <option value="Dra. Kharen Moreno" ${doctorSeleccionado === "Dra. Kharen Moreno" ? 'selected' : ''}>Dra. Kharen Moreno</option>
@@ -2722,16 +2721,14 @@ function editTicket(randomId) {
                             <option value="Tec. Maribel Guzmán" ${asistenteSeleccionado === "Tec. Maribel Guzmán" ? 'selected' : ''}>Tec. Maribel Guzmán</option>
                             <option value="Tec. Juliana Perez" ${asistenteSeleccionado === "Tec. Juliana Perez" ? 'selected' : ''}>Tec. Juliana Perez</option>
                             <option value="Tec. Jafeth Bermudez" ${asistenteSeleccionado === "Tec. Jafeth Bermudez" ? 'selected' : ''}>Tec. Jafeth Bermudez</option>
-                            <option value="Tec. Johnny Chacón" ${asistenteSeleccionado === "Tec. Johnny Chacón" ? 'selected' : ''}>Tec. Johnny Chacón</option>
                             <option value="Tec. Gabriela Zuñiga" ${asistenteSeleccionado === "Tec. Gabriela Zuñiga" ? 'selected' : ''}>Tec. Gabriela Zuñiga</option>
                             <option value="Tec. Indra Perez" ${asistenteSeleccionado === "Tec. Indra Perez" ? 'selected' : ''}>Tec. Indra Perez</option>
                             <option value="Tec. Randy Arias" ${asistenteSeleccionado === "Tec. Randy Arias" ? 'selected' : ''}>Tec. Randy Arias</option>
                             <option value="Tec. Yancy Picado" ${asistenteSeleccionado === "Tec. Yancy Picado" ? 'selected' : ''}>Tec. Yancy Picado</option>
                             <option value="Tec. Maria Fernanda"${asistenteSeleccionado === "Tec. Maria Fernanda" ? 'selected' : ''}>Tec. Maria Fernanda</option>
-                            <option value="Tec. Maria José Gutierrez"${asistenteSeleccionado === "Tec. Maria José Gutierrez" ? 'selected' : ''}>Tec. Maria José Gutierrez</option>
-                            <option value="Tec. Jimena Urtecho"${asistenteSeleccionado === "Tec.  Jimena Urtecho" ? 'selected' : ''}>Tec.  Jimena Urtecho</option>
                             <option value="Tec. Nicole Gamboa" ${asistenteSeleccionado === "Tec. Nicole Gamboa" ? 'selected' : ''}>Tec. Nicole Gamboa</option>
                             <option value="Tec. Paola López" ${asistenteSeleccionado === "Tec. Paola López" ? 'selected' : ''}>Tec. Paola López</option>
+                            <option value="Tec. Yovanel Valle" ${asistenteSeleccionado === "Tec. Yovanel Valle" ? 'selected' : ''}>Tec. Yovanel Valle</option>
                         </select>
                     </div>
                 </div>
