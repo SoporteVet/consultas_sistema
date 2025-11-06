@@ -5,40 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gestor de Plantillas</title>
     <link rel="stylesheet" href="index_lab.css">
-    <style>
-        /* Ocultar encabezados de tablas cuando se use plantilla de analitos */
-        .analitos-mode .table-header-analitos {
-            display: none !important;
-        }
-        
-        /* Alineación específica para las columnas de las tablas del perfil químico */
-        .container table th:nth-child(1),
-        .container table td:nth-child(1) {
-            text-align: left !important; /* PARÁMETRO - alineado a la izquierda */
-        }
-        
-        .container table th:nth-child(2),
-        .container table td:nth-child(2) {
-            text-align: left !important; /* RESULTADO - centrado */
-        }
-        
-        .container table th:nth-child(3),
-        .container table td:nth-child(3) {
-            text-align: left !important; /* VALOR DE REFERENCIA - centrado */
-        }
-        
-        .container table th:nth-child(4),
-        .container table td:nth-child(4) {
-            text-align: left !important; /* UNIDADES - centrado */
-        }
-        
-        /* Centrar los inputs en la columna RESULTADO */
-        .container table td:nth-child(2) input {
-            text-align: left !important;
-            margin: 0 auto;
-            display: block;
-        }
-    </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
 </script>
@@ -96,13 +62,6 @@ document.addEventListener('DOMContentLoaded', function(){
       } else {
         funcionamientoRenalTitle.style.display = 'block';
       }
-    }
-    
-    // Agregar/quitar clase para ocultar encabezados de tablas en modo analitos
-    if (template === 'analitos_laboratorio') {
-      document.body.classList.add('analitos-mode');
-    } else {
-      document.body.classList.remove('analitos-mode');
     }
     
     if (funcionamientoHepaticoTitle) {
@@ -592,6 +551,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "77 - 126",
                                 Colesterol_total: "129 - 331",		
                                 Trigliceridos: "36 - 135",
+                                CK: "32 - 157",
                                 Nitrógeno_Ureico:	"7 - 23",
                                 Urea: "20 - 50",
                                 Creatinina: "0,6 - 1,2",
@@ -615,6 +575,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "67 - 101",
                                 Colesterol_total: "68 - 128",		
                                 Trigliceridos: "19 - 52",
+                                CK: "184 - 885",
                                 Nitrógeno_Ureico:	"14 - 36",
                                 Creatinina: "0,4 - 1,2",
                                 Relación_BUN_Crea:	" 4,2 - 32,8 ",
@@ -637,6 +598,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "89 - 133",
                                 Colesterol_Total: "115 - 255",
                                 Trigliceridos: "45 - 105",
+                                CK: "53 - 241",
                                 Nitrógeno_Ureico: "7 - 19",
                                 Urea: "20 - 50",
                                 Creatinina: "0,3 - 0,9",
@@ -685,6 +647,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "77 - 126",
                                 Colesterol_total: "129 - 331",		
                                 Trigliceridos: "36 - 135",
+                                CK: "36 - 211",
                                 Nitrógeno_Ureico:	"7 - 23",
                                 Urea: "20 - 50",
                                 Creatinina: "0,6 - 1,2",
@@ -708,6 +671,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "29 - 127",
                                 Colesterol_Total: "127 - 247",
                                 Trigliceridos: "37 - 94",
+                                CK: "45 - 531",
                                 Nitrógeno_Ureico: "10 - 27",
                                 Urea: "20 - 50",
                                 Creatinina: "0.7 - 1.4",
@@ -731,6 +695,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "82 - 130",
                                 Colesterol_Total: "105 - 241",
                                 Trigliceridos: "43 - 126",
+                                CK: "34 - 272",
                                 Nitrógeno_Ureico: "7 - 19",
                                 Urea: "20 - 50",
                                 Creatinina: "0,4 - 0,9",
@@ -781,6 +746,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "65 - 111",
                                 Colesterol_Total: "76 - 146",
                                 Trigliceridos: "20 - 60",
+                                CK: "150 - 798",
                                 Nitrógeno_Ureico: "20 - 42",
                                 Urea: "30 - 60",
                                 Creatinina: "0,5 - 1,8",
@@ -804,6 +770,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "67 - 101",
                                 Colesterol_Total: "68 - 128",
                                 Trigliceridos: "19 - 52",
+                                CK: "184 - 885",
                                 Nitrógeno_Ureico: "14 - 36",
                                 Urea: "30 - 60",
                                 Creatinina: "0,4 - 1,2",
@@ -827,6 +794,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "61 - 102",
                                 Colesterol_Total: "66 - 132",
                                 Trigliceridos: "15 - 47",
+                                CK: "185 - 814",
                                 Nitrógeno_Ureico: "19 - 34",
                                 Urea: "30 - 60",
                                 Creatinina: "0,4 - 0,9",
@@ -852,6 +820,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "65 - 112",
                                 Colesterol_Total: "51 - 112",
                                 Trigliceridos: "13 - 74",
+                                CK: "164 - 930",
                                 Nitrógeno_Ureico: "19 - 30",
                                 Urea: "30 - 60",
                                 Creatinina: "0,6 - 1,7",
@@ -875,6 +844,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "67 - 102",
                                 Colesterol_Total: "56 - 114",
                                 Trigliceridos: "15 - 43",
+                                CK: "172 - 875",
                                 Nitrógeno_Ureico: "19 - 37",
                                 Urea: "30 - 60",
                                 Creatinina: "0,3 - 1,2",
@@ -898,6 +868,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             Glucosa: "59 - 99",
                             Colesterol_Total: "63 - 113",
                             Trigliceridos: "16 - 49",
+                            CK: "188 - 894",
                             Nitrógeno_Ureico: "19 - 33",
                             Urea: "30 - 60",
                             Creatinina: "0,4 - 0,9",
@@ -1016,6 +987,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('refglucosa').innerText = refValores.Glucosa || '';
         document.getElementById('refcolesterolT').innerText = refValores.Colesterol_total || refValores.Colesterol_Total || '';
         document.getElementById('refTrigliceridos').innerText = refValores.Trigliceridos || '';
+        document.getElementById('refCK').innerText = refValores.CK || '';
         document.getElementById('refnitrogeno_ureico').innerText = refValores.Nitrógeno_Ureico || '';
         document.getElementById('refurea').innerText = refValores.Urea || '';
         document.getElementById('refcreatinina').innerText = refValores.Creatinina || '';
@@ -1038,6 +1010,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('refglucosa').innerText = "";
         document.getElementById('refcolesterolT').innerText = "";
         document.getElementById('refTrigliceridos').innerText = "";
+        document.getElementById('refCK').innerText = "";
         document.getElementById('refnitrogeno_ureico').innerText = "";
         document.getElementById('refurea').innerText = "";
         document.getElementById('refcreatinina').innerText = "";
@@ -1078,7 +1051,7 @@ function formatearDecimal(id) {
         decimales = 1; // 1 decimal para estos campos
     } else if (['fosforo', 'calcio', 'potasio'].includes(id)) {
         decimales = 1; // 1 decimal para estos campos
-    } else if (['ALT', 'Fosfatasa_Alcalina', 'amilasa', 'nitrogeno_ureico', 'urea', 'lipasa'].includes(id)) {
+    } else if (['ALT', 'Fosfatasa_Alcalina', 'amilasa', 'CK', 'nitrogeno_ureico', 'urea', 'lipasa'].includes(id)) {
         decimales = 0; // Sin decimales para estos campos (enteros)
     }
     
@@ -1150,6 +1123,7 @@ document.addEventListener('DOMContentLoaded', function() {
         { campo: 'Glucosa', ref: 'refglucosa' },
         { campo: 'Colesterol_total', ref: 'refcolesterolT' },
         { campo: 'Trigliceridos', ref: 'refTrigliceridos' },
+        { campo: 'CK', ref: 'refCK' },
         { campo: 'nitrogeno_ureico', ref: 'refnitrogeno_ureico' },
         { campo: 'urea', ref: 'refurea' },
         { campo: 'creatinina', ref: 'refcreatinina' },
@@ -1226,12 +1200,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     </tr>
                 </tr>
                 <tr>
+                    <td>CK</td>
+                    <td>
+                        <input type="text" id="CK" list="rangock" onkeydown="moverFoco(event, 'CK')">
+                        <datalist id="rangock"></datalist>
+                    </td>
+                    <td id="refCK">32 - 157</td>
+                    <td>U/L</td>
+                </tr>
             </tbody>
         </table>
     
         <h3 class="titulos" id="funcionamientoRenalTitle">FUNCIONAMIENTO RENAL</h3>
         <table>
-            <thead class="table-header-analitos">
+            <thead>
                 <tr>
                     <th>PARÁMETRO</th>
                     <th>RESULTADO</th>
@@ -1317,7 +1299,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
         <h3 class="titulos" id="funcionamientoHepaticoTitle">FUNCIONAMIENTO HÉPATICO</h3>
         <table>
-            <thead class="table-header-analitos">
+            <thead>
                 <tr>
                     <th>PARÁMETRO</th>
                     <th>RESULTADO</th>
@@ -1376,7 +1358,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
         <h3 class="titulos" id="funcionamientoSanguineoTitle">FUNCIONAMIENTO SANGUINEO</h3>
         <table>
-            <thead class="table-header-analitos">
+            <thead>
                 <tr>
                     <th>PARÁMETRO</th>
                     <th>RESULTADO</th>
@@ -1541,6 +1523,7 @@ function moverFoco(event, siguienteId) {
             'Glucosa', 
             'Colesterol_total',
             'Trigliceridos',
+            'CK',
             'nitrogeno_ureico',
             'urea',
             'creatinina', 
@@ -1581,6 +1564,7 @@ function moverFoco(event, siguienteId) {
             'Glucosa', 
             'Colesterol_total',
             'Trigliceridos',
+            'CK',
             'nitrogeno_ureico',
             'urea',
             'creatinina', 
@@ -1646,6 +1630,9 @@ function redondearAEntero(id) {
         case 'amilasa':
             refId = 'refamilasa';
             break;
+        case 'CK':
+            refId = 'refCK';
+            break;
         case 'AST':
             refId = 'refAST';
             break;
@@ -1685,7 +1672,7 @@ function redondearAEntero(id) {
 // Asignar esta función a los campos que necesitan redondeo
 document.addEventListener('DOMContentLoaded', function() {
     // Campos que deben redondearse a enteros
-    const camposEnteros = ['Glucosa', 'Colesterol_total', 'Trigliceridos', 'ALT', 'Fosfatasa_Alcalina', 'urea', 'AST', 'nitrogeno_ureico', 'sodio', 'cloro', 'Na_K', 'GGT'];
+    const camposEnteros = ['Glucosa', 'Colesterol_total', 'Trigliceridos', 'CK', 'ALT', 'Fosfatasa_Alcalina', 'urea', 'AST', 'nitrogeno_ureico', 'sodio', 'cloro', 'Na_K', 'GGT'];
     
     camposEnteros.forEach(id => {
         const campo = document.getElementById(id);
@@ -2005,6 +1992,7 @@ function guardarAnalisisActual() {
         Glucosa: document.getElementById('Glucosa')?.value || '',
         Colesterol_total: document.getElementById('Colesterol_total')?.value || '',
         Trigliceridos: document.getElementById('Trigliceridos')?.value || '',
+        CK: document.getElementById('CK')?.value || '',
 
         // Datos de funcionamiento renal
         nitrogeno_ureico: document.getElementById('nitrogeno_ureico')?.value || '',
@@ -2119,6 +2107,7 @@ function cargarAnalisisDesdeHistorial(index) {
     document.getElementById('Glucosa').value = analisis.Glucosa || '';
     document.getElementById('Colesterol_total').value = analisis.Colesterol_total || '';
     document.getElementById('Trigliceridos').value = analisis.Trigliceridos || '';
+    document.getElementById('CK').value = analisis.CK || '';
     
     document.getElementById('nitrogeno_ureico').value = analisis.nitrogeno_ureico || '';
     document.getElementById('creatinina').value = analisis.creatinina || '';
