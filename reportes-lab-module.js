@@ -6,26 +6,26 @@ let labReportSelectedTemplate = null;
 
 // Mapeo de plantillas a archivos HTML del repositorio
 const LAB_REPORT_TEMPLATES = {
-  hemograma: { name: 'Hemograma', file: 'hemograma_2.html' },
-  tiempos_coagulacion: { name: 'Tiempos de Coagulación', file: 'tiempos_coagulacion.html' },
-  tipificacion: { name: 'Tipificación', file: 'tipificacion.html' },
-  panel_basico: { name: 'Panel Básico', file: 'Panel_Básico.html' },
-  panel_plus: { name: 'Panel Plus', file: 'Panel_Plus.html' },
-  perfil_quimico: { name: 'Perfil Químico', file: 'perfil_quimico.html' },
-  analitos_laboratorio: { name: 'Analitos Laboratorio', file: 'perfil_quimico.html' },
-  perfil_adulto: { name: 'Perfil Adulto Completo', file: 'perfil_adulto.html' },
-  perfil_renal: { name: 'Perfil Renal', file: 'perfil_renal.html' },
-  perfil_pre_quirurgico: { name: 'Perfil Pre-Quirúrgico', file: 'perfil_pre_quirurgico.html' },
-  perfil_hepatico: { name: 'Perfil Hepático', file: 'perfil_hepatico.html' },
-  electrolitos: { name: 'Electrolitos', file: 'electrolitos.html' },
-  heces: { name: 'Análisis de Heces', file: 'heces.html' },
-  urianalisis: { name: 'Urianálisis', file: 'urianalisis.html' },
-  tira_reactiva: { name: 'Tira Reactiva', file: 'tira_reactiva.html' },
-  frotis: { name: 'Frotis Sanguíneo', file: 'frotis.html' },
-  hisopado_oido: { name: 'Hisopado de Oído', file: 'hisopado_oido.html' },
-  reticulocitos: { name: 'Conteo de Reticulocitos', file: 'reticulocitos.html' },
-  analisis_liquido_libre: { name: 'Análisis Líquido Libre', file: 'analisis_liquido_libre.html' },
-  tests: { name: 'Pruebas Rápidas', file: 'Tests_Laboratorio.html' }
+  hemograma: { name: 'Hemograma', file: 'pages/hemograma_2.html' },
+  tiempos_coagulacion: { name: 'Tiempos de Coagulación', file: 'pages/tiempos_coagulacion.html' },
+  tipificacion: { name: 'Tipificación', file: 'pages/tipificacion.html' },
+  panel_basico: { name: 'Panel Básico', file: 'pages/Panel_Básico.html' },
+  panel_plus: { name: 'Panel Plus', file: 'pages/Panel_Plus.html' },
+  perfil_quimico: { name: 'Perfil Químico', file: 'pages/perfil_quimico.html' },
+  analitos_laboratorio: { name: 'Analitos Laboratorio', file: 'pages/analitos_laboratorio.html' },
+  perfil_adulto: { name: 'Perfil Adulto Completo', file: 'pages/perfil_adulto.html' },
+  perfil_renal: { name: 'Perfil Renal', file: 'pages/perfil_renal.html' },
+  perfil_pre_quirurgico: { name: 'Perfil Pre-Quirúrgico', file: 'pages/perfil_pre_quirurgico.html' },
+  perfil_hepatico: { name: 'Perfil Hepático', file: 'pages/perfil_hepatico.html' },
+  electrolitos: { name: 'Electrolitos', file: 'pages/electrolitos.html' },
+  heces: { name: 'Análisis de Heces', file: 'pages/heces.html' },
+  urianalisis: { name: 'Urianálisis', file: 'pages/urianalisis.html' },
+  tira_reactiva: { name: 'Tira Reactiva', file: 'pages/tira_reactiva.html' },
+  frotis: { name: 'Frotis Sanguíneo', file: 'pages/frotis.html' },
+  hisopado_oido: { name: 'Hisopado de Oído', file: 'pages/hisopado_oido.html' },
+  reticulocitos: { name: 'Conteo de Reticulocitos', file: 'pages/reticulocitos.html' },
+  analisis_liquido_libre: { name: 'Análisis Líquido Libre', file: 'pages/analisis_liquido_libre.html' },
+  tests: { name: 'Pruebas Rápidas', file: 'pages/Tests_Laboratorio.html' }
 };
 
 // Función auxiliar para convertir texto a formato de primera letra mayúscula

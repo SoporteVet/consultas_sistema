@@ -14,7 +14,7 @@
 </head>
 <body>
 <script>
-// Autollenado Panel Plus
+// Autollenado Perfil Químico
 document.addEventListener('DOMContentLoaded', function(){
   try {
     const p = new URLSearchParams(location.search);
@@ -29,6 +29,69 @@ document.addEventListener('DOMContentLoaded', function(){
     setVal('mascotaEdad', p.get('mascotaEdad'));
     setVal('mascotaPeso', p.get('mascotaPeso'));
     
+    // Cambiar el header según el tipo de plantilla
+    const template = p.get('template');
+    const headerElement = document.getElementById('reportHeader');
+    const interferenceSection = document.getElementById('interferenceIndicesSection');
+    const lipasaRow = document.getElementById('lipasaRow');
+    const funcionamientoRenalTitle = document.getElementById('funcionamientoRenalTitle');
+    const funcionamientoHepaticoTitle = document.getElementById('funcionamientoHepaticoTitle');
+    const funcionamientoSanguineoTitle = document.getElementById('funcionamientoSanguineoTitle');
+    
+    if (headerElement) {
+      if (template === 'analitos_laboratorio') {
+        headerElement.textContent = 'ANALITOS LABORATORIO';
+      } else {
+        headerElement.textContent = 'PERFIL QUIMICO GENERAL';
+      }
+    }
+    
+    // Ocultar sección de Índices de Interferencia para analitos_laboratorio
+    if (interferenceSection) {
+      if (template === 'analitos_laboratorio') {
+        interferenceSection.style.display = 'none';
+      } else {
+        interferenceSection.style.display = 'block';
+      }
+    }
+    
+    // Ocultar títulos de funcionamiento para analitos_laboratorio
+    if (funcionamientoRenalTitle) {
+      if (template === 'analitos_laboratorio') {
+        funcionamientoRenalTitle.style.display = 'none';
+      } else {
+        funcionamientoRenalTitle.style.display = 'block';
+      }
+    }
+    
+    if (funcionamientoHepaticoTitle) {
+      if (template === 'analitos_laboratorio') {
+        funcionamientoHepaticoTitle.style.display = 'none';
+      } else {
+        funcionamientoHepaticoTitle.style.display = 'block';
+      }
+    }
+    
+    if (funcionamientoSanguineoTitle) {
+      if (template === 'analitos_laboratorio') {
+        funcionamientoSanguineoTitle.style.display = 'none';
+      } else {
+        funcionamientoSanguineoTitle.style.display = 'block';
+      }
+    }
+    
+    // LIPASA siempre visible - se puede eliminar manualmente si es necesario
+    if (lipasaRow) {
+      lipasaRow.style.display = 'table-row';
+    }
+    
+    // Recargar la lista de parámetros después de detectar el template
+    setTimeout(() => {
+      if (typeof cargarListaDeParametros === 'function') {
+        cargarListaDeParametros();
+      }
+    }, 200);
+    
     // Verificar el mensaje del médico después del autollenado
     const medico = p.get('nombreMedico');
     if (medico) {
@@ -38,6 +101,84 @@ document.addEventListener('DOMContentLoaded', function(){
     }
   } catch(e){}
 });
+
+// Función adicional para asegurar que el header se cambie
+function updateHeaderBasedOnTemplate() {
+  const p = new URLSearchParams(location.search);
+  const template = p.get('template');
+  const headerElement = document.getElementById('reportHeader');
+  const interferenceSection = document.getElementById('interferenceIndicesSection');
+  const lipasaRow = document.getElementById('lipasaRow');
+  const funcionamientoRenalTitle = document.getElementById('funcionamientoRenalTitle');
+  const funcionamientoHepaticoTitle = document.getElementById('funcionamientoHepaticoTitle');
+  const funcionamientoSanguineoTitle = document.getElementById('funcionamientoSanguineoTitle');
+  
+  if (headerElement) {
+    if (template === 'analitos_laboratorio') {
+      headerElement.textContent = 'ANALITOS LABORATORIO';
+    } else {
+      headerElement.textContent = 'PERFIL QUIMICO GENERAL';
+    }
+  }
+  
+  // Ocultar sección de Índices de Interferencia para analitos_laboratorio
+  if (interferenceSection) {
+    if (template === 'analitos_laboratorio') {
+      interferenceSection.style.display = 'none';
+    } else {
+      interferenceSection.style.display = 'block';
+    }
+  }
+  
+  // Ocultar títulos de funcionamiento para analitos_laboratorio
+  if (funcionamientoRenalTitle) {
+    if (template === 'analitos_laboratorio') {
+      funcionamientoRenalTitle.style.display = 'none';
+    } else {
+      funcionamientoRenalTitle.style.display = 'block';
+    }
+  }
+  
+  // Agregar/quitar clase para ocultar encabezados de tablas en modo analitos
+  if (template === 'analitos_laboratorio') {
+    document.body.classList.add('analitos-mode');
+  } else {
+    document.body.classList.remove('analitos-mode');
+  }
+  
+  if (funcionamientoHepaticoTitle) {
+    if (template === 'analitos_laboratorio') {
+      funcionamientoHepaticoTitle.style.display = 'none';
+    } else {
+      funcionamientoHepaticoTitle.style.display = 'block';
+    }
+  }
+  
+  if (funcionamientoSanguineoTitle) {
+    if (template === 'analitos_laboratorio') {
+      funcionamientoSanguineoTitle.style.display = 'none';
+    } else {
+      funcionamientoSanguineoTitle.style.display = 'block';
+    }
+  }
+  
+  // LIPASA siempre visible - se puede eliminar manualmente si es necesario
+  if (lipasaRow) {
+    lipasaRow.style.display = 'table-row';
+  }
+  
+  // Recargar la lista de parámetros después de detectar el template
+  if (typeof cargarListaDeParametros === 'function') {
+    cargarListaDeParametros();
+  }
+}
+
+// Ejecutar también cuando el DOM esté completamente listo
+document.addEventListener('DOMContentLoaded', updateHeaderBasedOnTemplate);
+
+// Ejecutar también después de un pequeño delay por si hay problemas de timing
+setTimeout(updateHeaderBasedOnTemplate, 100);
+
 </script>
     <body>
         <div class="controls">
@@ -61,16 +202,16 @@ document.addEventListener('DOMContentLoaded', function(){
                 <option value="De 1 año a 12 años">De 1 año a 12 años</option>
                 <option value="De 6 meses a 1 año">De 6 meses a 1 año</option>
                 <option value="De 3 meses a 6 meses">De 3 meses a 6 meses</option>
-                <option value="De mes y medio a 3 meses">De mes y medio a 3 meses</option>
+                <option value="De 0 meses a mes y medio">De 0 meses a mes y medio</option>
                 <option value="Todas las edades">Todas las edades</option>
             </select>
         </div>
         <div class="container" id="template1" style="display: block;">
         <div class="header">
-            <img src="empresa.jpg" alt="Logo de la Empresa" class="small-image">
+            <img src="img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
             <h1>Laboratorio Clínico Veterinario</h1>
         </div>
-        <h3 class="subheader">PANEL PLUS</h3>
+        <h3 class="subheader" id="reportHeader">PERFIL QUIMICO GENERAL</h3>
             <table>
                 <thead>
                     <tr>
@@ -130,6 +271,7 @@ document.addEventListener('DOMContentLoaded', function(){
                             <option value="N.A">
                             <option value="Dr. Randall Azofeifa">
                             <option value="Dr. Luis Coto">
+                            <option value="Dr. Gustavo Gónzalez">
                             <option value="Dra. Daniela Sancho">
                             <option value="Dra. Sofia Carrillo">
                             <option value="Dra. Franciny Nuñez">
@@ -222,8 +364,8 @@ document.addEventListener('DOMContentLoaded', function(){
                             event.preventDefault();
                             document.getElementById(arribaId).focus();
                             break;
-                        case 'Enter':
                         case 'ArrowDown':
+                        case 'Enter':
                             event.preventDefault();
                             document.getElementById(abajoId).focus();
                             break;
@@ -243,7 +385,7 @@ document.addEventListener('DOMContentLoaded', function(){
     "Galgo Inglés-español", "Golden Retriever", "Gran Danés", "Greyhound", 
     "Husky Siberiano", "Jack Russell Terrier", "Labrador Retriever", "Maltés", 
     "Pastor Alemán", "Pequinés", "Pomerania", "Pug", "Rottweiler", "Samoyedo", 
-    "San Bernardo", "Schnauzer Gigante", "Schnauzer Mediano", "Schnauzer Miniatura", 
+    "San Bernardo", "Schnauzer", 
     "Shih Tzu", "SRD", "Yorkshire Terrier", "Weimaraner", "Fila Brasileiro",
 ];
 
@@ -408,330 +550,331 @@ document.addEventListener('DOMContentLoaded', function() {
                             "De 1 año a 12 años": {
                                 Glucosa: "77 - 126",
                                 Colesterol_total: "129 - 331",		
-                                Amilasa: "400 - 2500",
-                                CK: "32 - 157",
+                                Trigliceridos: "36 - 135",
                                 Nitrógeno_Ureico:	"7 - 23",
-                                Creatinina: "0,6 - 1,2",
                                 Urea: "20 - 50",
+                                Creatinina: "0,6 - 1,2",
                                 Relación_BUN_Crea:	" 4,2 - 32,8 ",
+                                Acido_Urico: "1,0 - 3,0",
                                 Calcio: "9,0 - 11,4",
                                 Fosforo: "3,3 - 6,4",
-                                Sodio: "139 - 164",
-                                Potasio: "4,4 - 6,1",
-                                Cloro: "105 - 125",
-                                Na_K: "27 - 38",
+                                Magnesio: "1,8 - 3,0",
+                                AST: "14 - 42",
                                 ALT: "15 - 52",
                                 Fosfatasa_Alcalina: "20 - 70",
+                                GGT: "1 - 11,5",
                                 Bilirrubina_Total: "0,2- 0,8",
                                 Albumina: "2,6 - 3,6",
                                 Proteínas_Totales: "5,4 - 7,2",
                                 Globulinas_Totales: "3,0 - 4,7",
                                 Relación_Albumina_Globulina: "0,6 - 1,1 ",
+                                Lipasa: "25 - 750",
                             },
                         "De 6 meses a 1 año": {
-                                Glucosa: "76 - 129",
-                                Colesterol_total: "129 - 271",		
-                                Amilasa: "363 - 916",
-                                CK: "184 - 885",
-                                Nitrógeno_Ureico:	"7,3 - 23,5",
-                                Urea: "20 - 50",
-                                Creatinina: "0,7 - 1,4",
+                                Glucosa: "67 - 101",
+                                Colesterol_total: "68 - 128",		
+                                Trigliceridos: "19 - 52",
+                                Nitrógeno_Ureico:	"14 - 36",
+                                Creatinina: "0,4 - 1,2",
                                 Relación_BUN_Crea:	" 4,2 - 32,8 ",
-                                Calcio: "9,2 - 13,0",
-                                Fosforo: "4,8 - 9,0",
-                                Sodio: "137 - 163",
-                                Potasio: "4,2 - 5,7",
-                                Cloro: "105 - 125",
-                                Na_K: "27 - 38",
-                                ALT: "19 - 47",
-                                Fosfatasa_Alcalina: "32 - 97",
-                                Bilirrubina_Total: "0,2- 0,9",
-                                Albumina: "2,7 - 3,5",
-                                Proteínas_Totales: "5,1 - 7,3",
-                                Globulinas_Totales: "3,0 - 4,7",
-                                Relación_Albumina_Globulina: "0,6 - 1,1 ",
+                                Acido_Urico: "0,4 - 1,3",
+                                Calcio: "8,9 - 10,1",
+                                Magnesio: "1,9 - 2,28",
+                                Fosforo: "6,2 - 9,1",
+                                AST: "10 - 36",
+                                ALT: "19 - 72",
+                                Fosfatasa_Alcalina: "21 - 95",
+                                GGT: "1 - 10",
+                                Bilirrubina_Total: "0,2- 0,8",
+                                Albumina: "2,4 - 3,6",
+                                Proteínas_Totales: "5,3 - 6,9",
+                                Globulinas_Totales: "2,6 - 4,7",
+                                Relación_Albumina_Globulina: "0,5 - 1,3 ",
+                                Lipasa: "25 - 750",
                             },
                             "De 3 meses a 6 meses": {
                                 Glucosa: "89 - 133",
                                 Colesterol_Total: "115 - 255",
-                                Amilasa: "262 - 621",
-                                CK: "53 - 241",
+                                Trigliceridos: "45 - 105",
                                 Nitrógeno_Ureico: "7 - 19",
-                                Creatinina: "0,3 - 0,9",
                                 Urea: "20 - 50",
+                                Creatinina: "0,3 - 0,9",
                                 Relación_BUN_Crea: "4,2 - 32,8",
+                                Acido_Urico: "0,5 - 1,4",
                                 Fosforo: "7,2 - 10,1",
                                 Calcio: "9,8 - 12,4",
-                                Sodio: "144 - 160",
-                                Potasio: "4,8 - 6,2",
-                                Cloro: "105 - 125",
-                                Na_K: "27 - 38",
+                                Magnesio: "1,8 - 3,0",
+                                AST: "14 - 33",
                                 ALT: "13 - 30",
                                 Fosfatasa_Alcalina: "85 - 199",
+                                GGT: "1,0 - 11,5",
                                 Bilirrubina_Total: "0,2 - 0,9",
                                 Albumina: "2,4 - 3,1",
                                 Proteínas_Totales: "4,6 - 5,6",
                                 Globulinas_Totales: "3,0 - 4,7",
-                                Relación_Albumina_Globulina: "0,6 - 1,1"
+                                Relación_Albumina_Globulina: "0,6 - 1,1",
+                                Lipasa: "25 - 750"
                             },
-                            "De mes y medio a 3 meses": {
+                            "De 0 meses a mes y medio": {
                                 Glucosa: "97 - 150",
                                 Colesterol_Total: "113 - 332",
-                                Amilasa: "262 - 621",
-                                CK: "53 - 241",
+                                Trigliceridos: "42 - 147",
                                 Nitrógeno_Ureico: "5,9 - 15,2",
                                 Urea: "20 - 50",
                                 Creatinina: "0,3 - 0,7",
                                 Relación_BUN_Crea: "4,2 - 32,8",
+                                Acido_Urico: "0,4 - 1,4",
                                 Fosforo: "7,5 - 10,1",
                                 Calcio: "9,8 - 12,4",
-                                Sodio: "142 - 157",
-                                Potasio: "4,8 - 5,8",
-                                Cloro: "105 - 125",
-                                Na_K: "27 - 38",
+                                Magnesio: "1,6 - 2,6",
+                                AST: "11 - 70",
                                 ALT: "10,0 - 28,0",
                                 Fosfatasa_Alcalina: "78 - 293",
+                                GGT: "0 - 12",
                                 Bilirrubina_Total: "0,1 - 0,6",
                                 Albumina: "2,3 - 2,6",
                                 Proteínas_Totales: "4,0 - 5,2",
                                 Globulinas_Totales: "3,0 - 4,1",
-                                Relación_Albumina_Globulina: "0,6 - 1,1"
+                                Relación_Albumina_Globulina: "0,6 - 1,1",
+                                Lipasa: "25 - 750"
                             },
                         },
                         Hembra: {
                             "De 1 año a 12 años": {
                                 Glucosa: "77 - 126",
                                 Colesterol_total: "129 - 331",		
-                                Amilasa: "400 - 2500",
-                                CK: "36 - 211",
+                                Trigliceridos: "36 - 135",
                                 Nitrógeno_Ureico:	"7 - 23",
+                                Urea: "20 - 50",
                                 Creatinina: "0,6 - 1,2",
-                                Urea: '20 - 50',
                                 Relación_BUN_Crea:	" 4,2 - 32,8 ",
                                 Calcio: "9,0 - 11,4",
+                                Acido_Urico: "0,5 - 1,4",
+                                Magnesio: "1,8 - 3,0",                       
                                 Fosforo: "3,3 - 6,4",
-                                Sodio: "139 - 164",
-                                Potasio: "4,4 - 6,1",
-                                Cloro: "105 - 125",
-                                Na_K: "27 - 38",
+                                AST: "14 - 42",
                                 ALT: "15 - 52",
                                 Fosfatasa_Alcalina: "20 - 70",
+                                GGT: "1 - 11,5",
                                 Bilirrubina_Total: "0,2- 0,8",
                                 Albumina: "2,6 - 3,6",
                                 Proteínas_Totales: "5,4 - 7,2",
                                 Globulinas_Totales: "3,0 - 4,7",
                                 Relación_Albumina_Globulina: "0,6 - 1,1 ",
+                                Lipasa: "25 - 750",
                             },
                             "De 6 meses a 1 año": {
                                 Glucosa: "29 - 127",
                                 Colesterol_Total: "127 - 247",
-                                Amilasa: "255 - 832",
-                                CK: "45 - 531",
+                                Trigliceridos: "37 - 94",
                                 Nitrógeno_Ureico: "10 - 27",
-                                Urea: '20 - 50',
+                                Urea: "20 - 50",
                                 Creatinina: "0.7 - 1.4",
                                 Relación_BUN_Crea: "4,2 - 32,8",
+                                Acido_Urico: "0,4 - 1,6",
                                 Fosforo: "4,4 - 9,2",
                                 Calcio: "9,4 - 11,7",
-                                Sodio: "139 - 163",
-                                Potasio: "4,3 - 5,5",
-                                Cloro: "105 - 125",
-                                Na_K: "27 - 38",
+                                Magnesio: "1,8 - 3,0",
+                                AST: "15 - 40",
                                 ALT: "16 - 49",
                                 Fosfatasa_Alcalina: "29 - 97",
+                                GGT: "1 - 11,5",
                                 Bilirrubina_Total: "0,2 - 1,1",
                                 Albumina: "2,7 - 3,6",
                                 Proteínas_Totales: "5,1 - 6,9",
                                 Globulinas_Totales: "3,0 - 4,7",
                                 Relación_Albumina_Globulina: "0,6 - 1,1",
+                                Lipasa: "25 - 750",
                             },
                             "De 3 meses a 6 meses": {
                                 Glucosa: "82 - 130",
                                 Colesterol_Total: "105 - 241",
-                                Amilasa: "281 - 636",
-                                CK: "34 - 272",
+                                Trigliceridos: "43 - 126",
                                 Nitrógeno_Ureico: "7 - 19",
                                 Urea: "20 - 50",
                                 Creatinina: "0,4 - 0,9",
                                 Relación_BUN_Crea: "4,2 - 32,8",
+                                Acido_Urico: "0,3 - 0,9",
                                 Fosforo: "7,5 - 10,0",
                                 Calcio: "10,1 - 12,3",
-                                Sodio: "138 - 156",
-                                Potasio: "4,3 - 5,9",
-                                Cloro: "105 - 125",
-                                Na_K: "27 - 38",
+                                Magnesio: "1,8 - 3,0",
+                                AST: "13 - 32",
                                 ALT: "9 - 27",
                                 Fosfatasa_Alcalina: "77 - 180",
+                                GGT: "1 - 11,5",
                                 Bilirrubina_Total: "0,2 - 0,9",
                                 Albumina: "2,4 - 3,1",
                                 Proteínas_Totales: "4,6 - 5,8",
                                 Globulinas_Totales: "3,0 - 4,7",
-                                Relación_Albumina_Globulina: "0,6 - 1,1"
+                                Relación_Albumina_Globulina: "0,6 - 1,1",
+                                Lipasa: "25 - 750"
                             },
-                        },
-                        "De mes y medio a 3 meses": {
+                            "De 0 meses a mes y medio": {
                                 Glucosa: "108 - 151",
                                 Colesterol_Total: "110 - 273",
-                                Amilasa: "281 - 636",
-                                CK: "34 - 272",
+                                Trigliceridos: "43 - 121",
                                 Nitrógeno_Ureico: "6,2 - 15,2",
                                 Urea: "20 - 50",
-                                Creatinina: "0,8 - 1,3",
+                                Creatinina: "0,3 - 0,8",
                                 Relación_BUN_Crea: "4,2 - 32,8",
+                                Acido_Urico: "0,3 - 1,3",
                                 Fosforo: "7,5 - 10,7",
                                 Calcio: "9,9 - 12,0",
-                                Sodio: "144 - 159",
-                                Potasio: "4,7 - 6,0",
-                                Cloro: "105 - 125",
-                                Na_K: "27 - 38",
+                                Magnesio: "1,8 - 3,0",
+                                AST: "11 - 35",
                                 ALT: "9 - 30",
                                 Fosfatasa_Alcalina: "85 - 273",
+                                GGT: "1 - 11,5",
                                 Bilirrubina_Total: "0,1 - 0,6",
                                 Albumina: "2,2 - 2,9",
                                 Proteínas_Totales: "4,0 - 5,1",
                                 Globulinas_Totales: "3,0 - 4,7",
-                                Relación_Albumina_Globulina: "0,6 - 1,1"
+                                Relación_Albumina_Globulina: "0,6 - 1,1",
+                                Lipasa: "25 - 750"
                             },
+                        }
                     },
                     Felino: {
                         Macho: {
                             "De 1 año a 12 años": {
                                 Glucosa: "65 - 111",
                                 Colesterol_Total: "76 - 146",
-                                Amilasa: "400 - 2500",
-                                CK: "150 - 798",
+                                Trigliceridos: "20 - 60",
                                 Nitrógeno_Ureico: "20 - 42",
                                 Urea: "30 - 60",
                                 Creatinina: "0,5 - 1,8",
+                                Acido_Urico: "0,3 - 0,9",
                                 Relación_BUN_Crea: "4,2 - 32,8",
                                 Fosforo: "4,1 - 6,4",
                                 Calcio: "8,3 - 10,4",
-                                Sodio: "149 - 163",
-                                Potasio: "4,1 - 5,4",
-                                Cloro: "114 - 125",
-                                Na_K: "32 - 41",
+                                Magnesio: "1,9 - 2,28",
+                                AST: "10 - 29",
                                 ALT: "20 - 67",
                                 Fosfatasa_Alcalina: "13 - 47",
+                                GGT: "1 - 10",
                                 Bilirrubina_Total: "0,2 - 0,7",
                                 Albumina: "2,8 - 3,7",
                                 Proteínas_Totales: "5,8 - 7,6",
                                 Globulinas_Totales: "2,6 - 4,5",
-                                Relación_Albumina_Globulina: "0,5 - 1,3",     
+                                Relación_Albumina_Globulina: "0,5 - 1,3",
+                                Lipasa: "25 - 375",     
                             },
                             "De 6 meses a 1 año": {
                                 Glucosa: "67 - 101",
                                 Colesterol_Total: "68 - 128",
-                                Amilasa: "403 - 752",
-                                CK: "184 - 885",
+                                Trigliceridos: "19 - 52",
                                 Nitrógeno_Ureico: "14 - 36",
                                 Urea: "30 - 60",
                                 Creatinina: "0,4 - 1,2",
                                 Relación_BUN_Crea: "4,2 - 32,8",
+                                Acido_Urico: "0,4 - 1,3",
                                 Fosforo: "6,2 - 9,1",
                                 Calcio: "8,9 - 10,1",
-                                Sodio: "152 - 162",
-                                Potasio: "4,1 - 5,7",
-                                Cloro: "114 - 126",
+                                Magnesio: "1,9 - 2,28",
+                                AST: "10 - 36",
                                 ALT: "19 - 72",
                                 Fosfatasa_Alcalina: "21 - 95",
+                                GGT: "1 - 10",
                                 Bilirrubina_Total: "0,2 - 0,8",
                                 Albumina: "2,4 - 3,6",
                                 Proteínas_Totales: "5,3 - 6,9",
                                 Globulinas_Totales: "2,6 - 4,5",
-                                Relación_Albumina_Globulina: "0,5 - 1,3"
+                                Relación_Albumina_Globulina: "0,5 - 1,3",
+                                Lipasa: "25 - 375"
                             },
                             "De 3 meses a 6 meses": {
                                 Glucosa: "61 - 102",
                                 Colesterol_Total: "66 - 132",
-                                Amilasa: "403 - 752",
-                                CK: "185 - 814",
+                                Trigliceridos: "15 - 47",
                                 Nitrógeno_Ureico: "19 - 34",
                                 Urea: "30 - 60",
                                 Creatinina: "0,4 - 0,9",
                                 Relación_BUN_Crea: "4,2 - 32,8",
+                                Acido_Urico: "0,4 - 1,1",
                                 Fosforo: "7,1 - 9,5",
                                 Calcio: "9,1 - 10,9",
-                                Sodio: "143 - 159",
-                                Potasio: "4,4 - 5,9",
-                                Cloro: "114 - 125",
+                                Magnesio: "1,9 - 2,28",
+                                AST: "9 - 34",
                                 ALT: "18 - 55",
                                 Fosfatasa_Alcalina: "43 - 124",
+                                GGT: "1 - 10",
                                 Bilirrubina_Total: "0,2 - 0,8",
                                 Albumina: "2,7 - 3,6",
                                 Proteínas_Totales: "5,4 - 6,6",
                                 Globulinas_Totales: "2,6 - 4,5",
-                                Relación_Albumina_Globulina: "0,5 - 1,3"
+                                Relación_Albumina_Globulina: "0,5 - 1,3",
+                                Lipasa: "25 - 375"
                             },
                         },
                         Hembra: {
                             "De 1 año a 12 años": {
                                 Glucosa: "65 - 112",
                                 Colesterol_Total: "51 - 112",
-                                Amilasa: "400 - 2500",
-                                CK: "164 - 930",
+                                Trigliceridos: "13 - 74",
                                 Nitrógeno_Ureico: "19 - 30",
-                                Creatinina: "0,6 - 1,7",
                                 Urea: "30 - 60",
+                                Creatinina: "0,6 - 1,7",
                                 Relación_BUN_Crea: "4,2 - 32,8",
+                                Acido_Urico: "0,5 - 1,4",
                                 Fosforo: "3,2 - 6,6",
                                 Calcio: "7,8 - 9,2",
-                                Sodio: "147 - 163",
-                                Potasio: "4,0 - 5,0",
-                                Cloro: "114 - 125",
-                                Na_K: "32 - 41",
+                                Magnesio: "1,9 - 2,28",
+                                AST: "10 - 29",
                                 ALT: "22 - 79",
                                 Fosfatasa_Alcalina: "12 - 55",
+                                GGT: "1 - 10",
                                 Bilirrubina_Total: "0,3 - 1,1",
                                 Albumina: "2,4 - 3,0",
                                 Proteínas_Totales: "5,6 - 7,7",
                                 Globulinas_Totales: "2,6 - 4,5",
-                                Relación_Albumina_Globulina: "0,5 - 1,3"
+                                Relación_Albumina_Globulina: "0,5 - 1,3",
+                                Lipasa: "25 - 375"
                             },
                             "De 6 meses a 1 año": {
                                 Glucosa: "67 - 102",
                                 Colesterol_Total: "56 - 114",
-                                Amilasa: "352 - 833",
-                                CK: "172 - 875",
+                                Trigliceridos: "15 - 43",
                                 Nitrógeno_Ureico: "19 - 37",
-                                Creatinina: "0,3 - 1,2",
                                 Urea: "30 - 60",
+                                Creatinina: "0,3 - 1,2",
                                 Relación_BUN_Crea: "4,2 - 32,8",
+                                Acido_Urico: "0,3 - 1,3",
                                 Fosforo: "4,9 - 8,3",
                                 Calcio: "8,5 - 10,3",
-                                Sodio: "147 - 163",
-                                Potasio: "4,1 - 5,6",
-                                Cloro: "114 - 125",
-                                Na_K: "32 - 41",
+                                Magnesio: "1,9 - 2,28",
+                                AST: "11 - 33",
                                 ALT: "25 - 77",
                                 Fosfatasa_Alcalina: "22 - 100",
+                                GGT: "1 - 10",
                                 Bilirrubina_Total: "0,2 - 0,9",
                                 Albumina: "2,5 - 3,6",
                                 Proteínas_Totales: "5,4 - 7,2",
                                 Globulinas_Totales: "2,6 - 4,5",
-                                Relación_Albumina_Globulina: "0,5 - 1,3"
+                                Relación_Albumina_Globulina: "0,5 - 1,3",
+                                Lipasa: "25 - 375"
                         },
                         "De 3 meses a 6 meses": {
                             Glucosa: "59 - 99",
                             Colesterol_Total: "63 - 113",
-                            Amilasa: "464 - 988",
-                            CK: "188 - 894",
+                            Trigliceridos: "16 - 49",
                             Nitrógeno_Ureico: "19 - 33",
                             Urea: "30 - 60",
                             Creatinina: "0,4 - 0,9",
                             Relación_BUN_Crea: "4,2 - 32,8",
+                            Acido_Urico: "0,4 - 1,2",
                             Fosforo: "6,9 - 9,5",
                             Calcio: "8,9 - 10,9",
-                            Sodio: "144 - 162",
-                            Potasio: "4,1 - 5,5",
-                            Cloro: "114 - 126",
-                            Na_K: "32 - 41",
+                            Magnesio: "1,9 - 2,28",
+                            AST: "10 - 27",
                             ALT: "19 - 58",
                             Fosfatasa_Alcalina: "39 - 114",
+                            GGT: "1 - 10",
                             Bilirrubina_Total: "0,1 - 0,6",
                             Albumina: "2,5 - 3,5",
                             Proteínas_Totales: "5,4 - 6,8",
                             Globulinas_Totales: "2,6 - 4,5",
-                            Relación_Albumina_Globulina: "0,5 - 1,3"
+                            Relación_Albumina_Globulina: "0,5 - 1,3",
+                            Lipasa: "25 - 375"
                             },
                         }
                     },
@@ -741,6 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "60,0 - 125,0",
                                 Colesterol_Total: "20,0 - 43,0",
                                 Amilasa: "",
+                                CK: "",
                                 Nitrógeno_Ureico: "9,0 - 32,0",
                                 Creatinina: "0,6 - 2,2",
                                 Relación_BUN_Crea: "",
@@ -760,6 +904,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "77 - 126",
                                 Colesterol_total: "129 - 331",		
                                 Amilasa: "400 - 2500",
+                                CK: "32 - 157",
                                 Nitrógeno_Ureico:	"7 - 23",
                                 Creatinina: "0,6 - 1,2",
                                 Relación_BUN_Crea:	" 4,2 - 32,8 ",
@@ -781,6 +926,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "60 - 125",
                                 Colesterol_Total: "20 - 43",
                                 Amilasa: "",
+                                CK: "",
                                 Nitrógeno_Ureico: "9,0 - 32,0",
                                 Creatinina: "0,6 - 2,2",
                                 Relación_BUN_Crea: "",
@@ -800,6 +946,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 Glucosa: "60 - 125",
                                 Colesterol_Total: "20 - 43",
                                 Amilasa: "",
+                                CK: "",
                                 Nitrógeno_Ureico: "9,0 - 32,0",
                                 Creatinina: "0,6 - 2,2",
                                 Relación_BUN_Crea: "",
@@ -827,48 +974,82 @@ document.addEventListener('DOMContentLoaded', function() {
         const refValores = valoresReferencia2[especie][sexo][edad];
         document.getElementById('refglucosa').innerText = refValores.Glucosa || '';
         document.getElementById('refcolesterolT').innerText = refValores.Colesterol_total || refValores.Colesterol_Total || '';
-        document.getElementById('refamilasa').innerText = refValores.Amilasa || '';
-        document.getElementById('refCK').innerText = refValores.CK || '';
-        document.getElementById('refurea').innerText = refValores.Urea || '';
+        document.getElementById('refTrigliceridos').innerText = refValores.Trigliceridos || '';
         document.getElementById('refnitrogeno_ureico').innerText = refValores.Nitrógeno_Ureico || '';
+        document.getElementById('refurea').innerText = refValores.Urea || '';
         document.getElementById('refcreatinina').innerText = refValores.Creatinina || '';
         document.getElementById('refbun_crea').innerText = refValores.Relación_BUN_Crea || '';
+        document.getElementById('refacido_urico').innerText = refValores.Acido_Urico || '';
         document.getElementById('reffosforo').innerText = refValores.Fosforo || '';
         document.getElementById('refcalcio').innerText = refValores.Calcio || '';
-        document.getElementById('refsodio').innerText = refValores.Sodio || '';
-        document.getElementById('refpotasio').innerText = refValores.Potasio|| '';
-        document.getElementById('refcloro').innerText = refValores.Cloro || '';
-        document.getElementById('refNa_K').innerText = refValores.Na_K || '';
+        document.getElementById('refmagnesio').innerText = refValores.Magnesio || '';
+        document.getElementById('refAST').innerText = refValores.AST || '';
         document.getElementById('refALT').innerText = refValores.ALT || '';
         document.getElementById('refFosfatasa_Alcalina').innerText = refValores.Fosfatasa_Alcalina || '';
+        document.getElementById('refGGT').innerText = refValores.GGT || '';
         document.getElementById('refbillirrubina').innerText = refValores.Bilirrubina_Total || '';
         document.getElementById('refalbumina').innerText = refValores.Albumina || '';
         document.getElementById('refproteinas_totales').innerText = refValores.Proteínas_Totales || '';
         document.getElementById('refglobulinas').innerText = refValores.Globulinas_Totales || '';
         document.getElementById('refalb_glo').innerText = refValores.Relación_Albumina_Globulina || '';
+        document.getElementById('reflipasa').innerText = refValores.Lipasa || '';
     } else {
         document.getElementById('refglucosa').innerText = "";
         document.getElementById('refcolesterolT').innerText = "";
-        document.getElementById('refamilasa').innerText = "";
-        document.getElementById('refCK').innerText = "";
-        document.getElementById('refurea').innerText = "";
+        document.getElementById('refTrigliceridos').innerText = "";
         document.getElementById('refnitrogeno_ureico').innerText = "";
+        document.getElementById('refurea').innerText = "";
         document.getElementById('refcreatinina').innerText = "";
         document.getElementById('refbun_crea').innerText = "";
+        document.getElementById('refacido_urico').innerText = "";
         document.getElementById('reffosforo').innerText = "";
         document.getElementById('refcalcio').innerText = "";
-        document.getElementById('refpotasio').innerText = "";
-        document.getElementById('refcloro').innerText = "";
-        document.getElementById('refNa_K').innerText = "";
+        document.getElementById('refmagnesio').innerText = "";
+        document.getElementById('refAST').innerText = "";
         document.getElementById('refALT').innerText = "";
         document.getElementById('refFosfatasa_Alcalina').innerText = "";
+        document.getElementById('refGGT').innerText = "";
         document.getElementById('refbillirrubina').innerText = "";
         document.getElementById('refalbumina').innerText = "";
         document.getElementById('refproteinas_totales').innerText = "";
         document.getElementById('refglobulinas').innerText = "";
         document.getElementById('refalb_glo').innerText = "";
+        document.getElementById('reflipasa').innerText = "";
     }
 }
+
+// Agregar la función formatearDecimal si aún no existe
+function formatearDecimal(id) {
+    const input = document.getElementById(id);
+    if (!input || input.value === '') return;
+    
+    // Eliminar flechas y obtener valor numérico
+    const valorTexto = input.value.replace(/\s*[↑↓]$/, '').replace(',', '.');
+    const valor = parseFloat(valorTexto);
+    
+    if (isNaN(valor)) return;
+    
+    // Determinar el número de decimales según el campo
+    let decimales = 1; // Por defecto, un decimal
+    
+    // Algunos campos podrían requerir diferente cantidad de decimales
+    if (['billirrubina_total', 'creatinina', 'Albumina'].includes(id)) {
+        decimales = 1; // 1 decimal para estos campos
+    } else if (['fosforo', 'calcio', 'potasio'].includes(id)) {
+        decimales = 1; // 1 decimal para estos campos
+    } else if (['ALT', 'Fosfatasa_Alcalina', 'amilasa', 'nitrogeno_ureico', 'urea', 'lipasa'].includes(id)) {
+        decimales = 0; // Sin decimales para estos campos (enteros)
+    }
+    
+    // Formatear con el número de decimales apropiado
+    const valorFormateado = valor.toFixed(decimales).replace('.', ',');
+    input.value = valorFormateado;
+    
+    // Actualizar color después del formateo
+    const refId = 'ref' + id.toLowerCase();
+    actualizarColor(id, refId);
+}
+
 // Reemplazar la función actualizarColor con esta versión simplificada
 // Reemplazar la función actualizarColor existente con esta versión mejorada
 function actualizarColor(inputId, refId) {
@@ -876,7 +1057,6 @@ function actualizarColor(inputId, refId) {
     const refElement = document.getElementById(refId);
     
     if (!inputElement || !refElement || !refElement.textContent) {
-        console.log(`No se encontró: ${inputId} o ${refId}`);
         return;
     }
     
@@ -928,25 +1108,26 @@ document.addEventListener('DOMContentLoaded', function() {
     const parametros = [
         { campo: 'Glucosa', ref: 'refglucosa' },
         { campo: 'Colesterol_total', ref: 'refcolesterolT' },
-        { campo: 'amilasa', ref: 'refamilasa' },
-        { campo: 'CK', ref: 'refCK' },
-        { campo: 'urea', ref: 'refurea' },
+        { campo: 'Trigliceridos', ref: 'refTrigliceridos' },
         { campo: 'nitrogeno_ureico', ref: 'refnitrogeno_ureico' },
+        { campo: 'urea', ref: 'refurea' },
         { campo: 'creatinina', ref: 'refcreatinina' },
         { campo: 'bun_crea', ref: 'refbun_crea' },
+        { campo: 'acido_urico', ref: 'refacido_urico' },
         { campo: 'fosforo', ref: 'reffosforo' },
         { campo: 'calcio', ref: 'refcalcio' },
-        { campo: 'sodio', ref: 'refsodio' },
-        { campo: 'potasio', ref: 'refpotasio' },
-        { campo: 'cloro', ref: 'refcloro' },
-        { campo: 'Na_K', ref: 'refNa_K' },
+        { campo: 'magnesio', ref: 'refmagnesio' },
+        { campo: 'AST', ref: 'refAST' },
         { campo: 'ALT', ref: 'refALT' },
         { campo: 'Fosfatasa_Alcalina', ref: 'refFosfatasa_Alcalina' },
+        { campo: 'GGT', ref: 'refGGT' },
         { campo: 'billirrubina_total', ref: 'refbillirrubina' },
         { campo: 'Albumina', ref: 'refalbumina' },
         { campo: 'proteinas_totales', ref: 'refproteinas_totales' },
         { campo: 'Globulinas', ref: 'refglobulinas' },
-        { campo: 'alb/glo', ref: 'refalb_glo' }
+        { campo: 'alb/glo', ref: 'refalb_glo' },
+        { campo: 'lipasa', ref: 'reflipasa' }
+
     ];
     
     parametros.forEach(param => {
@@ -970,7 +1151,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
-
+    </script>
     </script>
             </script>
             <tr>
@@ -993,37 +1174,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 <td>mg/dl</td>  
                 </tr>
                 <tr>
-                    <td>AMILASA</td>
-                    <td>
-                        <input type="text" id="amilasa" list="rangoamilasa" onblur="formatearDecimal('amilasa')" onkeydown="moverFoco(event, 'amilasa')">
-                        <datalist id="rangoamilasa"></datalist>
-                    </td>
-                    <td id="refamilasa">400 - 2500</td>
-                    <td>U/L</td>
+                    <tr>
+                        <td>TRIGLICÉRIDOS</td>
+                        <td>
+                            <input type="text" id="Trigliceridos" list="rangoTrigliceridos" onkeydown="moverFoco(event, 'Trigliceridos')">  
+                            <datalist id="rangoTrigliceridos"></datalist>
+                        </td>
+                        <td id="refTrigliceridos">23 - 75</td>
+                        <td>mg/dl</td>  
+                    </tr>
                 </tr>
                 <tr>
-                    <td>CK</td>
-                    <td>
-                        <input type="text" id="CK" list="rangock" onkeydown="moverFoco(event, 'CK')">
-                        <datalist id="rangock"></datalist>
-                    </td>
-                    <td id="refCK">32 - 157</td>
-                    <td>U/L</td>
-                </tr>
-            </tbody>
-        </table>
-    
-        <h3 class="titulos">FUNCIONAMIENTO RENAL</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>PARÁMETRO</th>
-                    <th>RESULTADO</th>
-                    <th>VALOR DE REFERENCIA</th>
-                    <th>UNIDADES</th>
-                </tr>
-            </thead>
-            <tbody>
                 <tr>
                     <td>NITROGENO UREICO</td>
                     <td>
@@ -1031,6 +1192,15 @@ document.addEventListener('DOMContentLoaded', function() {
                         <datalist id="rangonitrogeno_ureico"></datalist>
                     </td>
                     <td id="refnitrogeno_ureico">7 - 23</td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>UREA</td>
+                    <td>
+                        <input type="text" id="urea" list="rangourea" onblur="formatearDecimal('urea')" onkeydown="moverFoco(event, 'urea')">
+                        <datalist id="rangourea"></datalist>
+                    </td>
+                    <td id="refurea">15 - 48</td>
                     <td>mg/dl</td>
                 </tr>
                 <tr>
@@ -1043,20 +1213,21 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>mg/dl</td>
                 </tr>
                 <tr>
-                    <td>UREA</td>
-                    <td>
-                        <input type="text" id="urea" list="rangourea" onkeydown="moverFoco(event, 'Urea')">
-                        <datalist id="rangourea"></datalist>
-                    </td>
-                    <td id="refurea">20 - 50</td>
-                    <td>mg/dl</td>
-                    </tr>
-                <tr>
                     <td>RELACIÓN BUN/CREA</td>
                     <td>
-                    <input type="text" id="bun_crea" list="rangobun_crea" readonly style="background-color: #f0f0f0;" onkeydown="moverFoco(event, 'fosforo')">                        <datalist id="rangobun_crea"></datalist>
+                        <input type="text" id="bun_crea" list="rangobun_crea" onblur="formatearDecimal('bun_crea')" onkeydown="moverFoco(event, 'bun_crea')">
+                        <datalist id="rangobun_crea"></datalist>
                     </td>
                     <td id="refbun_crea"> 4,2 - 32,8 </td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>ÁCIDO ÚRICO</td>
+                    <td>
+                        <input type="text" id="acido_urico" list="rangoacido_urico" onblur="formatearDecimal('acido_urico')" onkeydown="moverFoco(event, 'acido_urico')">
+                        <datalist id="rangoacido_urico"></datalist>
+                    </td>
+                    <td id="refacido_urico">0.0 - 0.5</td>
                     <td>mg/dl</td>
                 </tr>
                 <tr>
@@ -1078,55 +1249,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>mg/dl</td>
                 </tr>
                 <tr>
-                    <td>SODIO</td>
+                    <td>MAGNESIO</td>
                     <td>
-                        <input type="text" id="sodio" list="rangosodio" onblur="formatearDecimal('sodio')" onkeydown="moverFoco(event, 'sodios')">
-                        <datalist id="rangosodio"></datalist>
+                        <input type="text" id="magnesio" list="rangomagnesio" onblur="formatearDecimal('magnesio')" onkeydown="moverFoco(event, 'magnesio')">
+                        <datalist id="rangomagnesio"></datalist>
                     </td>
-                    <td id="refsodio">139 - 164</td>
-                    <td>mmol/l</td>
+                    <td id="refmagnesio">1.8 - 2.4</td>
+                    <td>mg/dl</td>
                 </tr>
                 <tr>
-                    <td>POTASIO</td>
+                    <td>AST</td>
                     <td>
-                        <input type="text" id="potasio" list="rangopotasio" onblur="formatearDecimal('potasio')" onkeydown="moverFoco(event, 'potasio')">
-                        <datalist id="rangopotasio"></datalist>
+                        <input type="text" id="AST" list="rangoAST" onblur="formatearDecimal('AST')" onkeydown="moverFoco(event, 'AST')">
+                        <datalist id="rangoAST"></datalist>
                     </td>
-                    <td id="refpotasio">4,4 - 6,1</td>
-                    <td>mmol/l</td>
+                    <td id="refAST">15 - 66</td>
+                    <td>U/L</td>
                 </tr>
-                <tr>
-                    <td>CLORO</td>
-                    <td>
-                        <input type="text" id="cloro" list="rangocloro" onblur="formatearDecimal('cloro')" onkeydown="moverFoco(event, 'cloro')">
-                        <datalist id="rangocloro"></datalist>
-                    </td>
-                    <td id="refcloro">105 - 125</td>
-                    <td>mmol/l</td>
-                </tr>
-                <tr>
-                    <td>NA+/K+</td>
-                    <td>
-                        <input type="text" id="Na_K" list="rangoNa_K" onblur="formatearDecimal('Na_K')" onkeydown="moverFoco(event, 'Na_K')">
-                        <datalist id="rangoNa_K"></datalist>
-                    </td>
-                    <td id="refNa_K">27 - 38</td>
-                    <td></td>
-                </tr>
-            </tbody>
-        </table>
-    
-        <h3 class="titulos">FUNCIONAMIENTO HÉPATICO</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>PARÁMETRO</th>
-                    <th>RESULTADO</th>
-                    <th>VALOR DE REFERENCIA</th>
-                    <th>UNIDADES</th>
-                </tr>
-            </thead>
-            <tbody>
                 <tr>
                     <td>ALT</td>
                     <td>
@@ -1146,28 +1285,23 @@ document.addEventListener('DOMContentLoaded', function() {
                     <td>U/L</td>
                 </tr>
                 <tr>
+                    <td>GGT</td>
+                    <td>
+                        <input type="text" id="GGT" list="rangoGGT" onblur="formatearDecimal('GGT')" onkeydown="moverFoco(event, 'GGT')">
+                        <datalist id="rangoGGT"></datalist>
+                    </td>
+                    <td id="refGGT">0 - 6</td>
+                    <td>U/L</td>
+                </tr>
+                <tr>
                     <td>BILLIRRUBINA TOTAL</td>
                     <td>
                         <input type="text" id="billirrubina_total" list="rangobillirrubina" onblur="formatearDecimal('billirrubina_total')" onkeydown="moverFoco(event, 'billirrubina_total')">
                         <datalist id="rangobillirrubina"></datalist>
                     </td>
-                    <td id="refbillirrubina"> 0,2 - 0,8 </td>
+                    <td id="refbillirrubina">0,2 - 0,8</td>
                     <td>mg/dl</td>
                 </tr>
-            </tbody>
-        </table>
-    
-        <h3 class="titulos">FUNCIONAMIENTO SANGUINEO</h3>
-        <table>
-            <thead>
-                <tr>
-                    <th>PARÁMETRO</th>
-                    <th>RESULTADO</th>
-                    <th>VALOR DE REFERENCIA</th>
-                    <th>UNIDADES</th>
-                </tr>
-            </thead>
-            <tbody>
                 <tr>
                     <td>ALBUMINA</td>
                     <td>
@@ -1206,7 +1340,16 @@ document.addEventListener('DOMContentLoaded', function() {
                         <datalist id="rangoalb/glo"></datalist>
                     </td>
                     <td id="refalb_glo">0,6 - 1,1</td>
-                    <td>mg/dl</td>
+                    <td></td>
+                </tr>
+                <tr id="lipasaRow">
+                    <td>LIPASA PANCREATICA</td>
+                    <td>
+                        <input type="text" id="lipasa" list="rangolipasa" onblur="formatearDecimal('lipasa')" onkeydown="moverFoco(event, 'lipasa')">
+                        <datalist id="rangolipasa"></datalist>
+                    </td>
+                    <td id="reflipasa">Seleccionar especie</td>
+                    <td>U/L</td>
                 </tr>
                 <script>
 function calculateValues() {
@@ -1228,35 +1371,54 @@ function calculateValues() {
 }
 
 
-
-
+// Asegurarse que los event listeners estén correctamente asignados
+document.addEventListener('DOMContentLoaded', function() {
+    // Asignar event listeners para los campos de interés
+    const albuminaInput = document.getElementById('Albumina');
+       const proteinasInput = document.getElementById('proteinas_totales');
+    
+    if (albuminaInput) {
+        albuminaInput.addEventListener('input', calculateValues);
+        albuminaInput.addEventListener('blur', calculateValues);
+    }
+    
+    if (proteinasInput) {
+        proteinasInput.addEventListener('input', calculateValues);
+        proteinasInput.addEventListener('blur', calculateValues);
+    }
+    
+    // También calcular los valores iniciales si ya hay datos
+    calculateValues();
+});
             </script>
             </tbody>
         </table>
     
-        <h3 class="titulos">INDICES DE INTERFERENCIA</h3>
-        <table>
-            <tbody>
-                <tr>
-                    <td>SUERO HEMOLITICO</td>
-                    <td>
-                        <input type="text" id="suero_hemolitico2" list="opcionesInterferencia" style="width:140px;">
-                    </td>
-                </tr>
-                <tr>
-                    <td>SUERO LIPEMICO</td>
-                    <td>
-                        <input type="text" id="suero_lipemico2" list="opcionesInterferencia" style="width:140px;">
-                    </td>
-                </tr>
-                <tr>
-                    <td>SUERO ICTERICO</td>
-                    <td>
-                        <input type="text" id="suero_icterico2" list="opcionesInterferencia" style="width:140px;">
-                    </td>
-                </tr>
-            </tbody>
-        </table>
+        <div id="interferenceIndicesSection">
+            <h3 class="titulos">INDICES DE INTERFERENCIA</h3>
+            <table>
+                <tbody>
+                    <tr>
+                        <td>SUERO HEMOLITICO</td>
+                        <td>
+                            <input type="text" id="suero_hemolitico2" list="opcionesInterferencia" style="width:140px;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>SUERO LIPEMICO</td>
+                        <td>
+                            <input type="text" id="suero_lipemico2" list="opcionesInterferencia" style="width:140px;">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>SUERO ICTERICO</td>
+                        <td>
+                            <input type="text" id="suero_icterico2" list="opcionesInterferencia" style="width:140px;">
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
         <datalist id="opcionesInterferencia">
     <option value="No se observa">
     <option value="Se observa">
@@ -1287,300 +1449,6 @@ function calculateValues() {
     </div>
 
     <script>
-    
-        // Implementación de historial para Panel_Plus.html
-        document.addEventListener('DOMContentLoaded', function() {
-            // Configurar el historial de análisis
-            setupHistorial();
-            
-            // Añadir evento para guardar los datos al generar el PDF
-            const pdfButton = document.getElementById('pdfButton');
-            if (pdfButton) {
-                const originalHandler = pdfButton.onclick;
-                pdfButton.onclick = async function() {
-                    // Guardar los datos antes de generar el PDF
-                    guardarAnalisisActual();
-                    
-                    // Llamar al manejador original
-                    if (originalHandler) {
-                        return originalHandler.apply(this, arguments);
-                    }
-                };
-            }
-        });
-        
-        // Función para configurar el selector de historial
-        function setupHistorial() {
-            // Crear el selector de historial
-            const controlsDiv = document.querySelector('.controls');
-            
-            if (controlsDiv) {
-                // Crear el contenedor para el historial
-                const historialContainer = document.createElement('div');
-                historialContainer.className = 'historial-container';
-                historialContainer.style.marginTop = '10px';
-                
-                // Crear etiqueta
-                const label = document.createElement('label');
-                label.htmlFor = 'historialSelector';
-                label.textContent = 'Historial de análisis:';
-                label.style.marginRight = '10px';
-                
-                // Crear selector
-                const select = document.createElement('select');
-                select.id = 'historialSelector';
-                select.style.padding = '5px';
-                select.style.marginRight = '10px';
-                
-                // Opción por defecto
-                const defaultOption = document.createElement('option');
-                defaultOption.value = '';
-                defaultOption.textContent = '-- Seleccionar análisis anterior --';
-                defaultOption.selected = true;
-                select.appendChild(defaultOption);
-                
-                // Cargar opciones del historial
-                cargarOpcionesHistorial(select);
-                
-                // Evento de cambio
-                select.addEventListener('change', function() {
-                    if (this.value) {
-                        cargarAnalisisDesdeHistorial(this.value);
-                    }
-                });
-                
-                // Agregar botón para borrar historial
-                const borrarHistorialBtn = document.createElement('button');
-                borrarHistorialBtn.textContent = 'Borrar Historial';
-                borrarHistorialBtn.style.marginLeft = '10px';
-                borrarHistorialBtn.onclick = function() {
-                    if (confirm('¿Estás seguro de que quieres borrar todo el historial de análisis?')) {
-                        localStorage.removeItem('panelPlusHistorial');
-                        cargarOpcionesHistorial(select);
-                        alert('Historial borrado correctamente');
-                    }
-                };
-                
-                // Agregar elementos al DOM
-                historialContainer.appendChild(label);
-                historialContainer.appendChild(select);
-                historialContainer.appendChild(borrarHistorialBtn);
-                
-                // Agregar después de los selectores existentes
-                controlsDiv.appendChild(historialContainer);
-            }
-        }
-        
-        // Función para cargar las opciones del historial
-        function cargarOpcionesHistorial(selectElement) {
-            // Limpiar opciones existentes excepto la primera
-            while (selectElement.options.length > 1) {
-                selectElement.remove(1);
-            }
-            
-            // Obtener historial del localStorage
-            const historial = JSON.parse(localStorage.getItem('panelPlusHistorial') || '[]');
-            
-            // Agregar cada análisis como opción
-            historial.forEach((analisis, index) => {
-                const option = document.createElement('option');
-                option.value = index;
-                
-                // Crear descripción con nombre, fecha y hora
-                const fecha = new Date(analisis.timestamp);
-                const fechaStr = fecha.toLocaleDateString();
-                const horaStr = fecha.toLocaleTimeString();
-                
-                option.textContent = `${analisis.mascotaNombre} - ${analisis.propietarioNombre} (${fechaStr} ${horaStr})`;
-                
-                selectElement.appendChild(option);
-            });
-        }
-        
-        // Función para guardar el análisis actual
-        function guardarAnalisisActual() {
-            // Recopilación de todos los datos del formulario
-            const formData = {
-                // Datos de la mascota y propietario
-                mascotaNombre: document.getElementById('mascotaNombre')?.value || '',
-                mascotaRaza: document.getElementById('mascotaRaza')?.value || '',
-                mascotaEspecie: document.getElementById('especieEnPlantilla')?.value || '',
-                mascotaSexo: document.getElementById('sexoEnPlantilla')?.value || '',
-                mascotaEdad: document.getElementById('mascotaEdad')?.value || '',
-                mascotaPeso: document.getElementById('mascotaPeso')?.value || '',
-
-                propietarioNombre: document.getElementById('propietarioNombre')?.value || '',
-                propietarioCedula: document.getElementById('propietarioCedula')?.value || '',
-                propietarioTelefono: document.getElementById('propietarioTelefono')?.value || '',
-                propietarioEmail: document.getElementById('propietarioEmail')?.value || '',
-                propietarioFecha: document.getElementById('propietarioFecha')?.value || '',
-                nombreMedico: document.getElementById('nombreMedico')?.value || '',
-
-                // Datos de química clínica
-                Glucosa: document.getElementById('Glucosa')?.value || '',
-                Colesterol_total: document.getElementById('Colesterol_total')?.value || '',
-                amilasa: document.getElementById('amilasa')?.value || '',
-                CK: document.getElementById('CK')?.value || '',
-
-                // Datos adicionales
-                ALT: document.getElementById('ALT')?.value || '',
-                AST: document.getElementById('AST')?.value || '',
-                Fosfatasa_Alcalina: document.getElementById('Fosfatasa_Alcalina')?.value || '',
-
-                // Índices de interferencia
-                suero_hemolitico: document.getElementById('suero_hemolitico2')?.value || 'No se observa',
-                suero_lipemico: document.getElementById('suero_lipemico2')?.value || 'No se observa',
-                suero_icterico: document.getElementById('suero_icterico2')?.value || 'No se observa',
-
-                // Selectores principales
-                especieSelector: document.getElementById('especieSelector')?.value || '',
-                sexoSelector: document.getElementById('sexoSelector')?.value || '',
-                edadSelector: document.getElementById('edadSelector')?.value || '',
-
-                // Añadir timestamp para ordenación
-                timestamp: new Date().getTime()
-            };
-
-            // Verificar si hay datos significativos para guardar
-            if (!formData.mascotaNombre && !formData.propietarioNombre) {
-                console.warn('No hay datos significativos para guardar.');
-                return;
-            }
-
-            // Obtener historial existente
-            let historial = JSON.parse(localStorage.getItem('panelPlusHistorial') || '[]');
-
-            // Añadir el nuevo análisis al principio
-            historial.unshift(formData);
-
-            // Limitar a los 10 últimos
-            historial = historial.slice(0, 10);
-
-            // Guardar en localStorage
-            localStorage.setItem('panelPlusHistorial', JSON.stringify(historial));
-
-            // Actualizar opciones en el selector
-            const selector = document.getElementById('historialSelector');
-            if (selector) {
-                cargarOpcionesHistorial(selector);
-            }
-        }
-        
-        // Función para cargar un análisis desde el historial
-        function cargarAnalisisDesdeHistorial(index) {
-            // Obtener historial
-            const historial = JSON.parse(localStorage.getItem('panelPlusHistorial') || '[]');
-            
-            if (!historial[index]) return;
-            
-            const analisis = historial[index];
-            
-            // Cargar todos los campos con los datos guardados
-            // Datos de la mascota y propietario
-            document.getElementById('mascotaNombre').value = analisis.mascotaNombre || '';
-            document.getElementById('mascotaRaza').value = analisis.mascotaRaza || '';
-            document.getElementById('especieEnPlantilla').value = analisis.mascotaEspecie || '';
-            document.getElementById('sexoEnPlantilla').value = analisis.mascotaSexo || '';
-            document.getElementById('mascotaEdad').value = analisis.mascotaEdad || '';
-            document.getElementById('mascotaPeso').value = analisis.mascotaPeso || '';
-            
-            document.getElementById('propietarioNombre').value = analisis.propietarioNombre || '';
-            document.getElementById('propietarioCedula').value = analisis.propietarioCedula || '';
-            document.getElementById('propietarioTelefono').value = analisis.propietarioTelefono || '';
-            document.getElementById('propietarioEmail').value = analisis.propietarioEmail || '';
-            document.getElementById('propietarioFecha').value = analisis.propietarioFecha || '';
-            document.getElementById('nombreMedico').value = analisis.nombreMedico || '';
-            
-            // Datos de química clínica
-            document.getElementById('Glucosa').value = analisis.Glucosa || '';
-            document.getElementById('Colesterol_total').value = analisis.Colesterol_total || '';
-            document.getElementById('amilasa').value = analisis.amilasa || '';
-            document.getElementById('CK').value = analisis.CK || '';
-            
-            // Datos de funcionamiento renal
-            document.getElementById('nitrogeno_ureico').value = analisis.nitrogeno_ureico || '';
-            document.getElementById('creatinina').value = analisis.creatinina || '';
-            document.getElementById('urea').value = analisis.urea || '';
-            document.getElementById('bun_crea').value = analisis.bun_crea || '';
-            document.getElementById('fosforo').value = analisis.fosforo || '';
-            document.getElementById('calcio').value = analisis.calcio || '';
-            document.getElementById('sodio').value = analisis.sodio || '';
-            document.getElementById('potasio').value = analisis.potasio || '';
-            document.getElementById('cloro').value = analisis.cloro || '';
-            document.getElementById('Na_K').value = analisis.Na_K || '';
-            
-            // Datos de funcionamiento hepático
-            document.getElementById('ALT').value = analisis.ALT || '';
-            document.getElementById('Fosfatasa_Alcalina').value = analisis.Fosfatasa_Alcalina || '';
-            document.getElementById('billirrubina_total').value = analisis.billirrubina_total || '';
-            
-            // Datos de funcionamiento sanguíneo
-            document.getElementById('Albumina').value = analisis.Albumina || '';
-            document.getElementById('proteinas_totales').value = analisis.proteinas_totales || '';
-            document.getElementById('Globulinas').value = analisis.Globulinas || '';
-            document.getElementById('alb/glo').value = analisis.alb_glo || '';
-            
-            // Índices de interferencia
-            document.getElementById('suero_hemolitico2').value = analisis.suero_hemolitico || 'No se observa';
-            document.getElementById('suero_lipemico2').value = analisis.suero_lipemico || 'No se observa';
-            document.getElementById('suero_icterico2').value = analisis.suero_icterico || 'No se observa';
-            
-            // Selectores principales
-            if (analisis.especieSelector) {
-                document.getElementById('especieSelector').value = analisis.especieSelector;
-                // Disparar el evento change manualmente
-                const event = new Event('change');
-                document.getElementById('especieSelector').dispatchEvent(event);
-            }
-            
-            if (analisis.sexoSelector) {
-                document.getElementById('sexoSelector').value = analisis.sexoSelector;
-                const event = new Event('change');
-                document.getElementById('sexoSelector').dispatchEvent(event);
-            }
-            
-            if (analisis.edadSelector) {
-                document.getElementById('edadSelector').value = analisis.edadSelector;
-                const event = new Event('change');
-                document.getElementById('edadSelector').dispatchEvent(event);
-            }
-            
-            // Actualizar colores y valores calculados
-            calculateValues(); // Para actualizar globulinas y alb/glo
-            
-            // Actualizar colores para todos los campos
-            const parametros = [
-                { campo: 'Glucosa', ref: 'refglucosa' },
-                { campo: 'Colesterol_total', ref: 'refcolesterolT' },
-                { campo: 'amilasa', ref: 'refamilasa' },
-                { campo: 'CK', ref: 'refCK' },
-                { campo: 'urea', ref: 'refurea' },
-                { campo: 'nitrogeno_ureico', ref: 'refnitrogeno_ureico' },
-                { campo: 'creatinina', ref: 'refcreatinina' },
-                { campo: 'bun_crea', ref: 'refbun_crea' },
-                { campo: 'fosforo', ref: 'reffosforo' },
-                { campo: 'calcio', ref: 'refcalcio' },
-                { campo: 'sodio', ref: 'refsodio' },
-                { campo: 'potasio', ref: 'refpotasio' },
-                { campo: 'cloro', ref: 'refcloro' },
-                { campo: 'Na_K', ref: 'refNa_K' },
-                { campo: 'ALT', ref: 'refALT' },
-                { campo: 'Fosfatasa_Alcalina', ref: 'refFosfatasa_Alcalina' },
-                { campo: 'billirrubina_total', ref: 'refbillirrubina' },
-                { campo: 'Albumina', ref: 'refalbumina' },
-                { campo: 'proteinas_totales', ref: 'refproteinas_totales' },
-                { campo: 'Globulinas', ref: 'refglobulinas' },
-                { campo: 'alb/glo', ref: 'refalb_glo' }
-            ];
-            
-            parametros.forEach(param => {
-                actualizarColor(param.campo, param.ref, {type: 'blur'});
-            });
-            
-            // Mostrar mensaje de éxito
-            alert(`Datos de ${analisis.mascotaNombre} cargados correctamente`);
-        }
-
 function moverFoco(event, siguienteId) {
     if (event.key === 'Enter') {
         event.preventDefault();
@@ -1588,26 +1456,27 @@ function moverFoco(event, siguienteId) {
         // Lista completa de campos en orden de navegación
         const camposParametros = [
             'Glucosa', 
-            'Colesterol_total', 
-            'amilasa',
-            'CK',
-            'nitrogeno_ureico',  
+            'Colesterol_total',
+            'Trigliceridos',
+            'nitrogeno_ureico',
+            'urea',
             'creatinina', 
-            'urea', 
-            'bun_crea', 
+            'bun_crea',
+            'acido_urico',
             'fosforo', 
-            'calcio', 
-            'sodio', 
-            'potasio', 
-            'cloro', 
-            'Na_K', 
+            'calcio',
+            'magnesio',
+            'AST',
             'ALT', 
-            'Fosfatasa_Alcalina', 
+            'Fosfatasa_Alcalina',
+            'GGT',
             'billirrubina_total', 
             'Albumina', 
             'proteinas_totales', 
             'Globulinas', 
-            'alb/glo'
+            'alb/glo',
+            'lipasa'
+
         ];
         
         // Encontrar el índice del campo actual
@@ -1627,27 +1496,29 @@ function moverFoco(event, siguienteId) {
         // Los mismos campos para navegación hacia arriba
         const camposParametros = [
             'Glucosa', 
-            'Colesterol_total', 
-            'amilasa',
-            'CK',
-            'nitrogeno_ureico',  
+            'Colesterol_total',
+            'Trigliceridos',
+            'nitrogeno_ureico',
+            'urea',
             'creatinina', 
-            'urea', 
-            'bun_crea', 
+            'bun_crea',
+            'acido_urico',
             'fosforo', 
-            'calcio', 
-            'sodio', 
-            'potasio', 
-            'cloro', 
-            'Na_K', 
+            'calcio',
+            'magnesio',
+            'AST',
             'ALT', 
-            'Fosfatasa_Alcalina', 
+            'Fosfatasa_Alcalina',
+            'GGT',
             'billirrubina_total', 
             'Albumina', 
             'proteinas_totales', 
             'Globulinas', 
-            'alb/glo'
+            'alb/glo',
+            'lipasa'
+
         ];
+        
         // Encontrar el índice del campo actual
         const indiceActual = camposParametros.indexOf(event.target.id);
         
@@ -1659,8 +1530,7 @@ function moverFoco(event, siguienteId) {
     }
 }
 document.addEventListener('DOMContentLoaded', () => {
-    cargarListaDeParametros();
-    console.log("Cargando lista de parámetros..."); // Para debugear
+    // No cargar inmediatamente, esperar a que se detecte el template
 });
 // Función mejorada de redondeo que maneja correctamente los IDs de referencia
 function redondearAEntero(id) {
@@ -1684,14 +1554,17 @@ function redondearAEntero(id) {
         case 'Colesterol_total':
             refId = 'refcolesterolT';
             break;
-        case 'CK':
-            refId = 'refCK';
+        case 'Trigliceridos':
+            refId = 'refTrigliceridos';
             break;
         case 'Glucosa':
             refId = 'refglucosa';
             break;
         case 'amilasa':
             refId = 'refamilasa';
+            break;
+        case 'AST':
+            refId = 'refAST';
             break;
         case 'ALT':
             refId = 'refALT';
@@ -1704,6 +1577,9 @@ function redondearAEntero(id) {
             break;
         case 'nitrogeno_ureico':
             refId = 'refnitrogeno_ureico';
+            break;
+        case 'GGT':
+            refId = 'refGGT';
             break;
         case 'sodio':
             refId = 'refsodio';
@@ -1726,7 +1602,7 @@ function redondearAEntero(id) {
 // Asignar esta función a los campos que necesitan redondeo
 document.addEventListener('DOMContentLoaded', function() {
     // Campos que deben redondearse a enteros
-    const camposEnteros = ['Glucosa', 'Colesterol_total', 'amilasa', 'CK', 'ALT', 'Fosfatasa_Alcalina', 'urea', 'nitrogeno_ureico', 'sodio', 'cloro', 'Na_K'];
+    const camposEnteros = ['Glucosa', 'Colesterol_total', 'Trigliceridos', 'ALT', 'Fosfatasa_Alcalina', 'urea', 'AST', 'nitrogeno_ureico', 'sodio', 'cloro', 'Na_K', 'GGT'];
     
     camposEnteros.forEach(id => {
         const campo = document.getElementById(id);
@@ -1773,7 +1649,7 @@ function redondearAUnDecimal(id) {
 // Asignar esta función a los campos fósforo y calcio
 document.addEventListener('DOMContentLoaded', function() {
     // Campos que deben redondearse a un decimal
-    const camposUnDecimal = ['fosforo', 'calcio', 'creatinina'];
+    const camposUnDecimal = ['fosforo', 'calcio', 'acido_urico', 'creatinina'];
     
     camposUnDecimal.forEach(id => {
         const campo = document.getElementById(id);
@@ -1798,7 +1674,6 @@ document.addEventListener('DOMContentLoaded', function() {
 function cargarListaDeParametros() {
     const selector = document.getElementById('parameterSelector');
     if (!selector) {
-        console.error("No se encontró el selector de parámetros");
         return;
     }
     
@@ -1806,25 +1681,22 @@ function cargarListaDeParametros() {
     
     // Lista de parámetros específicos que queremos mostrar
     const parametrosEspecificos = [
-        "GLUCOSA", "COLESTEROL TOTAL", "AMILASA", "CK", "UREA",
-        "NITROGENO UREICO", "CREATININA", "BUN_CREA", "FOSFORO", "CALCIO", "SODIO", "POTASIO", "CLORO", "NA+/K+",
-        "ALT", "FOSFATASA ALCALINA", "BILLIRRUBINA TOTAL",
-        "ALBUMINA", "PROTEINAS TOTALES", "GLOBULINAS TOTALES", "RELACIÓN ALBUMINA/GLOBULINAS"
-    ];
+    "GLUCOSA", "COLESTEROL TOTAL", "TRIGLICÉRIDOS", "CK",
+    "NITROGENO UREICO", "UREA", "CREATININA", "RELACIÓN BUN/CREA", "ÁCIDO ÚRICO", "FOSFORO", "CALCIO", "MAGNESIO",
+    "AST", "ALT", "FOSFATASA ALCALINA", "GGT", "BILLIRRUBINA TOTAL",
+    "ALBUMINA", "PROTEINAS TOTALES", "GLOBULINAS TOTALES", "RELACIÓN ALBUMINA/GLOBULINAS", "LIPASA PANCREATICA"
+];
     
     const tablas = document.querySelectorAll('#template1 table');
-    console.log(`Encontradas ${tablas.length} tablas`); // Para debugear
     
     tablas.forEach((tabla, tablaIndex) => {
         const filas = tabla.querySelectorAll('tbody tr');
-        console.log(`Tabla ${tablaIndex}: ${filas.length} filas`); // Para debugear
         
         filas.forEach((fila, filaIndex) => {
             if (!fila.cells || fila.cells.length === 0) return;
             
             // Obtener el nombre del parámetro (primera celda)
             const paramName = fila.cells[0]?.textContent.trim();
-            console.log(`Fila ${filaIndex}: "${paramName}"`); // Para debugear
             
             // Solo agregar los parámetros específicos que queremos
             if (parametrosEspecificos.includes(paramName)) {
@@ -1840,25 +1712,30 @@ function cargarListaDeParametros() {
             }
         });
     });
-    
-    console.log(`Total de opciones cargadas: ${selector.options.length - 1}`); // Para debugear
 }
 
 function eliminarParametroSeleccionado() {
     const selector = document.getElementById('parameterSelector');
     const filaId = selector.value;
-    
+
     if (!filaId) {
         alert('Por favor, selecciona un parámetro para eliminar.');
         return;
     }
-    
+
     const fila = document.getElementById(filaId);
     if (fila) {
         fila.remove();
-        
+
         // Actualizar el selector después de eliminar
         cargarListaDeParametros();
+
+        // Verificar si el campo eliminado tiene eventos asociados y eliminarlos
+        const input = fila.querySelector('input');
+        if (input) {
+            const inputClone = input.cloneNode(true); // Clonar el nodo para eliminar eventos
+            input.parentNode.replaceChild(inputClone, input); // Reemplazar el nodo original
+        }
     }
 }
     function actualizarSexoEnPlantilla() {
@@ -1878,19 +1755,422 @@ function eliminarParametroSeleccionado() {
             mensaje.style.display = 'block';
         }
     }
+    </script>
+        <script>
+            function toggleTemplate() {
+                const templates = document.querySelectorAll('.container');
+                const selectedTemplate = document.getElementById(document.getElementById('templateSelector').value);
+                templates.forEach(template => template.style.display = 'none');
+                if (selectedTemplate) selectedTemplate.style.display = 'block';
+            }
+    
+            function actualizarSexoEnPlantilla() {
+                const sexo = document.getElementById('sexoSelector').value;
+                document.querySelectorAll('.container').forEach(template => {
+                    const input = template.querySelector('#sexoEnPlantilla, #sexoEnPlantilla2');
+                    if (input) input.value = sexo;
+                });
+            }
+    
+            function actualizarEspecieEnPlantilla() {
+                const especie = document.getElementById('especieSelector').value;
+                document.querySelectorAll('.container').forEach(template => {
+                    const input = template.querySelector('#especieEnPlantilla, #especieEnPlantilla2');
+                    if (input) input.value = especie;
+                });
+            }
+    
+            function actualizarValoresReferencia() {
+                const especie = document.getElementById('especieSelector').value;
+                const sexo = document.getElementById('sexoSelector').value;
+                const edad = document.getElementById('edadSelector').value;
+                // Lógica para actualizar los valores de referencia en todas las plantillas
+            }
+
+            
     
     </script>
     <script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Configurar el historial de análisis
+    setupHistorial();
+    
+    // Añadir evento para guardar los datos al generar el PDF
+    const pdfButton = document.getElementById('pdfButton');
+    if (pdfButton) {
+        const originalHandler = pdfButton.onclick;
+        pdfButton.onclick = async function() {
+            // Guardar los datos antes de generar el PDF
+            guardarAnalisisActual();
+            
+            // Llamar al manejador original
+            if (originalHandler) {
+                return originalHandler.apply(this, arguments);
+            }
+        };
+    }
+});
+
+// Función para configurar el selector de historial
+function setupHistorial() {
+    // Crear el selector de historial
+    const controlsDiv = document.querySelector('.controls');
+    
+    if (controlsDiv) {
+        // Crear el contenedor para el historial
+        const historialContainer = document.createElement('div');
+        historialContainer.className = 'historial-container';
+        historialContainer.style.marginTop = '10px';
         
-       document.addEventListener('DOMContentLoaded', () => {
+        // Crear etiqueta
+        const label = document.createElement('label');
+        label.htmlFor = 'historialSelector';
+        label.textContent = 'Historial de análisis:';
+        label.style.marginRight = '10px';
+        
+        // Crear selector
+        const select = document.createElement('select');
+        select.id = 'historialSelector';
+        select.style.padding = '5px';
+        select.style.marginRight = '10px';
+        
+        // Opción por defecto
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Seleccionar análisis anterior --';
+        defaultOption.selected = true;
+        select.appendChild(defaultOption);
+        
+        // Cargar opciones del historial
+        cargarOpcionesHistorial(select);
+        
+        // Evento de cambio
+        select.addEventListener('change', function() {
+            if (this.value) {
+                cargarAnalisisDesdeHistorial(this.value);
+            }
+        });
+        
+        // Agregar botón para borrar historial
+        const borrarHistorialBtn = document.createElement('button');
+        borrarHistorialBtn.textContent = 'Borrar Historial';
+        borrarHistorialBtn.style.marginLeft = '10px';
+        borrarHistorialBtn.onclick = function() {
+            if (confirm('¿Estás seguro de que quieres borrar todo el historial de análisis?')) {
+                localStorage.removeItem('panelQuimicoHistorial');
+                cargarOpcionesHistorial(select);
+                alert('Historial borrado correctamente');
+            }
+        };
+        
+        // Agregar elementos al DOM
+        historialContainer.appendChild(label);
+        historialContainer.appendChild(select);
+        historialContainer.appendChild(borrarHistorialBtn);
+        
+        // Agregar después de los selectores existentes
+        controlsDiv.appendChild(historialContainer);
+    }
+}
+
+// Función para cargar las opciones del historial
+function cargarOpcionesHistorial(selectElement) {
+    // Limpiar opciones existentes excepto la primera
+    while (selectElement.options.length > 1) {
+        selectElement.remove(1);
+    }
+    
+    // Obtener historial del localStorage
+    const historial = JSON.parse(localStorage.getItem('panelQuimicoHistorial') || '[]');
+    
+    // Agregar cada análisis como opción
+    historial.forEach((analisis, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        
+        // Crear descripción con nombre, fecha y hora
+        const fecha = new Date(analisis.timestamp);
+        const fechaStr = fecha.toLocaleDateString();
+        const horaStr = fecha.toLocaleTimeString();
+        
+        option.textContent = `${analisis.mascotaNombre} - ${analisis.propietarioNombre} (${fechaStr} ${horaStr})`;
+        
+        selectElement.appendChild(option);
+    });
+}
+
+// Función para guardar el análisis actual
+function guardarAnalisisActual() {
+    // Recopilación de todos los datos del formulario
+    const formData = {
+        // Datos de la mascota y propietario
+        mascotaNombre: document.getElementById('mascotaNombre')?.value || '',
+        mascotaRaza: document.getElementById('mascotaRaza')?.value || '',
+        mascotaEspecie: document.getElementById('especieEnPlantilla')?.value || '',
+        mascotaSexo: document.getElementById('sexoEnPlantilla')?.value || '',
+        mascotaEdad: document.getElementById('mascotaEdad')?.value || '',
+        mascotaPeso: document.getElementById('mascotaPeso')?.value || '',
+
+        propietarioNombre: document.getElementById('propietarioNombre')?.value || '',
+        propietarioCedula: document.getElementById('propietarioCedula')?.value || '',
+        propietarioTelefono: document.getElementById('propietarioTelefono')?.value || '',
+        propietarioEmail: document.getElementById('propietarioEmail')?.value || '',
+        propietarioFecha: document.getElementById('propietarioFecha')?.value || '',
+        nombreMedico: document.getElementById('nombreMedico')?.value || '',
+
+        // Datos de química clínica
+        Glucosa: document.getElementById('Glucosa')?.value || '',
+        Colesterol_total: document.getElementById('Colesterol_total')?.value || '',
+        Trigliceridos: document.getElementById('Trigliceridos')?.value || '',
+
+        // Datos de funcionamiento renal
+        nitrogeno_ureico: document.getElementById('nitrogeno_ureico')?.value || '',
+        creatinina: document.getElementById('creatinina')?.value || '',
+        urea: document.getElementById('urea')?.value || '',
+        acido_urico: document.getElementById('acido_urico')?.value || '',
+        bun_crea: document.getElementById('bun_crea')?.value || '',
+        fosforo: document.getElementById('fosforo')?.value || '',
+        calcio: document.getElementById('calcio')?.value || '',
+        magnesio: document.getElementById('magnesio')?.value || '',
+
+        // Datos de funcionamiento hepático
+        AST: document.getElementById('AST')?.value || '',
+        ALT: document.getElementById('ALT')?.value || '',
+        Fosfatasa_Alcalina: document.getElementById('Fosfatasa_Alcalina')?.value || '',
+        GGT: document.getElementById('GGT')?.value || '',
+        billirrubina_total: document.getElementById('billirrubina_total')?.value || '',
+
+        // Datos de funcionamiento sanguíneo
+        Albumina: document.getElementById('Albumina')?.value || '',
+        proteinas_totales: document.getElementById('proteinas_totales')?.value || '',
+        Globulinas: document.getElementById('Globulinas')?.value || '',
+        alb_glo: document.getElementById('alb/glo')?.value || '',
+        lipasa: document.getElementById('lipasa')?.value || '',
+
+        // Índices de interferencia
+        suero_hemolitico: document.getElementById('suero_hemolitico2')?.value || 'No se observa',
+        suero_lipemico: document.getElementById('suero_lipemico2')?.value || 'No se observa',
+        suero_icterico: document.getElementById('suero_icterico2')?.value || 'No se observa',
+
+        // Selectores principales
+        especieSelector: document.getElementById('especieSelector')?.value || '',
+        sexoSelector: document.getElementById('sexoSelector')?.value || '',
+        edadSelector: document.getElementById('edadSelector')?.value || '',
+
+        // Añadir timestamp para ordenación
+        timestamp: new Date().getTime()
+    };
+
+    // Verificar si hay datos significativos para guardar
+    if (!formData.mascotaNombre && !formData.propietarioNombre) {
+        console.warn('No hay datos significativos para guardar.');
+        return;
+    }
+
+    // Obtener historial existente
+    let historial = JSON.parse(localStorage.getItem('panelQuimicoHistorial') || '[]');
+
+    // Añadir el nuevo análisis al principio
+    historial.unshift(formData);
+
+    // Limitar a los 10 últimos
+    historial = historial.slice(0, 10);
+
+    // Guardar en localStorage
+    localStorage.setItem('panelQuimicoHistorial', JSON.stringify(historial));
+
+    // Actualizar opciones en el selector
+    const selector = document.getElementById('historialSelector');
+    if (selector) {
+        cargarOpcionesHistorial(selector);
+    }
+}
+
+// Reemplaza la función cargarAnalisisDesdeHistorial por esta versión mejorada
+function cargarAnalisisDesdeHistorial(index) {
+    // Obtener historial
+    const historial = JSON.parse(localStorage.getItem('panelQuimicoHistorial') || '[]');
+    
+    if (!historial[index]) return;
+    
+    const analisis = historial[index];
+    
+    // Cargar todos los campos básicos primero
+    document.getElementById('mascotaNombre').value = analisis.mascotaNombre || '';
+    document.getElementById('mascotaRaza').value = analisis.mascotaRaza || '';
+    document.getElementById('mascotaEdad').value = analisis.mascotaEdad || '';
+    document.getElementById('mascotaPeso').value = analisis.mascotaPeso || '';
+    
+    document.getElementById('propietarioNombre').value = analisis.propietarioNombre || '';
+    document.getElementById('propietarioCedula').value = analisis.propietarioCedula || '';
+    document.getElementById('propietarioTelefono').value = analisis.propietarioTelefono || '';
+    document.getElementById('propietarioEmail').value = analisis.propietarioEmail || '';
+    document.getElementById('propietarioFecha').value = analisis.propietarioFecha || '';
+    document.getElementById('nombreMedico').value = analisis.nombreMedico || '';
+    
+    // Establecer los selectores principales PRIMERO y en orden correcto
+    // 1. Especie
+    if (analisis.especieSelector) {
+        document.getElementById('especieSelector').value = analisis.especieSelector;
+        // Actualizar manualmente el campo relacionado
+        document.getElementById('especieEnPlantilla').value = analisis.mascotaEspecie || '';
+    }
+    
+    // 2. Sexo
+    if (analisis.sexoSelector) {
+        document.getElementById('sexoSelector').value = analisis.sexoSelector;
+        // Actualizar manualmente el campo relacionado
+        document.getElementById('sexoEnPlantilla').value = analisis.mascotaSexo || '';
+    }
+    
+    // 3. Edad
+    if (analisis.edadSelector) {
+        document.getElementById('edadSelector').value = analisis.edadSelector;
+    }
+    
+    // IMPORTANTE: Actualizar los valores de referencia explícitamente
+    // DESPUÉS de establecer todos los selectores
+    actualizarValoresReferencia2();
+    
+    // Ahora cargar los valores de los análisis
+    document.getElementById('Glucosa').value = analisis.Glucosa || '';
+    document.getElementById('Colesterol_total').value = analisis.Colesterol_total || '';
+    document.getElementById('Trigliceridos').value = analisis.Trigliceridos || '';
+    
+    document.getElementById('nitrogeno_ureico').value = analisis.nitrogeno_ureico || '';
+    document.getElementById('creatinina').value = analisis.creatinina || '';
+    document.getElementById('urea').value = analisis.urea || '';
+    document.getElementById('acido_urico').value = analisis.acido_urico || '';
+    document.getElementById('bun_crea').value = analisis.bun_crea || '';
+    document.getElementById('fosforo').value = analisis.fosforo || '';
+    document.getElementById('calcio').value = analisis.calcio || '';
+    document.getElementById('magnesio').value = analisis.magnesio || '';
+    
+    document.getElementById('AST').value = analisis.AST || '';
+    document.getElementById('ALT').value = analisis.ALT || '';
+    document.getElementById('Fosfatasa_Alcalina').value = analisis.Fosfatasa_Alcalina || '';
+    document.getElementById('GGT').value = analisis.GGT || '';
+    document.getElementById('billirrubina_total').value = analisis.billirrubina_total || '';
+    
+    document.getElementById('Albumina').value = analisis.Albumina || '';
+    document.getElementById('proteinas_totales').value = analisis.proteinas_totales || '';
+    document.getElementById('Globulinas').value = analisis.Globulinas || '';
+    document.getElementById('alb/glo').value = analisis.alb_glo || '';
+    document.getElementById('lipasa').value = analisis.lipasa || '';
+    
+    document.getElementById('suero_hemolitico2').value = analisis.suero_hemolitico || 'No se observa';
+    document.getElementById('suero_lipemico2').value = analisis.suero_lipemico || 'No se observa';
+    document.getElementById('suero_icterico2').value = analisis.suero_icterico || 'No se observa';
+    
+    // Actualizar colores y valores calculados
+    calculateValues(); // Para actualizar globulinas y alb/glo
+    calculateBunCreatinine(); // Para actualizar BUN/CREA
+    
+    // Actualizar colores para todos los campos
+    const parametros = [
+        { campo: 'Glucosa', ref: 'refglucosa' },
+        { campo: 'Colesterol_total', ref: 'refcolesterolT' },
+        { campo: 'Trigliceridos', ref: 'refTrigliceridos' },
+        { campo: 'nitrogeno_ureico', ref: 'refnitrogeno_ureico' },
+        { campo: 'urea', ref: 'refurea' },
+        { campo: 'creatinina', ref: 'refcreatinina' },
+        { campo: 'bun_crea', ref: 'refbun_crea' },
+        { campo: 'acido_urico', ref: 'refacido_urico' },
+        { campo: 'fosforo', ref: 'reffosforo' },
+        { campo: 'calcio', ref: 'refcalcio' },
+        { campo: 'magnesio', ref: 'refmagnesio' },
+        { campo: 'AST', ref: 'refAST' },
+        { campo: 'ALT', ref: 'refALT' },
+        { campo: 'Fosfatasa_Alcalina', ref: 'refFosfatasa_Alcalina' },
+        { campo: 'GGT', ref: 'refGGT' },
+        { campo: 'billirrubina_total', ref: 'refbillirrubina' },
+        { campo: 'Albumina', ref: 'refalbumina' },
+        { campo: 'lipasa', ref: 'reflipasa' },
+        { campo: 'proteinas_totales', ref: 'refproteinas_totales' },
+        { campo: 'Globulinas', ref: 'refglobulinas' },
+        { campo: 'alb/glo', ref: 'refalb_glo' }
+    ];
+    
+    parametros.forEach(param => {
+        actualizarColor(param.campo, param.ref, {type: 'blur'});
+    });
+    
+    // Mostrar mensaje de éxito
+    alert(`Datos de ${analisis.mascotaNombre} cargados correctamente`);
+}
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const templates = document.querySelectorAll('.container');
+            const templateSelector = document.getElementById('templateSelector');
+        
+            if (templateSelector) {
+                templateSelector.addEventListener('change', () => {
+                    templates.forEach(template => template.style.display = 'none');
+                    const selectedTemplate = document.getElementById(templateSelector.value);
+                    if (selectedTemplate) selectedTemplate.style.display = 'block';
+                });
+            }
+        });
+        
+        function printTemplate() {
+            const templateSelector = document.getElementById('templateSelector');
+            const selectedTemplate = document.getElementById(templateSelector.value);
+        
+            if (!selectedTemplate) {
+                alert('Selecciona una plantilla antes de imprimir.');
+                return;
+            }
+        
+            // Crear un contenedor temporal para la impresión
+            const printContainer = document.createElement('div');
+            printContainer.id = 'printContainer';
+            printContainer.style.display = 'none';
+            document.body.appendChild(printContainer);
+        
+            // Clonar la plantilla seleccionada y agregarla al contenedor de impresión
+            const clone = selectedTemplate.cloneNode(true);
+            printContainer.appendChild(clone);
+        
+            // Ocultar todas las plantillas excepto la seleccionada
+            const templates = document.querySelectorAll('.container');
+            templates.forEach(template => {
+                if (template !== selectedTemplate) {
+                    template.style.display = 'none';
+                }
+            });
+        
+            // Mostrar el contenedor de impresión y ocultar el resto del contenido
+            printContainer.style.display = 'block';
+            document.querySelector('.controls').style.display = 'none';
+        
+            // Imprimir el contenido del contenedor de impresión
+            window.print();
+        
+            // Restaurar la visibilidad de todas las plantillas y controles
+            printContainer.style.display = 'none';
+            document.querySelector('.controls').style.display = 'block';
+            templates.forEach(template => {
+                template.style.display = 'none';
+            });
+            selectedTemplate.style.display = 'block';
+        
+            // Eliminar el contenedor de impresión
+            document.body.removeChild(printContainer);
+        }
+        </script>
+    <script>
+   document.addEventListener('DOMContentLoaded', () => {
         const templates = document.querySelectorAll('.container');
         const templateSelector = document.getElementById('templateSelector');
     
-        templateSelector.addEventListener('change', () => {
-            templates.forEach(template => template.style.display = 'none');
-            const selectedTemplate = document.getElementById(templateSelector.value);
-            if (selectedTemplate) selectedTemplate.style.display = 'block';
-        });
+        if (templateSelector) {
+            templateSelector.addEventListener('change', () => {
+                templates.forEach(template => template.style.display = 'none');
+                const selectedTemplate = document.getElementById(templateSelector.value);
+                if (selectedTemplate) selectedTemplate.style.display = 'block';
+            });
+        }
     });
     async function generatePDF() {
     // Mostrar el indicador de carga
@@ -1901,29 +2181,25 @@ function eliminarParametroSeleccionado() {
     pdfButton.disabled = true;
     
     try {
-        console.log("Iniciando generación de PDF...");
-        
-        // Verificar que las bibliotecas estén cargadas
-        if (!window.jspdf || !window.html2canvas) {
-            throw new Error("Las bibliotecas necesarias no están cargadas correctamente");
-        }
-        
         const { jsPDF } = window.jspdf;
-        console.log("jsPDF cargado correctamente");
-        
         const selectedTemplate = document.getElementById('template1');
+
         if (!selectedTemplate) {
-            throw new Error('No se encontró la plantilla');
+            alert('No se encontró la plantilla.');
+            return;
         }
-        
-        // Obtener datos para el nombre del archivo
+
+        // Obtener el nombre de la mascota y el primer apellido del propietario
         const mascotaNombre = document.getElementById('mascotaNombre').value || 'Sin_nombre';
         const propietarioNombre = document.getElementById('propietarioNombre').value || 'Sin_apellido';
-        const nombreArray = propietarioNombre.split(' ');
-        const propietarioApellido = nombreArray.length > 1 ? nombreArray[1] : nombreArray[0];
         
-        console.log("Esperando carga de imágenes...");
-        // Esperar a que todas las imágenes se carguen
+        // Extraer el primer apellido (segundo elemento después de dividir por espacios)
+        const nombreArray = propietarioNombre.split(' ');
+        // Si hay al menos dos palabras, tomar la segunda como primer apellido
+        // Si no, usar el valor completo o el default
+        const propietarioApellido = nombreArray.length > 1 ? nombreArray[1] : nombreArray[0];
+
+        // Espera a que todas las imágenes dentro del elemento se carguen
         const images = selectedTemplate.getElementsByTagName('img');
         const loadImages = Array.from(images).map(img => {
             return new Promise((resolve, reject) => {
@@ -1935,11 +2211,10 @@ function eliminarParametroSeleccionado() {
                 }
             });
         });
-        
+
         await Promise.all(loadImages);
-        console.log("Imágenes cargadas, generando canvas...");
-        
-        // Generar canvas con opciones óptimas
+
+        // Genera el canvas
         const canvas = await html2canvas(selectedTemplate, {
             scale: 2,
             useCORS: true,
@@ -1960,189 +2235,75 @@ function eliminarParametroSeleccionado() {
 
         // Agrega la imagen de la plantilla escalada y centrada
         pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+
+        // Genera el nombre del archivo según la plantilla actual y datos
+        // Verificar si viene de analitos_laboratorio
+        const urlParams = new URLSearchParams(window.location.search);
+        const isAnalitosLaboratorio = urlParams.get('template') === 'analitos_laboratorio';
+        const fileName = isAnalitosLaboratorio 
+            ? `Analitos Laboratorio ${mascotaNombre} ${propietarioApellido}.pdf`
+            : `Perfil Quimico General ${mascotaNombre} ${propietarioApellido}.pdf`;
         
-        console.log("Canvas generado, creando PDF...");
+        // Generar el blob del PDF
+        const pdfBlob = pdf.output('blob');
         
-        // Nombre del archivo
-        const fileName = `Panel Plus ${mascotaNombre} ${propietarioApellido}.pdf`;
-        console.log("Guardando como:", fileName);
-        
-        // Método simplificado - usar el método tradicional que funciona en todos los navegadores
-        pdf.save(fileName);
-        console.log("PDF guardado exitosamente");
+        // Intentar usar la API File System Access para guardar el archivo
+        if ('showSaveFilePicker' in window) {
+            try {
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName: fileName,
+                    types: [{
+                        description: 'Archivo PDF',
+                        accept: { 'application/pdf': ['.pdf'] }
+                    }]
+                });
+                
+                const writable = await fileHandle.createWritable();
+                await writable.write(pdfBlob);
+                await writable.close();
+                
+                console.log('Archivo guardado con éxito usando File System Access API');
+            } catch (err) {
+                // Si el usuario cancela el guardado o hay un error
+                if (err.name !== 'AbortError') {
+                    console.error('Error al usar File System Access API:', err);
+                    // Caer en el método tradicional
+                    pdf.save(fileName);
+                }
+            }
+        } else {
+            // Navegador no soporta File System Access API, usar método tradicional
+            pdf.save(fileName);
+        }
         
     } catch (error) {
-        console.error('Error detallado al generar el PDF:', error);
-        alert('Error al generar el PDF: ' + error.message);
+        console.error('Error al generar el PDF:', error);
+        alert('Ocurrió un error al generar el PDF: ' + error.message);
     } finally {
-        // Ocultar indicador y habilitar botón
+        // Ocultar el indicador de carga y habilitar el botón nuevamente
         loadingIndicator.style.display = 'none';
         pdfButton.disabled = false;
     }
 }
 
-// Agregar la función formatearDecimal si aún no existe
-function formatearDecimal(id) {
-    const input = document.getElementById(id);
-    if (!input || input.value === '') return;
-    
-    // Eliminar flechas y obtener valor numérico
-    const valorTexto = input.value.replace(/\s*[↑↓]$/, '').replace(',', '.');
-    const valor = parseFloat(valorTexto);
-    
-    if (isNaN(valor)) return;
-    
-    // Determinar el número de decimales según el campo
-    let decimales = 1; // Por defecto, un decimal
-    
-    // Algunos campos podrían requerir diferente cantidad de decimales
-    if (['billirrubina_total', 'creatinina', 'Albumina'].includes(id)) {
-        decimales = 1; // 1 decimal para estos campos
-    } else if (['fosforo', 'calcio', 'potasio'].includes(id)) {
-        decimales = 1; // 1 decimal para estos campos
-    } else if (['ALT', 'Fosfatasa_Alcalina', 'amilasa', 'CK', 'nitrogeno_ureico', 'urea'].includes(id)) {
-        decimales = 0; // Sin decimales para estos campos (enteros)
-    }
-    
-    // Formatear con el número adecuado de decimales y usar coma como separador
-    input.value = valor.toFixed(decimales).replace('.', ',');
-    
-    // Actualizar color basado en referencia
-    // Determinar qué ID de referencia usar
-    let refId;
-    switch(id) {
-        case 'Colesterol_total':
-            refId = 'refcolesterolT';
-            break;
-        case 'billirrubina_total':
-            refId = 'refbillirrubina';
-            break;
-        case 'Fosfatasa_Alcalina':
-            refId = 'refFosfatasa_Alcalina';
-            break;
-        case 'alb/glo':
-            refId = 'refalb_glo';
-            break;
-        case 'Na_K':
-            refId = 'refNa_K';
-            break;
-        default:
-            refId = 'ref' + id.toLowerCase();
-    }
-    
-    actualizarColor(id, refId);
-    
-    // Si es uno de los campos que afecta al cálculo BUN/CREA, recalcular
-    if (id === 'nitrogeno_ureico' || id === 'creatinina') {
-        calculateBunCreatinine();
-    }
-}
-
-// Reemplazar la función calculateBunCreatinine por esta versión mejorada
-function calculateBunCreatinine() {
-    const nitroInput = document.getElementById('nitrogeno_ureico');
-    const creaInput = document.getElementById('creatinina');
-    const bunCreaInput = document.getElementById('bun_crea');
-    const refElement = document.getElementById('refbun_crea');
-
-    // Verificar que los elementos existan
-    if (!nitroInput || !creaInput || !bunCreaInput || !refElement) {
-        console.error("Elementos necesarios para el cálculo BUN/CREA no encontrados");
-        return;
-    }
-
-    // Obtener y limpiar los valores
-    let nitroValue = nitroInput.value.trim().replace(/\s*[↑↓]$/, '').replace(',', '.');
-    let creaValue = creaInput.value.trim().replace(/\s*[↑↓]$/, '').replace(',', '.');
-
-    const nitroNum = parseFloat(nitroValue);
-    const creaNum = parseFloat(creaValue);
-
-    // Si no hay números válidos o creatinina es cero/negativa
-    if (isNaN(nitroNum) || isNaN(creaNum) || creaNum <= 0) {
-        bunCreaInput.value = "";
-        return;
-    }
-
-    // Calcular la relación
-    const ratio = nitroNum / creaNum;
-    
-    // Obtener rango de referencia
-    const rangoTexto = refElement.textContent.trim();
-    const match = rangoTexto.match(/([\d,.]+)\s*-\s*([\d,.]+)/);
-    
-    if (match) {
-        const min = parseFloat(match[1].replace(',', '.'));
-        const max = parseFloat(match[2].replace(',', '.'));
-        
-        // Formatear con un decimal y coma
-        let ratioFormatted = ratio.toFixed(1).replace('.', ',');
-        
-        // Aplicar estilo y añadir flecha según el valor
-        if (ratio < min) {
-            bunCreaInput.style.color = '#0096d2'; // Azul para valores bajos
-            ratioFormatted += ' ↓';
-        } else if (ratio > max) {
-            bunCreaInput.style.color = 'red'; // Rojo para valores altos
-            ratioFormatted += ' ↑';
-        } else {
-            bunCreaInput.style.color = 'black'; // Negro para valores normales
+// Función para eliminar el campo LIPASA
+function deleteLipasaField() {
+    const lipasaRow = document.getElementById('lipasaRow');
+    if (lipasaRow) {
+        if (confirm('¿Estás seguro de que quieres eliminar el campo LIPASA?')) {
+            lipasaRow.remove();
+            // También limpiar el valor del input si existe
+            const lipasaInput = document.getElementById('lipasa');
+            if (lipasaInput) {
+                lipasaInput.value = '';
+            }
         }
-        
-        // Mostrar el resultado
-        bunCreaInput.value = ratioFormatted;
     } else {
-        // Si no se pudo determinar el rango, mostrar sin indicadores
-        bunCreaInput.value = ratio.toFixed(1).replace('.', ',');
-        bunCreaInput.style.color = 'black';
+        alert('El campo LIPASA ya ha sido eliminado');
     }
 }
-
-// Configurar los listeners para el cálculo automático de BUN/CREA
-document.addEventListener('DOMContentLoaded', function() {
-    // ...existing code...
-    
-    // Configurar event listeners para BUN/CREA
-    const nitro = document.getElementById('nitrogeno_ureico');
-    const crea = document.getElementById('creatinina');
-    
-    if (nitro) {
-        nitro.addEventListener('input', calculateBunCreatinine);
-        nitro.addEventListener('blur', function() {
-            if (typeof formatearDecimal === 'function') {
-                formatearDecimal('nitrogeno_ureico');
-            }
-            calculateBunCreatinine();
-        });
-    }
-    
-    if (crea) {
-        crea.addEventListener('input', calculateBunCreatinine);
-        crea.addEventListener('blur', function() {
-            if (typeof formatearDecimal === 'function') {
-                formatearDecimal('creatinina');
-            }
-            calculateBunCreatinine();
-        });
-    }
-    
-    // Ejecutar cálculo inicial después de cargar la página
-    setTimeout(calculateBunCreatinine, 500);
-});
-
-// Modificar la función cargarAnalisisDesdeHistorial para recalcular BUN/CREA
-function cargarAnalisisDesdeHistorial(index) {
-    // ...existing code...
-    
-    // Recalcular BUN/CREA en lugar de usar el valor guardado
-    setTimeout(function() {
-        calculateBunCreatinine();
-        if (typeof calculateValues === 'function') {
-            calculateValues(); // Para calcular globulinas y alb/glo
-        }
-    }, 200);
-}
-
+</script>
     </script>
+        <script type="module" src="numeros.js"></script>
     </body>
     </html>

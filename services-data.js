@@ -65,13 +65,13 @@ const SERVICIOS_LABORATORIO = {
     servicios: [
       {
         id: "panel_plus",
-        nombre: "Panel Plus (Alb, ALT, ALP, AMY, Bun, CA, Crea, Bun/Crea, Glob, Alb/Glob, P, TBILL, TP, CHOL, TBA, Electrolitos, glu)",
+        nombre: "Panel Plus (Alb, ALT, ALP, AMY, Bun, CA, CK, Crea, Bun/Crea, Glob, Alb/Glob, P, TBILL, TP, CHOL, TBA, Electrolitos, glu)",
         descripcion: "Evaluación avanzada de albúmina, electrolitos, proteínas, lípidos y función hepática/renal.",
         precio: 25000
       },
       {
         id: "panel_general_basico",
-        nombre: "Panel General Básico (Alb, ALP, ALT, AMY, Bun, Crea, Bun-Crea, Ca, Glob, Glo-Alb- Glu, TP, TC, CK, P, BillT)",
+        nombre: "Panel General Básico (Alb, ALP, ALT, AMY, Bun, Crea, Bun-Crea, Ca, Glob, Glo-Alb- Glu, TP, TC, P, BillT)",
         descripcion: "Alternativa simplificada del Panel Plus, con enfoque en función renal, hepática.",
         precio: 23000
       },
