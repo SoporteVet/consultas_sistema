@@ -2087,6 +2087,7 @@ function editLabTicket(randomId) {
                             <option value="Dra. Sofia Carrillo" ${ticket.medicoSolicita === 'Dra. Sofia Carrillo' ? 'selected' : ''}>Dra. Sofia Carrillo</option>
                             <option value="Dra. Karla Quesada" ${ticket.medicoSolicita === 'Dra. Karla Quesada' ? 'selected' : ''}>Dra. Karla Quesada</option>
                             <option value="Dra. Natalia Alvarado" ${ticket.medicoSolicita === 'Dra. Natalia Alvarado' ? 'selected' : ''}>Dra. Natalia Alvarado</option>
+                            <option value="Dra. Eliany Lopez" ${ticket.medicoSolicita === 'Dra. Eliany Lopez' ? 'selected' : ''}>Dra. Eliany Lopez</option>
                             <option value="Medico Externo" ${ticket.medicoSolicita === 'Medico Externo' ? 'selected' : ''}>Médico Externo</option>
                             <option value="Medico Internista" ${ticket.medicoSolicita === 'Medico Internista' ? 'selected' : ''}>Médico Internista</option>
                             <option value="N.A" ${ticket.medicoSolicita === 'N.A' ? 'selected' : ''}>N.A</option>
