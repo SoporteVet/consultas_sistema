@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consentimiento Informado - Transfusiones Sanguíneas</title>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3a7ca5;
+            --secondary-color: #f8f9fa;
+            --accent-color: #63c5da;
+            --text-color: #2c3e50;
+            --border-color: #d1e7f0;
+            --highlight-color: #e3f2fd;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+        body { font-family: 'Segoe UI', Arial, sans-serif; margin:0; padding:20px; background:#f5f7fa; color:var(--text-color);}        
+        .container { width:800px; margin:0 auto; padding:30px; background:white; border:1px solid var(--border-color); box-shadow:0 5px 20px var(--shadow-color); border-radius:12px; margin-bottom:40px; }
+        .header { display:flex; justify-content:space-between; align-items:center; border-bottom:3px solid var(--accent-color); padding-bottom:15px; margin-bottom:20px; }
+        .logo { max-width:80px; border-radius:10px; box-shadow:0 2px 5px var(--shadow-color); }
+        h1 { flex:1; text-align:center; color:var(--primary-color); font-size:1.6rem; text-shadow:1px 1px 2px var(--shadow-color); }
+        .date-short { font-size:0.9rem; font-weight:bold; }
+        p, ul { margin-bottom:20px; line-height:1.6; text-align:justify; }
+        ul { padding-left:20px; }
+        input[type="text"] { border:none; background:transparent; font-weight:bold; min-height:35px; padding:8px 12px; }
+        input[type="text"]:focus { outline:none; background:var(--highlight-color); box-shadow:0 3px 8px var(--shadow-color); }
+        .signature-area { display:flex; justify-content:center; margin-top:40px; }
+        .firma-container { display:flex; flex-direction:column; align-items:center; flex:1; }
+        .signature-box { background:var(--secondary-color); padding:10px; border-radius:5px; width:100%; text-align:center; margin-bottom:10px; font-weight:500; }
+        .signature-pad { width:100%; height:200px; border:2px dashed var(--border-color); border-radius:8px; background:white; box-shadow:0 2px 8px var(--shadow-color); }
+        .signature-buttons { margin-top:10px; }
+        .pdf-button-container { text-align:center; margin-top:30px; }
+        .pdf-button { padding:12px 25px; background:#4CAF50; color:white; border:none; border-radius:6px; font-weight:bold; cursor:pointer; box-shadow:0 3px 10px rgba(0,0,0,0.15); }
+        .pdf-button:hover { background:#45a049; }
+        .autocomplete-banner{background:linear-gradient(135deg,#e3f2fd,#bbdefb);border:1px solid #2196f3;color:#1565c0;padding:12px 20px;margin-bottom:20px;border-radius:8px;font-size:0.9rem;box-shadow:0 2px 8px rgba(33,150,243,0.15);}
+        .autocomplete-banner strong{color:#0d47a1;}
+        input[type="text"]:-webkit-autofill,input[type="text"]:-webkit-autofill:hover,input[type="text"]:-webkit-autofill:focus{-webkit-box-shadow:0 0 0px 1000px white inset;-webkit-text-fill-color:var(--text-color)!important;background:white!important;}
+        .page-break{page-break-before:always;margin-top:50px;}
+        @media print{.autocomplete-banner,.pdf-button-container,.signature-buttons{display:none!important;}body{background:white!important;}.container{box-shadow:none!important;border:none!important;}.page-break{margin-top:0;}}
+    </style>
+</head>
+<body>
+    <!-- PÁGINA 1 -->
+    <div class="container" id="transfusionPage1">
+        <!-- Banner de autocompletado -->
+        <div class="autocomplete-banner" id="autocompleteBanner" style="display:none;">
+            <strong>ℹ️ Datos cargados automáticamente</strong> - Los campos se han completado con información desde la base de datos. Puedes modificar cualquier dato si es necesario.
+        </div>
+        
+        <div class="header">
+            <img src="../img/logo.jpg" alt="Veterinaria San Martin de Porres" class="logo">
+            <h1>CONSENTIMIENTO INFORMADO PARA TRANSFUSIONES SANGUÍNEAS EN CANINOS Y FELINOS</h1>
+            <div id="shortDate" class="date-short"></div>
+        </div>
+        
+        <p><strong>Nombre del propietario/a:</strong> <input type="text" id="ownerName" placeholder="Nombre del propietario" required style="width: 350px;"></p>
+        
+        <div class="form-row" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Cédula:</strong> <input type="text" id="ownerId" placeholder="Cédula" style="width: 200px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Teléfono:</strong> <input type="text" id="ownerPhone" placeholder="Teléfono" style="width: 200px;">
+            </div>
+        </div>
+        
+        <p><strong>Nombre de la mascota:</strong> <input type="text" id="petName" placeholder="Nombre de la mascota" required style="width: 350px;"></p>
+        
+        <div class="form-row" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Especie:</strong> <input type="text" id="petSpecies" placeholder="Especie" style="width: 120px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Raza:</strong> <input type="text" id="petBreed" placeholder="Raza" style="width: 150px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Peso:</strong> <input type="text" id="petWeight" placeholder="Peso" style="width: 100px;">
+            </div>
+        </div>
+        
+        <div class="form-row" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Edad:</strong> <input type="text" id="petAge" placeholder="Edad" style="width: 100px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Sexo:</strong> <input type="text" id="petSex" placeholder="Sexo" style="width: 120px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Esterilizado/a:</strong> <input type="text" id="petSterilized" placeholder="Sí / No" style="width: 100px;">
+            </div>
+        </div>
+        
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+        
+        <p><strong>Estimado cliente:</strong></p>
+        <p>
+            En la Veterinaria San Martín de Porres nos comprometemos a brindar atención veterinaria ética, segura y con los más altos estándares. Este documento tiene como finalidad informarle de manera clara sobre el procedimiento de transfusión sanguínea, sus beneficios y posibles riesgos, para que pueda otorgar su consentimiento informado.
+        </p>
+        
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+        
+        <h2 style="color: var(--primary-color); font-size: 1.3rem;">¿QUÉ ES UNA TRANSFUSIÓN SANGUÍNEA?</h2>
+        <p>
+            Es un procedimiento médico mediante el cual se administra sangre total o componentes sanguíneos (como glóbulos rojos o plasma) a un paciente con el objetivo de estabilizar su estado de salud. Este tratamiento se utiliza comúnmente en casos de:
+        </p>
+        <ul>
+            <li>Anemia severa</li>
+            <li>Hemorragias agudas</li>
+            <li>Trastornos de coagulación</li>
+            <li>Enfermedades inmunomediadas</li>
+            <li>Cirugías complejas o trauma</li>
+            <li>Otras condiciones clínicas que comprometan la oxigenación y perfusión tisular</li>
+        </ul>
+        
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+        
+        <h2 style="color: var(--primary-color); font-size: 1.3rem;">BENEFICIOS DEL PROCEDIMIENTO</h2>
+        <ul>
+            <li>Restablece niveles adecuados de oxígeno en los tejidos</li>
+            <li>Mejora los signos clínicos asociados a la anemia o pérdida de sangre</li>
+            <li>Brinda tiempo crítico para el tratamiento de la causa subyacente</li>
+            <li>Puede representar una intervención salvavidas</li>
+        </ul>
+    </div>
+
+    <!-- PÁGINA 2 -->
+    <div class="container page-break" id="transfusionPage2">
+        <div class="header">
+            <img src="logo.jpg" alt="Veterinaria San Martin de Porres" class="logo">
+            <h1>CONSENTIMIENTO INFORMADO PARA TRANSFUSIONES SANGUÍNEAS EN CANINOS Y FELINOS</h1>
+            <div style="font-size:0.9rem;font-weight:bold;">Página 2</div>
+        </div>
+        
+        <h2 style="color: var(--primary-color); font-size: 1.3rem; margin-top: 0;">POSIBLES RIESGOS Y ADVERSIDADES</h2>
+        <p>
+            Aunque se toman todas las medidas necesarias para minimizar complicaciones, las transfusiones conllevan ciertos riesgos:
+        </p>
+        <ul>
+            <li>Reacciones alérgicas: fiebre, vómito, urticaria, dificultad para respirar</li>
+            <li>Rechazo de la sangre transfundida: por incompatibilidad o anticuerpos preexistentes</li>
+            <li>Sobrecarga de volumen: puede causar edema pulmonar o insuficiencia cardíaca</li>
+            <li>Reacciones hemolíticas: destrucción de los glóbulos rojos transfundidos</li>
+            <li>Infecciones (muy poco frecuentes): riesgo mínimo gracias al uso de donantes evaluados</li>
+            <li>Fracaso terapéutico: en algunos casos, la transfusión no logra el resultado esperado</li>
+        </ul>
+        
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+        
+        <h2 style="color: var(--primary-color); font-size: 1.3rem;">MEDIDAS TOMADAS PARA MINIMIZAR LOS RIESGOS</h2>
+        <ul>
+            <li>Determinación de grupo sanguíneo y pruebas de compatibilidad, si el tiempo y condición lo permiten</li>
+            <li>Uso de sangre de donadores sanos y seleccionados</li>
+            <li>Medicación preventiva en pacientes con riesgo de reacciones</li>
+            <li>Monitoreo constante antes, durante y después del procedimiento</li>
+            <li>Evaluación clínica y de laboratorio del estado del paciente</li>
+        </ul>
+        
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+        
+        <h2 style="color: var(--primary-color); font-size: 1.3rem;">DECLARACIÓN Y AUTORIZACIÓN</h2>
+        <p><strong>Yo, el/la abajo firmante, declaro que:</strong></p>
+        <ul>
+            <li>He sido debidamente informado/a sobre el procedimiento, sus riesgos y beneficios.</li>
+            <li>Entiendo que, aunque es una intervención que puede salvar la vida de mi mascota, también implica riesgos que no pueden ser completamente evitados.</li>
+            <li>Autorizo al equipo veterinario de la Veterinaria San Martín de Porres a realizar la transfusión sanguínea en caso de que se considere necesaria para la salud de mi mascota.</li>
+            <li>Me comprometo a cubrir los costos asociados al procedimiento y sus cuidados relacionados.</li>
+        </ul>
+        
+        <p>Firmado a las <span id="transTime"></span> horas, el día <span id="transDay"></span> del mes <span id="transMonth"></span> del año <span id="transYear"></span>.</p>
+        
+        <div class="signature-area">
+            <div class="firma-container">
+                <div class="signature-box">Firma del propietario/a</div>
+                <canvas class="signature-pad" id="ownerSigPad"></canvas>
+                <div class="signature-buttons">
+                    <button type="button" onclick="clearSignature('ownerSigPad')">Limpiar</button>
+                </div>
+            </div>
+        </div>
+        <div class="pdf-button-container">
+            <button class="pdf-button" onclick="generatePDF()">Generar PDF</button>
+        </div>
+    </div>
+
+    <!-- PÁGINA 3 - OBSERVACIONES/PADECIMIENTOS PREVIOS -->
+    <div class="container" id="transfusionPage3">
+        <div class="header">
+            <img src="../img/logo.jpg" alt="Veterinaria San Martin de Porres" class="logo">
+            <h1>OBSERVACIONES / PADECIMIENTOS PREVIOS</h1>
+            <div id="shortDate3" class="date-short"></div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h2 style="text-align: center; color: var(--primary-color); margin-bottom: 20px;">
+                Información sobre Observaciones y Padecimientos Previos del Paciente
+            </h2>
+            
+            <div style="background-color: var(--secondary-color); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <p><strong>Nombre del paciente (mascota):</strong> <input type="text" id="obsPetName" placeholder="Nombre de la mascota" readonly style="width: 300px; background-color: white;"></p>
+                <p><strong>Propietario:</strong> <input type="text" id="obsOwnerName" placeholder="Nombre del propietario" readonly style="width: 350px; background-color: white;"></p>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <label for="observacionesPadecimientos" style="display: block; font-weight: bold; margin-bottom: 15px; font-size: 1.1rem; color: var(--primary-color);">
+                    Observaciones y Padecimientos Previos:
+                </label>
+                <textarea 
+                    id="observacionesPadecimientos" 
+                    style="width: 100%; height: 400px; border: 2px solid var(--border-color); padding: 15px; font-family: inherit; font-size: 14px; resize: vertical; border-radius: 8px; line-height: 1.6;"
+                    placeholder="Describa aquí cualquier observación relevante, padecimientos previos, enfermedades conocidas, alergias, medicamentos actuales, cirugías anteriores, o cualquier otra información médica importante del paciente..."
+                ></textarea>
+            </div>
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const now = new Date();
+            document.getElementById('shortDate').textContent = now.toLocaleDateString('es-ES');
+            const shortDate3 = document.getElementById('shortDate3');
+            if (shortDate3) shortDate3.textContent = now.toLocaleDateString('es-ES');
+            document.getElementById('transTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            // Función para actualizar los datos de la página de observaciones
+            function updateObservacionesPageData() {
+                const petName = document.getElementById('petName')?.value || '';
+                const ownerName = document.getElementById('ownerName')?.value || '';
+                
+                const obsPetName = document.getElementById('obsPetName');
+                const obsOwnerName = document.getElementById('obsOwnerName');
+                
+                if (obsPetName) obsPetName.value = petName;
+                if (obsOwnerName) obsOwnerName.value = ownerName;
+            }
+            
+            // Sincronizar datos cuando cambien los campos principales
+            const petNameField = document.getElementById('petName');
+            const ownerNameField = document.getElementById('ownerName');
+            if (petNameField) {
+                petNameField.addEventListener('input', updateObservacionesPageData);
+            }
+            if (ownerNameField) {
+                ownerNameField.addEventListener('input', updateObservacionesPageData);
+            }
+            
+            // Sincronizar datos iniciales
+            setTimeout(updateObservacionesPageData, 200);
+            document.getElementById('transDay').textContent = now.getDate();
+            document.getElementById('transMonth').textContent = now.toLocaleString('es-ES', { month: 'long' });
+            document.getElementById('transYear').textContent = now.getFullYear();
+            
+            // Autocompletado desde parámetros URL
+            const params = new URLSearchParams(window.location.search);
+            const fields = [
+                {param: 'mascotaNombre', element: 'petName'},
+                {param: 'mascotaTipo', element: 'petSpecies'},
+                {param: 'mascotaRaza', element: 'petBreed'},
+                {param: 'mascotaEdad', element: 'petAge'},
+                {param: 'mascotaPeso', element: 'petWeight'},
+                {param: 'mascotaSexo', element: 'petSex'},
+                {param: 'clienteNombre', element: 'ownerName'},
+                {param: 'clienteCedula', element: 'ownerId'},
+                {param: 'clienteTelefono', element: 'ownerPhone'},
+                {param: 'procedimiento', element: 'procedureType'},
+                {param: 'doctorAtiende', element: 'attendingDoctor'},
+                {param: 'urgencia', element: 'urgencyLevel'}
+            ];
+            
+            let hasAutocomplete = false;
+            fields.forEach(field => {
+                const value = params.get(field.param);
+                if (value) {
+                    const element = document.getElementById(field.element);
+                    if (element) {
+                        element.value = decodeURIComponent(value.replace(/\+/g, ' '));
+                        hasAutocomplete = true;
+                    }
+                }
+            });
+            
+            if (hasAutocomplete) {
+                document.getElementById('autocompleteBanner').style.display = 'block';
+            }
+            
+            // Init signature pad
+            const canvas = document.getElementById('ownerSigPad');
+            function resize(c) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 2);
+                c.width = c.offsetWidth * ratio;
+                c.height = c.offsetHeight * ratio;
+                c.getContext('2d').scale(ratio, ratio);
+            }
+            resize(canvas);
+            window.signaturePads = { ownerSigPad: new SignaturePad(canvas, {
+                backgroundColor:'rgba(255,255,255,0)',
+                penColor:'rgb(0,0,100)',
+                minWidth: 0.3,    // thin stroke
+                maxWidth: 1.5     // reduced max thickness
+            }) };
+            window.addEventListener('resize', () => resize(canvas));
+        });
+        
+        function clearSignature(id) {
+            window.signaturePads[id].clear();
+        }
+        
+        async function generatePDF() {
+            const petName = document.getElementById('petName').value;
+            const ownerName = document.getElementById('ownerName').value;
+            let ownerLastName = '';
+            if (ownerName && ownerName.trim().split(' ').length > 1) {
+                const parts = ownerName.trim().split(' ');
+                ownerLastName = parts.length > 2 ? parts[parts.length - 1] : parts[1];
+            }
+            if (!petName) { alert('Ingrese nombre de la mascota'); return; }
+            
+            // Actualizar datos en la página de observaciones antes de generar PDF
+            if (typeof updateObservacionesPageData === 'function') {
+                updateObservacionesPageData();
+            }
+            
+            // Procesar textarea de observaciones para preservar saltos de línea
+            const observacionesTextarea = document.getElementById('observacionesPadecimientos');
+            let observacionesTempDiv = null;
+            if (observacionesTextarea && observacionesTextarea.value) {
+                observacionesTempDiv = document.createElement('div');
+                const lines = observacionesTextarea.value.split(/\r?\n/);
+                observacionesTempDiv.innerHTML = lines.map(line => {
+                    if (line.trim() === '') {
+                        return '<br>';
+                    } else {
+                        return `<div style="margin: 4px 0; white-space: pre-wrap; line-height: 1.6;">${line}</div>`;
+                    }
+                }).join('');
+                observacionesTempDiv.style.cssText = `
+                    width: 100%;
+                    min-height: 400px;
+                    border: 2px solid var(--border-color);
+                    padding: 15px;
+                    font-family: inherit;
+                    font-size: 14px;
+                    border-radius: 8px;
+                    line-height: 1.6;
+                    white-space: pre-wrap;
+                    word-wrap: break-word;
+                    overflow-wrap: break-word;
+                    color: #333;
+                    background-color: white;
+                `;
+                observacionesTextarea.style.display = 'none';
+                observacionesTextarea.parentNode.insertBefore(observacionesTempDiv, observacionesTextarea);
+            }
+            
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p','mm','a4');
+            
+            // Ocultar elementos que no deben aparecer en el PDF
+            const banner = document.getElementById('autocompleteBanner');
+            const pdfButtons = document.querySelectorAll('.pdf-button-container');
+            const sigButtons = document.querySelectorAll('.signature-buttons');
+            
+            const originalBannerDisplay = banner.style.display;
+            banner.style.display = 'none';
+            pdfButtons.forEach(btn => btn.style.display = 'none');
+            sigButtons.forEach(btn => btn.style.display = 'none');
+            
+            // Página 1
+            const page1 = document.getElementById('transfusionPage1');
+            const canvas1 = await html2canvas(page1, { scale:1.5, useCORS:true, backgroundColor:'#fff' });
+            const img1 = canvas1.toDataURL('image/jpeg', 0.7);
+            const imgWidth = 140, pageHeight = 297;
+            const imgHeight1 = (canvas1.height * imgWidth) / canvas1.width;
+            const x = (pdf.internal.pageSize.getWidth() - imgWidth)/2;
+            const y1 = (pageHeight - imgHeight1)/2;
+            pdf.addImage(img1,'JPEG',x,y1,imgWidth,imgHeight1);
+            
+            // Página 2
+            pdf.addPage();
+            const page2 = document.getElementById('transfusionPage2');
+            const canvas2 = await html2canvas(page2, { scale:1.5, useCORS:true, backgroundColor:'#fff' });
+            const img2 = canvas2.toDataURL('image/jpeg', 0.7);
+            const imgHeight2 = (canvas2.height * imgWidth) / canvas2.width;
+            const y2 = (pageHeight - imgHeight2)/2;
+            pdf.addImage(img2,'JPEG',x,y2,imgWidth,imgHeight2);
+            
+            // Página 3 - Observaciones
+            pdf.addPage();
+            const page3 = document.getElementById('transfusionPage3');
+            if (page3) {
+                const canvas3 = await html2canvas(page3, { scale:1.5, useCORS:true, backgroundColor:'#fff' });
+                const img3 = canvas3.toDataURL('image/jpeg', 0.7);
+                const imgHeight3 = (canvas3.height * imgWidth) / canvas3.width;
+                const y3 = (pageHeight - imgHeight3)/2;
+                pdf.addImage(img3,'JPEG',x,y3,imgWidth,imgHeight3);
+            }
+            
+            // Restaurar textarea de observaciones
+            if (observacionesTextarea && observacionesTempDiv) {
+                observacionesTextarea.style.display = '';
+                if (observacionesTempDiv.parentNode) {
+                    observacionesTempDiv.parentNode.removeChild(observacionesTempDiv);
+                }
+            }
+            
+            // Restaurar elementos ocultos
+            banner.style.display = originalBannerDisplay;
+            pdfButtons.forEach(btn => btn.style.display = 'block');
+            sigButtons.forEach(btn => btn.style.display = 'block');
+            
+            pdf.save(`Transfusion_${petName}_${ownerLastName}.pdf`);
+        }
+    </script>
+</body>
+<script>
+// --- AUTOLLENADO DE DATOS DESDE LA URL ---
+function getQueryParams() {
+    const params = {};
+    const search = window.location.search.substring(1);
+    if (!search) return params;
+    search.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+    });
+    return params;
+}
+
+function fillFormFromParams() {
+    const params = getQueryParams();
+    let anyFilled = false;
+    // Mapeo de parámetros a posibles IDs de campos
+    const map = {
+        clienteNombre: ['clienteNombre', 'ownerName', 'propietario', 'nombreCliente'],
+        clienteCedula: ['clienteCedula', 'cedula'],
+        clienteTelefono: ['clienteTelefono', 'telefono'],
+        clienteCorreo: ['clienteCorreo', 'correo'],
+        mascotaNombre: ['mascotaNombre', 'petName', 'nombreMascota'],
+        mascotaTipo: ['mascotaTipo', 'tipoMascota'],
+        mascotaRaza: ['mascotaRaza', 'raza'],
+        mascotaEdad: ['mascotaEdad', 'edad'],
+        mascotaPeso: ['mascotaPeso', 'peso'],
+        procedimiento: ['procedimiento'],
+        doctorAtiende: ['doctorAtiende', 'doctor'],
+        fechaCirugia: ['fechaCirugia'],
+        urgencia: ['urgencia'],
+        fecha: ['fecha'],
+        hora: ['hora']
+    };
+    Object.keys(map).forEach(param => {
+        if (params[param]) {
+            let value = params[param].replace(/\+/g, ' ');
+            map[param].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = value;
+                    anyFilled = true;
+                }
+            });
+        }
+    });
+    // Mostrar banner si se autocompletó algo
+    const banner = document.getElementById('autocompleteBanner');
+    if (banner && anyFilled) {
+        banner.innerHTML = '<span class="icon">ℹ️</span><div class="content"><h3>Datos cargados automáticamente</h3><p>Los campos se han completado con información del sistema. Puedes modificar cualquier dato si es necesario.</p></div>';
+        banner.style.display = 'flex';
+    }
+}
+document.addEventListener('DOMContentLoaded', fillFormFromParams);
+</script>
+</html>

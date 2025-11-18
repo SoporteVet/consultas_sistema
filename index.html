@@ -5,13 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Consultas - Veterinaria</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link rel="stylesheet" href="index.css">
-  <link rel="stylesheet" href="laboratorio.css">
-  <link rel="stylesheet" href="consentimientos.css">
-  <link rel="stylesheet" href="quirofano.css">
-  <link rel="stylesheet" href="internamiento.css">
+  <link rel="stylesheet" href="css/index.css">
+  <link rel="stylesheet" href="css/laboratorio.css">
+  <link rel="stylesheet" href="css/consentimientos.css">
+  <link rel="stylesheet" href="css/quirofano.css">
   
-  <link rel="icon" href="empresa.jpg" type="image/x-icon">
+  <link rel="icon" href="img/empresa.jpg" type="image/x-icon">
 </head>
 <body>
   <!-- Botón menú hamburguesa para dispositivos móviles -->
@@ -34,7 +33,7 @@
       </button>
       
       <div class="logo">
-        <img src="empresa.jpg" alt="Logo Veterinaria">
+        <img src="img/empresa.jpg" alt="Logo Veterinaria">
         <h1>Veterinaria San Martin de Porres</h1>
       </div>
       
@@ -117,28 +116,6 @@
             </button>
             <button id="verQuirofanoBtn" class="submenu-btn" onclick="navigateToQuirofano('verQuirofanoSection', 'verQuirofanoBtn');">
               <i class="fas fa-list-alt"></i> Ver Tickets
-            </button>
-          </div>
-        </div>
-
-        <!-- Internamiento -->
-        <div class="nav-category">
-          <button id="internamientoBtn" class="nav-category-btn" onclick="toggleSubmenuHTML('internamientoBtn', 'internamientoSubmenu');">
-            <i class="fas fa-home"></i> Internamiento
-            <i class="fas fa-chevron-down category-arrow"></i>
-          </button>
-          <div id="internamientoSubmenu" class="nav-submenu">
-            <button id="crearInternamientoBtn" class="submenu-btn" onclick="navigateToInternamiento('crearInternamientoSection', 'crearInternamientoBtn');">
-              <i class="fas fa-plus-circle"></i> Registrar Paciente
-            </button>
-            <button id="verInternamientoBtn" class="submenu-btn" onclick="navigateToInternamiento('verInternamientoSection', 'verInternamientoBtn');">
-              <i class="fas fa-list-alt"></i> Ver Pacientes
-            </button>
-            <button id="monitoreoInternamientoBtn" class="submenu-btn" onclick="navigateToInternamiento('monitoreoInternamientoSection', 'monitoreoInternamientoBtn');">
-              <i class="fas fa-heartbeat"></i> Monitoreo
-            </button>
-            <button id="medicamentosInternamientoBtn" class="submenu-btn" onclick="navigateToInternamiento('medicamentosInternamientoSection', 'medicamentosInternamientoBtn');">
-              <i class="fas fa-pills"></i> Medicamentos
             </button>
           </div>
         </div>
@@ -238,8 +215,7 @@
                   <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
                   <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
                   <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-                  <option value="Dra. Eliany Lopez">Dra. Eliany Lopez</option>
-                  <option value="Dra. Adriana Rojas">Dra. Adriana Rojas</option>
+
                 </select>
               </div>
               <div class="form-group">
@@ -316,7 +292,6 @@
                   <option value="cirugia">Cirugía</option>
                   <option value="muestra_test">Muestra para test</option>
                   <option value="tiempos_coagulacion">Tiempos de coagulación</option>
-                  <option value="internamiento">Internamiento</option>
                   <option value="test_sida_leucemia">Test de Sida Leucemia</option>
                   <option value="test_distemper">Test de Distemper</option>
                   <option value="test_parvovirus">Test Parvovirus</option>
@@ -569,7 +544,6 @@
                   <option value="">Seleccione un médico</option>
                   <option value="Dr. Luis Coto">Dr. Luis Coto</option>
                   <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
-                  <option value="Dr. Gustavo Gonzalez">Dr. Gustavo Gonzalez</option>
                   <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
                   <option value="Dra. Francinny Nuñez">Dra. Francinny Nuñez</option>
                   <option value="Dra. Kharen Moreno">Dra. Kharen Moreno</option>
@@ -578,8 +552,6 @@
                   <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
                   <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
                   <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-                  <option value="Dra. Eliany Lopez">Dra. Eliany Lopez</option>
-                  <option value="Dra. Adriana Rojas">Dra. Adriana Rojas</option>
                   <option value="Medico Externo">Médico Externo</option>
 
                   <option value="N.A">N.A</option>
@@ -743,7 +715,6 @@
             <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
             <option value="Medico Externo">Médico Externo</option>
             <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-            <option value="Dra. Eliany Lopez">Dra. Eliany Lopez</option>
             <option value="N.A">N.A</option>
           </select>
         </div>
@@ -1196,10 +1167,10 @@
                       <option value="Vacuna Anual">Vacuna Anual</option>
                     </optgroup>
                     <optgroup label="Vacunas">
-                      <option value="Triple Felina">Triple Felina</option>
                       <option value="Trip/Leu">Trip/Leu</option>
                       <option value="Trip/Rab">Trip/Rab</option>
                       <option value="Leu">Leu</option>
+                        <option value="Triple Felina">Triple Felina</option>
                     </optgroup>
                   </select>
                 </div>
@@ -1283,7 +1254,6 @@
                 <option value="anestesia">Anestesia</option>
                 <option value="cirugia">Cirugía</option>
                 <option value="emergencias">Emergencias</option>
-                <option value="internamiento">Internamiento</option>
                 <option value="transfusion">Transfusión</option>
                 <option value="cesarea">Cesárea</option>
                 <option value="eutanasia">Eutanasia</option>
@@ -1457,7 +1427,7 @@
                   <option value="">Seleccione un doctor</option>
                   <option value="Dr. Luis Coto">Dr. Luis Coto</option>
                   <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
--                  <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
+                  <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
                   <option value="Dra. Francinny Nuñez">Dra. Francinny Nuñez</option>
                   <option value="Dra. Kharen Moreno">Dra. Kharen Moreno</option>
                   <option value="Dra. Karina Madrigal">Dra. Karina Madrigal</option>
@@ -1465,8 +1435,6 @@
                   <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
                   <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
                   <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-                  <option value="Dra. Eliany Lopez">Dra. Eliany Lopez</option>
-                  <option value="Dra. Adriana Rojas">Dra. Adriana Rojas</option>
                 </select>
               </div>
               <div class="form-group">
@@ -1540,706 +1508,6 @@
         </div>
       </section>
 
-      <!-- ========== MÓDULO DE INTERNAMIENTO ========== -->
-      
-      <!-- Sección para registrar pacientes internados -->
-      <section id="crearInternamientoSection" class="hidden">
-        <h2><i class="fas fa-home"></i> Registrar Paciente Internado</h2>
-        <div class="form-container">
-          <form id="internamientoForm">
-            <!-- Búsqueda de Cliente -->
-            <div class="form-section">
-              <h3><i class="fas fa-search"></i> Buscar Cliente</h3>
-              <div class="form-row">
-                <div class="form-group" style="position: relative;">
-                  <label for="intClienteSearch">Buscar Cliente</label>
-                  <input type="text" id="intClienteSearch" placeholder="Escriba nombre, cédula o ID del paciente..." autocomplete="off">
-                  <div id="intClienteResults" class="cliente-search-results"></div>
-                </div>
-                <div class="form-group">
-                  <label for="intFechaFiltro"><i class="fas fa-calendar-alt"></i> Filtrar por Fecha de Consulta</label>
-                  <input type="date" id="intFechaFiltro" required>
-                </div>
-              </div>
-            </div>
-
-            <!-- Información del Paciente -->
-            <div class="form-section">
-              <h3><i class="fas fa-paw"></i> Información del Paciente</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intNombre">Nombre del Cliente</label>
-                  <input type="text" id="intNombre" required>
-                </div>
-                <div class="form-group">
-                  <label for="intCedula">Cédula</label>
-                  <input type="text" id="intCedula" required>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intMascota">Nombre de la Mascota</label>
-                  <input type="text" id="intMascota" required>
-                </div>
-                <div class="form-group">
-                  <label for="intTipoMascota">Tipo de Mascota</label>
-                  <select id="intTipoMascota" required>
-                    <option value="perro">Perro</option>
-                    <option value="gato">Gato</option>
-                    <option value="conejo">Conejo</option>
-                    <option value="otro">Otro</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intEdad">Edad</label>
-                  <input type="text" id="intEdad" placeholder="Ej: 2 años, 6 meses" required>
-                </div>
-                <div class="form-group">
-                  <label for="intRaza">Raza</label>
-                  <input type="text" id="intRaza" placeholder="Ej: Labrador, Persa, SRD">
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intPeso">Peso (kg)</label>
-                  <input type="text" id="intPeso" placeholder="Ej: 5.2 kg" required>
-                </div>
-                <div class="form-group">
-                  <label for="intSexo">Sexo</label>
-                  <select id="intSexo" required>
-                    <option value="">Seleccionar</option>
-                    <option value="macho">Macho</option>
-                    <option value="hembra">Hembra</option>
-                  </select>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intIdPaciente">ID del Paciente</label>
-                  <input type="text" id="intIdPaciente" required>
-                </div>
-                <div class="form-group">
-                  <label for="intTemperatura">Temperatura (°C)</label>
-                  <input type="number" id="intTemperatura" step="0.1" placeholder="38.5">
-                </div>
-              </div>
-            </div>
-
-            <!-- Información del Propietario -->
-            <div class="form-section">
-              <h3><i class="fas fa-user"></i> Información del Propietario</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intPropietario">Propietario</label>
-                  <input type="text" id="intPropietario" required>
-                </div>
-                <div class="form-group">
-                  <label for="intTelefono">Teléfono</label>
-                  <input type="tel" id="intTelefono" required>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intEmail">Email</label>
-                  <input type="email" id="intEmail">
-                </div>
-                <div class="form-group">
-                  <label for="intFactura">Número de Factura</label>
-                  <input type="text" id="intFactura">
-                </div>
-              </div>
-            </div>
-
-            <!-- Información Médica -->
-            <div class="form-section">
-              <h3><i class="fas fa-stethoscope"></i> Información Médica</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intMedicoEncargado">Médico Encargado</label>
-                  <select id="intMedicoEncargado" required>
-                    <option value="">Seleccione un médico</option>
-                    <option value="Dr. Luis Coto">Dr. Luis Coto</option>
-                    <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
-                    <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
-                    <option value="Dra. Francinny Nuñez">Dra. Francinny Nuñez</option>
-                    <option value="Dra. Kharen Moreno">Dra. Kharen Moreno</option>
-                    <option value="Dra. Karina Madrigal">Dra. Karina Madrigal</option>
-                    <option value="Dra. Lourdes Chacón">Dra. Lourdes Chacón</option>
-                    <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
-                    <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
-                    <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="intFechaIngreso">Fecha de Ingreso</label>
-                  <input type="date" id="intFechaIngreso" required>
-                </div>
-              </div>
-
-              <div class="form-group">
-                <label for="intHistoriaClinica">Historia Clínica</label>
-                <textarea id="intHistoriaClinica" placeholder="Describa la historia clínica del paciente" rows="3"></textarea>
-              </div>
-
-              <div class="form-group">
-                <label for="intDiagnosticoPresuntivo">Diagnóstico Presuntivo</label>
-                <textarea id="intDiagnosticoPresuntivo" placeholder="Diagnóstico presuntivo o motivo del internamiento" rows="3"></textarea>
-              </div>
-
-              <div class="form-group">
-                <label for="intPadecimientosPrevios">Padecimientos o Enfermedades Previas</label>
-                <textarea id="intPadecimientosPrevios" placeholder="Enfermedades previas conocidas" rows="2"></textarea>
-              </div>
-            </div>
-
-            <!-- Checklist de Procedimientos -->
-            <div class="form-section">
-              <h3><i class="fas fa-clipboard-check"></i> Checklist de Procedimientos</h3>
-              <div class="checklist-grid">
-                <label class="checkbox-label">
-                  <input type="checkbox" id="intMuestras">
-                  <span>Tomaron Muestras</span>
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="intExamenes">
-                  <span>Tiene Exámenes</span>
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="intUltrasonido">
-                  <span>Ultrasonido</span>
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="intCastrado">
-                  <span>Castrado</span>
-                </label>
-                <label class="checkbox-label">
-                  <input type="checkbox" id="intVacunaDesparasitacion">
-                  <span>Vacuna y Desparasitación</span>
-                </label>
-              </div>
-            </div>
-
-            <button type="submit" class="btn-submit">
-              <i class="fas fa-home"></i> Registrar Paciente Internado
-            </button>
-          </form>
-        </div>
-      </section>
-
-      <!-- Sección para ver pacientes internados -->
-      <section id="verInternamientoSection" class="hidden">
-        <h2><i class="fas fa-list"></i> Pacientes Internados</h2>
-        
-        <!-- Filtros -->
-        <div class="internamiento-filters" style="margin-bottom: 20px;">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="intFilterDate"><i class="fas fa-calendar-alt"></i> Filtrar por fecha:</label>
-              <input type="date" id="intFilterDate">
-            </div>
-            <div class="form-group">
-              <label for="intFilterEstado"><i class="fas fa-filter"></i> Estado:</label>
-              <select id="intFilterEstado">
-                <option value="todos">Todos</option>
-                <option value="internado">Internado</option>
-                <option value="alta">Dado de Alta</option>
-                <option value="critico">Crítico</option>
-                <option value="estable">Estable</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        <!-- Barra de búsqueda -->
-        <div class="search-bar" style="margin-bottom: 15px;">
-          <input type="text" id="intSearchInput" placeholder="Buscar por cliente, mascota, ID paciente..." autocomplete="off">
-        </div>
-
-        <!-- Contenedor de pacientes internados -->
-        <div id="intPacientesContainer" class="int-pacientes-container">
-          <!-- Aquí se mostrarán los pacientes internados -->
-        </div>
-      </section>
-
-      <!-- Sección de monitoreo de parámetros vitales -->
-      <section id="monitoreoInternamientoSection" class="hidden">
-        <h2><i class="fas fa-heartbeat"></i> Control de Internamiento</h2>
-        
-        <!-- Selector de paciente -->
-        <div class="form-row" style="margin-bottom: 20px;">
-          <div class="form-group">
-            <label for="intPacienteMonitoreo">Seleccionar Paciente:</label>
-            <select id="intPacienteMonitoreo" required>
-              <option value="">Seleccione un paciente internado</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="intFechaMonitoreo">Fecha:</label>
-            <input type="date" id="intFechaMonitoreo" required>
-          </div>
-        </div>
-
-        <!-- Formulario de monitoreo horizontal -->
-        <div id="intMonitoreoForm" class="monitoring-container" style="display: none;">
-          <form id="monitoreoForm">
-            
-            <!-- Información del Paciente -->
-            <div class="patient-info-section">
-              <div class="patient-header">
-                <div class="clinic-logo">
-                  <img src="logo.jpg" alt="Veterinaria San Martin de Porres" style="max-width: 80px;">
-                  <h3>Veterinaria San Martin de Porres</h3>
-                </div>
-                <h2>CONTROL DE INTERNAMIENTO</h2>
-                <div class="patient-details">
-                  <div class="detail-row">
-                    <span><strong>Expediente N°:</strong> <input type="text" id="expedienteNum" readonly></span>
-                    <span><strong>Paciente:</strong> <input type="text" id="pacienteNombre" readonly></span>
-                    <span><strong>Propietario:</strong> <input type="text" id="propietarioNombre" readonly></span>
-                  </div>
-                  <div class="detail-row">
-                    <span><strong>Historia Clínica:</strong> <input type="text" id="historiaClinica" readonly></span>
-                    <span><strong>Dx Presuntivo:</strong> <input type="text" id="diagnosticoPresuntivo" readonly></span>
-                  </div>
-                  <div class="detail-row">
-                    <span><strong>Médico Encargado:</strong> <input type="text" id="medicoEncargado" readonly></span>
-                    <span><strong>Fecha Ingreso:</strong> <input type="text" id="fechaIngreso" readonly></span>
-                    <span><strong>Fecha Salida:</strong> <input type="text" id="fechaSalida" readonly></span>
-                  </div>
-                  <div class="detail-row">
-                    <span><strong>Edad:</strong> <input type="text" id="edadPaciente" readonly></span>
-                    <span><strong>Raza:</strong> <input type="text" id="razaPaciente" readonly></span>
-                    <span><strong>Especie:</strong> <input type="text" id="especiePaciente" readonly></span>
-                    <span><strong>Sexo:</strong> <input type="text" id="sexoPaciente" readonly></span>
-                  </div>
-                  <div class="detail-row">
-                    <span><strong>Peso:</strong> <input type="text" id="pesoPaciente" readonly></span>
-                    <span><strong>Temp:</strong> <input type="text" id="temperaturaPaciente" readonly></span>
-                    <span><strong>Cédula:</strong> <input type="text" id="cedulaPropietario" readonly></span>
-                    <span><strong>Teléfono:</strong> <input type="text" id="telefonoPropietario" readonly></span>
-                  </div>
-                  <div class="detail-row">
-                    <span><strong>Email:</strong> <input type="text" id="emailPropietario" readonly></span>
-                    <span><strong>Padecimientos previos:</strong> <input type="text" id="padecimientosPrevios" readonly></span>
-                  </div>
-                </div>
-                
-                <!-- Checklist de procedimientos -->
-                <div class="procedures-checklist">
-                  <h4>Procedimientos Realizados:</h4>
-                  <div class="checklist-grid">
-                    <label><input type="checkbox" id="muestrasTomadas"> Tomaron Muestras?</label>
-                    <label><input type="checkbox" id="tieneExamenes"> Tiene Exámenes?</label>
-                    <label><input type="checkbox" id="ultrasonidoRealizado"> Ultrasonido</label>
-                    <label><input type="checkbox" id="castradoRealizado"> Castrado</label>
-                    <label><input type="checkbox" id="vacunaDesparasitacion"> Vacuna y Despa</label>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Tabla de Medicamentos Horizontal -->
-            <div class="medications-section">
-              <h3><i class="fas fa-pills"></i> Control de Medicamentos</h3>
-              <div class="medications-table-container">
-                <table class="medications-horizontal-table">
-                  <thead>
-                    <tr>
-                      <th rowspan="2">MEDICAMENTO</th>
-                      <th rowspan="2">DOSIS</th>
-                      <th rowspan="2">ADM</th>
-                      <th rowspan="2">VÍA</th>
-                      <th colspan="4">HORAS</th>
-                      <th colspan="4">DÍA 1</th>
-                      <th colspan="4">DÍA 2</th>
-                      <th colspan="4">DÍA 3</th>
-                      <th colspan="4">DÍA 4</th>
-                    </tr>
-                    <tr>
-                      <th>12am-6am</th>
-                      <th>6am-12pm</th>
-                      <th>12pm-6pm</th>
-                      <th>6pm-12am</th>
-                      <th>12am-6am</th>
-                      <th>6am-12pm</th>
-                      <th>12pm-6pm</th>
-                      <th>6pm-12am</th>
-                      <th>12am-6am</th>
-                      <th>6am-12pm</th>
-                      <th>12pm-6pm</th>
-                      <th>6pm-12am</th>
-                      <th>12am-6am</th>
-                      <th>6am-12pm</th>
-                      <th>12pm-6pm</th>
-                      <th>6pm-12am</th>
-                      <th>12am-6am</th>
-                      <th>6am-12pm</th>
-                      <th>12pm-6pm</th>
-                      <th>6pm-12am</th>
-                    </tr>
-                  </thead>
-                  <tbody id="medicationsTableBody">
-                    <!-- Se llenará dinámicamente -->
-                  </tbody>
-                </table>
-              </div>
-              
-              <!-- Observaciones de medicamentos -->
-              <div class="medication-observations">
-                <label for="observacionesMedicamentos"><strong>OBSERVACION MEDICAMENTOS:</strong></label>
-                <input type="text" id="observacionesMedicamentos" placeholder="Observaciones sobre medicamentos...">
-              </div>
-            </div>
-
-            <!-- Grid de Parámetros Vitales -->
-            <div class="parameters-section">
-              <h3><i class="fas fa-thermometer-half"></i> Parámetros Vitales</h3>
-              <div class="parameters-grid-container">
-                <table class="parameters-horizontal-table">
-                  <thead>
-                    <tr>
-                      <th rowspan="2">PARÁMETROS</th>
-                      <th colspan="3">DÍA 1</th>
-                      <th colspan="3">DÍA 2</th>
-                      <th colspan="3">DÍA 3</th>
-                      <th colspan="3">DÍA 4</th>
-                    </tr>
-                    <tr>
-                      <th>Mañana</th>
-                      <th>Tarde</th>
-                      <th>Noche</th>
-                      <th>Mañana</th>
-                      <th>Tarde</th>
-                      <th>Noche</th>
-                      <th>Mañana</th>
-                      <th>Tarde</th>
-                      <th>Noche</th>
-                      <th>Mañana</th>
-                      <th>Tarde</th>
-                      <th>Noche</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><strong>Comió (Si, No, Poco, Mucho, A asistido, S sonda)</strong></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Bebió (Si, No, Poco, Mucho, A asistido, S sonda)</strong></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Vomitó (Si, No, Poco, Mucho, A asistido, S sonda)</strong></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Defecó (Si, No, Poco, Mucho, D duro, L líquido, P pastoso, S sangre, M melena)</strong></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Orinó (Si, No, Poco, Mucho, A amarillo, C claro, R rojo, S sonda)</strong></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Fluidos:</strong></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                    </tr>
-                    <tr>
-                      <td><strong>Vp:</strong></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                      <td><input type="text" class="parameter-input"></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Información de Alimentación -->
-            <div class="feeding-section">
-              <h3><i class="fas fa-utensils"></i> Información de Alimentación</h3>
-              <div class="feeding-table">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>TIPO ALIMENTO</th>
-                      <th>RACIÓN</th>
-                      <th>FRECUENCIA</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td><input type="text" class="feeding-input"></td>
-                      <td><input type="text" class="feeding-input"></td>
-                      <td><input type="text" class="feeding-input"></td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="feeding-input"></td>
-                      <td><input type="text" class="feeding-input"></td>
-                      <td><input type="text" class="feeding-input"></td>
-                    </tr>
-                    <tr>
-                      <td><input type="text" class="feeding-input"></td>
-                      <td><input type="text" class="feeding-input"></td>
-                      <td><input type="text" class="feeding-input"></td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Observaciones Generales -->
-            <div class="observations-section">
-              <h3><i class="fas fa-sticky-note"></i> Observaciones</h3>
-              <div class="observations-grid">
-                <div class="observation-field">
-                  <label for="consideracionesEspeciales"><strong>CONSIDERACIONES ESPECIALES:</strong></label>
-                  <textarea id="consideracionesEspeciales" rows="3" placeholder="Consideraciones especiales del paciente..."></textarea>
-                </div>
-                <div class="observation-field">
-                  <label for="observacionesRX"><strong>OBSERVACIONES EN RX, US Y HG+QX:</strong></label>
-                  <textarea id="observacionesRX" rows="3" placeholder="Observaciones de exámenes..."></textarea>
-                </div>
-                <div class="observation-field">
-                  <label for="observacionesGenerales"><strong>OBSERVACIONES GENERALES:</strong></label>
-                  <textarea id="observacionesGenerales" rows="3" placeholder="Observaciones generales..."></textarea>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-actions">
-              <button type="button" class="btn btn-secondary" onclick="agregarMedicamentoHorizontal()">
-                <i class="fas fa-plus"></i> Agregar Medicamento
-              </button>
-              <button type="button" class="btn btn-secondary" onclick="imprimirFormulario()">
-                <i class="fas fa-print"></i> Imprimir
-              </button>
-              <button type="button" class="btn btn-secondary" onclick="exportarPDF()">
-                <i class="fas fa-file-pdf"></i> Exportar PDF
-              </button>
-              <button type="submit" class="btn btn-primary">
-                <i class="fas fa-save"></i> Guardar Control
-              </button>
-            </div>
-          </form>
-        </div>
-      </section>
-
-      <!-- Sección de control de medicamentos -->
-      <section id="medicamentosInternamientoSection" class="hidden">
-        <h2><i class="fas fa-pills"></i> Control de Medicamentos</h2>
-        
-        <!-- Selector de paciente -->
-        <div class="form-row" style="margin-bottom: 20px;">
-          <div class="form-group">
-            <label for="intPacienteMedicamentos">Seleccionar Paciente:</label>
-            <select id="intPacienteMedicamentos" required>
-              <option value="">Seleccione un paciente internado</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="intFechaMedicamentos">Fecha:</label>
-            <input type="date" id="intFechaMedicamentos" required>
-          </div>
-        </div>
-
-        <!-- Formulario de medicamentos -->
-        <div id="intMedicamentosForm" class="form-container" style="display: none;">
-          <form id="medicamentosForm">
-            <div class="form-section">
-              <h3><i class="fas fa-prescription-bottle"></i> Agregar Medicamento</h3>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intMedicamento">Medicamento</label>
-                  <input type="text" id="intMedicamento" placeholder="Nombre del medicamento" required>
-                </div>
-                <div class="form-group">
-                  <label for="intDosis">Dosis</label>
-                  <input type="text" id="intDosis" placeholder="Ej: 10mg, 2ml" required>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intVia">Vía de Administración</label>
-                  <select id="intVia" required>
-                    <option value="">Seleccionar</option>
-                    <option value="oral">Oral</option>
-                    <option value="intravenosa">Intravenosa</option>
-                    <option value="intramuscular">Intramuscular</option>
-                    <option value="subcutanea">Subcutánea</option>
-                    <option value="topica">Tópica</option>
-                    <option value="oftalmica">Oftálmica</option>
-                    <option value="otica">Ótica</option>
-                  </select>
-                </div>
-                <div class="form-group">
-                  <label for="intFrecuencia">Frecuencia</label>
-                  <input type="text" id="intFrecuencia" placeholder="Ej: Cada 8 horas, 2 veces al día" required>
-                </div>
-              </div>
-
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="intDuracion">Duración del Tratamiento</label>
-                  <input type="text" id="intDuracion" placeholder="Ej: 7 días, hasta mejoría">
-                </div>
-                <div class="form-group">
-                  <label for="intObservacionesMed">Observaciones</label>
-                  <input type="text" id="intObservacionesMed" placeholder="Instrucciones especiales">
-                </div>
-              </div>
-
-              <button type="button" id="intAgregarMedicamento" class="btn-secondary">
-                <i class="fas fa-plus"></i> Agregar Medicamento
-              </button>
-            </div>
-
-            <!-- Tabla de medicamentos -->
-            <div class="form-section">
-              <h3><i class="fas fa-table"></i> Medicamentos Prescritos</h3>
-              <div class="medicamentos-table-container">
-                <table id="intMedicamentosTable" class="medicamentos-table">
-                  <thead>
-                    <tr>
-                      <th>Medicamento</th>
-                      <th>Dosis</th>
-                      <th>Vía</th>
-                      <th>Frecuencia</th>
-                      <th>Duración</th>
-                      <th>Observaciones</th>
-                      <th>Acciones</th>
-                    </tr>
-                  </thead>
-                  <tbody id="intMedicamentosTableBody">
-                    <!-- Se llenará dinámicamente -->
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Horarios de administración -->
-            <div class="form-section">
-              <h3><i class="fas fa-clock"></i> Horarios de Administración</h3>
-              <div class="horarios-container">
-                <div class="horarios-grid">
-                  <div class="horario-column">
-                    <h4>12am - 6am</h4>
-                    <div id="horarioMadrugada" class="horario-slots">
-                      <!-- Se llenará dinámicamente -->
-                    </div>
-                  </div>
-                  <div class="horario-column">
-                    <h4>6am - 12pm</h4>
-                    <div id="horarioManana" class="horario-slots">
-                      <!-- Se llenará dinámicamente -->
-                    </div>
-                  </div>
-                  <div class="horario-column">
-                    <h4>12pm - 6pm</h4>
-                    <div id="horarioTarde" class="horario-slots">
-                      <!-- Se llenará dinámicamente -->
-                    </div>
-                  </div>
-                  <div class="horario-column">
-                    <h4>6pm - 12am</h4>
-                    <div id="horarioNoche" class="horario-slots">
-                      <!-- Se llenará dinámicamente -->
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <button type="submit" class="btn-submit">
-              <i class="fas fa-save"></i> Guardar Medicamentos
-            </button>
-          </form>
-        </div>
-      </section>
-      
       <!-- Sección de estadísticas -->
       <section id="estadisticasSection" class="hidden">
         <h2><i class="fas fa-chart-bar"></i> Estadísticas</h2>
@@ -2527,10 +1795,6 @@
               <h4>Emergencias</h4>
               <p>Consentimiento para atención de emergencias</p>
             </div>
-            <div class="template-card" data-template="internamiento">
-              <h4>Internamiento</h4>
-              <p>Autorización para internamiento hospitalario</p>
-            </div>
             <div class="template-card" data-template="transfusion">
               <h4>Transfusión</h4>
               <p>Consentimiento para transfusión sanguínea</p>
@@ -2644,40 +1908,30 @@
 <script>
   emailjs.init('ZiyjOCMRsBnxJn_LT');
 </script>
-  <script src="firebase-config.js"></script>
+  <script src="js/firebase-config.js"></script>
   <!-- Módulos de optimización de tiempo real -->
-  <script src="firebase-realtime-optimizer.js"></script>
-  <script src="porcobrar-performance-fix.js"></script>
-  <script src="services-data.js"></script>
-  <script src="auth.js"></script>
-  <script src="laboratorio.js"></script>
+  <script src="js/firebase-realtime-optimizer.js"></script>
+  <script src="js/billing-performance-optimizer.js"></script>
+  <script src="js/services-data.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/laboratorio.js"></script>
 
-<script src="consentimientos-module.js"></script>
-<script src="quirofano-module.js"></script>
-  <script src="reportes-lab-module.js"></script>
-  <script src="index.js"></script>
-<script src="internamiento.js"></script>
-<script>
-// Verificación simple de carga del módulo de Internamiento
-setTimeout(() => {
-  if (typeof window.navigateToInternamiento === 'function') {
-    console.log('✓ Módulo de Internamiento cargado correctamente');
-  } else {
-    console.error('✗ Error: Módulo de Internamiento no se cargó correctamente');
-  }
-}, 1000);
-</script>
-  <script src="fix-wait-time.js"></script>
-  <script src="admin-users.js"></script>
-  <script src="fix-lab-search.js"></script>
-  <script src="fix-services-selection.js"></script>
+<script src="js/consentimientos-module.js"></script>
+<script src="js/quirofano-module.js"></script>
+  <script src="js/reportes-lab-module.js"></script>
+  <script src="js/index.js"></script>
+  <script src="js/wait-time-chart-fix.js"></script>
+  <script src="js/admin-users.js"></script>
+  <script src="js/laboratory-search-fix.js"></script>
+  <script src="js/services-selection-manager.js"></script>
   <!-- Inicialización de optimizaciones -->
-  <script src="realtime-performance-init.js"></script>
+  <script src="js/realtime-performance-manager.js"></script>
   <!-- Optimizador de memoria -->
-  <script src="memory-optimizer.js"></script>
+  <!-- <script src="js/memory-optimizer.js"></script> -->
   <!-- Herramientas de diagnóstico (solo en desarrollo) -->
-  <script src="diagnostico-tiempo-real.js"></script>
-  <script src="memory-diagnostic.js"></script>
+  <!-- Comentados porque los archivos no existen -->
+  <!-- <script src="js/diagnostico-tiempo-real.js"></script> -->
+  <!-- <script src="js/memory-diagnostic.js"></script> -->
   
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -2778,4 +2032,5 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 </body>
+</html>
 </html>
