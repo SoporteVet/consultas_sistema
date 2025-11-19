@@ -5773,6 +5773,7 @@ window.addEventListener('DOMContentLoaded', function() {
       document.getElementById('inySelmix'),
       document.getElementById('inyConvenia'),
       document.getElementById('inyCerenia'),
+      document.getElementById('inyLibrela'),
       document.getElementById('inySoroglobulin'),
       document.getElementById('inyNexium'),
       document.getElementById('inyOsurnia'),
@@ -5812,6 +5813,7 @@ window.addEventListener('DOMContentLoaded', function() {
       selmix: document.getElementById('inySelmix').checked ? 'X' : '',
       convenia: document.getElementById('inyConvenia').checked ? 'X' : '',
       cerenia: document.getElementById('inyCerenia').checked ? 'X' : '',
+      librela: document.getElementById('inyLibrela').checked ? 'X' : '',
       soroglobulin: document.getElementById('inySoroglobulin').checked ? 'X' : '',
       nexium: document.getElementById('inyNexium').checked ? 'X' : '',
       osurnia: document.getElementById('inyOsurnia').checked ? 'X' : '',
@@ -5885,7 +5887,7 @@ window.addEventListener('DOMContentLoaded', function() {
     if (!tbody) return;
     
     if (inyectables.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="18" class="no-data">No hay inyectables registrados</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="20" class="no-data">No hay inyectables registrados</td></tr>';
       return;
     }
     
@@ -5917,6 +5919,10 @@ window.addEventListener('DOMContentLoaded', function() {
             <td>
               <span class="field-display">${inyectable.cerenia || ''}</span>
               <input type="text" class="field-edit" value="${inyectable.cerenia || ''}" style="display: none;" data-field="cerenia">
+            </td>
+            <td>
+              <span class="field-display">${inyectable.librela || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.librela || ''}" style="display: none;" data-field="librela">
             </td>
             <td>
               <span class="field-display">${inyectable.soroglobulin || ''}</span>
@@ -5994,6 +6000,7 @@ window.addEventListener('DOMContentLoaded', function() {
             <td>${inyectable.selmix || ''}</td>
             <td>${inyectable.convenia || ''}</td>
             <td>${inyectable.cerenia || ''}</td>
+            <td>${inyectable.librela || ''}</td>
             <td>${inyectable.soroglobulin || ''}</td>
             <td>${inyectable.nexium || ''}</td>
             <td>${inyectable.osurnia || ''}</td>
