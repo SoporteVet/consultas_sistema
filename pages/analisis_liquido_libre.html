@@ -78,7 +78,7 @@ document.addEventListener('DOMContentLoaded', function(){
 
 <div class="container" id="template1" style="display: block;">
     <div class="header">
-        <img src="../img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
+        <img src="img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
         <h1>Laboratorio Clínico Veterinario</h1>
     </div>
     <h3 class="subheader">ANÁLISIS LÍQUIDO LIBRE</h3>
@@ -254,8 +254,8 @@ document.addEventListener('DOMContentLoaded', function(){
                     <td>(1.005-1.040)</td>
                 </tr>
                 <tr>
-                    <td>Clasificación</td>
-                    <td><input type="text" id="Clasificación"></td>
+                    <td>Método de recolección</td>
+                    <td><input type="text" id="metodoRecoleccion"></td>
                     <td></td>
                 </tr>
             </tbody>
@@ -357,19 +357,19 @@ document.addEventListener('DOMContentLoaded', function(){
                 <tr style="background-color: white;">
                     <td style="padding: 10px; font-weight: bold;">Examen Microscópico Directo:</td>
                     <td style="padding: 10px; font-weight: bold;">
-                        <textarea id="examenMicroscopico" rows="3" style="width: 100%; border: none; background: transparent; font-weight: bold; resize: vertical;"></textarea>
+                        <textarea id="examenMicroscopico" rows="3" style="width: 100%; border: none; background: transparent; font-weight: bold; resize: vertical; white-space: pre-wrap; word-wrap: break-word;"></textarea>
                     </td>
                 </tr>
                 <tr style="background-color: white;">
                     <td style="padding: 10px; font-weight: bold;">Tinción Dip Quick:</td>
                     <td style="padding: 10px; font-weight: bold;">
-                        <textarea id="tincionDipQuick" rows="3" style="width: 100%; border: none; background: transparent; font-weight: bold; resize: vertical;"></textarea>
+                        <textarea id="tincionDipQuick" rows="3" style="width: 100%; border: none; background: transparent; font-weight: bold; resize: vertical; white-space: pre-wrap; word-wrap: break-word;"></textarea>
                     </td>
                 </tr>
                 <tr style="background-color: white;">
                     <td style="padding: 10px; font-weight: bold;">Tinción Gram:</td>
                     <td style="padding: 10px; font-weight: bold;">
-                        <textarea id="tincionGram" rows="3" style="width: 100%; border: none; background: transparent; font-weight: bold; resize: vertical;"></textarea>
+                        <textarea id="tincionGram" rows="3" style="width: 100%; border: none; background: transparent; font-weight: bold; resize: vertical; white-space: pre-wrap; word-wrap: break-word;"></textarea>
                     </td>
                 </tr>
             </tbody>
@@ -553,6 +553,64 @@ async function generatePDF() {
 
         await Promise.all(loadImages);
 
+        // Convertir textareas con saltos de línea en divs para preservar formato en PDF
+        const textareaIds = ['examenMicroscopico', 'tincionDipQuick', 'tincionGram'];
+        const textareaBackups = [];
+        
+        textareaIds.forEach(id => {
+            const textarea = document.getElementById(id);
+            if (textarea) {
+                // Guardar el textarea original
+                const computedStyle = window.getComputedStyle(textarea);
+                textareaBackups.push({
+                    id: id,
+                    element: textarea,
+                    parent: textarea.parentNode,
+                    value: textarea.value
+                });
+                
+                // Crear un div que reemplace el textarea
+                const div = document.createElement('div');
+                div.id = id + '_pdf';
+                
+                // Copiar todos los estilos del textarea
+                div.style.width = computedStyle.width;
+                div.style.height = computedStyle.height || textarea.offsetHeight + 'px';
+                div.style.minHeight = textarea.offsetHeight + 'px';
+                div.style.padding = computedStyle.padding;
+                div.style.margin = computedStyle.margin;
+                div.style.border = computedStyle.border;
+                div.style.background = computedStyle.background;
+                div.style.backgroundColor = computedStyle.backgroundColor;
+                div.style.fontWeight = computedStyle.fontWeight;
+                div.style.fontSize = computedStyle.fontSize;
+                div.style.fontFamily = computedStyle.fontFamily;
+                div.style.lineHeight = computedStyle.lineHeight;
+                div.style.color = computedStyle.color;
+                div.style.textAlign = computedStyle.textAlign;
+                div.style.verticalAlign = computedStyle.verticalAlign;
+                div.style.whiteSpace = 'pre-wrap';
+                div.style.wordWrap = 'break-word';
+                div.style.overflow = 'visible';
+                div.style.boxSizing = computedStyle.boxSizing;
+                
+                // Convertir saltos de línea en <br>
+                let content = textarea.value || '';
+                if (content.trim() === '') {
+                    div.innerHTML = '&nbsp;';
+                } else {
+                    // Escapar HTML y luego convertir saltos de línea
+                    const tempDiv = document.createElement('div');
+                    tempDiv.textContent = content;
+                    const escapedContent = tempDiv.innerHTML;
+                    div.innerHTML = escapedContent.replace(/\n/g, '<br>');
+                }
+                
+                // Reemplazar el textarea con el div
+                textarea.parentNode.replaceChild(div, textarea);
+            }
+        });
+
         // Genera el canvas con manejo de errores CORS
         let canvas;
         let imgData;
@@ -663,9 +721,25 @@ async function generatePDF() {
         } else {
             pdf.save(fileName);
         }
+        
+        // Restaurar los textareas originales
+        textareaBackups.forEach(backup => {
+            const div = document.getElementById(backup.id + '_pdf');
+            if (div && backup.element) {
+                div.parentNode.replaceChild(backup.element, div);
+            }
+        });
     } catch (error) {
         console.error('Error al generar el PDF:', error);
         alert('Ocurrió un error al generar el PDF: ' + error.message);
+        
+        // Asegurar que los textareas se restauren incluso si hay error
+        textareaBackups.forEach(backup => {
+            const div = document.getElementById(backup.id + '_pdf');
+            if (div && backup.element) {
+                div.parentNode.replaceChild(backup.element, div);
+            }
+        });
     } finally {
         // Ocultar el indicador de carga y habilitar el botón nuevamente
         loadingIndicator.style.display = 'none';
