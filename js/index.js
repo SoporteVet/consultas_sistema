@@ -6364,7 +6364,7 @@ window.addEventListener('DOMContentLoaded', function() {
     
     // Vacunas trimestrales
     vacunasDisponibles.trimestral.forEach(vacuna => {
-      const inputId = `inventario${vacuna.replace('/', '').replace('/', '')}`;
+      const inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
       const input = document.getElementById(inputId);
       if (input) {
         input.disabled = !habilitar;
@@ -6426,7 +6426,7 @@ window.addEventListener('DOMContentLoaded', function() {
     
     // Vacunas trimestrales
     vacunasDisponibles.trimestral.forEach(vacuna => {
-      const inputId = `inventario${vacuna.replace('/', '').replace('/', '')}`;
+      const inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
       const input = document.getElementById(inputId);
       const valor = input ? parseInt(input.value) || 0 : 0;
       inventarioActualizado[sanitizeFirebaseKey(vacuna)] = valor;
@@ -7289,7 +7289,7 @@ const vacunasDisponibles = {
     
     // Vacunas trimestrales
     vacunasDisponibles.trimestral.forEach(vacuna => {
-      const inputId = `inventario${vacuna.replace('/', '').replace('/', '')}`;
+      const inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
       const input = document.getElementById(inputId);
       const valor = input ? parseInt(input.value) || 0 : 0;
       // Usar clave sanitizada para Firebase
