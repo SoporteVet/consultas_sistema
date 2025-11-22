@@ -162,7 +162,10 @@
               </div>
               <div class="form-group">
                 <label for="cedula">Cédula</label>
-                <input type="text" id="cedula" required>
+                <div style="display: flex; gap: 5px; align-items: center;">
+                  <input type="text" id="cedula" required style="flex: 1;">
+                  <button type="button" id="buscarCedulaBtn" onclick="buscarPorCedula()" style="width: 45px; height: 45px; padding: 0; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 5px; font-size: 18px; flex-shrink: 0; transition: background 0.3s;" title="Buscar nombre por cédula">🔍</button>
+                </div>
               </div>
             </div>
 
@@ -1942,6 +1945,75 @@
   <!-- <script src="js/memory-diagnostic.js"></script> -->
   
 <script>
+// Función para buscar propietario por cédula usando API
+async function buscarPorCedula() {
+  const cedulaInput = document.getElementById('cedula');
+  const nombreInput = document.getElementById('nombre');
+  const botonBuscar = document.getElementById('buscarCedulaBtn');
+  
+  const cedula = cedulaInput.value.trim();
+  
+  if (!cedula) {
+    alert('Por favor, ingrese un número de cédula');
+    return;
+  }
+  
+  // Mostrar indicador de carga
+  botonBuscar.disabled = true;
+  botonBuscar.textContent = '⏳';
+  botonBuscar.style.background = '#6c757d';
+  
+  try {
+    // CONFIGURAR AQUÍ LA URL DE TU API
+    // Ejemplo de API de Hacienda de Costa Rica:
+    const url = `https://api.hacienda.go.cr/fe/ae?identificacion=${cedula}`;
+    
+    const response = await fetch(url);
+    
+    if (!response.ok) {
+      throw new Error('No se pudo obtener la información');
+    }
+    
+    const data = await response.json();
+    
+    // AJUSTAR SEGÚN LA ESTRUCTURA DE RESPUESTA DE TU API
+    // Ejemplo para API de Hacienda de Costa Rica:
+    if (data && data.nombre) {
+      nombreInput.value = data.nombre;
+      nombreInput.style.backgroundColor = '#d4edda'; // Verde claro
+      nombreInput.style.transition = 'background-color 0.5s';
+      setTimeout(() => {
+        nombreInput.style.backgroundColor = '';
+      }, 2000);
+    } else {
+      alert('No se encontró información para esta cédula');
+    }
+    
+  } catch (error) {
+    console.error('Error al buscar por cédula:', error);
+    alert('Error al buscar la información. Por favor, intente nuevamente.');
+  } finally {
+    // Restaurar botón
+    botonBuscar.disabled = false;
+    botonBuscar.textContent = '🔍';
+    botonBuscar.style.background = '#007bff';
+  }
+}
+
+// Opcional: Buscar al presionar Enter en el campo de cédula
+document.addEventListener('DOMContentLoaded', function() {
+  const cedulaInput = document.getElementById('cedula');
+  if (cedulaInput) {
+    // Prevenir que Enter envíe el formulario cuando está en el campo de cédula
+    cedulaInput.addEventListener('keypress', function(event) {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        buscarPorCedula();
+      }
+    });
+  }
+});
+
 document.addEventListener('DOMContentLoaded', function() {
   const tipoMascota = document.getElementById('tipoMascota');
   const conejoImg = document.getElementById('conejoImg');
