@@ -544,20 +544,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tr>
                 <tr>
                     <td>BILIRRUBINA TOTAL</td>
-                    <td><input type="text" id="bilirrubina_total" oninput="actualizarColor('bilirrubina_total', 'refBilirrubinaTotal')" onblur="formatearDecimal('bilirrubina_total')" onkeydown="moverFoco(event, 'bilirrubina_directa')"></td>
+                    <td><input type="text" id="bilirrubina_total" oninput="actualizarColor('bilirrubina_total', 'refBilirrubinaTotal')" onblur="formatearDecimal('bilirrubina_total')" onkeydown="moverFoco(event, 'fosfatasa_alcalina')"></td>
                     <td id="refBilirrubinaTotal">0,2-0,8</td>
-                    <td>mg/dl</td>
-                </tr>
-                <tr>
-                    <td>BILIRRUBINA DIRECTA</td>
-                    <td><input type="text" id="bilirrubina_directa" oninput="actualizarColor('bilirrubina_directa', 'refBilirrubinaDirecta')" onblur="formatearDecimal('bilirrubina_directa')" onkeydown="moverFoco(event, 'bilirrubina_indirecta')"></td>
-                    <td id="refBilirrubinaDirecta">0,0-14,0</td>
-                    <td>mg/dl</td>
-                </tr>
-                <tr>
-                    <td>BILIRRUBINA INDIRECTA</td>
-                    <td><input type="text" id="bilirrubina_indirecta" oninput="actualizarColor('bilirrubina_indirecta', 'refBilirrubinaIndirecta')" onblur="formatearDecimal('bilirrubina_indirecta')" onkeydown="moverFoco(event, 'fosfatasa_alcalina')"></td>
-                    <td id="refBilirrubinaIndirecta">0,07-0,60</td>
                     <td>mg/dl</td>
                 </tr>
                 <tr>
@@ -667,8 +655,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,3-6,4",
                             BilirrubinaTotal: "0,2-0,8",
-                            BilirrubinaDirecta: "0,0-14,0",
-                            BilirrubinaIndirecta: "0,07-0,60",
                             FosfatasaAlcalina: "20-70",
                             GGT: "1-11,5",
                             AST: "14-42",
@@ -685,8 +671,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,3-6,4",
                             BilirrubinaTotal: "0,2-0,8",
-                            BilirrubinaDirecta: "0,0-14,0",
-                            BilirrubinaIndirecta: "0,07-0,60",
                             FosfatasaAlcalina: "20-70",
                             GGT: "1-11,5",
                             AST: "14-42",
@@ -703,8 +687,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,3-6,4",
                             BilirrubinaTotal: "0,2-0,8",
-                            BilirrubinaDirecta: "0,0-14,0",
-                            BilirrubinaIndirecta: "0,07-0,60",
                             FosfatasaAlcalina: "20-70",
                             GGT: "1-11,5",
                             AST: "14-42",
@@ -721,8 +703,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,3-6,4",
                             BilirrubinaTotal: "0,2-0,8",
-                            BilirrubinaDirecta: "0,0-14,0",
-                            BilirrubinaIndirecta: "0,07-0,60",
                             FosfatasaAlcalina: "20-70",
                             GGT: "1-11,5",
                             AST: "14-42",
@@ -741,8 +721,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,3-6,4",
                             BilirrubinaTotal: "0,2-0,8",
-                            BilirrubinaDirecta: "0,0-14,0",
-                            BilirrubinaIndirecta: "0,07-0,60",
                             FosfatasaAlcalina: "20-70",
                             GGT: "1-11,5",
                             AST: "14-42",
@@ -759,8 +737,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,3-6,4",
                             BilirrubinaTotal: "0,2-0,8",
-                            BilirrubinaDirecta: "0,0-14,0",
-                            BilirrubinaIndirecta: "0,07-0,60",
                             FosfatasaAlcalina: "20-70",
                             GGT: "1-11,5",
                             AST: "14-42",
@@ -777,8 +753,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,3-6,4",
                             BilirrubinaTotal: "0,2-0,8",
-                            BilirrubinaDirecta: "0,0-14,0",
-                            BilirrubinaIndirecta: "0,07-0,60",
                             FosfatasaAlcalina: "20-70",
                             GGT: "1-11,5",
                             AST: "14-42",
@@ -795,8 +769,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,3-6,4",
                             BilirrubinaTotal: "0,2-0,8",
-                            BilirrubinaDirecta: "0,0-14,0",
-                            BilirrubinaIndirecta: "0,07-0,60",
                             FosfatasaAlcalina: "20-70",
                             GGT: "1-11,5",
                             AST: "14-42",
@@ -817,8 +789,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,5-6,0",
                             BilirrubinaTotal: "0,1-0,4",
-                            BilirrubinaDirecta: "0,0-0,1",
-                            BilirrubinaIndirecta: "0,1-0,3",
                             FosfatasaAlcalina: "10-50",
                             GGT: "0-5",
                             AST: "15-45",
@@ -835,8 +805,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,5-6,0",
                             BilirrubinaTotal: "0,1-0,4",
-                            BilirrubinaDirecta: "0,0-0,1",
-                            BilirrubinaIndirecta: "0,1-0,3",
                             FosfatasaAlcalina: "10-50",
                             GGT: "0-5",
                             AST: "15-45",
@@ -853,8 +821,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,5-6,0",
                             BilirrubinaTotal: "0,1-0,4",
-                            BilirrubinaDirecta: "0,0-0,1",
-                            BilirrubinaIndirecta: "0,1-0,3",
                             FosfatasaAlcalina: "10-50",
                             GGT: "0-5",
                             AST: "15-45",
@@ -871,8 +837,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,5-6,0",
                             BilirrubinaTotal: "0,1-0,4",
-                            BilirrubinaDirecta: "0,0-0,1",
-                            BilirrubinaIndirecta: "0,1-0,3",
                             FosfatasaAlcalina: "10-50",
                             GGT: "0-5",
                             AST: "15-45",
@@ -891,8 +855,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,5-6,0",
                             BilirrubinaTotal: "0,1-0,4",
-                            BilirrubinaDirecta: "0,0-0,1",
-                            BilirrubinaIndirecta: "0,1-0,3",
                             FosfatasaAlcalina: "10-50",
                             GGT: "0-5",
                             AST: "15-45",
@@ -909,8 +871,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,5-6,0",
                             BilirrubinaTotal: "0,1-0,4",
-                            BilirrubinaDirecta: "0,0-0,1",
-                            BilirrubinaIndirecta: "0,1-0,3",
                             FosfatasaAlcalina: "10-50",
                             GGT: "0-5",
                             AST: "15-45",
@@ -927,8 +887,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,5-6,0",
                             BilirrubinaTotal: "0,1-0,4",
-                            BilirrubinaDirecta: "0,0-0,1",
-                            BilirrubinaIndirecta: "0,1-0,3",
                             FosfatasaAlcalina: "10-50",
                             GGT: "0-5",
                             AST: "15-45",
@@ -945,8 +903,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             Urea: "20-50",
                             Fosforo: "3,5-6,0",
                             BilirrubinaTotal: "0,1-0,4",
-                            BilirrubinaDirecta: "0,0-0,1",
-                            BilirrubinaIndirecta: "0,1-0,3",
                             FosfatasaAlcalina: "10-50",
                             GGT: "0-5",
                             AST: "15-45",
@@ -976,8 +932,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         document.getElementById('refUrea').innerText = refValores.Urea || '';
                         document.getElementById('refFosforo').innerText = refValores.Fosforo || '';
                         document.getElementById('refBilirrubinaTotal').innerText = refValores.BilirrubinaTotal || '';
-                        document.getElementById('refBilirrubinaDirecta').innerText = refValores.BilirrubinaDirecta || '';
-                        document.getElementById('refBilirrubinaIndirecta').innerText = refValores.BilirrubinaIndirecta || '';
                         document.getElementById('refFosfatasaAlcalina').innerText = refValores.FosfatasaAlcalina || '';
                         document.getElementById('refGGT').innerText = refValores.GGT || '';
                         document.getElementById('refAST').innerText = refValores.AST || '';
@@ -989,7 +943,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         
                         // Actualizar colores de campos que ya tienen valores
                         const campos = ['glucosa', 'colesterol', 'trigliceridos', 'urea', 'fosforo', 'bilirrubina_total', 
-                                      'bilirrubina_directa', 'bilirrubina_indirecta', 'fosfatasa_alcalina', 'ggt', 'ast', 'alt',
+                                      'fosfatasa_alcalina', 'ggt', 'ast', 'alt',
                                       'albumina', 'proteinas_totales', 'globulinas_totales', 'relacion_ag'];
                         
                         campos.forEach(campo => {
@@ -1223,8 +1177,6 @@ function guardarAnalisisActual() {
         urea: getValueSafe('urea'),
         fosforo: getValueSafe('fosforo'),
         bilirrubina_total: getValueSafe('bilirrubina_total'),
-        bilirrubina_directa: getValueSafe('bilirrubina_directa'),
-        bilirrubina_indirecta: getValueSafe('bilirrubina_indirecta'),
         fosfatasa_alcalina: getValueSafe('fosfatasa_alcalina'),
         ggt: getValueSafe('ggt'),
         ast: getValueSafe('ast'),
@@ -1291,8 +1243,6 @@ function cargarAnalisisDesdeHistorial(index) {
     document.getElementById('urea').value = analisis.urea || '';
     document.getElementById('fosforo').value = analisis.fosforo || '';
     document.getElementById('bilirrubina_total').value = analisis.bilirrubina_total || '';
-    document.getElementById('bilirrubina_directa').value = analisis.bilirrubina_directa || '';
-    document.getElementById('bilirrubina_indirecta').value = analisis.bilirrubina_indirecta || '';
     document.getElementById('fosfatasa_alcalina').value = analisis.fosfatasa_alcalina || '';
     document.getElementById('ggt').value = analisis.ggt || '';
     document.getElementById('ast').value = analisis.ast || '';
@@ -1458,7 +1408,7 @@ function cargarListaDeParametrosHepatico() {
     
     const parametrosEspecificos = [
         "GLUCOSA", "COLESTEROL TOTAL", "TRIGLICÉRIDOS", "UREA", "FOSFORO",
-        "BILIRRUBINA TOTAL", "BILIRRUBINA DIRECTA", "BILIRRUBINA INDIRECTA",
+        "BILIRRUBINA TOTAL",
         "FOSFATASA ALCALINA", "GGT", "AST", "ALT",
         "ALBUMINA", "PROTEÍNAS TOTALES", "GLOBULINAS TOTALES", "RELACIÓN ALBUMINA/GLOBULINA",
         "Suero Hemolítico", "Suero Lipémico", "Suero Ictérico"
