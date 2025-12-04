@@ -768,6 +768,7 @@ function editQuirofanoTicket(randomId) {
                                 <option value="Dra. Eliany Lopez" ${doctorActual === 'Dra. Eliany Lopez' ? 'selected' : ''}>Dra. Eliany Lopez</option>
                                 <option value="Dra. Adriana Rojas" ${doctorActual === 'Dra. Adriana Rojas' ? 'selected' : ''}>Dra. Adriana Rojas</option>
                                 <option value="Dra. Nicole Sibaja" ${doctorActual === 'Dra. Nicole Sibaja' ? 'selected' : ''}>Dra. Nicole Sibaja</option>
+                                <option value="Dra. Christiane Buchheim" ${doctorActual === 'Dra. Christiane Buchheim' ? 'selected' : ''}>Dra. Christiane Buchheim</option>
                             </select>
                         </div>
                         <div class="form-group">

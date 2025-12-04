@@ -3031,6 +3031,7 @@ function editTicket(randomId) {
                             <option value="Dra. Eliany Lopez" ${doctorSeleccionado === "Dra. Eliany Lopez" ? 'selected' : ''}>Dra. Eliany Lopez</option>
                             <option value="Dra. Adriana Rojas" ${doctorSeleccionado === "Dra. Adriana Rojas" ? 'selected' : ''}>Dra. Adriana Rojas</option>
                             <option value="Dra. Nicole Sibaja" ${doctorSeleccionado === "Dra. Nicole Sibaja" ? 'selected' : ''}>Dra. Nicole Sibaja</option>
+                            <option value="Dra. Christiane Buchheim" ${doctorSeleccionado === "Dra. Christiane Buchheim" ? 'selected' : ''}>Dra. Christiane Buchheim</option>
                         </select>
                     </div>
                     <div class="form-group">
