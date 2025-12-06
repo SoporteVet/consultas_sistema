@@ -1527,6 +1527,35 @@ if (cedulaInput) {
             }
         }
     });
+
+    // Limpiar campos cuando se borre la cédula
+    cedulaInput.addEventListener('input', function() {
+        const cedula = this.value.trim();
+        if (cedula.length === 0) {
+            // Limpiar campos relacionados
+            const nombreInput = document.getElementById('nombre');
+            if (nombreInput) nombreInput.value = '';
+            
+            const mascotaInput = document.getElementById('mascota');
+            if (mascotaInput) mascotaInput.value = '';
+            
+            const tipoMascotaInput = document.getElementById('tipoMascota');
+            if (tipoMascotaInput) tipoMascotaInput.value = 'perro';
+            
+            const idPacienteInput = document.getElementById('idPaciente');
+            if (idPacienteInput) idPacienteInput.value = '';
+            
+            // Remover selector de mascotas si existe
+            const mascotasSelector = document.getElementById('mascotasSelectorContainer');
+            if (mascotasSelector) mascotasSelector.remove();
+            
+            // Restaurar estilos
+            if (nombreInput) {
+                nombreInput.style.borderColor = '';
+                nombreInput.placeholder = '';
+            }
+        }
+    });
 }
 
 // Función para mostrar selector de mascotas cuando hay múltiples

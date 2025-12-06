@@ -130,6 +130,44 @@ function setupQuirofanoEventListeners() {
                 }
             }
         });
+
+        // Limpiar campos cuando se borre la cédula
+        quirofanoCedulaInput.addEventListener('input', function() {
+            const cedula = this.value.trim();
+            if (cedula.length === 0) {
+                // Limpiar campos relacionados
+                const nombreInput = document.getElementById('quirofanoNombre');
+                if (nombreInput) nombreInput.value = '';
+                
+                const mascotaInput = document.getElementById('quirofanoMascota');
+                if (mascotaInput) mascotaInput.value = '';
+                
+                const tipoMascotaInput = document.getElementById('quirofanoTipoMascota');
+                if (tipoMascotaInput) tipoMascotaInput.value = 'perro';
+                
+                const idPacienteInput = document.getElementById('quirofanoIdPaciente');
+                if (idPacienteInput) idPacienteInput.value = '';
+                
+                const razaInput = document.getElementById('quirofanoRaza');
+                if (razaInput) razaInput.value = '';
+                
+                const edadInput = document.getElementById('quirofanoEdad');
+                if (edadInput) edadInput.value = '';
+                
+                const pesoInput = document.getElementById('quirofanoPeso');
+                if (pesoInput) pesoInput.value = '';
+                
+                // Remover selector de mascotas si existe
+                const mascotasSelector = document.getElementById('mascotasSelectorContainerQuirofano');
+                if (mascotasSelector) mascotasSelector.remove();
+                
+                // Restaurar estilos
+                if (nombreInput) {
+                    nombreInput.style.borderColor = '';
+                    nombreInput.placeholder = '';
+                }
+            }
+        });
     }
     
     // Configurar el checkbox de exámenes prequirúrgicos
