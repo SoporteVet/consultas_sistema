@@ -377,8 +377,6 @@ function searchClients() {
         return;
     }
     
-    console.log('Buscando clientes:', searchTerm, 'Origen:', consentSource);
-    
     // Mostrar indicador de carga
     resultsContainer.innerHTML = '<div class="loading-consent"><i class="fas fa-spinner fa-spin"></i> Buscando clientes...</div>';
     resultsContainer.classList.add('active');
@@ -474,9 +472,6 @@ function filterClientsFromQuirofanoTickets(searchTerm) {
     const selectedDate = getSelectedConsentDate();
     const dateFilter = selectedDate || getCurrentDateString();
     
-    console.log('Buscando en tickets de quirófano:', window.quirofanoTickets.length, 'tickets disponibles');
-    console.log('Ejemplo de ticket:', window.quirofanoTickets[0]);
-    
     // Filtrar tickets de quirófano que coincidan con el término de búsqueda Y que sean de la fecha seleccionada
     const matchingTickets = window.quirofanoTickets.filter(ticket => {
         // Primero verificar que el ticket fue creado en la fecha seleccionada
@@ -493,9 +488,6 @@ function filterClientsFromQuirofanoTickets(searchTerm) {
             (ticket.correo && ticket.correo.toLowerCase().includes(term))
         );
     });
-    
-    console.log('Tickets que coinciden con la búsqueda:', matchingTickets.length);
-    console.log('Filtro aplicado: Tickets de fecha ' + dateFilter);
     
     // Agrupar por cliente único
     matchingTickets.forEach(ticket => {
@@ -674,9 +666,6 @@ function filterClientsFromConsultaTickets(searchTerm) {
             (t.numFactura && String(t.numFactura).toLowerCase().includes(term))
         );
     });
-    
-    console.log('Tickets de consulta que coinciden con la búsqueda:', matching.length);
-    console.log('Filtro aplicado: Tickets de fecha ' + dateFilter);
     
     matching.forEach(ticket => {
         const key = ticket.cedula || ticket.idPaciente || (ticket.nombre + '|' + ticket.mascota);
