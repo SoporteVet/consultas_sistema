@@ -955,6 +955,25 @@ section h2 i {
 }
 
 /* Mejoras en los modales */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(3px);
+  animation: fadeIn 0.3s forwards;
+}
+
+.modal.hidden {
+  display: none;
+}
+
 .edit-modal {
   position: fixed;
   top: 0;
@@ -4073,3 +4092,105 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
 /* ==================== FIN ESTILOS PARA SISTEMA DE INVENTARIO DE VACUNAS ==================== */
 
 /* ==================== FIN ESTILOS PARA CONTROL DE VACUNAS ==================== */
+
+/* ==================== ESTILOS PARA MODAL DE CONFIRMACIÓN DE TURNO ==================== */
+.confirm-modal-content {
+  text-align: center;
+  max-width: 450px;
+  padding: 40px 30px;
+}
+
+.confirm-modal-icon {
+  font-size: 64px;
+  color: #4285f4;
+  margin-bottom: 20px;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+.confirm-modal-content h3 {
+  color: #2c3e50;
+  font-size: 1.5rem;
+  margin-bottom: 15px;
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.confirm-modal-content p {
+  color: #555;
+  font-size: 1.1rem;
+  line-height: 1.6;
+  margin-bottom: 30px;
+  padding: 0 10px;
+}
+
+.confirm-modal-content .modal-actions {
+  justify-content: center;
+  gap: 15px;
+  margin-top: 30px;
+}
+
+.btn-cancel-confirm {
+  background: #f5f5f5;
+  color: #666;
+  border: 2px solid #ddd;
+  padding: 12px 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+  justify-content: center;
+}
+
+.btn-cancel-confirm:hover {
+  background: #e0e0e0;
+  border-color: #bbb;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.btn-accept-confirm {
+  background: linear-gradient(135deg, #4285f4 0%, #357abd 100%);
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 1rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 140px;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+.btn-accept-confirm:hover {
+  background: linear-gradient(135deg, #357abd 0%, #2a5f9a 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(66, 133, 244, 0.4);
+}
+
+.btn-accept-confirm:active,
+.btn-cancel-confirm:active {
+  transform: translateY(0);
+}
+
+/* ==================== FIN ESTILOS PARA MODAL DE CONFIRMACIÓN DE TURNO ==================== */
