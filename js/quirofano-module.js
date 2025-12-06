@@ -45,15 +45,6 @@ function initQuirofanoModule() {
         dateFilterInput.value = todayString;
     }
     
-    // Asegurar que el botón de filtro "En Preparación" esté activo visualmente
-    const enPreparacionBtn = document.querySelector('.quirofano-filter-btn[data-filter="en-preparacion"]');
-    if (enPreparacionBtn) {
-        // Remover active de todos los botones
-        document.querySelectorAll('.quirofano-filter-btn').forEach(btn => btn.classList.remove('active'));
-        // Agregar active al botón de "En Preparación"
-        enPreparacionBtn.classList.add('active');
-    }
-    
     loadQuirofanoTickets();
     setupQuirofanoEventListeners();
     
@@ -99,76 +90,6 @@ function setupQuirofanoEventListeners() {
     if (quirofanoForm) {
         quirofanoForm.addEventListener('submit', handleQuirofanoFormSubmit);
     }
-
-    // Botón de búsqueda de cédula en quirófano
-    const buscarCedulaQuirofanoBtn = document.getElementById('buscarCedulaQuirofanoBtn');
-    if (buscarCedulaQuirofanoBtn) {
-        buscarCedulaQuirofanoBtn.addEventListener('click', function() {
-            const cedulaInput = document.getElementById('quirofanoCedula');
-            if (cedulaInput) {
-                const cedula = cedulaInput.value.trim();
-                if (cedula.length >= 9) {
-                    buscarCedulaQuirofano(cedula);
-                } else {
-                    showNotification('La cédula debe tener al menos 9 caracteres', 'error');
-                }
-            }
-        });
-    }
-
-    // Event listener para consultar con Enter en el campo de cédula de quirófano
-    const quirofanoCedulaInput = document.getElementById('quirofanoCedula');
-    if (quirofanoCedulaInput) {
-        quirofanoCedulaInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const cedula = this.value.trim();
-                if (cedula.length >= 9) {
-                    buscarCedulaQuirofano(cedula);
-                } else {
-                    showNotification('La cédula debe tener al menos 9 caracteres', 'error');
-                }
-            }
-        });
-
-        // Limpiar campos cuando se borre la cédula
-        quirofanoCedulaInput.addEventListener('input', function() {
-            const cedula = this.value.trim();
-            if (cedula.length === 0) {
-                // Limpiar campos relacionados
-                const nombreInput = document.getElementById('quirofanoNombre');
-                if (nombreInput) nombreInput.value = '';
-                
-                const mascotaInput = document.getElementById('quirofanoMascota');
-                if (mascotaInput) mascotaInput.value = '';
-                
-                const tipoMascotaInput = document.getElementById('quirofanoTipoMascota');
-                if (tipoMascotaInput) tipoMascotaInput.value = 'perro';
-                
-                const idPacienteInput = document.getElementById('quirofanoIdPaciente');
-                if (idPacienteInput) idPacienteInput.value = '';
-                
-                const razaInput = document.getElementById('quirofanoRaza');
-                if (razaInput) razaInput.value = '';
-                
-                const edadInput = document.getElementById('quirofanoEdad');
-                if (edadInput) edadInput.value = '';
-                
-                const pesoInput = document.getElementById('quirofanoPeso');
-                if (pesoInput) pesoInput.value = '';
-                
-                // Remover selector de mascotas si existe
-                const mascotasSelector = document.getElementById('mascotasSelectorContainerQuirofano');
-                if (mascotasSelector) mascotasSelector.remove();
-                
-                // Restaurar estilos
-                if (nombreInput) {
-                    nombreInput.style.borderColor = '';
-                    nombreInput.placeholder = '';
-                }
-            }
-        });
-    }
     
     // Configurar el checkbox de exámenes prequirúrgicos
     const examenesCheckbox = document.getElementById('quirofanoExamenesPrequirurgicos');
@@ -182,31 +103,6 @@ function setupQuirofanoEventListeners() {
                 examenesStatusContainer.style.display = 'none';
             }
         });
-    }
-    
-    // Configurar el checkbox de vía
-    const viaCheckbox = document.getElementById('quirofanoVia');
-    const viaStatusContainer = document.getElementById('viaStatusContainer');
-    
-    if (viaCheckbox && viaStatusContainer) {
-        viaCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                viaStatusContainer.style.display = 'block';
-            } else {
-                viaStatusContainer.style.display = 'none';
-            }
-        });
-    }
-    
-    // Controlar visibilidad del campo "vía" según el rol del usuario
-    const userRole = sessionStorage.getItem('userRole');
-    const viaField = document.querySelector('.quirofano-via-field');
-    if (viaField) {
-        if (userRole === 'visitas') {
-            viaField.style.display = 'none';
-        } else {
-            viaField.style.display = '';
-        }
     }
     
 
@@ -295,9 +191,6 @@ function handleQuirofanoFormSubmit(e) {
         examenesPrequirurgicos: getCheckboxValue('quirofanoExamenesPrequirurgicos'),
         examenesStatus: getCheckboxValue('quirofanoExamenesPrequirurgicos') ? 
             getFieldValue('quirofanoExamenesStatus') : null,
-        via: getCheckboxValue('quirofanoVia'),
-        viaStatus: getCheckboxValue('quirofanoVia') ? 
-            getFieldValue('quirofanoViaStatus') : null,
         fechaCreacion: new Date().toISOString(),
         fechaProgramada: getFieldValue('quirofanoFecha'),
         horaProgramada: getFieldValue('quirofanoHora'),
@@ -350,28 +243,9 @@ function saveQuirofanoTicket(ticketData) {
     
     quirofanoFirebaseRef.push(ticketData)
         .then(() => {
-            // Guardar/actualizar información del paciente en base de datos relacional
-            if (window.patientDatabase && window.patientDatabase.initialized) {
-                window.patientDatabase.savePatientFromTicket({
-                    cedula: ticketData.cedula,
-                    nombre: ticketData.nombrePropietario,
-                    mascota: ticketData.nombreMascota,
-                    tipoMascota: ticketData.tipoMascota,
-                    idPaciente: ticketData.idPaciente,
-                    raza: ticketData.raza,
-                    edad: ticketData.edad,
-                    peso: ticketData.peso,
-                    telefono: ticketData.telefono || '',
-                    correo: ticketData.correo || ''
-                }).catch(err => console.warn('Error guardando paciente:', err));
-            }
-
             hideLoading();
             showNotification('Ticket de quirófano creado exitosamente', 'success');
             document.getElementById('quirofanoTicketForm').reset();
-            // Limpiar selector de mascotas si existe
-            const mascotasSelector = document.getElementById('mascotasSelectorContainerQuirofano');
-            if (mascotasSelector) mascotasSelector.remove();
             loadQuirofanoTickets();
             
             // Actualizar variable global inmediatamente después de crear
@@ -381,9 +255,6 @@ function saveQuirofanoTicket(ticketData) {
                 // Actualizar contador de exámenes prequirúrgicos
                 if (typeof window.updatePrequirurgicoCounter === 'function') {
                     window.updatePrequirurgicoCounter();
-                }
-                if (typeof window.updateViaCounter === 'function') {
-                    window.updateViaCounter();
                 }
                 
                 // Redirigir a la vista de ver tickets después de actualizar
@@ -505,11 +376,7 @@ function loadQuirofanoTickets() {
 }
 
 // Función para renderizar tickets
-function renderQuirofanoTickets(filter = null, searchTerm = '') {
-    // Si no se especifica un filtro, usar el filtro actual guardado
-    if (filter === null) {
-        filter = window.currentQuirofanoFilter || 'en-preparacion';
-    }
+function renderQuirofanoTickets(filter = 'todos', searchTerm = '') {
     // Usar la función con filtro de fecha, pasando fecha vacía para que use hoy por defecto
     const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
     renderQuirofanoTicketsWithDateFilter(filter, searchTerm, dateFilter);
@@ -632,16 +499,6 @@ function renderQuirofanoTicketsWithDateFilter(filter = 'todos', searchTerm = '',
                                  class="btn-examenes-realizados" 
                                  title="Marcar exámenes como realizados">
                             <i class="fas fa-check"></i> Marcar como realizados
-                         </button>`
-                    }</p>` : ''}
-                ${ticket.via && sessionStorage.getItem('userRole') !== 'visitas' ? `<p><i class="fas fa-syringe"></i> <strong>Vía:</strong> 
-                    ${ticket.viaStatus === 'realizado' ? 
-                        '<span style="color: #28a745; font-weight: bold;">✅ Realizada</span>' : 
-                        `<span style="color: #ff6b35; font-weight: bold;">⏳ Pendiente</span>
-                         <button onclick="marcarViaRealizada('${ticket.randomId}')" 
-                                 class="btn-examenes-realizados" 
-                                 title="Marcar vía como realizada">
-                            <i class="fas fa-check"></i> Marcar como realizada
                          </button>`
                     }</p>` : ''}
                 ${ticket.observaciones ? `<p><i class="fas fa-sticky-note"></i> <strong>Observaciones:</strong> ${ticket.observaciones}</p>` : ''}
@@ -911,6 +768,7 @@ function editQuirofanoTicket(randomId) {
                                 <option value="Dra. Eliany Lopez" ${doctorActual === 'Dra. Eliany Lopez' ? 'selected' : ''}>Dra. Eliany Lopez</option>
                                 <option value="Dra. Adriana Rojas" ${doctorActual === 'Dra. Adriana Rojas' ? 'selected' : ''}>Dra. Adriana Rojas</option>
                                 <option value="Dra. Nicole Sibaja" ${doctorActual === 'Dra. Nicole Sibaja' ? 'selected' : ''}>Dra. Nicole Sibaja</option>
+                                <option value="Dra. Christiane Buchheim" ${doctorActual === 'Dra. Christiane Buchheim' ? 'selected' : ''}>Dra. Christiane Buchheim</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -971,25 +829,8 @@ function editQuirofanoTicket(randomId) {
                                 </select>
                             </div>
                         </div>
-                        <div class="form-group edit-quirofano-via-field" style="display: ${sessionStorage.getItem('userRole') === 'visitas' ? 'none' : ''};">
-                            <label for="editQuirofanoVia">
-                                <input type="checkbox" id="editQuirofanoVia" name="via" ${ticket.via ? 'checked' : ''} style="margin-right: 8px;">
-                                Vía
-                            </label>
-                            <small style="display: block; color: #666; margin-top: 4px;">
-                                Marque si el paciente requiere vía
-                            </small>
-                            
-                            <!-- Estado de la vía en edición -->
-                            <div id="editViaStatusContainer" style="display: ${ticket.via ? 'block' : 'none'}; margin-top: 8px;">
-                                <label for="editQuirofanoViaStatus" style="font-size: 13px; color: #555;">
-                                    Estado de la vía:
-                                </label>
-                                <select id="editQuirofanoViaStatus" style="margin-left: 8px; padding: 2px 6px; font-size: 12px;">
-                                    <option value="pendiente" ${ticket.viaStatus === 'pendiente' || !ticket.viaStatus ? 'selected' : ''}>⏳ Pendiente</option>
-                                    <option value="realizado" ${ticket.viaStatus === 'realizado' ? 'selected' : ''}>✅ Realizada</option>
-                                </select>
-                            </div>
+                        <div class="form-group">
+                            <!-- Campo vacío para mantener estructura -->
                         </div>
                     </div>
 
@@ -1054,20 +895,6 @@ function editQuirofanoTicket(randomId) {
         });
     }
     
-    // Event listener para el checkbox de vía en edición
-    const editViaCheckbox = document.getElementById('editQuirofanoVia');
-    const editViaStatusContainer = document.getElementById('editViaStatusContainer');
-    
-    if (editViaCheckbox && editViaStatusContainer) {
-        editViaCheckbox.addEventListener('change', function() {
-            if (this.checked) {
-                editViaStatusContainer.style.display = 'block';
-            } else {
-                editViaStatusContainer.style.display = 'none';
-            }
-        });
-    }
-    
 
 }
 
@@ -1121,9 +948,6 @@ function handleQuirofanoEdit(e) {
         examenesPrequirurgicos: document.getElementById('editQuirofanoExamenesPrequirurgicos').checked,
         examenesStatus: document.getElementById('editQuirofanoExamenesPrequirurgicos').checked ? 
             document.getElementById('editQuirofanoExamenesStatus').value : null,
-        via: document.getElementById('editQuirofanoVia') ? document.getElementById('editQuirofanoVia').checked : false,
-        viaStatus: document.getElementById('editQuirofanoVia') && document.getElementById('editQuirofanoVia').checked ? 
-            (document.getElementById('editQuirofanoViaStatus') ? document.getElementById('editQuirofanoViaStatus').value : 'pendiente') : null,
         fechaModificacion: new Date().toISOString(),
         modificadoPor: sessionStorage.getItem('userName') || 'Usuario'
     };
@@ -1513,313 +1337,8 @@ window.closeQuirofanoDeleteModal = closeQuirofanoDeleteModal;
 window.confirmDeleteQuirofanoTicket = confirmDeleteQuirofanoTicket;
 window.marcarExamenesRealizados = marcarExamenesRealizados;
 
-// Función para marcar vía como realizada
-function marcarViaRealizada(randomId) {
-    const ticket = window.quirofanoTickets.find(t => t.randomId === randomId);
-    if (!ticket) {
-        showNotification('Ticket no encontrado', 'error');
-        return;
-    }
-    
-    if (!ticket.via) {
-        showNotification('Este ticket no requiere vía', 'warning');
-        return;
-    }
-    
-    if (ticket.viaStatus === 'realizado') {
-        showNotification('La vía ya está marcada como realizada', 'info');
-        return;
-    }
-    
-    // Confirmar la acción
-    if (!confirm('¿Está seguro de marcar la vía como realizada?')) {
-        return;
-    }
-    
-    showLoading();
-    
-    // Actualizar el ticket
-    const updateData = {
-        viaStatus: 'realizado'
-    };
-    
-    // Actualizar en Firebase
-    quirofanoFirebaseRef.child(randomId).update(updateData)
-        .then(() => {
-            // Actualizar en el array local
-            ticket.viaStatus = 'realizado';
-            
-            // Recargar la visualización
-            const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
-            const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
-            renderQuirofanoTicketsWithDateFilter(window.currentQuirofanoFilter, searchTerm, dateFilter);
-            
-            // Actualizar contadores
-            if (typeof window.updateViaCounter === 'function') {
-                window.updateViaCounter();
-            }
-            
-            hideLoading();
-            showNotification('Vía marcada como realizada', 'success');
-        })
-        .catch(error => {
-            hideLoading();
-            showNotification('Error al marcar la vía como realizada', 'error');
-        });
-}
-
-window.marcarViaRealizada = marcarViaRealizada;
-
-// Función para obtener tickets de quirófano con vía para una fecha específica
-window.getQuirofanoTicketsWithViaForDate = function(date) {
-    if (typeof window.quirofanoTickets === 'undefined' || !Array.isArray(window.quirofanoTickets)) {
-        return [];
-    }
-    
-    return window.quirofanoTickets.filter(ticket => {
-        if (!ticket.via || ticket.via !== true) return false;
-        if (!ticket.fechaProgramada) return false;
-        
-        // Comparar fechas (formato YYYY-MM-DD)
-        const ticketDate = ticket.fechaProgramada.split('T')[0];
-        return ticketDate === date;
-    }).map(ticket => {
-        // Añadir randomId si no existe (para compatibilidad)
-        if (!ticket.randomId && ticket.id) {
-            ticket.randomId = ticket.id;
-        }
-        return ticket;
-    });
-};
 
 
-
-
-// Función para buscar paciente por cédula en quirófano
-function buscarCedulaQuirofano(cedula) {
-    if (!cedula || cedula.trim().length < 9) {
-        showNotification('La cédula debe tener al menos 9 caracteres', 'error');
-        return;
-    }
-
-    const nombreInput = document.getElementById('quirofanoNombre');
-    const mascotaInput = document.getElementById('quirofanoMascota');
-    const tipoMascotaInput = document.getElementById('quirofanoTipoMascota');
-    const idPacienteInput = document.getElementById('quirofanoIdPaciente');
-    const razaInput = document.getElementById('quirofanoRaza');
-    const edadInput = document.getElementById('quirofanoEdad');
-    const pesoInput = document.getElementById('quirofanoPeso');
-    const buscarBtn = document.getElementById('buscarCedulaQuirofanoBtn');
-    
-    if (!nombreInput) return;
-
-    // Deshabilitar botón y mostrar indicador de carga
-    if (buscarBtn) {
-        buscarBtn.disabled = true;
-        buscarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
-    }
-
-    // Mostrar indicador de carga
-    nombreInput.style.borderColor = '#ffa500';
-    nombreInput.placeholder = 'Buscando...';
-
-    const cedulaNormalizada = cedula.trim();
-
-    // PRIMERO: Buscar en la base de datos local de pacientes
-    if (window.patientDatabase && window.patientDatabase.initialized) {
-        const patientInfo = window.patientDatabase.fillFormFromPatient(cedulaNormalizada, 'quirofano');
-        
-        if (patientInfo) {
-            // Paciente encontrado en BD local
-            nombreInput.value = patientInfo.cliente.nombre || '';
-            nombreInput.style.borderColor = '#4caf50';
-            nombreInput.placeholder = '';
-            
-            // Mostrar selector de mascotas si hay más de una
-            const mascotas = patientInfo.mascotas || [];
-            if (mascotas.length > 0) {
-                mostrarSelectorMascotasQuirofano(mascotas, cedulaNormalizada);
-            } else if (mascotas.length === 1) {
-                // Si solo hay una mascota, rellenar automáticamente
-                const mascota = mascotas[0];
-                if (mascotaInput) mascotaInput.value = mascota.nombre || '';
-                if (tipoMascotaInput) tipoMascotaInput.value = mascota.tipoMascota || 'otro';
-                if (idPacienteInput) idPacienteInput.value = mascota.idPaciente || '';
-                if (razaInput) razaInput.value = mascota.raza || '';
-                if (edadInput) edadInput.value = mascota.edad || '';
-                if (pesoInput) pesoInput.value = mascota.peso || '';
-            }
-
-            // Restaurar botón
-            if (buscarBtn) {
-                buscarBtn.disabled = false;
-                buscarBtn.innerHTML = '<i class="fas fa-search"></i>';
-            }
-            
-            // Restaurar el color del borde después de 2 segundos
-            setTimeout(() => {
-                nombreInput.style.borderColor = '';
-            }, 2000);
-            
-            return; // No consultar API externa si encontramos en BD local
-        }
-    }
-
-    // SEGUNDO: Si no se encontró en BD local, consultar API externa
-    nombreInput.placeholder = 'Consultando API externa...';
-    const direccion = `https://apis.gometa.org/cedulas/${cedulaNormalizada}`;
-    
-    fetch(direccion)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error('No se encontró información para esta cédula');
-            }
-            return response.json();
-        })
-        .then(data => {
-            // Procesar respuesta de API (similar a consultas)
-            if (Array.isArray(data) && data.length > 0) {
-                data = data[0];
-            }
-            
-            let nombreCompleto = '';
-            if (data && typeof data === 'object') {
-                nombreCompleto = data.nombreCompleto || data.nombre || data.name || data.fullName || '';
-            } else if (typeof data === 'string') {
-                nombreCompleto = data.trim();
-            }
-
-            if (nombreCompleto && nombreCompleto.trim()) {
-                nombreInput.value = nombreCompleto.trim();
-                nombreInput.style.borderColor = '#4caf50';
-                nombreInput.placeholder = '';
-                
-                // Guardar en base de datos local para futuras búsquedas
-                if (window.patientDatabase && window.patientDatabase.initialized) {
-                    window.patientDatabase.savePatientFromTicket({
-                        cedula: cedulaNormalizada,
-                        nombre: nombreCompleto.trim()
-                    }).catch(err => console.warn('Error guardando paciente:', err));
-                }
-                
-                setTimeout(() => {
-                    nombreInput.style.borderColor = '';
-                }, 2000);
-            } else {
-                throw new Error('No se pudo extraer el nombre de la respuesta');
-            }
-        })
-        .catch(error => {
-            nombreInput.style.borderColor = '#f44336';
-            nombreInput.placeholder = 'No se encontró información para esta cédula';
-            showNotification('No se encontró información para esta cédula', 'error');
-            
-            setTimeout(() => {
-                nombreInput.style.borderColor = '';
-                nombreInput.placeholder = '';
-            }, 3000);
-        })
-        .finally(() => {
-            if (buscarBtn) {
-                buscarBtn.disabled = false;
-                buscarBtn.innerHTML = '<i class="fas fa-search"></i>';
-            }
-        });
-}
-
-// Función para mostrar selector de mascotas en quirófano
-function mostrarSelectorMascotasQuirofano(mascotas, cedula) {
-    const existingSelector = document.getElementById('mascotasSelectorContainerQuirofano');
-    if (existingSelector) existingSelector.remove();
-
-    const mascotaInput = document.getElementById('quirofanoMascota');
-    if (!mascotaInput) return;
-
-    const container = document.createElement('div');
-    container.id = 'mascotasSelectorContainerQuirofano';
-    container.style.cssText = `
-        margin-top: 10px;
-        padding: 15px;
-        background: #e3f2fd;
-        border: 1px solid #2196f3;
-        border-radius: 8px;
-        max-height: 300px;
-        overflow-y: auto;
-    `;
-
-    const title = document.createElement('div');
-    title.style.cssText = 'font-weight: bold; margin-bottom: 10px; color: #1976d2;';
-    title.innerHTML = `<i class="fas fa-paw"></i> Mascotas registradas para esta cédula:`;
-    container.appendChild(title);
-
-    mascotas.forEach((mascota) => {
-        const mascotaCard = document.createElement('div');
-        mascotaCard.style.cssText = `
-            padding: 10px;
-            margin: 5px 0;
-            background: white;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: all 0.2s;
-            border: 2px solid transparent;
-        `;
-        mascotaCard.innerHTML = `
-            <div style="font-weight: 600; color: #2c3e50;">${mascota.nombre || 'Sin nombre'}</div>
-            <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
-                ${mascota.tipoMascota ? `Tipo: ${mascota.tipoMascota}` : ''}
-                ${mascota.idPaciente ? ` | ID: ${mascota.idPaciente}` : ''}
-                ${mascota.raza ? ` | Raza: ${mascota.raza}` : ''}
-            </div>
-        `;
-
-        mascotaCard.addEventListener('mouseenter', () => {
-            mascotaCard.style.borderColor = '#2196f3';
-            mascotaCard.style.background = '#f5f5f5';
-        });
-
-        mascotaCard.addEventListener('mouseleave', () => {
-            mascotaCard.style.borderColor = 'transparent';
-            mascotaCard.style.background = 'white';
-        });
-
-        mascotaCard.addEventListener('click', () => {
-            // Rellenar campos con la mascota seleccionada
-            if (mascotaInput) mascotaInput.value = mascota.nombre || '';
-            const tipoMascotaInput = document.getElementById('quirofanoTipoMascota');
-            if (tipoMascotaInput && mascota.tipoMascota) {
-                tipoMascotaInput.value = mascota.tipoMascota;
-            }
-            const idPacienteInput = document.getElementById('quirofanoIdPaciente');
-            if (idPacienteInput && mascota.idPaciente) {
-                idPacienteInput.value = mascota.idPaciente;
-            }
-            const razaInput = document.getElementById('quirofanoRaza');
-            if (razaInput && mascota.raza) {
-                razaInput.value = mascota.raza;
-            }
-            const edadInput = document.getElementById('quirofanoEdad');
-            if (edadInput && mascota.edad) {
-                edadInput.value = mascota.edad;
-            }
-            const pesoInput = document.getElementById('quirofanoPeso');
-            if (pesoInput && mascota.peso) {
-                pesoInput.value = mascota.peso;
-            }
-
-            // Remover selector después de seleccionar
-            container.remove();
-            showNotification(`Mascota "${mascota.nombre}" seleccionada`, 'success');
-        });
-
-        container.appendChild(mascotaCard);
-    });
-
-    // Insertar después del campo de mascota
-    const mascotaGroup = mascotaInput.closest('.form-group');
-    if (mascotaGroup && mascotaGroup.parentNode) {
-        mascotaGroup.parentNode.insertBefore(container, mascotaGroup.nextSibling);
-    }
-}
 
 // Inicializar cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
