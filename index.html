@@ -162,7 +162,12 @@
               </div>
               <div class="form-group">
                 <label for="cedula">Cédula</label>
-                <input type="text" id="cedula" required>
+                <div style="display: flex; gap: 8px; align-items: flex-end;">
+                  <input type="text" id="cedula" required style="flex: 1;">
+                  <button type="button" id="buscarCedulaBtn" class="btn-submit" style="padding: 8px 10px; min-width: 36px; width: 36px; display: flex; align-items: center; justify-content: center;" title="Buscar información de la cédula">
+                    <i class="fas fa-search"></i>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -215,7 +220,6 @@
                   <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
                   <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
                   <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-                  <option value="Dra. Christiane Buchheim">Dra. Christiane Buchheim</option>
 
                 </select>
               </div>
@@ -358,11 +362,19 @@
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
           <h2><i class="fas fa-list"></i> Sala de Espera</h2>
           
-          <!-- Contador de tickets con exámenes prequirúrgicos -->
-          <div id="prequirurgicoCounter" class="prequirurgico-counter" style="display: none;">
-            <i class="fas fa-vials"></i>
-            <span class="counter-text">Exámenes prequirúrgicos pendientes:</span>
-            <span id="prequirurgicoCount" class="counter-number">0</span>
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
+            <!-- Contador de tickets con exámenes prequirúrgicos -->
+            <div id="prequirurgicoCounter" class="prequirurgico-counter" style="display: none;">
+              <i class="fas fa-vials"></i>
+              <span class="counter-text">Exámenes prequirúrgicos pendientes:</span>
+              <span id="prequirurgicoCount" class="counter-number">0</span>
+            </div>
+            <!-- Contador de tickets con vía pendiente -->
+            <div id="viaCounter" class="prequirurgico-counter" style="display: none;">
+              <i class="fas fa-syringe"></i>
+              <span class="counter-text">Vía pendiente:</span>
+              <span id="viaCount" class="counter-number">0</span>
+            </div>
           </div>
         </div>
         
@@ -553,7 +565,6 @@
                   <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
                   <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
                   <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-                  <option value="Dra. Christiane Buchheim">Dra. Christiane Buchheim</option>
                   <option value="Medico Externo">Médico Externo</option>
 
                   <option value="N.A">N.A</option>
@@ -717,7 +728,6 @@
             <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
             <option value="Medico Externo">Médico Externo</option>
             <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-            <option value="Dra. Christiane Buchheim">Dra. Christiane Buchheim</option>
             <option value="N.A">N.A</option>
           </select>
         </div>
@@ -837,13 +847,6 @@
                 </label>
               </div>
               <div class="form-group checkbox-group">
-                <label for="inyLibrela">
-                  <input type="checkbox" id="inyLibrela" value="Librela">
-                  <span class="checkmark"></span>
-                  Librela
-                </label>
-              </div>
-              <div class="form-group checkbox-group">
                 <label for="inySoroglobulin">
                   <input type="checkbox" id="inySoroglobulin" value="Soroglobulin">
                   <span class="checkmark"></span>
@@ -955,7 +958,6 @@
                     <th>Selmix</th>
                     <th>Convenia</th>
                     <th>Cerenia</th>
-                    <th>Librela</th>
                     <th>Soroglobulin</th>
                     <th>Nexium</th>
                     <th>Osurnia</th>
@@ -1175,13 +1177,13 @@
                       <option value="Giardia">Giardia</option>
                       <option value="C4">C4</option>
                       <option value="C6">C6</option>
+                      <option value="Triple Felina">Triple Felina</option>
                       <option value="Vacuna Anual">Vacuna Anual</option>
                     </optgroup>
                     <optgroup label="Vacunas">
                       <option value="Trip/Leu">Trip/Leu</option>
                       <option value="Trip/Rab">Trip/Rab</option>
                       <option value="Leu">Leu</option>
-                        <option value="Triple Felina">Triple Felina</option>
                     </optgroup>
                   </select>
                 </div>
@@ -1334,7 +1336,12 @@
               </div>
               <div class="form-group">
                 <label for="quirofanoCedula">Cédula</label>
-                <input type="text" id="quirofanoCedula" required>
+                <div style="display: flex; gap: 8px; align-items: flex-end;">
+                  <input type="text" id="quirofanoCedula" required style="flex: 1;">
+                  <button type="button" id="buscarCedulaQuirofanoBtn" class="btn-submit" style="padding: 8px 10px; min-width: 36px; width: 36px; display: flex; align-items: center; justify-content: center;" title="Buscar información de la cédula">
+                    <i class="fas fa-search"></i>
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -1404,6 +1411,32 @@
               </div>
             </div>
 
+            <div class="form-row quirofano-via-field" style="display: none;">
+              <div class="form-group">
+                <!-- Campo vacío para mantener el diseño de dos columnas -->
+              </div>
+              <div class="form-group">
+                <label for="quirofanoVia">
+                  <input type="checkbox" id="quirofanoVia" style="margin-right: 8px;">
+                  Vía
+                </label>
+                <small style="display: block; color: #666; margin-top: 4px;">
+                  Marque si el paciente requiere vía
+                </small>
+                
+                <!-- Estado de la vía -->
+                <div id="viaStatusContainer" style="display: none; margin-top: 8px;">
+                  <label for="quirofanoViaStatus" style="font-size: 13px; color: #555;">
+                    Estado de la vía:
+                  </label>
+                  <select id="quirofanoViaStatus" style="margin-left: 8px; padding: 2px 6px; font-size: 12px;">
+                    <option value="pendiente">⏳ Pendiente</option>
+                    <option value="realizado">✅ Realizada</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <div class="form-row">
               <div class="form-group">
                 <label for="quirofanoIdPaciente">ID del Paciente</label>
@@ -1446,7 +1479,6 @@
                   <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
                   <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
                   <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-                  <option value="Dra. Christiane Buchheim">Dra. Christiane Buchheim</option>
                 </select>
               </div>
               <div class="form-group">
@@ -1781,6 +1813,12 @@
         <div class="client-search-section">
           <h3>Buscar Cliente</h3>
           <div class="search-container">
+            <div class="form-row">
+              <div class="form-group">
+                <label for="consentFechaFiltro"><i class="fas fa-calendar-alt"></i> Filtrar por fecha:</label>
+                <input type="date" id="consentFechaFiltro">
+              </div>
+            </div>
             <div class="search-input-container">
               <input type="text" id="consentClientSearch" placeholder="Buscar por nombre, cédula o nombre de mascota..." class="search-input">
               <button id="searchClientBtn" class="search-btn">
@@ -1880,6 +1918,25 @@
     </div>
   </div>
 
+  <!-- Modal de confirmación para turnos -->
+  <div id="confirmTurnoModal" class="modal hidden">
+    <div class="modal-content confirm-modal-content">
+      <div class="confirm-modal-icon">
+        <i class="fas fa-question-circle"></i>
+      </div>
+      <h3 id="confirmTurnoTitle">Confirmar Acción</h3>
+      <p id="confirmTurnoMessage">¿Está seguro de guardar los cambios?</p>
+      <div class="modal-actions">
+        <button id="confirmTurnoCancel" class="btn-cancel-confirm">
+          <i class="fas fa-times"></i> Cancelar
+        </button>
+        <button id="confirmTurnoAccept" class="btn-accept-confirm">
+          <i class="fas fa-check"></i> Aceptar
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Modal de administración de usuarios -->
 <div id="adminUsersModal" class="edit-modal" style="display:none;z-index:2000;">
   <div class="modal-content animate-scale" style="max-width:420px;">
@@ -1921,6 +1978,8 @@
   emailjs.init('ZiyjOCMRsBnxJn_LT');
 </script>
   <script src="js/firebase-config.js"></script>
+  <!-- Base de datos relacional de pacientes -->
+  <script src="js/patient-database.js"></script>
   <!-- Módulos de optimización de tiempo real -->
   <script src="js/firebase-realtime-optimizer.js"></script>
   <script src="js/billing-performance-optimizer.js"></script>
@@ -1939,11 +1998,10 @@
   <!-- Inicialización de optimizaciones -->
   <script src="js/realtime-performance-manager.js"></script>
   <!-- Optimizador de memoria -->
-  <!-- <script src="js/memory-optimizer.js"></script> -->
+  <script src="js/memory-optimizer.js"></script>
   <!-- Herramientas de diagnóstico (solo en desarrollo) -->
-  <!-- Comentados porque los archivos no existen -->
-  <!-- <script src="js/diagnostico-tiempo-real.js"></script> -->
-  <!-- <script src="js/memory-diagnostic.js"></script> -->
+  <script src="js/diagnostico-tiempo-real.js"></script>
+  <script src="js/memory-diagnostic.js"></script>
   
 <script>
 document.addEventListener('DOMContentLoaded', function() {
