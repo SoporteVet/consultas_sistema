@@ -14,31 +14,66 @@ function getCurrentDateString() {
            String(today.getDate()).padStart(2, '0');
 }
 
-// Función para verificar si un ticket fue creado hoy
-function isTicketCreatedToday(ticket) {
-    const today = getCurrentDateString();
+// Función para verificar si un ticket fue creado en una fecha específica
+function isTicketCreatedOnDate(ticket, targetDate = null) {
+    // Si no se proporciona fecha, usar la fecha del calendario o la de hoy
+    const dateToCheck = targetDate || getSelectedConsentDate() || getCurrentDateString();
+    
+    // Priorizar fechaConsulta (ya está en formato YYYY-MM-DD, sin problemas de zona horaria)
+    if (ticket.fechaConsulta) {
+        return ticket.fechaConsulta === dateToCheck;
+    }
     
     // Verificar fechaCreacion (campo principal para tickets de quirófano)
     if (ticket.fechaCreacion) {
         const ticketDate = ticket.fechaCreacion.split('T')[0];
-        return ticketDate === today;
+        return ticketDate === dateToCheck;
     }
     
     // Verificar fecha (campo para tickets de consulta)
+    // Intentar extraer la fecha directamente del string ISO sin convertir a Date
     if (ticket.fecha) {
-        const ticketDate = new Date(ticket.fecha);
-        if (!isNaN(ticketDate.getTime())) {
-            const ticketDateString = ticketDate.toISOString().split('T')[0];
-            return ticketDateString === today;
+        // Si es un string ISO, extraer la fecha directamente
+        if (typeof ticket.fecha === 'string' && ticket.fecha.includes('T')) {
+            const ticketDate = ticket.fecha.split('T')[0];
+            return ticketDate === dateToCheck;
+        }
+        // Si es un objeto Date o número timestamp, convertir con cuidado
+        if (ticket.fecha instanceof Date || typeof ticket.fecha === 'number') {
+            const ticketDateObj = new Date(ticket.fecha);
+            if (!isNaN(ticketDateObj.getTime())) {
+                // Usar métodos locales para evitar problemas de zona horaria
+                const year = ticketDateObj.getFullYear();
+                const month = String(ticketDateObj.getMonth() + 1).padStart(2, '0');
+                const day = String(ticketDateObj.getDate()).padStart(2, '0');
+                const ticketDateString = `${year}-${month}-${day}`;
+                return ticketDateString === dateToCheck;
+            }
         }
     }
     
-    // Verificar fechaConsulta como fallback
-    if (ticket.fechaConsulta) {
-        return ticket.fechaConsulta === today;
-    }
-    
     return false;
+}
+
+// Función para obtener la fecha seleccionada en el calendario de búsqueda
+function getSelectedConsentDate() {
+    const dateInput = document.getElementById('consentFechaBusqueda');
+    if (dateInput && dateInput.value) {
+        return dateInput.value;
+    }
+    return null;
+}
+
+// Función para formatear fecha YYYY-MM-DD a formato legible DD/MM/YYYY sin problemas de zona horaria
+function formatConsentDate(dateString) {
+    if (!dateString) return 'hoy';
+    const [year, month, day] = dateString.split('-');
+    return `${day}/${month}/${year}`;
+}
+
+// Función para verificar si un ticket fue creado hoy (mantener compatibilidad)
+function isTicketCreatedToday(ticket) {
+    return isTicketCreatedOnDate(ticket, getCurrentDateString());
 }
 
 // Plantillas permitidas por origen
@@ -171,7 +206,17 @@ function setupConsentEventListeners() {
         searchInput.addEventListener('input', debounce(searchClients, 500));
     }
     
-    
+    // Calendario de fecha de búsqueda
+    const fechaBusquedaInput = document.getElementById('consentFechaBusqueda');
+    if (fechaBusquedaInput) {
+        fechaBusquedaInput.addEventListener('change', function() {
+            // Si hay un término de búsqueda, actualizar automáticamente
+            const searchTerm = document.getElementById('consentClientSearch').value.trim();
+            if (searchTerm.length >= 2) {
+                searchClients();
+            }
+        });
+    }
     
     // Template cards
     setupTemplateCardListeners();
@@ -352,12 +397,14 @@ function searchClients() {
         }
         const filteredClients = (window.quirofanoTickets.length > 0) ? filterClientsFromQuirofanoTickets(searchTerm) : [];
         if (filteredClients.length === 0) {
+            const selectedDate = getSelectedConsentDate();
+            const dateLabel = formatConsentDate(selectedDate);
             resultsContainer.innerHTML = `
                 <div class="no-clients-found">
                     <i class="fas fa-database"></i>
                     <h4>Sin resultados</h4>
-                    <p>No se encontraron clientes en quirófano con ese término para el día de hoy.</p>
-                    <p class="search-info"><i class="fas fa-info-circle"></i> Solo se muestran tickets creados hoy</p>
+                    <p>No se encontraron clientes en quirófano con ese término para ${dateLabel}.</p>
+                    <p class="search-info"><i class="fas fa-info-circle"></i> Mostrando tickets de ${dateLabel}</p>
                 </div>
             `;
         } else {
@@ -377,12 +424,14 @@ function searchClients() {
         }
         const filteredClients = (window.tickets.length > 0) ? filterClientsFromConsultaTickets(searchTerm) : [];
         if (filteredClients.length === 0) {
+            const selectedDate = getSelectedConsentDate();
+            const dateLabel = formatConsentDate(selectedDate);
             resultsContainer.innerHTML = `
                 <div class="no-clients-found">
                     <i class="fas fa-database"></i>
                     <h4>Sin resultados</h4>
-                    <p>No se encontraron clientes de consulta con ese término para el día de hoy.</p>
-                    <p class="search-info"><i class="fas fa-info-circle"></i> Solo se muestran tickets creados hoy</p>
+                    <p>No se encontraron clientes de consulta con ese término para ${dateLabel}.</p>
+                    <p class="search-info"><i class="fas fa-info-circle"></i> Mostrando tickets de ${dateLabel}</p>
                 </div>
             `;
         } else {
@@ -403,12 +452,14 @@ function searchClients() {
         }
         const filteredClients = (window.tickets.length > 0) ? filterClientsFromInternos(searchTerm) : [];
         if (filteredClients.length === 0) {
+            const selectedDate = getSelectedConsentDate();
+            const dateLabel = formatConsentDate(selectedDate);
             resultsContainer.innerHTML = `
                 <div class="no-clients-found">
                     <i class="fas fa-info-circle"></i>
                     <h4>Sin resultados</h4>
-                    <p>No se encontraron pacientes internos con ese término para el día de hoy.</p>
-                    <p class="search-info"><i class="fas fa-info-circle"></i> Solo se muestran tickets creados hoy</p>
+                    <p>No se encontraron pacientes internos con ese término para ${dateLabel}.</p>
+                    <p class="search-info"><i class="fas fa-info-circle"></i> Mostrando tickets de ${dateLabel}</p>
                 </div>
             `;
         } else {
@@ -420,14 +471,16 @@ function searchClients() {
 function filterClientsFromQuirofanoTickets(searchTerm) {
     const term = searchTerm.toLowerCase();
     const clientsMap = new Map();
+    const selectedDate = getSelectedConsentDate();
+    const dateFilter = selectedDate || getCurrentDateString();
     
     console.log('Buscando en tickets de quirófano:', window.quirofanoTickets.length, 'tickets disponibles');
     console.log('Ejemplo de ticket:', window.quirofanoTickets[0]);
     
-    // Filtrar tickets de quirófano que coincidan con el término de búsqueda Y que sean creados hoy
+    // Filtrar tickets de quirófano que coincidan con el término de búsqueda Y que sean de la fecha seleccionada
     const matchingTickets = window.quirofanoTickets.filter(ticket => {
-        // Primero verificar que el ticket fue creado hoy
-        if (!isTicketCreatedToday(ticket)) {
+        // Primero verificar que el ticket fue creado en la fecha seleccionada
+        if (!isTicketCreatedOnDate(ticket, dateFilter)) {
             return false;
         }
         
@@ -442,7 +495,7 @@ function filterClientsFromQuirofanoTickets(searchTerm) {
     });
     
     console.log('Tickets que coinciden con la búsqueda:', matchingTickets.length);
-    console.log('Filtro aplicado: Solo tickets creados hoy (' + getCurrentDateString() + ')');
+    console.log('Filtro aplicado: Tickets de fecha ' + dateFilter);
     
     // Agrupar por cliente único
     matchingTickets.forEach(ticket => {
@@ -491,10 +544,13 @@ function displayClientResults(clients) {
     }
     
     // Agregar mensaje informativo sobre el filtro de fecha
+    const selectedDate = getSelectedConsentDate();
+    const dateFilter = selectedDate || getCurrentDateString();
+    const dateLabel = formatConsentDate(selectedDate || getCurrentDateString());
     const infoMessage = `
         <div class="search-info-message">
             <i class="fas fa-calendar-day"></i>
-            <span>Mostrando solo tickets creados hoy (${getCurrentDateString()})</span>
+            <span>Mostrando tickets de ${dateLabel} (${dateFilter})</span>
         </div>
     `;
     
@@ -599,11 +655,13 @@ function filterClientsFromConsultaTickets(searchTerm) {
     const term = searchTerm.toLowerCase();
     const clientsMap = new Map();
     const source = Array.isArray(window.tickets) ? window.tickets : [];
+    const selectedDate = getSelectedConsentDate();
+    const dateFilter = selectedDate || getCurrentDateString();
     
-    // Filtrar tickets que coincidan con el término de búsqueda Y que sean creados hoy
+    // Filtrar tickets que coincidan con el término de búsqueda Y que sean de la fecha seleccionada
     const matching = source.filter(t => {
-        // Primero verificar que el ticket fue creado hoy
-        if (!isTicketCreatedToday(t)) {
+        // Primero verificar que el ticket fue creado en la fecha seleccionada
+        if (!isTicketCreatedOnDate(t, dateFilter)) {
             return false;
         }
         
@@ -618,7 +676,7 @@ function filterClientsFromConsultaTickets(searchTerm) {
     });
     
     console.log('Tickets de consulta que coinciden con la búsqueda:', matching.length);
-    console.log('Filtro aplicado: Solo tickets creados hoy (' + getCurrentDateString() + ')');
+    console.log('Filtro aplicado: Tickets de fecha ' + dateFilter);
     
     matching.forEach(ticket => {
         const key = ticket.cedula || ticket.idPaciente || (ticket.nombre + '|' + ticket.mascota);
@@ -854,6 +912,8 @@ function clearClientSearch() {
     document.getElementById('consentClientSearch').value = '';
     document.getElementById('clientSearchResults').classList.remove('active');
     selectedClient = null;
+    
+    // No limpiar la fecha automáticamente, permitir que el usuario la mantenga si quiere
     
     // Las plantillas permanecen habilitadas
     document.querySelectorAll('.template-card').forEach(card => {

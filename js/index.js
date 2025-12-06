@@ -1283,6 +1283,335 @@ if (ticketForm) {
     });
 }
 
+// Función mejorada para buscar paciente por cédula (primero en BD local, luego API externa)
+function consultarCedulaAPI(cedula) {
+    if (!cedula || cedula.trim().length < 9) {
+        showNotification('La cédula debe tener al menos 9 caracteres', 'error');
+        return;
+    }
+
+    const nombreInput = document.getElementById('nombre');
+    const mascotaInput = document.getElementById('mascota');
+    const tipoMascotaInput = document.getElementById('tipoMascota');
+    const idPacienteInput = document.getElementById('idPaciente');
+    const buscarBtn = document.getElementById('buscarCedulaBtn');
+    
+    if (!nombreInput) return;
+
+    // Deshabilitar botón y mostrar indicador de carga
+    if (buscarBtn) {
+        buscarBtn.disabled = true;
+        buscarBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+    }
+
+    // Mostrar indicador de carga en el campo
+    nombreInput.style.borderColor = '#ffa500';
+    nombreInput.placeholder = 'Buscando...';
+
+    const cedulaNormalizada = cedula.trim();
+
+    // PRIMERO: Buscar en la base de datos local de pacientes
+    if (window.patientDatabase && window.patientDatabase.initialized) {
+        const patientInfo = window.patientDatabase.fillFormFromPatient(cedulaNormalizada, 'consulta');
+        
+        if (patientInfo) {
+            // Paciente encontrado en BD local
+            nombreInput.value = patientInfo.cliente.nombre || '';
+            nombreInput.style.borderColor = '#4caf50';
+            nombreInput.placeholder = '';
+            
+            // Mostrar selector de mascotas si hay más de una
+            const mascotas = patientInfo.mascotas || [];
+            if (mascotas.length > 0) {
+                mostrarSelectorMascotas(mascotas, cedulaNormalizada);
+            } else if (mascotas.length === 1) {
+                // Si solo hay una mascota, rellenar automáticamente
+                const mascota = mascotas[0];
+                if (mascotaInput) mascotaInput.value = mascota.nombre || '';
+                if (tipoMascotaInput) tipoMascotaInput.value = mascota.tipoMascota || 'otro';
+                if (idPacienteInput) idPacienteInput.value = mascota.idPaciente || '';
+            }
+
+            // Restaurar botón
+            if (buscarBtn) {
+                buscarBtn.disabled = false;
+                buscarBtn.innerHTML = '<i class="fas fa-search"></i>';
+            }
+            
+            // Restaurar el color del borde después de 2 segundos
+            setTimeout(() => {
+                nombreInput.style.borderColor = '';
+            }, 2000);
+            
+            return; // No consultar API externa si encontramos en BD local
+        }
+    }
+
+    // SEGUNDO: Si no se encontró en BD local, consultar API externa
+    nombreInput.placeholder = 'Consultando API externa...';
+    const direccion = `https://apis.gometa.org/cedulas/${cedulaNormalizada}`;
+    
+    fetch(direccion)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('No se encontró información para esta cédula');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // Si data es un array, tomar el primer elemento
+            if (Array.isArray(data) && data.length > 0) {
+                data = data[0];
+            }
+            
+            let primerNombre = '';
+            let segundoNombre = '';
+            let apellido1 = '';
+            let apellido2 = '';
+            let nombreCompleto = '';
+            
+            if (data && typeof data === 'object') {
+                // Primero intentar obtener nombre completo
+                nombreCompleto = data.nombreCompleto || data.nombre || data.name || data.fullName || '';
+                
+                // Si tenemos nombre completo, parsearlo (puede venir en formato "apellido apellido nombre nombre")
+                if (nombreCompleto) {
+                    const partes = nombreCompleto.trim().split(/\s+/);
+                    if (partes.length === 4) {
+                        // Si tiene 4 partes, asumimos formato: apellido1 apellido2 nombre1 nombre2
+                        apellido1 = partes[0] || '';
+                        apellido2 = partes[1] || '';
+                        primerNombre = partes[2] || '';
+                        segundoNombre = partes[3] || '';
+                        // Reconstruir con el orden correcto: nombre1 nombre2 apellido1 apellido2
+                        const partesOrdenadas = [primerNombre, segundoNombre, apellido1, apellido2].filter(p => p && p.trim());
+                        nombreCompleto = partesOrdenadas.join(' ');
+                    } else if (partes.length === 3) {
+                        // Si tiene 3 partes, asumimos formato: apellido1 apellido2 nombre1
+                        apellido1 = partes[0] || '';
+                        apellido2 = partes[1] || '';
+                        primerNombre = partes[2] || '';
+                        const partesOrdenadas = [primerNombre, apellido1, apellido2].filter(p => p && p.trim());
+                        nombreCompleto = partesOrdenadas.join(' ');
+                    } else if (partes.length === 2) {
+                        // Si tiene 2 partes, asumimos formato: apellido1 nombre1
+                        apellido1 = partes[0] || '';
+                        primerNombre = partes[1] || '';
+                        const partesOrdenadas = [primerNombre, apellido1].filter(p => p && p.trim());
+                        nombreCompleto = partesOrdenadas.join(' ');
+                    }
+                    // Si tiene 1 parte, usarlo directamente
+                } else {
+                    // Si no hay nombre completo, intentar usar campos individuales
+                    primerNombre = data.primerNombre || data.firstName || '';
+                    segundoNombre = data.segundoNombre || data.middleName || '';
+                    apellido1 = data.primerApellido || data.apellido1 || data.firstLastName || '';
+                    apellido2 = data.segundoApellido || data.apellido2 || data.secondLastName || '';
+                    
+                    // Si tenemos campos individuales, construir el nombre completo en orden correcto
+                    if (primerNombre || apellido1) {
+                        const partes = [primerNombre, segundoNombre, apellido1, apellido2].filter(p => p && p.trim());
+                        nombreCompleto = partes.join(' ');
+                    }
+                    
+                    // Si hay apellidos combinados, intentar separarlos
+                    if (!apellido1 && data.apellidos) {
+                        const apellidos = data.apellidos.trim().split(/\s+/);
+                        apellido1 = apellidos[0] || '';
+                        apellido2 = apellidos[1] || '';
+                        const partes = [primerNombre, segundoNombre, apellido1, apellido2].filter(p => p && p.trim());
+                        nombreCompleto = partes.join(' ');
+                    }
+                }
+            } else if (typeof data === 'string') {
+                // Si es un string, parsearlo (puede venir en formato "apellido apellido nombre nombre")
+                const partes = data.trim().split(/\s+/);
+                if (partes.length === 4) {
+                    // Formato: apellido1 apellido2 nombre1 nombre2 -> nombre1 nombre2 apellido1 apellido2
+                    apellido1 = partes[0] || '';
+                    apellido2 = partes[1] || '';
+                    primerNombre = partes[2] || '';
+                    segundoNombre = partes[3] || '';
+                    const partesOrdenadas = [primerNombre, segundoNombre, apellido1, apellido2].filter(p => p && p.trim());
+                    nombreCompleto = partesOrdenadas.join(' ');
+                } else if (partes.length === 3) {
+                    // Formato: apellido1 apellido2 nombre1 -> nombre1 apellido1 apellido2
+                    apellido1 = partes[0] || '';
+                    apellido2 = partes[1] || '';
+                    primerNombre = partes[2] || '';
+                    const partesOrdenadas = [primerNombre, apellido1, apellido2].filter(p => p && p.trim());
+                    nombreCompleto = partesOrdenadas.join(' ');
+                } else if (partes.length === 2) {
+                    // Formato: apellido1 nombre1 -> nombre1 apellido1
+                    apellido1 = partes[0] || '';
+                    primerNombre = partes[1] || '';
+                    const partesOrdenadas = [primerNombre, apellido1].filter(p => p && p.trim());
+                    nombreCompleto = partesOrdenadas.join(' ');
+                } else {
+                    // Si tiene 1 parte, usarlo directamente
+                    nombreCompleto = data.trim();
+                }
+            }
+
+            if (nombreCompleto && nombreCompleto.trim()) {
+                nombreInput.value = nombreCompleto.trim();
+                nombreInput.style.borderColor = '#4caf50';
+                nombreInput.placeholder = '';
+                
+                // Guardar en base de datos local para futuras búsquedas
+                if (window.patientDatabase && window.patientDatabase.initialized) {
+                    window.patientDatabase.savePatientFromTicket({
+                        cedula: cedulaNormalizada,
+                        nombre: nombreCompleto.trim()
+                    }).catch(err => console.warn('Error guardando paciente:', err));
+                }
+                
+                // Restaurar el color del borde después de 2 segundos
+                setTimeout(() => {
+                    nombreInput.style.borderColor = '';
+                }, 2000);
+            } else {
+                throw new Error('No se pudo extraer el nombre de la respuesta');
+            }
+        })
+        .catch(error => {
+            nombreInput.style.borderColor = '#f44336';
+            nombreInput.placeholder = 'No se encontró información para esta cédula';
+            
+            showNotification('No se encontró información para esta cédula', 'error');
+            
+            // Restaurar el placeholder después de 3 segundos
+            setTimeout(() => {
+                nombreInput.style.borderColor = '';
+                nombreInput.placeholder = '';
+            }, 3000);
+            
+            console.warn('Error al consultar API de cédulas:', error);
+        })
+        .finally(() => {
+            // Restaurar botón
+            if (buscarBtn) {
+                buscarBtn.disabled = false;
+                buscarBtn.innerHTML = '<i class="fas fa-search"></i>';
+            }
+        });
+}
+
+// Event listener para el botón de búsqueda de cédula
+const buscarCedulaBtn = document.getElementById('buscarCedulaBtn');
+if (buscarCedulaBtn) {
+    buscarCedulaBtn.addEventListener('click', function() {
+        const cedulaInput = document.getElementById('cedula');
+        if (cedulaInput) {
+            const cedula = cedulaInput.value.trim();
+            if (cedula.length >= 9) {
+                consultarCedulaAPI(cedula);
+            } else {
+                showNotification('La cédula debe tener al menos 9 caracteres', 'error');
+            }
+        }
+    });
+}
+
+// Event listener para consultar con Enter en el campo de cédula
+const cedulaInput = document.getElementById('cedula');
+if (cedulaInput) {
+    cedulaInput.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const cedula = this.value.trim();
+            if (cedula.length >= 9) {
+                consultarCedulaAPI(cedula);
+            } else {
+                showNotification('La cédula debe tener al menos 9 caracteres', 'error');
+            }
+        }
+    });
+}
+
+// Función para mostrar selector de mascotas cuando hay múltiples
+function mostrarSelectorMascotas(mascotas, cedula) {
+    // Remover selector anterior si existe
+    const existingSelector = document.getElementById('mascotasSelectorContainer');
+    if (existingSelector) existingSelector.remove();
+
+    const mascotaInput = document.getElementById('mascota');
+    if (!mascotaInput) return;
+
+    const container = document.createElement('div');
+    container.id = 'mascotasSelectorContainer';
+    container.style.cssText = `
+        margin-top: 10px;
+        padding: 15px;
+        background: #e3f2fd;
+        border: 1px solid #2196f3;
+        border-radius: 8px;
+        max-height: 300px;
+        overflow-y: auto;
+    `;
+
+    const title = document.createElement('div');
+    title.style.cssText = 'font-weight: bold; margin-bottom: 10px; color: #1976d2;';
+    title.innerHTML = `<i class="fas fa-paw"></i> Mascotas registradas para esta cédula:`;
+    container.appendChild(title);
+
+    mascotas.forEach((mascota, index) => {
+        const mascotaCard = document.createElement('div');
+        mascotaCard.style.cssText = `
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 2px solid transparent;
+        `;
+        mascotaCard.innerHTML = `
+            <div style="font-weight: 600; color: #2c3e50;">${mascota.nombre || 'Sin nombre'}</div>
+            <div style="font-size: 0.9em; color: #666; margin-top: 5px;">
+                ${mascota.tipoMascota ? `Tipo: ${mascota.tipoMascota}` : ''}
+                ${mascota.idPaciente ? ` | ID: ${mascota.idPaciente}` : ''}
+                ${mascota.raza ? ` | Raza: ${mascota.raza}` : ''}
+            </div>
+        `;
+
+        mascotaCard.addEventListener('mouseenter', () => {
+            mascotaCard.style.borderColor = '#2196f3';
+            mascotaCard.style.background = '#f5f5f5';
+        });
+
+        mascotaCard.addEventListener('mouseleave', () => {
+            mascotaCard.style.borderColor = 'transparent';
+            mascotaCard.style.background = 'white';
+        });
+
+        mascotaCard.addEventListener('click', () => {
+            // Rellenar campos con la mascota seleccionada
+            if (mascotaInput) mascotaInput.value = mascota.nombre || '';
+            const tipoMascotaInput = document.getElementById('tipoMascota');
+            if (tipoMascotaInput && mascota.tipoMascota) {
+                tipoMascotaInput.value = mascota.tipoMascota;
+            }
+            const idPacienteInput = document.getElementById('idPaciente');
+            if (idPacienteInput && mascota.idPaciente) {
+                idPacienteInput.value = mascota.idPaciente;
+            }
+
+            // Remover selector después de seleccionar
+            container.remove();
+            showNotification(`Mascota "${mascota.nombre}" seleccionada`, 'success');
+        });
+
+        container.appendChild(mascotaCard);
+    });
+
+    // Insertar después del campo de mascota
+    const mascotaGroup = mascotaInput.closest('.form-group');
+    if (mascotaGroup && mascotaGroup.parentNode) {
+        mascotaGroup.parentNode.insertBefore(container, mascotaGroup.nextSibling);
+    }
+}
+
 // Event listeners para la sección de horario
 if (verHorarioBtn) {
     verHorarioBtn.addEventListener('click', mostrarHorario);
@@ -1597,6 +1926,7 @@ function loadTickets() {
                 renderTickets(currentFilter);
                 updateStatsGlobal();
                 updatePrequirurgicoCounter();
+                updateViaCounter();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
@@ -1641,6 +1971,7 @@ function loadTickets() {
                 
                 updateStatsGlobal();
                 updatePrequirurgicoCounter();
+                updateViaCounter();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
@@ -1656,6 +1987,7 @@ function loadTickets() {
                 renderTickets(currentFilter);
                 updateStatsGlobal();
                 updatePrequirurgicoCounter();
+                updateViaCounter();
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
@@ -1737,10 +2069,27 @@ function addTicket() {
         }
         ticketsRef.push(nuevoTicket)
             .then(() => {
+                // Guardar/actualizar información del paciente en base de datos relacional
+                if (window.patientDatabase && window.patientDatabase.initialized) {
+                    window.patientDatabase.savePatientFromTicket({
+                        cedula: cedula,
+                        nombre: nombre,
+                        mascota: mascota,
+                        tipoMascota: tipoMascota,
+                        idPaciente: idPaciente,
+                        telefono: nuevoTicket.telefono || '',
+                        correo: nuevoTicket.correo || ''
+                    }).catch(err => console.warn('Error guardando paciente:', err));
+                }
+
                 ticketForm.reset();
                 if (document.getElementById('fecha')) {
                     document.getElementById('fecha').value = getLocalDateString();
                 }
+                // Limpiar selector de mascotas si existe
+                const mascotasSelector = document.getElementById('mascotasSelectorContainer');
+                if (mascotasSelector) mascotasSelector.remove();
+                
                 hideLoadingButton(document.querySelector('.btn-submit'));
                 showNotification('Consulta creada correctamente', 'success');
                 setTimeout(() => {
@@ -3031,7 +3380,6 @@ function editTicket(randomId) {
                             <option value="Dra. Eliany Lopez" ${doctorSeleccionado === "Dra. Eliany Lopez" ? 'selected' : ''}>Dra. Eliany Lopez</option>
                             <option value="Dra. Adriana Rojas" ${doctorSeleccionado === "Dra. Adriana Rojas" ? 'selected' : ''}>Dra. Adriana Rojas</option>
                             <option value="Dra. Nicole Sibaja" ${doctorSeleccionado === "Dra. Nicole Sibaja" ? 'selected' : ''}>Dra. Nicole Sibaja</option>
-                            <option value="Dra. Christiane Buchheim" ${doctorSeleccionado === "Dra. Christiane Buchheim" ? 'selected' : ''}>Dra. Christiane Buchheim</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -5504,9 +5852,20 @@ function navigateToQuirofano(sectionId, buttonId) {
             filterDateInput.value = getLocalDateString();
         }
         
-        // Renderizar tickets si el módulo está inicializado
+        // Asegurar que el botón de filtro "En Preparación" esté activo visualmente
+        const enPreparacionBtn = document.querySelector('.quirofano-filter-btn[data-filter="en-preparacion"]');
+        if (enPreparacionBtn) {
+            // Remover active de todos los botones
+            document.querySelectorAll('.quirofano-filter-btn').forEach(btn => btn.classList.remove('active'));
+            // Agregar active al botón de "En Preparación"
+            enPreparacionBtn.classList.add('active');
+        }
+        
+        // Renderizar tickets si el módulo está inicializado, usando el filtro actual
         if (typeof renderQuirofanoTickets === 'function') {
-            renderQuirofanoTickets();
+            // Usar el filtro actual (que debería ser 'en-preparacion' por defecto)
+            const currentFilter = window.currentQuirofanoFilter || 'en-preparacion';
+            renderQuirofanoTickets(currentFilter);
         }
     }
 }
@@ -5550,9 +5909,49 @@ function updatePrequirurgicoCounter() {
     }
 }
 
+// Función para actualizar el contador de tickets con vía pendiente
+function updateViaCounter() {
+    const counterElement = document.getElementById('viaCounter');
+    const countElement = document.getElementById('viaCount');
+    
+    if (!counterElement || !countElement) {
+        return;
+    }
+    
+    // Verificar el rol del usuario - ocultar para visitas
+    const userRole = sessionStorage.getItem('userRole');
+    if (userRole === 'visitas') {
+        counterElement.style.display = 'none';
+        return;
+    }
+    
+    // Verificar si tenemos acceso a los tickets de quirófano
+    if (typeof window.quirofanoTickets === 'undefined' || !Array.isArray(window.quirofanoTickets)) {
+        counterElement.style.display = 'none';
+        return;
+    }
+    
+    // Contar tickets con vía pendiente (solo los que están pendientes, no los realizados)
+    const ticketsConVia = window.quirofanoTickets.filter(ticket => 
+        ticket.via === true && 
+        (ticket.viaStatus === 'pendiente' || !ticket.viaStatus)
+    ).length;
+    
+    // Actualizar el contador
+    countElement.textContent = ticketsConVia;
+    
+    // Mostrar u ocultar el contador según si hay tickets
+    if (ticketsConVia > 0) {
+        counterElement.style.display = 'flex';
+    } else {
+        counterElement.style.display = 'none';
+    }
+}
+
 // Exponer la función globalmente
 window.navigateToQuirofano = navigateToQuirofano;
 window.updatePrequirurgicoCounter = updatePrequirurgicoCounter;
+window.updateViaCounter = updateViaCounter;
 
 // Funciones mejoradas para manejo del sidebar en móviles
 function toggleSidebar() {
@@ -7260,8 +7659,61 @@ const vacunasDisponibles = {
   }
   
   
+  // Función para mostrar modal de confirmación personalizado
+  function showConfirmTurnoModal(title, message) {
+    return new Promise((resolve) => {
+      const modal = document.getElementById('confirmTurnoModal');
+      const titleEl = document.getElementById('confirmTurnoTitle');
+      const messageEl = document.getElementById('confirmTurnoMessage');
+      const acceptBtn = document.getElementById('confirmTurnoAccept');
+      const cancelBtn = document.getElementById('confirmTurnoCancel');
+      
+      // Configurar el contenido del modal
+      titleEl.textContent = title;
+      messageEl.textContent = message;
+      
+      // Limpiar event listeners previos
+      const newAcceptBtn = acceptBtn.cloneNode(true);
+      const newCancelBtn = cancelBtn.cloneNode(true);
+      acceptBtn.parentNode.replaceChild(newAcceptBtn, acceptBtn);
+      cancelBtn.parentNode.replaceChild(newCancelBtn, cancelBtn);
+      
+      // Mostrar el modal
+      modal.classList.remove('hidden');
+      
+      // Event listeners
+      newAcceptBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        resolve(true);
+      });
+      
+      newCancelBtn.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        resolve(false);
+      });
+      
+      // Cerrar al hacer clic fuera del modal
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+          modal.classList.add('hidden');
+          resolve(false);
+        }
+      });
+      
+      // Cerrar con ESC
+      const handleEsc = (e) => {
+        if (e.key === 'Escape') {
+          modal.classList.add('hidden');
+          document.removeEventListener('keydown', handleEsc);
+          resolve(false);
+        }
+      };
+      document.addEventListener('keydown', handleEsc);
+    });
+  }
+  
   // Abrir turno con inventario inicial
-  function abrirTurno() {
+  async function abrirTurno() {
     const responsable = document.getElementById('responsableApertura').value.trim();
     
     if (!responsable) {
@@ -7273,6 +7725,33 @@ const vacunasDisponibles = {
     if (!currentVacunasFecha || !currentVacunasTurno) {
       showNotification('Debe seleccionar fecha y turno primero', 'error');
       return;
+    }
+    
+    // Determinar el mensaje de confirmación según el tipo de turno
+    let tituloConfirmacion = '';
+    let mensajeConfirmacion = '';
+    switch(currentVacunasTurno) {
+      case 'Mañana':
+        tituloConfirmacion = 'Abrir Turno';
+        mensajeConfirmacion = '¿Está seguro de guardar los cambios y abrir el turno?';
+        break;
+      case 'Tarde':
+        tituloConfirmacion = 'Entregar Turno';
+        mensajeConfirmacion = '¿Está seguro de guardar los cambios y entregar el turno?';
+        break;
+      case 'Noche':
+        tituloConfirmacion = 'Cerrar Turno';
+        mensajeConfirmacion = '¿Está seguro de guardar los cambios y cerrar el turno?';
+        break;
+      default:
+        tituloConfirmacion = 'Confirmar Acción';
+        mensajeConfirmacion = '¿Está seguro de guardar los cambios?';
+    }
+    
+    // Mostrar confirmación antes de proceder
+    const confirmed = await showConfirmTurnoModal(tituloConfirmacion, mensajeConfirmacion);
+    if (!confirmed) {
+      return; // Si el usuario cancela, no hacer nada
     }
     
     // Recopilar inventario inicial
