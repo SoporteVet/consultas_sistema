@@ -404,6 +404,11 @@ class PatientDatabase {
                     const patient = this.findPatientByCedula(cedula);
                     if (patient) {
                         this.showPetSelector(cedula, formType);
+                    } else {
+                        // Si no se encuentra en BD local, buscar en API externa si está disponible
+                        if (window.cedulaSearchIntegration && cedula.length >= 5) {
+                            window.cedulaSearchIntegration.searchCedulaInAPI(cedula, formType, true);
+                        }
                     }
                 }
             }, 500); // Esperar 500ms después de que el usuario deje de escribir
@@ -411,10 +416,15 @@ class PatientDatabase {
 
         cedulaField.addEventListener('blur', (e) => {
             const cedula = e.target.value.trim();
-            if (cedula) {
+            if (cedula && cedula.length >= 5) {
                 const patient = this.findPatientByCedula(cedula);
                 if (patient) {
                     this.fillFormFromPatient(cedula, formType);
+                } else {
+                    // Si no se encuentra en BD local, buscar en API externa
+                    if (window.cedulaSearchIntegration) {
+                        window.cedulaSearchIntegration.searchCedulaInAPI(cedula, formType, true);
+                    }
                 }
             }
         });

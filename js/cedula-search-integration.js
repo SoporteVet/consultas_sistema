@@ -1,9 +1,9 @@
 // Módulo de Integración de Búsqueda por Cédula
-// Integra la API de Gometa para autocompletar datos del propietario
+// Integra la API de Hacienda de Costa Rica para autocompletar datos del propietario
 
 class CedulaSearchIntegration {
     constructor() {
-        this.apiUrl = 'https://apis.gometa.org/cedulas/';
+        this.apiUrl = 'https://api.hacienda.go.cr/fe/ae?identificacion=';
         this.searchTimeout = null;
         this.init();
     }
@@ -26,6 +26,7 @@ class CedulaSearchIntegration {
         // Integrar con formularios
         this.setupCedulaFieldEnhancement('cedula', 'consulta');
         this.setupCedulaFieldEnhancement('quirofanoCedula', 'quirofano');
+        this.setupCedulaFieldEnhancement('labCedula', 'laboratorio');
         console.log('✅ Integración de búsqueda por cédula lista');
     }
 
@@ -37,11 +38,12 @@ class CedulaSearchIntegration {
         // Agregar botón de búsqueda
         this.addSearchButton(cedulaField, formType);
 
-        // Búsqueda automática en la API de Gometa
+        // Búsqueda automática cuando el campo pierde el foco
         cedulaField.addEventListener('blur', (e) => {
             const cedula = e.target.value.trim();
-            if (cedula && cedula.length >= 9) {
-                this.searchCedulaInAPI(cedula, formType);
+            if (cedula && cedula.length >= 5) {
+                // Verificar primero en BD local, si no existe buscar en API
+                this.searchCedulaInAPI(cedula, formType, false);
             }
         });
 
@@ -51,8 +53,32 @@ class CedulaSearchIntegration {
                 e.preventDefault();
                 const cedula = e.target.value.trim();
                 if (cedula && cedula.length >= 5) {
-                    this.searchCedulaInAPI(cedula, formType);
+                    this.searchCedulaInAPI(cedula, formType, false);
                 }
+            }
+        });
+
+        // Búsqueda automática cuando no se encuentra en BD local (después de escribir)
+        let searchTimeout;
+        cedulaField.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            const cedula = e.target.value.trim();
+            
+            // Si tiene al menos 5 dígitos, esperar un momento y buscar
+            if (cedula.length >= 5) {
+                searchTimeout = setTimeout(() => {
+                    // Primero verificar en BD local
+                    if (window.patientDatabase) {
+                        const existingPatient = window.patientDatabase.findPatientByCedula(cedula);
+                        if (!existingPatient) {
+                            // Si no existe en BD local, buscar en API externa
+                            this.searchCedulaInAPI(cedula, formType, true);
+                        }
+                    } else {
+                        // Si no hay BD local disponible, buscar directamente en API
+                        this.searchCedulaInAPI(cedula, formType, true);
+                    }
+                }, 1000); // Esperar 1 segundo después de que el usuario deje de escribir
             }
         });
     }
@@ -94,60 +120,165 @@ class CedulaSearchIntegration {
         }
     }
 
-    // Buscar en la API de Gometa
-    async searchCedulaInAPI(cedula, formType = 'consulta') {
-        if (!cedula || cedula.length < 9) {
-            this.showSearchNotification('Por favor ingrese un número de cédula válido (mínimo 9 dígitos)', 'warning');
+    // Buscar en la API de Hacienda de Costa Rica
+    async searchCedulaInAPI(cedula, formType = 'consulta', skipLocalCheck = false) {
+        if (!cedula || cedula.length < 5) {
+            this.showSearchNotification('Por favor ingrese un número de cédula válido (mínimo 5 dígitos)', 'warning');
             return;
         }
 
-        // Primero verificar si ya existe en nuestra BD
-        if (window.patientDatabase) {
+        // Primero verificar si ya existe en nuestra BD (a menos que se indique lo contrario)
+        if (!skipLocalCheck && window.patientDatabase) {
             const existingPatient = window.patientDatabase.findPatientByCedula(cedula);
             if (existingPatient) {
+                // Notificación eliminada según solicitud del usuario
                 // El sistema de patient-database ya mostrará el dropdown
                 return;
             }
         }
 
-        // Si no existe, buscar en API de Gometa
+        // Si no existe, buscar en API de Hacienda
         this.showLoadingIndicator(true);
 
         try {
-            const response = await fetch(`${this.apiUrl}${cedula}`, {
-                method: 'GET',
-                headers: {
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json'
-                }
-            });
+            // Limpiar la cédula (solo números)
+            const cedulaLimpia = cedula.replace(/\D/g, '');
+            const url = `${this.apiUrl}${cedulaLimpia}`;
+            
+            // Intentar primero con fetch simple (sin headers para evitar problemas de CORS)
+            let response;
+            let useProxy = false;
+            
+            try {
+                response = await fetch(url, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+            } catch (corsError) {
+                // Si falla por CORS, usar proxy
+                useProxy = true;
+                console.warn('Error CORS directo, usando proxy:', corsError.message);
+            }
 
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+            // Si hay error de CORS o la respuesta no es OK, intentar con proxy
+            if (useProxy || (response && !response.ok && response.status === 0)) {
+                try {
+                    const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`;
+                    response = await fetch(proxyUrl, {
+                        method: 'GET',
+                        mode: 'cors'
+                    });
+                    
+                    if (response.ok) {
+                        const proxyData = await response.json();
+                        // El proxy devuelve el contenido en el campo 'contents'
+                        try {
+                            const data = typeof proxyData.contents === 'string' 
+                                ? JSON.parse(proxyData.contents) 
+                                : proxyData.contents;
+                            this.processAPIResponse(data, cedula, formType);
+                            return;
+                        } catch (parseError) {
+                            console.error('Error parseando respuesta del proxy:', parseError);
+                            throw new Error('Error al procesar respuesta de la API');
+                        }
+                    }
+                } catch (proxyError) {
+                    console.error('Error con proxy CORS:', proxyError);
+                    throw new Error('No se pudo conectar con el servicio de búsqueda de cédulas');
+                }
+            }
+
+            if (!response || !response.ok) {
+                if (response && response.status === 404) {
+                    this.showSearchNotification('No se encontró información para esta cédula en la base de datos nacional', 'warning');
+                    return;
+                }
+                throw new Error(`HTTP error! status: ${response ? response.status : 'unknown'}`);
             }
 
             const data = await response.json();
-            
-            if (data && (data.nombre || data.results)) {
-                // La API puede devolver diferentes formatos
-                const nombre = data.nombre || data.results?.nombre || '';
-                
-                if (nombre) {
-                    this.fillOwnerDataFromAPI(nombre, cedula, formType);
-                    this.showSearchNotification(`✅ Datos encontrados: ${nombre}`, 'success');
-                } else {
-                    this.showSearchNotification('No se encontró información para esta cédula', 'warning');
-                }
-            } else {
-                this.showSearchNotification('No se encontró información para esta cédula', 'warning');
-            }
+            this.processAPIResponse(data, cedula, formType);
 
         } catch (error) {
             console.error('Error buscando en API de cédulas:', error);
-            this.showSearchNotification('No se pudo conectar con el servicio de búsqueda de cédulas', 'error');
+            // Verificar si es un error de CORS específico
+            if (error.message && error.message.includes('CORS') || error.name === 'TypeError') {
+                this.showSearchNotification('Error de conexión con la API. Por favor, intente nuevamente o contacte al administrador.', 'error');
+            } else {
+                this.showSearchNotification('No se pudo conectar con el servicio de búsqueda de cédulas. Verifique su conexión a internet.', 'error');
+            }
         } finally {
             this.showLoadingIndicator(false);
         }
+    }
+
+    // Procesar respuesta de la API de Hacienda
+    processAPIResponse(data, cedula, formType) {
+        // Manejar diferentes formatos de respuesta de la API de Hacienda
+        let nombre = '';
+        if (data) {
+            if (typeof data === 'string') {
+                // Si la respuesta es un string, intentar parsearlo
+                try {
+                    const parsed = JSON.parse(data);
+                    nombre = parsed.nombre || parsed.name || parsed.razonSocial || 
+                            parsed.results?.nombre || parsed.results?.name || parsed.results?.razonSocial ||
+                            parsed.data?.nombre || parsed.data?.name || parsed.data?.razonSocial || '';
+                } catch (e) {
+                    // Si no es JSON, puede ser el nombre directamente
+                    nombre = data;
+                }
+            } else if (data.nombre) {
+                nombre = data.nombre;
+            } else if (data.name) {
+                nombre = data.name;
+            } else if (data.razonSocial) {
+                nombre = data.razonSocial;
+            } else if (data.results) {
+                nombre = data.results.nombre || data.results.name || data.results.razonSocial || '';
+            } else if (data.data) {
+                nombre = data.data.nombre || data.data.name || data.data.razonSocial || '';
+            } else if (Array.isArray(data) && data.length > 0) {
+                // Si es un array, tomar el primer elemento
+                const firstItem = data[0];
+                nombre = firstItem.nombre || firstItem.name || firstItem.razonSocial || '';
+            }
+        }
+        
+        if (nombre && nombre.trim()) {
+            // La API de Hacienda ya devuelve el nombre en el formato correcto (nombre primero)
+            // No es necesario invertir
+            this.fillOwnerDataFromAPI(nombre.trim(), cedula, formType);
+            // Notificación eliminada según solicitud del usuario
+        } else {
+            this.showSearchNotification('No se encontró información para esta cédula', 'warning');
+        }
+    }
+
+    // Invertir nombre de "APELLIDOS NOMBRE" a "NOMBRE APELLIDOS"
+    invertirNombre(nombreCompleto) {
+        if (!nombreCompleto) return nombreCompleto;
+        
+        const nombreOriginal = nombreCompleto.trim();
+        const partes = nombreOriginal.split(/\s+/).filter(p => p.length > 0);
+        
+        if (partes.length <= 1) return nombreOriginal;
+        
+        // Si tiene 2 partes: invertir directamente
+        if (partes.length === 2) {
+            return `${partes[1]} ${partes[0]}`;
+        }
+        
+        // Para 3 o más partes: últimos 2 son nombres, resto son apellidos
+        // Ejemplo: "MORAGA JARQUIN ALBA LUZ" -> "ALBA LUZ MORAGA JARQUIN"
+        if (partes.length >= 3) {
+            const nombres = partes.slice(-2).join(' ');
+            const apellidos = partes.slice(0, -2).join(' ');
+            return `${nombres} ${apellidos}`;
+        }
+        
+        return nombreOriginal;
     }
 
     // Rellenar datos del propietario desde la API
@@ -160,30 +291,41 @@ class CedulaSearchIntegration {
             quirofano: {
                 nombre: 'quirofanoNombre',
                 cedula: 'quirofanoCedula'
+            },
+            laboratorio: {
+                nombre: 'labNombre',
+                cedula: 'labCedula'
             }
         };
 
         const fields = fieldMappings[formType] || fieldMappings.consulta;
 
-        // Rellenar nombre
+        // Rellenar nombre (siempre, incluso si ya tiene valor, para actualizar)
         const nombreInput = document.getElementById(fields.nombre);
-        if (nombreInput && !nombreInput.value) {
-            nombreInput.value = nombre;
-            nombreInput.style.background = '#e8f5e9'; // Verde claro para indicar autocompletado
-            
-            // Quitar el fondo después de 2 segundos
-            setTimeout(() => {
-                nombreInput.style.background = '';
-            }, 2000);
+        if (nombreInput) {
+            // Si el campo está vacío o solo tiene espacios, rellenarlo
+            if (!nombreInput.value || nombreInput.value.trim() === '') {
+                nombreInput.value = nombre;
+                nombreInput.style.background = '#e8f5e9'; // Verde claro para indicar autocompletado
+                
+                // Quitar el fondo después de 2 segundos
+                setTimeout(() => {
+                    nombreInput.style.background = '';
+                }, 2000);
+            }
         }
 
-        // Enfocar en el siguiente campo (mascota)
-        const nextField = formType === 'consulta' ? 
-            document.getElementById('mascota') : 
-            document.getElementById('quirofanoMascota');
-        
-        if (nextField) {
-            setTimeout(() => nextField.focus(), 100);
+        // Enfocar en el siguiente campo (mascota) si el nombre se rellenó
+        if (nombreInput && nombreInput.value === nombre) {
+            const nextField = formType === 'consulta' ? 
+                document.getElementById('mascota') : 
+                formType === 'quirofano' ?
+                document.getElementById('quirofanoMascota') :
+                document.getElementById('labMascota');
+            
+            if (nextField) {
+                setTimeout(() => nextField.focus(), 100);
+            }
         }
     }
 
