@@ -6,6 +6,7 @@ class PatientDatabase {
         this.patientsRef = null;
         this.patients = new Map(); // Cache local de pacientes
         this.initialized = false;
+        this.currentFormType = 'consulta'; // Tipo de formulario activo
         this.init();
     }
 
@@ -76,6 +77,7 @@ class PatientDatabase {
                 cedula: cedula,
                 telefono: ticketData.telefono || existingPatient?.telefono || '',
                 correo: ticketData.correo || existingPatient?.correo || '',
+                direccion: ticketData.direccion || existingPatient?.direccion || '',
                 ultimaActualizacion: Date.now(),
                 fechaCreacion: existingPatient?.fechaCreacion || Date.now()
             };
@@ -92,6 +94,7 @@ class PatientDatabase {
                 edad: ticketData.edad || existingPatient?.mascotas?.[mascotaNombre]?.edad || '',
                 peso: ticketData.peso || existingPatient?.mascotas?.[mascotaNombre]?.peso || '',
                 sexo: ticketData.sexo || existingPatient?.mascotas?.[mascotaNombre]?.sexo || '',
+                color: ticketData.color || existingPatient?.mascotas?.[mascotaNombre]?.color || '',
                 ultimaConsulta: Date.now(),
                 fechaCreacion: existingPatient?.mascotas?.[mascotaNombre]?.fechaCreacion || Date.now()
             };
@@ -102,6 +105,7 @@ class PatientDatabase {
             updates[`${cedula}/cedula`] = clienteData.cedula;
             updates[`${cedula}/telefono`] = clienteData.telefono;
             updates[`${cedula}/correo`] = clienteData.correo;
+            updates[`${cedula}/direccion`] = clienteData.direccion;
             updates[`${cedula}/ultimaActualizacion`] = clienteData.ultimaActualizacion;
             updates[`${cedula}/fechaCreacion`] = clienteData.fechaCreacion;
             updates[`${cedula}/mascotas/${mascotaNombre}`] = mascotaData;
@@ -122,6 +126,7 @@ class PatientDatabase {
             patient.nombre = clienteData.nombre;
             patient.telefono = clienteData.telefono;
             patient.correo = clienteData.correo;
+            patient.direccion = clienteData.direccion;
             patient.ultimaActualizacion = clienteData.ultimaActualizacion;
 
             console.log(`💾 Paciente ${cedula} actualizado con mascota ${mascotaNombre}`);
@@ -135,16 +140,47 @@ class PatientDatabase {
         const patient = this.findPatientByCedula(cedula);
         if (!patient) return null;
 
-        // Rellenar datos del cliente
-        if (formType === 'consulta') {
-            const nombreInput = document.getElementById('nombre');
-            if (nombreInput) nombreInput.value = patient.nombre || '';
-        } else if (formType === 'laboratorio') {
-            const labNombreInput = document.getElementById('labNombre');
-            if (labNombreInput) labNombreInput.value = patient.nombre || '';
-        } else if (formType === 'quirofano') {
-            const quirofanoNombreInput = document.getElementById('quirofanoNombre');
-            if (quirofanoNombreInput) quirofanoNombreInput.value = patient.nombre || '';
+        // Rellenar datos del cliente según el tipo de formulario
+        const fieldMappings = {
+            consulta: {
+                nombre: 'nombre',
+                telefono: 'telefono',
+                correo: 'correo'
+            },
+            laboratorio: {
+                nombre: 'labNombre',
+                telefono: 'labTelefono',
+                correo: 'labCorreo'
+            },
+            quirofano: {
+                nombre: 'quirofanoNombre',
+                telefono: 'quirofanoTelefono',
+                correo: 'quirofanoCorreo'
+            }
+        };
+
+        const fields = fieldMappings[formType] || fieldMappings.consulta;
+
+        // Rellenar campos del propietario
+        if (fields.nombre) {
+            const nombreInput = document.getElementById(fields.nombre);
+            if (nombreInput && patient.nombre) {
+                nombreInput.value = patient.nombre;
+            }
+        }
+        
+        if (fields.telefono) {
+            const telefonoInput = document.getElementById(fields.telefono);
+            if (telefonoInput && patient.telefono) {
+                telefonoInput.value = patient.telefono;
+            }
+        }
+        
+        if (fields.correo) {
+            const correoInput = document.getElementById(fields.correo);
+            if (correoInput && patient.correo) {
+                correoInput.value = patient.correo;
+            }
         }
 
         // Retornar información de mascotas para que el usuario seleccione
@@ -152,7 +188,8 @@ class PatientDatabase {
             cliente: {
                 nombre: patient.nombre || '',
                 telefono: patient.telefono || '',
-                correo: patient.correo || ''
+                correo: patient.correo || '',
+                direccion: patient.direccion || ''
             },
             mascotas: patient.mascotas ? Object.values(patient.mascotas) : []
         };
@@ -170,8 +207,217 @@ class PatientDatabase {
             raza: mascota.raza,
             edad: mascota.edad,
             peso: mascota.peso,
-            sexo: mascota.sexo
+            sexo: mascota.sexo,
+            color: mascota.color
         }));
+    }
+
+    // Mostrar UI de selección de mascota
+    showPetSelector(cedula, formType = 'consulta') {
+        const patientData = this.fillFormFromPatient(cedula, formType);
+        if (!patientData || !patientData.mascotas || patientData.mascotas.length === 0) {
+            return;
+        }
+
+        // Determinar qué contenedor usar según el tipo de formulario
+        let containerSelector;
+        let mascotaFieldId;
+        let tipoMascotaFieldId;
+        let idPacienteFieldId;
+        let razaFieldId;
+        let edadFieldId;
+        let pesoFieldId;
+        let sexoFieldId;
+
+        if (formType === 'laboratorio') {
+            containerSelector = '#labCedula';
+            mascotaFieldId = 'labMascota';
+            tipoMascotaFieldId = 'labTipoMascota';
+            idPacienteFieldId = 'labIdPaciente';
+            razaFieldId = 'labRaza';
+            edadFieldId = 'labEdad';
+            pesoFieldId = 'labPeso';
+            sexoFieldId = 'labSexo';
+        } else if (formType === 'quirofano') {
+            containerSelector = '#quirofanoCedula';
+            mascotaFieldId = 'quirofanoMascota';
+            tipoMascotaFieldId = 'quirofanoTipoMascota';
+            idPacienteFieldId = 'quirofanoIdPaciente';
+            razaFieldId = 'quirofanoRaza';
+            edadFieldId = 'quirofanoEdad';
+            pesoFieldId = 'quirofanoPeso';
+            sexoFieldId = 'quirofanoSexo';
+        } else {
+            containerSelector = '#cedula';
+            mascotaFieldId = 'mascota';
+            tipoMascotaFieldId = 'tipoMascota';
+            idPacienteFieldId = 'idPaciente';
+            razaFieldId = 'raza';
+            edadFieldId = 'edad';
+            pesoFieldId = 'peso';
+            sexoFieldId = 'sexo';
+        }
+
+        // Buscar el campo de cédula
+        const cedulaField = document.querySelector(containerSelector);
+        if (!cedulaField) return;
+
+        // Eliminar selector anterior si existe
+        const existingSelector = document.getElementById('petSelectorDropdown');
+        if (existingSelector) {
+            existingSelector.remove();
+        }
+
+        // Crear dropdown de mascotas
+        const dropdown = document.createElement('div');
+        dropdown.id = 'petSelectorDropdown';
+        dropdown.className = 'pet-selector-dropdown';
+        
+        const header = document.createElement('div');
+        header.className = 'pet-selector-header';
+        header.innerHTML = `
+            <i class="fas fa-paw"></i>
+            <strong>Cliente encontrado:</strong> ${patientData.cliente.nombre}
+            <br>
+            <small>Seleccione una mascota o cree una nueva:</small>
+        `;
+        dropdown.appendChild(header);
+
+        // Agregar opciones de mascotas existentes
+        patientData.mascotas.forEach((mascota, index) => {
+            const petOption = document.createElement('div');
+            petOption.className = 'pet-option';
+            
+            const iconClass = mascota.tipoMascota === 'perro' ? 'fa-dog' : 
+                            mascota.tipoMascota === 'gato' ? 'fa-cat' : 'fa-paw';
+            
+            petOption.innerHTML = `
+                <div class="pet-icon">
+                    <i class="fas ${iconClass}"></i>
+                </div>
+                <div class="pet-info">
+                    <div class="pet-name">${mascota.nombre}</div>
+                    <div class="pet-details">
+                        ${mascota.raza || 'Sin raza'} • 
+                        ${mascota.edad || 'Sin edad'} • 
+                        ${mascota.sexo || 'Sin sexo'}
+                        ${mascota.idPaciente ? ` • ID: ${mascota.idPaciente}` : ''}
+                    </div>
+                </div>
+            `;
+            
+            petOption.addEventListener('click', () => {
+                this.selectPet(mascota, {
+                    mascota: mascotaFieldId,
+                    tipoMascota: tipoMascotaFieldId,
+                    idPaciente: idPacienteFieldId,
+                    raza: razaFieldId,
+                    edad: edadFieldId,
+                    peso: pesoFieldId,
+                    sexo: sexoFieldId
+                });
+                dropdown.remove();
+            });
+            
+            dropdown.appendChild(petOption);
+        });
+
+        // Opción para crear nueva mascota
+        const newPetOption = document.createElement('div');
+        newPetOption.className = 'pet-option new-pet-option';
+        newPetOption.innerHTML = `
+            <div class="pet-icon">
+                <i class="fas fa-plus-circle"></i>
+            </div>
+            <div class="pet-info">
+                <div class="pet-name">Nueva Mascota</div>
+                <div class="pet-details">Registrar una nueva mascota para este cliente</div>
+            </div>
+        `;
+        
+        newPetOption.addEventListener('click', () => {
+            dropdown.remove();
+            // Limpiar campos de mascota para permitir nuevo registro
+            const mascotaInput = document.getElementById(mascotaFieldId);
+            if (mascotaInput) mascotaInput.focus();
+        });
+        
+        dropdown.appendChild(newPetOption);
+
+        // Insertar dropdown después del campo de cédula
+        cedulaField.parentNode.style.position = 'relative';
+        cedulaField.parentNode.appendChild(dropdown);
+
+        // Cerrar dropdown al hacer clic fuera
+        setTimeout(() => {
+            document.addEventListener('click', function closeDropdown(e) {
+                if (!dropdown.contains(e.target) && e.target !== cedulaField) {
+                    dropdown.remove();
+                    document.removeEventListener('click', closeDropdown);
+                }
+            });
+        }, 100);
+    }
+
+    // Seleccionar mascota y rellenar campos
+    selectPet(mascota, fieldIds) {
+        const mascotaInput = document.getElementById(fieldIds.mascota);
+        if (mascotaInput) mascotaInput.value = mascota.nombre || '';
+
+        const tipoMascotaInput = document.getElementById(fieldIds.tipoMascota);
+        if (tipoMascotaInput) tipoMascotaInput.value = mascota.tipoMascota || 'otro';
+
+        const idPacienteInput = document.getElementById(fieldIds.idPaciente);
+        if (idPacienteInput) idPacienteInput.value = mascota.idPaciente || '';
+
+        const razaInput = document.getElementById(fieldIds.raza);
+        if (razaInput) razaInput.value = mascota.raza || '';
+
+        const edadInput = document.getElementById(fieldIds.edad);
+        if (edadInput) edadInput.value = mascota.edad || '';
+
+        const pesoInput = document.getElementById(fieldIds.peso);
+        if (pesoInput) pesoInput.value = mascota.peso || '';
+
+        const sexoInput = document.getElementById(fieldIds.sexo);
+        if (sexoInput) sexoInput.value = mascota.sexo || '';
+
+        // Mostrar notificación de éxito
+        if (typeof showNotification === 'function') {
+            showNotification(`Mascota "${mascota.nombre}" seleccionada correctamente`, 'success');
+        }
+    }
+
+    // Setup de listeners para campo de cédula
+    setupCedulaListener(cedulaFieldId, formType = 'consulta') {
+        const cedulaField = document.getElementById(cedulaFieldId);
+        if (!cedulaField) return;
+
+        // Debounce para evitar múltiples búsquedas
+        let searchTimeout;
+        
+        cedulaField.addEventListener('input', (e) => {
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(() => {
+                const cedula = e.target.value.trim();
+                if (cedula.length >= 5) { // Buscar cuando tenga al menos 5 caracteres
+                    const patient = this.findPatientByCedula(cedula);
+                    if (patient) {
+                        this.showPetSelector(cedula, formType);
+                    }
+                }
+            }, 500); // Esperar 500ms después de que el usuario deje de escribir
+        });
+
+        cedulaField.addEventListener('blur', (e) => {
+            const cedula = e.target.value.trim();
+            if (cedula) {
+                const patient = this.findPatientByCedula(cedula);
+                if (patient) {
+                    this.fillFormFromPatient(cedula, formType);
+                }
+            }
+        });
     }
 }
 
@@ -182,6 +428,19 @@ function initPatientDatabase() {
     if (!patientDatabase && window.database) {
         patientDatabase = new PatientDatabase();
         window.patientDatabase = patientDatabase;
+        
+        // Setup listeners automáticos para formularios después de inicializar
+        setTimeout(() => {
+            // Formulario de consultas
+            if (document.getElementById('cedula')) {
+                patientDatabase.setupCedulaListener('cedula', 'consulta');
+            }
+            
+            // Formulario de quirófano
+            if (document.getElementById('quirofanoCedula')) {
+                patientDatabase.setupCedulaListener('quirofanoCedula', 'quirofano');
+            }
+        }, 1500);
     }
 }
 
@@ -196,4 +455,5 @@ if (document.readyState === 'loading') {
 
 // Exportar para uso manual
 window.initPatientDatabase = initPatientDatabase;
+
 

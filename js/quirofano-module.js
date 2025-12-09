@@ -105,8 +105,31 @@ function setupQuirofanoEventListeners() {
         });
     }
     
-
-
+    // Configurar el checkbox de vía
+    const viaCheckbox = document.getElementById('quirofanoVia');
+    const viaStatusContainer = document.getElementById('viaStatusContainer');
+    
+    if (viaCheckbox && viaStatusContainer) {
+        viaCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                viaStatusContainer.style.display = 'block';
+            } else {
+                viaStatusContainer.style.display = 'none';
+            }
+        });
+    }
+    
+    // Controlar visibilidad del campo "vía" según el rol del usuario
+    const userRole = sessionStorage.getItem('userRole');
+    const viaField = document.querySelector('.quirofano-via-field');
+    if (viaField) {
+        if (userRole === 'visitas') {
+            viaField.style.display = 'none';
+        } else {
+            viaField.style.display = '';
+        }
+    }
+    
     // Búsqueda en tiempo real
     const searchInput = document.getElementById('quirofanoSearchInput');
     if (searchInput) {
@@ -191,6 +214,9 @@ function handleQuirofanoFormSubmit(e) {
         examenesPrequirurgicos: getCheckboxValue('quirofanoExamenesPrequirurgicos'),
         examenesStatus: getCheckboxValue('quirofanoExamenesPrequirurgicos') ? 
             getFieldValue('quirofanoExamenesStatus') : null,
+        via: getCheckboxValue('quirofanoVia'),
+        viaStatus: getCheckboxValue('quirofanoVia') ? 
+            getFieldValue('quirofanoViaStatus') : null,
         fechaCreacion: new Date().toISOString(),
         fechaProgramada: getFieldValue('quirofanoFecha'),
         horaProgramada: getFieldValue('quirofanoHora'),
@@ -243,6 +269,23 @@ function saveQuirofanoTicket(ticketData) {
     
     quirofanoFirebaseRef.push(ticketData)
         .then(() => {
+            // Guardar paciente en la base de datos relacional
+            if (window.patientDatabase && ticketData.cedula) {
+                window.patientDatabase.savePatientFromTicket({
+                    cedula: ticketData.cedula,
+                    nombre: ticketData.nombrePropietario,
+                    telefono: ticketData.telefono,
+                    correo: ticketData.correo,
+                    mascota: ticketData.nombreMascota,
+                    tipoMascota: ticketData.tipoMascota,
+                    idPaciente: ticketData.idPaciente,
+                    raza: ticketData.raza,
+                    edad: ticketData.edad,
+                    peso: ticketData.peso,
+                    sexo: ticketData.sexo
+                }).catch(err => console.error('Error guardando en BD de pacientes:', err));
+            }
+            
             hideLoading();
             showNotification('Ticket de quirófano creado exitosamente', 'success');
             document.getElementById('quirofanoTicketForm').reset();
@@ -255,6 +298,11 @@ function saveQuirofanoTicket(ticketData) {
                 // Actualizar contador de exámenes prequirúrgicos
                 if (typeof window.updatePrequirurgicoCounter === 'function') {
                     window.updatePrequirurgicoCounter();
+                }
+                
+                // Actualizar contador de vía
+                if (typeof window.updateViaCounter === 'function') {
+                    window.updateViaCounter();
                 }
                 
                 // Redirigir a la vista de ver tickets después de actualizar
@@ -371,6 +419,11 @@ function loadQuirofanoTickets() {
         // Actualizar contador de exámenes prequirúrgicos
         if (typeof window.updatePrequirurgicoCounter === 'function') {
             window.updatePrequirurgicoCounter();
+        }
+        
+        // Actualizar contador de vía
+        if (typeof window.updateViaCounter === 'function') {
+            window.updateViaCounter();
         }
     });
 }
@@ -499,6 +552,16 @@ function renderQuirofanoTicketsWithDateFilter(filter = 'todos', searchTerm = '',
                                  class="btn-examenes-realizados" 
                                  title="Marcar exámenes como realizados">
                             <i class="fas fa-check"></i> Marcar como realizados
+                         </button>`
+                    }</p>` : ''}
+                ${ticket.via && sessionStorage.getItem('userRole') !== 'visitas' ? `<p><i class="fas fa-syringe"></i> <strong>Vía:</strong> 
+                    ${ticket.viaStatus === 'realizado' ? 
+                        '<span style="color: #28a745; font-weight: bold;">✅ Realizada</span>' : 
+                        `<span style="color: #ff6b35; font-weight: bold;">⏳ Pendiente</span>
+                         <button onclick="marcarViaRealizada('${ticket.randomId}')" 
+                                 class="btn-examenes-realizados" 
+                                 title="Marcar vía como realizada">
+                            <i class="fas fa-check"></i> Marcar como realizada
                          </button>`
                     }</p>` : ''}
                 ${ticket.observaciones ? `<p><i class="fas fa-sticky-note"></i> <strong>Observaciones:</strong> ${ticket.observaciones}</p>` : ''}
@@ -745,8 +808,25 @@ function editQuirofanoTicket(randomId) {
                                 <option value="emergencia" ${ticket.tipoUrgencia === 'emergencia' ? 'selected' : ''}>🔴 Cirugía de Emergencia</option>
                             </select>
                         </div>
-                        <div class="form-group">
-                            <!-- Campo vacío para mantener estructura -->
+                        <div class="form-group edit-quirofano-via-field" style="display: ${sessionStorage.getItem('userRole') === 'visitas' ? 'none' : ''};">
+                            <label for="editQuirofanoVia">
+                                <input type="checkbox" id="editQuirofanoVia" name="via" ${ticket.via ? 'checked' : ''} style="margin-right: 8px;">
+                                Vía
+                            </label>
+                            <small style="display: block; color: #666; margin-top: 4px;">
+                                Marque si el paciente requiere vía
+                            </small>
+                            
+                            <!-- Estado de la vía en edición -->
+                            <div id="editViaStatusContainer" style="display: ${ticket.via ? 'block' : 'none'}; margin-top: 8px;">
+                                <label for="editQuirofanoViaStatus" style="font-size: 13px; color: #555;">
+                                    Estado de la vía:
+                                </label>
+                                <select id="editQuirofanoViaStatus" style="margin-left: 8px; padding: 2px 6px; font-size: 12px;">
+                                    <option value="pendiente" ${ticket.viaStatus === 'pendiente' || !ticket.viaStatus ? 'selected' : ''}>⏳ Pendiente</option>
+                                    <option value="realizado" ${ticket.viaStatus === 'realizado' ? 'selected' : ''}>✅ Realizada</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
 
@@ -895,6 +975,20 @@ function editQuirofanoTicket(randomId) {
         });
     }
     
+    // Event listener para el checkbox de vía en edición
+    const editViaCheckbox = document.getElementById('editQuirofanoVia');
+    const editViaStatusContainer = document.getElementById('editViaStatusContainer');
+    
+    if (editViaCheckbox && editViaStatusContainer) {
+        editViaCheckbox.addEventListener('change', function() {
+            if (this.checked) {
+                editViaStatusContainer.style.display = 'block';
+            } else {
+                editViaStatusContainer.style.display = 'none';
+            }
+        });
+    }
+    
 
 }
 
@@ -948,6 +1042,9 @@ function handleQuirofanoEdit(e) {
         examenesPrequirurgicos: document.getElementById('editQuirofanoExamenesPrequirurgicos').checked,
         examenesStatus: document.getElementById('editQuirofanoExamenesPrequirurgicos').checked ? 
             document.getElementById('editQuirofanoExamenesStatus').value : null,
+        via: document.getElementById('editQuirofanoVia') ? document.getElementById('editQuirofanoVia').checked : false,
+        viaStatus: document.getElementById('editQuirofanoVia') && document.getElementById('editQuirofanoVia').checked ? 
+            (document.getElementById('editQuirofanoViaStatus') ? document.getElementById('editQuirofanoViaStatus').value : 'pendiente') : null,
         fechaModificacion: new Date().toISOString(),
         modificadoPor: sessionStorage.getItem('userName') || 'Usuario'
     };
@@ -972,6 +1069,16 @@ function handleQuirofanoEdit(e) {
             showNotification('Ticket actualizado exitosamente', 'success');
             closeQuirofanoModal();
             loadQuirofanoTickets();
+            
+            // Actualizar contadores
+            setTimeout(() => {
+                if (typeof window.updatePrequirurgicoCounter === 'function') {
+                    window.updatePrequirurgicoCounter();
+                }
+                if (typeof window.updateViaCounter === 'function') {
+                    window.updateViaCounter();
+                }
+            }, 300);
         })
         .catch((error) => {
             showNotification('Error al actualizar el ticket', 'error');
@@ -1054,6 +1161,16 @@ function confirmDeleteQuirofanoTicket(randomId) {
             closeQuirofanoDeleteModal();
             closeQuirofanoModal();
             loadQuirofanoTickets();
+            
+            // Actualizar contadores
+            setTimeout(() => {
+                if (typeof window.updatePrequirurgicoCounter === 'function') {
+                    window.updatePrequirurgicoCounter();
+                }
+                if (typeof window.updateViaCounter === 'function') {
+                    window.updateViaCounter();
+                }
+            }, 300);
         })
         .catch((error) => {
             showNotification('Error al eliminar el ticket', 'error');
@@ -1085,6 +1202,16 @@ function endQuirofanoSurgery(randomId) {
         .then(() => {
             showNotification('Cirugía marcada como terminada', 'success');
             loadQuirofanoTickets();
+            
+            // Actualizar contadores
+            setTimeout(() => {
+                if (typeof window.updatePrequirurgicoCounter === 'function') {
+                    window.updatePrequirurgicoCounter();
+                }
+                if (typeof window.updateViaCounter === 'function') {
+                    window.updateViaCounter();
+                }
+            }, 300);
         })
         .catch((error) => {
             showNotification('Error al terminar la cirugía', 'error');
@@ -1200,6 +1327,11 @@ function marcarListoParaCirugia(randomId) {
             window.updatePrequirurgicoCounter();
         }
         
+        // Actualizar contador de vía
+        if (typeof window.updateViaCounter === 'function') {
+            window.updateViaCounter();
+        }
+        
         // Re-renderizar los tickets
         const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
         const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
@@ -1244,12 +1376,8 @@ function hideLoading() {
     }
 }
 
-function showNotification(message, type = 'info') {
-    // Si existe la función global, la usa
-    if (window.showNotification) {
-        window.showNotification(message, type);
-    }
-}
+// Usar la función showNotification global de index.js
+// No definir una función local para evitar recursión infinita
 
 function getTipoMascotaLabel(tipo) {
     const tipos = {
@@ -1336,6 +1464,79 @@ window.setupQuirofanoFilterVisibility = setupQuirofanoFilterVisibility;
 window.closeQuirofanoDeleteModal = closeQuirofanoDeleteModal;
 window.confirmDeleteQuirofanoTicket = confirmDeleteQuirofanoTicket;
 window.marcarExamenesRealizados = marcarExamenesRealizados;
+
+// Función para marcar vía como realizada
+function marcarViaRealizada(randomId) {
+    const ticket = window.quirofanoTickets.find(t => t.randomId === randomId);
+    if (!ticket) {
+        showNotification('Ticket no encontrado', 'error');
+        return;
+    }
+    
+    if (!ticket.via) {
+        showNotification('Este ticket no requiere vía', 'warning');
+        return;
+    }
+    
+    if (ticket.viaStatus === 'realizado') {
+        showNotification('La vía ya está marcada como realizada', 'info');
+        return;
+    }
+    
+    // Confirmar la acción
+    if (!confirm('¿Está seguro de marcar la vía como realizada?')) {
+        return;
+    }
+    
+    showLoading();
+    
+    const updateData = {
+        viaStatus: 'realizado'
+    };
+    
+    quirofanoFirebaseRef.child(randomId).update(updateData)
+        .then(() => {
+            ticket.viaStatus = 'realizado';
+            const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
+            const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
+            renderQuirofanoTicketsWithDateFilter(window.currentQuirofanoFilter, searchTerm, dateFilter);
+            if (typeof window.updateViaCounter === 'function') {
+                window.updateViaCounter();
+            }
+            hideLoading();
+            showNotification('Vía marcada como realizada', 'success');
+        })
+        .catch(() => {
+            hideLoading();
+            showNotification('Error al marcar la vía como realizada', 'error');
+        });
+}
+
+window.marcarViaRealizada = marcarViaRealizada;
+
+// Función para obtener tickets de quirófano con vía para una fecha específica
+window.getQuirofanoTicketsWithViaForDate = function(date) {
+    // No mostrar la vía al rol visitas
+    if (sessionStorage.getItem('userRole') === 'visitas') {
+        return [];
+    }
+    
+    if (typeof window.quirofanoTickets === 'undefined' || !Array.isArray(window.quirofanoTickets)) {
+        return [];
+    }
+    
+    return window.quirofanoTickets.filter(ticket => {
+        if (!ticket.via || ticket.via !== true) return false;
+        if (!ticket.fechaProgramada) return false;
+        const ticketDate = ticket.fechaProgramada.split('T')[0];
+        return ticketDate === date;
+    }).map(ticket => {
+        if (!ticket.randomId && ticket.id) {
+            ticket.randomId = ticket.id;
+        }
+        return ticket;
+    });
+};
 
 
 

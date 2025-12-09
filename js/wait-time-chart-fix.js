@@ -44,35 +44,40 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Crear datos de muestra si no hay datos reales
                         if (!window.waitTimeChart) {
                             const ctx = canvas.getContext('2d');
-                            if (ctx) {
-                                // Datos de muestra para el gráfico
-                                const data = {
-                                    labels: ['Consulta', 'Emergencia', 'Vacunación'],
-                                    datasets: [{
-                                        label: 'Tiempo promedio (minutos)',
-                                        data: [15, 5, 12],
-                                        backgroundColor: ['#4285f4', '#ea4335', '#34a853'],
-                                        borderWidth: 1
-                                    }]
-                                };
-                                
-                                // Crear gráfico de ejemplo
-                                window.waitTimeChart = new Chart(ctx, {
-                                    type: 'bar',
-                                    data: data,
-                                    options: {
-                                        responsive: true,
-                                        maintainAspectRatio: false,
-                                        scales: {
-                                            y: {
-                                                beginAtZero: true,
-                                                title: {
-                                                    display: true,
-                                                    text: 'Minutos'
+                            if (ctx && window.lazyLoadLibs) {
+                                // Cargar Chart.js de forma diferida
+                                window.lazyLoadLibs.loadChartJS().then(() => {
+                                    // Datos de muestra para el gráfico
+                                    const data = {
+                                        labels: ['Consulta', 'Emergencia', 'Vacunación'],
+                                        datasets: [{
+                                            label: 'Tiempo promedio (minutos)',
+                                            data: [15, 5, 12],
+                                            backgroundColor: ['#4285f4', '#ea4335', '#34a853'],
+                                            borderWidth: 1
+                                        }]
+                                    };
+                                    
+                                    // Crear gráfico de ejemplo
+                                    window.waitTimeChart = new Chart(ctx, {
+                                        type: 'bar',
+                                        data: data,
+                                        options: {
+                                            responsive: true,
+                                            maintainAspectRatio: false,
+                                            scales: {
+                                                y: {
+                                                    beginAtZero: true,
+                                                    title: {
+                                                        display: true,
+                                                        text: 'Minutos'
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
+                                    });
+                                }).catch(error => {
+                                    console.error('Error al cargar Chart.js:', error);
                                 });
                             }
                         }

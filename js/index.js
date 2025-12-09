@@ -429,9 +429,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
         
-        // Continue with loading data
-        showLoading();
-        
         // Verify if the sections exist before trying to work with them
         const crearTicketSection = document.getElementById('crearTicketSection');
         const verTicketsSection = document.getElementById('crearTicketSection');
@@ -439,15 +436,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const estadisticasSection = document.getElementById('estadisticasSection');
         
         if (!crearTicketSection || !verTicketsSection) {
-            hideLoading();
             showNotification('Error: Estructura HTML incompleta', 'error');
             return;
         }
         
         // Inicializar Firebase Auth y cargar datos
         initAuth().then(() => {
+            // Cargar tickets
             loadTickets().then(() => {
-                hideLoading();
                 isDataLoaded = true;
                 
                 // La configuración de sección por defecto ya se hizo arriba
@@ -501,12 +497,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Sistema de quirófano no disponible
                 }
                 
+                // Datos cargados correctamente
+                
             }).catch(err => {
-                hideLoading();
                 showNotification('Error al cargar los datos', 'error');
             });
         }).catch(err => {
-            hideLoading();
             showNotification('Error al conectar con el servidor', 'error');
         });
     }).catch(err => {
@@ -514,7 +510,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (window.location.pathname.toLowerCase().includes('home.html')) {
             return;
         }
-        hideLoading();
         showNotification('Error de autenticación. Por favor inicie sesión nuevamente.', 'error');
         // Add a login button instead of auto-redirect
         const mainContainer = document.querySelector('.main-container');
@@ -1541,7 +1536,7 @@ function updateTicketInDOM(updatedTicket) {
     }
 }
 
-// Función para cargar tickets desde Firebase
+// Función para cargar tickets desde Firebase (optimizada)
 function loadTickets() {
     return new Promise((resolve, reject) => {
         ticketsRef.once('value')
@@ -1549,7 +1544,10 @@ function loadTickets() {
                 tickets = [];
                 currentTicketId = 1;
                 const data = snapshot.val() || {};
-                Object.keys(data).forEach(key => {
+                const keys = Object.keys(data);
+                
+                // Procesar todos los tickets (optimizado para no bloquear)
+                keys.forEach(key => {
                     const entry = data[key];
                     if (entry && entry.id != null && entry.mascota) {
                         tickets.push({
@@ -1561,6 +1559,7 @@ function loadTickets() {
                         ticketsRef.child(key).remove();
                     }
                 });
+                
                 // Update global reference
                 window.tickets = tickets;
                 return settingsRef.once('value');
@@ -1597,6 +1596,9 @@ function loadTickets() {
                 renderTickets(currentFilter);
                 updateStatsGlobal();
                 updatePrequirurgicoCounter();
+                if (typeof updateViaCounter === 'function') {
+                    updateViaCounter();
+                }
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
@@ -1641,6 +1643,9 @@ function loadTickets() {
                 
                 updateStatsGlobal();
                 updatePrequirurgicoCounter();
+                if (typeof updateViaCounter === 'function') {
+                    updateViaCounter();
+                }
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
@@ -1656,6 +1661,9 @@ function loadTickets() {
                 renderTickets(currentFilter);
                 updateStatsGlobal();
                 updatePrequirurgicoCounter();
+                if (typeof updateViaCounter === 'function') {
+                    updateViaCounter();
+                }
                 if (horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
             }
@@ -1737,6 +1745,30 @@ function addTicket() {
         }
         ticketsRef.push(nuevoTicket)
             .then(() => {
+                // Guardar paciente en la base de datos relacional
+                if (window.patientDatabase && cedula) {
+                    const telefono = document.getElementById('telefono')?.value || '';
+                    const correo = document.getElementById('correo')?.value || '';
+                    const raza = document.getElementById('raza')?.value || '';
+                    const edad = document.getElementById('edad')?.value || '';
+                    const peso = document.getElementById('peso')?.value || '';
+                    const sexo = document.getElementById('sexo')?.value || '';
+                    
+                    window.patientDatabase.savePatientFromTicket({
+                        cedula,
+                        nombre,
+                        telefono,
+                        correo,
+                        mascota,
+                        tipoMascota,
+                        idPaciente,
+                        raza,
+                        edad,
+                        peso,
+                        sexo
+                    }).catch(err => console.error('Error guardando en BD de pacientes:', err));
+                }
+                
                 ticketForm.reset();
                 if (document.getElementById('fecha')) {
                     document.getElementById('fecha').value = getLocalDateString();
@@ -1863,6 +1895,9 @@ function renderTickets(filter = 'todos', date = null) {
             );
         });
     }
+
+    // Agregar tickets de quirófano con vía marcada para la fecha seleccionada
+    // No agregamos tickets de vía a la sala de espera; solo se muestra el contador (updateViaCounter)
 
     if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
         let table = `<table class="excel-tickets-table">
@@ -2171,6 +2206,17 @@ function renderTickets(filter = 'todos', date = null) {
                     ${ticket.horaAtencion ? `<p><i class="fas fa-user-md"></i> Atención: ${formatTime12Hour(ticket.horaAtencion)}</p>` : ''}
                     ${ticket.horaFinalizacion ? `<p><i class="fas fa-check-circle"></i> Finalización: ${formatTime12Hour(ticket.horaFinalizacion)}</p>` : ''}
                     <p class="${urgenciaClass}"><strong>Categorización de paciente:</strong> ${getUrgenciaLabel(ticket.urgencia)}</p>
+                    ${ticket.via && sessionStorage.getItem('userRole') !== 'visitas' ? `<p><i class="fas fa-syringe"></i> <strong>Vía:</strong> 
+                        ${ticket.viaStatus === 'realizado' ? 
+                            '<span style="color: #28a745; font-weight: bold;">✅ Realizada</span>' : 
+                            `<span style="color: #ff6b35; font-weight: bold;">⏳ Pendiente</span>
+                             ${ticket.randomId ? `<button onclick="if(typeof marcarViaRealizada === 'function'){ marcarViaRealizada('${ticket.randomId}'); }" 
+                                     class="btn-examenes-realizados" 
+                                     title="Marcar vía como realizada"
+                                     style="margin-left: 8px; padding: 4px 8px; background: #28a745; color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 12px;">
+                                <i class="fas fa-check"></i> Marcar como realizada
+                             </button>` : ''}` 
+                        }</p>` : ''}
                     ${ticket.urgencia === 'emergencia' ? `<div class="ticket-emergencia-anim" style='position:absolute;top:10px;right:10px;z-index:2;'><span style='background:#d32f2f;color:#fff;padding:4px 10px;border-radius:6px;font-weight:bold;font-size:0.95em;box-shadow:0 2px 8px rgba(0,0,0,0.12);letter-spacing:1px;'>Emergencia</span></div>` : ''}
                     <div class="estado-badge ${estadoClass}">
                         <i class="fas fa-${ticket.estado === 'espera' ? 'hourglass-half' : 
@@ -4213,9 +4259,10 @@ function renderizarGraficosTiempoEspera(ticketsFiltrados) {
     data.push(promedio);
   });
   
-  // Crear gráfico
-  try {
-    window.waitTimeChart = new Chart(ctx, {
+  // Cargar Chart.js de forma diferida y crear gráfico
+  window.lazyLoadLibs.loadChartJS().then(() => {
+    try {
+      window.waitTimeChart = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: labels,
@@ -4253,9 +4300,12 @@ function renderizarGraficosTiempoEspera(ticketsFiltrados) {
         }
       }
     });
-  } catch (error) {
-    
-  }
+    } catch (error) {
+      console.error('Error al crear gráfico de tiempo de espera:', error);
+    }
+  }).catch(error => {
+    console.error('Error al cargar Chart.js:', error);
+  });
 }
 
 // Función para renderizar los gráficos de personal y servicios
@@ -4437,9 +4487,10 @@ function renderizarGraficoPersonalPorServicio(conteoPersonalServicio) {
     });
   });
   
-  // Crear gráfico de barras
-  try {
-    window.chartServiciosPersonal = new Chart(ctx, {
+  // Cargar Chart.js de forma diferida y crear gráfico de barras
+  window.lazyLoadLibs.loadChartJS().then(() => {
+    try {
+      window.chartServiciosPersonal = new Chart(ctx, {
       type: 'bar',
       data: {
         labels: personal,
@@ -4458,13 +4509,16 @@ function renderizarGraficoPersonalPorServicio(conteoPersonalServicio) {
         }
       }
     });
-  } catch (error) {
-    
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#f00';
-    ctx.textAlign = 'center';
-    ctx.fillText('Error al crear gráfico', canvas.width / 2, canvas.height / 2);
-  }
+    } catch (error) {
+      console.error('Error al crear gráfico de personal por servicio:', error);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#f00';
+      ctx.textAlign = 'center';
+      ctx.fillText('Error al crear gráfico', canvas.width / 2, canvas.height / 2);
+    }
+  }).catch(error => {
+    console.error('Error al cargar Chart.js:', error);
+  });
 }
 
 // Renderizar gráfico de distribución de servicios (gráfico de pie)
@@ -4508,9 +4562,10 @@ function renderizarGraficoDistribucionServicios(conteoServicios) {
   const labels = servicios.map(servicio => getNombreServicio(servicio));
   const colors = colores.slice(0, servicios.length);
   
-  // Crear gráfico de pie
-  try {
-    window.chartDistribucionServicios = new Chart(ctx, {
+  // Cargar Chart.js de forma diferida y crear gráfico de pie
+  window.lazyLoadLibs.loadChartJS().then(() => {
+    try {
+      window.chartDistribucionServicios = new Chart(ctx, {
       type: 'pie',
       data: {
         labels: labels,
@@ -4537,13 +4592,16 @@ function renderizarGraficoDistribucionServicios(conteoServicios) {
         }
       }
     });
-  } catch (error) {
-    
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#f00';
-    ctx.textAlign = 'center';
-    ctx.fillText('Error al crear gráfico', canvas.width / 2, canvas.height / 2);
-  }
+    } catch (error) {
+      console.error('Error al crear gráfico de distribución:', error);
+      ctx.font = '16px Arial';
+      ctx.fillStyle = '#f00';
+      ctx.textAlign = 'center';
+      ctx.fillText('Error al crear gráfico', canvas.width / 2, canvas.height / 2);
+    }
+  }).catch(error => {
+    console.error('Error al cargar Chart.js:', error);
+  });
 }
 
 // Configurar Event Listeners para estadísticas
@@ -4670,8 +4728,24 @@ function showLoading() {
 
 function hideLoading() {
     const loadingOverlay = document.getElementById('loadingOverlay');
+    const mainContainer = document.querySelector('.main-container');
+    
     if (loadingOverlay) {
-        loadingOverlay.remove();
+        // Fade out del loading
+        loadingOverlay.style.opacity = '0';
+        
+        // Mostrar contenido principal con fade in
+        if (mainContainer) {
+            mainContainer.classList.add('loaded');
+        }
+        
+        // Remover loading después de la transición
+        setTimeout(() => {
+            loadingOverlay.remove();
+        }, 400);
+    } else if (mainContainer) {
+        // Si no hay loading, asegurar que el contenido esté visible
+        mainContainer.classList.add('loaded');
     }
 }
 
@@ -5527,6 +5601,9 @@ function updatePrequirurgicoCounter() {
         return;
     }
     
+    // Mostrar el contador para todos los roles permitidos, incluso si está en 0
+    counterElement.style.display = 'flex';
+    
     // Verificar si tenemos acceso a los tickets de quirófano
     if (typeof window.quirofanoTickets === 'undefined' || !Array.isArray(window.quirofanoTickets)) {
         counterElement.style.display = 'none';
@@ -5550,9 +5627,49 @@ function updatePrequirurgicoCounter() {
     }
 }
 
+// Función para actualizar el contador de tickets con vía pendiente
+function updateViaCounter() {
+    const counterElement = document.getElementById('viaCounter');
+    const countElement = document.getElementById('viaCount');
+    
+    if (!counterElement || !countElement) {
+        return;
+    }
+    
+    // Verificar el rol del usuario - ocultar para visitas
+    const userRole = sessionStorage.getItem('userRole');
+    if (userRole === 'visitas') {
+        counterElement.style.display = 'none';
+        return;
+    }
+    
+    // Verificar si tenemos acceso a los tickets de quirófano
+    if (typeof window.quirofanoTickets === 'undefined' || !Array.isArray(window.quirofanoTickets)) {
+        counterElement.style.display = 'none';
+        return;
+    }
+    
+    // Contar tickets con vía pendiente (solo los que están pendientes)
+    const ticketsConVia = window.quirofanoTickets.filter(ticket => 
+        ticket.via === true && 
+        (ticket.viaStatus === 'pendiente' || !ticket.viaStatus)
+    ).length;
+    
+    // Actualizar el contador
+    countElement.textContent = ticketsConVia;
+    
+    // Mostrar u ocultar el contador según si hay tickets
+    if (ticketsConVia > 0) {
+        counterElement.style.display = 'flex';
+    } else {
+        counterElement.style.display = 'none';
+    }
+}
+
 // Exponer la función globalmente
 window.navigateToQuirofano = navigateToQuirofano;
 window.updatePrequirurgicoCounter = updatePrequirurgicoCounter;
+window.updateViaCounter = updateViaCounter;
 
 // Funciones mejoradas para manejo del sidebar en móviles
 function toggleSidebar() {
@@ -5659,6 +5776,8 @@ window.addEventListener('DOMContentLoaded', function() {
   // document.body.appendChild(scriptQuirofano);
   
   // ========== MÓDULO DE INYECTABLES ==========
+  // Referencia activa del listener para evitar cargar datos de días previos
+  let currentInyectablesRef = null;
   
   // Función de navegación para inyectables
   window.navigateToInyectables = function(sectionId, buttonId) {
@@ -5713,12 +5832,19 @@ window.addEventListener('DOMContentLoaded', function() {
     } else {
       console.error('No se encontró el input de fecha');
     }
+
+    // Configurar fecha de filtro por defecto al día actual
+    const dateFilterInput = document.getElementById('inyectablesDateFilter');
+    if (dateFilterInput && !dateFilterInput.value) {
+      dateFilterInput.value = getLocalDateString();
+    }
     
     // Configurar event listeners
     setupInyectablesEventListeners();
     
-    // Cargar datos existentes
-    loadInyectablesData();
+    // Cargar datos existentes filtrados al día actual
+    const targetDate = dateFilterInput?.value || getLocalDateString();
+    loadInyectablesData(targetDate);
   }
   
   // Configurar event listeners para inyectables
@@ -5759,6 +5885,12 @@ window.addEventListener('DOMContentLoaded', function() {
       console.log('Event listener de filtro configurado');
     } else {
       console.error('No se encontró el botón de filtro');
+    }
+
+    // Cambio directo en el input de fecha dispara el filtro diario
+    const dateFilterInput = document.getElementById('inyectablesDateFilter');
+    if (dateFilterInput) {
+      dateFilterInput.addEventListener('change', filterInyectablesByDate);
     }
     
     // Campo de dosis A favor siempre visible - no necesita lógica especial
@@ -5857,7 +5989,7 @@ window.addEventListener('DOMContentLoaded', function() {
         console.log('Inyectable guardado exitosamente');
         showNotification('Inyectable registrado exitosamente', 'success');
         limpiarFormularioInyectables();
-        loadInyectablesData(); // Recargar la tabla
+        loadInyectablesData(data.fecha || getLocalDateString()); // Recargar la tabla del día
       })
       .catch((error) => {
         console.error('Error al guardar inyectable:', error);
@@ -5866,15 +5998,28 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   
   // Cargar datos de inyectables desde Firebase
-  function loadInyectablesData() {
+  function loadInyectablesData(dateFilter) {
     if (!firebase || !firebase.database) {
       console.error('Firebase no está disponible');
       return;
     }
     
     const database = firebase.database();
-    const ref = database.ref('inyectables');
-    
+    const targetDate = dateFilter || getLocalDateString();
+    let ref = database.ref('inyectables');
+
+    // Desenganchar listener anterior para evitar cargas acumuladas
+    if (currentInyectablesRef) {
+      currentInyectablesRef.off('value');
+    }
+
+    // Consulta filtrada por fecha para no cargar el histórico completo
+    if (targetDate) {
+      ref = ref.orderByChild('fecha').equalTo(targetDate);
+    }
+
+    currentInyectablesRef = ref;
+
     ref.on('value', (snapshot) => {
       const data = snapshot.val();
       const inyectables = data ? Object.entries(data).map(([key, value]) => ({ id: key, ...value })) : [];
@@ -6057,14 +6202,21 @@ window.addEventListener('DOMContentLoaded', function() {
   function searchInyectables() {
     const searchTerm = document.getElementById('inyectablesSearch').value.toLowerCase();
     if (!searchTerm) {
-      loadInyectablesData();
+      const fallbackDate = document.getElementById('inyectablesDateFilter')?.value || getLocalDateString();
+      loadInyectablesData(fallbackDate);
       return;
     }
     
     if (!firebase || !firebase.database) return;
     
     const database = firebase.database();
-    const ref = database.ref('inyectables');
+    const targetDate = document.getElementById('inyectablesDateFilter')?.value || getLocalDateString();
+    let ref = database.ref('inyectables');
+
+    // Restringir búsqueda al día seleccionado
+    if (targetDate) {
+      ref = ref.orderByChild('fecha').equalTo(targetDate);
+    }
     
     ref.once('value', (snapshot) => {
       const data = snapshot.val();
@@ -6085,26 +6237,8 @@ window.addEventListener('DOMContentLoaded', function() {
   // Filtrar inyectables por fecha
   function filterInyectablesByDate() {
     const dateFilter = document.getElementById('inyectablesDateFilter').value;
-    if (!dateFilter) {
-      loadInyectablesData();
-      return;
-    }
-    
-    if (!firebase || !firebase.database) return;
-    
-    const database = firebase.database();
-    const ref = database.ref('inyectables');
-    
-    ref.once('value', (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
-      
-      const inyectables = Object.entries(data)
-        .map(([key, value]) => ({ id: key, ...value }))
-        .filter(inyectable => inyectable.fecha === dateFilter);
-      
-      displayInyectablesTable(inyectables);
-    });
+    const targetDate = dateFilter || getLocalDateString();
+    loadInyectablesData(targetDate);
   }
   
   // Editar factura
@@ -6258,7 +6392,8 @@ window.addEventListener('DOMContentLoaded', function() {
       .then(() => {
         showNotification('Registro actualizado exitosamente', 'success');
         cancelEditInyectableRow(id);
-        loadInyectablesData(); // Recargar la tabla
+        const targetDate = document.getElementById('inyectablesDateFilter')?.value || getLocalDateString();
+        loadInyectablesData(targetDate); // Recargar la tabla filtrada
       })
       .catch((error) => {
         console.error('Error al actualizar registro:', error);
@@ -7275,54 +7410,153 @@ const vacunasDisponibles = {
       return;
     }
     
-    // Recopilar inventario inicial
-    const inventarioInicial = {};
-    
-    // Vacunas anuales
-    vacunasDisponibles.anual.forEach(vacuna => {
-      // Crear ID del input basado en el nombre de la vacuna
-      let inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
-      const input = document.getElementById(inputId);
-      const valor = input ? parseInt(input.value) || 0 : 0;
-      // Usar clave sanitizada para Firebase
-      inventarioInicial[sanitizeFirebaseKey(vacuna)] = valor;
-    });
-    
-    // Vacunas trimestrales
-    vacunasDisponibles.trimestral.forEach(vacuna => {
-      const inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
-      const input = document.getElementById(inputId);
-      const valor = input ? parseInt(input.value) || 0 : 0;
-      // Usar clave sanitizada para Firebase
-      inventarioInicial[sanitizeFirebaseKey(vacuna)] = valor;
-    });
-    
-    // Crear datos del turno
-    const turnoData = {
-      responsable: responsable,
-      fecha: currentVacunasFecha,
-      turno: currentVacunasTurno,
-      horaApertura: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-      timestamp: Date.now(),
-      inventario: inventarioInicial
+    // Configurar modal de confirmación según el tipo de turno
+    let confirmConfig = {
+      title: 'Confirmar acción',
+      message: '¿Está seguro de que desea guardar los cambios?',
+      iconClass: 'fas fa-save',
+      confirmLabel: 'Confirmar'
     };
     
-    // Guardar en Firebase
-    const turnoKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
-    const database = firebase.database();
-    const ref = database.ref(`inventarioTurnos/${turnoKey}`);
+    switch(currentVacunasTurno) {
+      case 'Mañana':
+        confirmConfig = {
+          title: 'Abrir turno',
+          message: '¿Está seguro de que desea abrir el turno con el inventario configurado?',
+          iconClass: 'fas fa-play-circle',
+          confirmLabel: 'Abrir turno'
+        };
+        break;
+      case 'Tarde':
+        confirmConfig = {
+          title: 'Entregar turno',
+          message: '¿Está seguro de que desea entregar el turno con el inventario configurado?',
+          iconClass: 'fas fa-handshake',
+          confirmLabel: 'Entregar turno'
+        };
+        break;
+      case 'Noche':
+        confirmConfig = {
+          title: 'Cerrar turno',
+          message: '¿Está seguro de que desea cerrar el turno con el inventario configurado?',
+          iconClass: 'fas fa-stop-circle',
+          confirmLabel: 'Cerrar turno'
+        };
+        break;
+      default:
+        break;
+    }
     
-    ref.set(turnoData)
-      .then(() => {
-        showNotification('Turno abierto exitosamente', 'success');
-        inventarioActual = inventarioInicial;
-        mostrarInventarioActual(turnoData);
-        actualizarVistaInventario();
-      })
-      .catch((error) => {
-        console.error('Error al abrir turno:', error);
-        showNotification('Error al abrir el turno', 'error');
+    // Mostrar confirmación custom con estilos
+    showTurnoConfirmModal(confirmConfig, () => {
+      // Recopilar inventario inicial
+      const inventarioInicial = {};
+      
+      // Vacunas anuales
+      vacunasDisponibles.anual.forEach(vacuna => {
+        // Crear ID del input basado en el nombre de la vacuna
+        let inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
+        const input = document.getElementById(inputId);
+        const valor = input ? parseInt(input.value) || 0 : 0;
+        // Usar clave sanitizada para Firebase
+        inventarioInicial[sanitizeFirebaseKey(vacuna)] = valor;
       });
+      
+      // Vacunas trimestrales
+      vacunasDisponibles.trimestral.forEach(vacuna => {
+        const inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
+        const input = document.getElementById(inputId);
+        const valor = input ? parseInt(input.value) || 0 : 0;
+        // Usar clave sanitizada para Firebase
+        inventarioInicial[sanitizeFirebaseKey(vacuna)] = valor;
+      });
+      
+      // Crear datos del turno
+      const turnoData = {
+        responsable: responsable,
+        fecha: currentVacunasFecha,
+        turno: currentVacunasTurno,
+        horaApertura: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: Date.now(),
+        inventario: inventarioInicial
+      };
+      
+      // Guardar en Firebase
+      const turnoKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
+      const database = firebase.database();
+      const ref = database.ref(`inventarioTurnos/${turnoKey}`);
+      
+      ref.set(turnoData)
+        .then(() => {
+          showNotification('Turno abierto exitosamente', 'success');
+          inventarioActual = inventarioInicial;
+          mostrarInventarioActual(turnoData);
+          actualizarVistaInventario();
+        })
+        .catch((error) => {
+          console.error('Error al abrir turno:', error);
+          showNotification('Error al abrir el turno', 'error');
+        });
+    });
+  }
+
+  // Modal de confirmación estilizado para apertura/entrega/cierre de turno
+  function showTurnoConfirmModal(config, onConfirm) {
+    const { title, message, iconClass, confirmLabel } = config;
+    
+    // Evitar duplicados
+    const existing = document.getElementById('turnoConfirmModal');
+    if (existing) existing.remove();
+    
+    const modal = document.createElement('div');
+    modal.id = 'turnoConfirmModal';
+    modal.className = 'turno-confirm-overlay';
+    modal.innerHTML = `
+      <div class="turno-confirm-content animate-scale">
+        <div class="turno-confirm-header">
+          <div class="turno-confirm-icon">
+            <i class="${iconClass}"></i>
+          </div>
+          <div>
+            <h3>${title}</h3>
+            <p>${message}</p>
+          </div>
+        </div>
+        <div class="turno-confirm-actions">
+          <button class="btn-cancel-confirm" type="button" id="turnoConfirmCancel">
+            <i class="fas fa-times"></i> Cancelar
+          </button>
+          <button class="btn-accept-confirm" type="button" id="turnoConfirmAccept">
+            <i class="fas fa-check"></i> ${confirmLabel}
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const closeModal = () => modal.remove();
+    
+    // Cerrar al hacer click fuera del contenido
+    modal.addEventListener('click', (e) => {
+      if (e.target.classList.contains('turno-confirm-overlay')) {
+        closeModal();
+      }
+    });
+    
+    // Botones
+    const cancelBtn = document.getElementById('turnoConfirmCancel');
+    const acceptBtn = document.getElementById('turnoConfirmAccept');
+    
+    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
+    if (acceptBtn) {
+      acceptBtn.addEventListener('click', () => {
+        closeModal();
+        if (typeof onConfirm === 'function') {
+          onConfirm();
+        }
+      });
+    }
   }
   
   // Actualizar vista del inventario
