@@ -87,6 +87,600 @@ body {
   min-height: 100vh;
 }
 
+/* ========================================
+   ESTILOS PARA BASE DE DATOS DE PACIENTES
+   ======================================== */
+
+/* Dropdown de selección de mascota */
+.pet-selector-dropdown {
+  position: absolute;
+  top: calc(100% + 5px);
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid var(--secondary-color);
+  border-radius: var(--border-radius);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-height: 400px;
+  overflow-y: auto;
+  animation: slideDownPatient 0.3s ease;
+}
+
+@keyframes slideDownPatient {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Header del selector */
+.pet-selector-header {
+  /* Celeste suave */
+  background: linear-gradient(135deg, #6ec1ff, #4da3ff);
+  color: white;
+  padding: 15px;
+  border-radius: var(--border-radius) var(--border-radius) 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.pet-selector-header i {
+  margin-right: 8px;
+  font-size: 18px;
+}
+
+.pet-selector-header strong {
+  font-size: 15px;
+  display: inline-block;
+  margin-bottom: 5px;
+}
+
+.pet-selector-header small {
+  opacity: 0.95;
+  font-size: 13px;
+}
+
+/* Opciones de mascotas */
+.pet-option {
+  display: flex;
+  align-items: center;
+  padding: 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #e8e8e8;
+  transition: all 0.2s ease;
+  gap: 15px;
+}
+
+.pet-option:hover {
+  background: #f8f9fa;
+  padding-left: 20px;
+}
+
+.pet-option:last-child {
+  border-bottom: none;
+  border-radius: 0 0 var(--border-radius) var(--border-radius);
+}
+
+/* Icono de mascota */
+.pet-icon {
+  width: 50px;
+  height: 50px;
+  min-width: 50px;
+  background: linear-gradient(135deg, #6ec1ff, #4da3ff);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 24px;
+  transition: transform 0.2s ease;
+}
+
+.pet-option:hover .pet-icon {
+  transform: scale(1.1);
+}
+
+/* Información de mascota */
+.pet-info {
+  flex: 1;
+}
+
+.pet-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--primary-color);
+  margin-bottom: 5px;
+}
+
+.pet-details {
+  font-size: 13px;
+  color: var(--dark-gray);
+  line-height: 1.4;
+}
+
+/* Opción de nueva mascota */
+.new-pet-option {
+  border-top: 2px dashed #e0e0e0;
+  background: #f8f9fa;
+}
+
+.new-pet-option:hover {
+  background: #e3f2fd;
+}
+
+.new-pet-option .pet-icon {
+  background: linear-gradient(135deg, var(--success-color), #52c41a);
+}
+
+.new-pet-option .pet-name {
+  color: var(--success-color);
+}
+
+/* Indicador de carga */
+.patient-loading-indicator {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--secondary-color);
+  font-size: 18px;
+  animation: spinPatient 1s linear infinite;
+}
+
+@keyframes spinPatient {
+  from {
+    transform: translateY(-50%) rotate(0deg);
+  }
+  to {
+    transform: translateY(-50%) rotate(360deg);
+  }
+}
+
+/* Badge de cliente encontrado */
+.patient-found-badge {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--success-color);
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  animation: fadeInPatient 0.3s ease;
+}
+
+@keyframes fadeInPatient {
+  from {
+    opacity: 0;
+    transform: translateY(-50%) scale(0.8);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(-50%) scale(1);
+  }
+}
+
+.patient-found-badge i {
+  font-size: 12px;
+}
+
+/* Scrollbar personalizado para el dropdown */
+.pet-selector-dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.pet-selector-dropdown::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 0 var(--border-radius) var(--border-radius) 0;
+}
+
+.pet-selector-dropdown::-webkit-scrollbar-thumb {
+  background: var(--secondary-color);
+  border-radius: 4px;
+}
+
+.pet-selector-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #2980b9;
+}
+
+/* Responsive para dispositivos móviles */
+@media (max-width: 768px) {
+  .pet-selector-dropdown {
+    max-height: 300px;
+  }
+  
+  .pet-option {
+    padding: 12px;
+  }
+  
+  .pet-icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
+    font-size: 20px;
+  }
+  
+  .pet-name {
+    font-size: 14px;
+  }
+  
+  .pet-details {
+    font-size: 12px;
+  }
+  
+  .pet-selector-header {
+    padding: 12px;
+    font-size: 13px;
+  }
+}
+
+/* ========================================
+   ESTILOS PARA BÚSQUEDA DE CÉDULA (API + TICKETS)
+   ======================================== */
+
+/* Botones de búsqueda de cédula */
+.cedula-search-button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.api-search-btn {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+}
+
+.api-search-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #2980b9, #21618c);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.tickets-search-btn {
+  background: linear-gradient(135deg, #27ae60, #229954);
+  color: white;
+}
+
+.tickets-search-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #229954, #1e8449);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+}
+
+.cedula-search-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cedula-search-button i {
+  font-size: 14px;
+}
+
+/* Modal de tickets encontrados */
+.cedula-tickets-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeInModal 0.3s ease;
+}
+
+@keyframes fadeInModal {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.cedula-tickets-modal-content {
+  background: white;
+  border-radius: 12px;
+  width: 90%;
+  max-width: 900px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideInModal 0.3s ease;
+}
+
+@keyframes slideInModal {
+  from {
+    transform: scale(0.9) translateY(-20px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+.cedula-tickets-modal-header {
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  color: white;
+  padding: 20px 25px;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.cedula-tickets-modal-header h3 {
+  margin: 0;
+  font-size: 22px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.cedula-tickets-modal-close {
+  background: rgba(255, 255, 255, 0.2);
+  border: none;
+  color: white;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 18px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cedula-tickets-modal-close:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: rotate(90deg);
+}
+
+.cedula-tickets-modal-body {
+  padding: 25px;
+  overflow-y: auto;
+  max-height: calc(85vh - 80px);
+}
+
+.cedula-info {
+  background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+  padding: 15px 20px;
+  border-radius: 8px;
+  margin-bottom: 25px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 15px;
+  color: #1976d2;
+}
+
+.cedula-info i {
+  font-size: 24px;
+}
+
+.ticket-count {
+  margin-left: auto;
+  background: white;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-weight: 600;
+  font-size: 13px;
+}
+
+.tickets-section {
+  margin-bottom: 30px;
+}
+
+.tickets-section h4 {
+  color: var(--primary-color);
+  font-size: 18px;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #e0e0e0;
+}
+
+.tickets-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 15px;
+}
+
+/* Tarjetas de ticket mini */
+.ticket-card-mini {
+  background: white;
+  border: 2px solid #e0e0e0;
+  border-radius: 10px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+}
+
+.ticket-card-mini:hover {
+  border-color: var(--secondary-color);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-3px);
+}
+
+.ticket-card-header {
+  background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 2px solid #d0d0d0;
+}
+
+.ticket-id {
+  font-weight: 700;
+  color: var(--primary-color);
+  font-size: 16px;
+}
+
+.ticket-fecha {
+  font-size: 12px;
+  color: var(--dark-gray);
+  font-weight: 500;
+}
+
+.ticket-card-body {
+  padding: 15px;
+}
+
+.ticket-info-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+.ticket-info-row i {
+  color: var(--secondary-color);
+  width: 16px;
+  margin-top: 2px;
+}
+
+.ticket-info-row strong {
+  color: var(--dark-gray);
+  min-width: 90px;
+}
+
+.ticket-card-footer {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed #e0e0e0;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ticket-estado {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.ticket-estado.estado-espera {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.ticket-estado.estado-consultorio,
+.ticket-estado.estado-consultorio1,
+.ticket-estado.estado-consultorio2,
+.ticket-estado.estado-consultorio3,
+.ticket-estado.estado-consultorio4,
+.ticket-estado.estado-consultorio5 {
+  background: #d1ecf1;
+  color: #0c5460;
+}
+
+.ticket-estado.estado-terminado,
+.ticket-estado.estado-finalizado {
+  background: #d4edda;
+  color: #155724;
+}
+
+.ticket-estado.estado-en-preparacion {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.ticket-estado.estado-cirugia {
+  background: #f8d7da;
+  color: #721c24;
+}
+
+.ticket-servicio {
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  background: #e3f2fd;
+  color: #1976d2;
+}
+
+/* Scrollbar para modal body */
+.cedula-tickets-modal-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.cedula-tickets-modal-body::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+.cedula-tickets-modal-body::-webkit-scrollbar-thumb {
+  background: var(--secondary-color);
+  border-radius: 5px;
+}
+
+.cedula-tickets-modal-body::-webkit-scrollbar-thumb:hover {
+  background: #2980b9;
+}
+
+/* Responsive para búsqueda de cédula */
+@media (max-width: 768px) {
+  .cedula-search-container {
+    flex-direction: column !important;
+  }
+  
+  .cedula-search-button {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .cedula-tickets-modal-content {
+    width: 95%;
+    max-height: 90vh;
+  }
+  
+  .tickets-list {
+    grid-template-columns: 1fr;
+  }
+  
+  .cedula-tickets-modal-header h3 {
+    font-size: 18px;
+  }
+  
+  .cedula-info {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .ticket-count {
+    margin-left: 0;
+  }
+}
+
 /* Sidebar Styles */
 .sidebar {
   width: 280px;
@@ -4191,6 +4785,62 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
 .btn-accept-confirm:active,
 .btn-cancel-confirm:active {
   transform: translateY(0);
+}
+
+/* Modal de confirmación para apertura/entrega/cierre de turno */
+.turno-confirm-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 20px;
+}
+
+.turno-confirm-content {
+  background: #fff;
+  border-radius: 14px;
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.15);
+  max-width: 520px;
+  width: 100%;
+  padding: 24px;
+}
+
+.turno-confirm-header {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.turno-confirm-header h3 {
+  margin: 0 0 6px 0;
+  color: #2c3e50;
+}
+
+.turno-confirm-header p {
+  margin: 0;
+  color: #546e7a;
+  line-height: 1.45;
+}
+
+.turno-confirm-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 12px;
+  background: #e8f0fe;
+  display: grid;
+  place-items: center;
+  color: #4285f4;
+  font-size: 1.3rem;
+}
+
+.turno-confirm-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }
 
 /* ==================== FIN ESTILOS PARA MODAL DE CONFIRMACIÓN DE TURNO ==================== */
