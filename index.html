@@ -356,14 +356,22 @@
 
       <!-- Sección para visualizar tickets -->
       <section id="verTicketsSection" class="hidden">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
           <h2><i class="fas fa-list"></i> Sala de Espera</h2>
           
-          <!-- Contador de tickets con exámenes prequirúrgicos -->
-          <div id="prequirurgicoCounter" class="prequirurgico-counter" style="display: none;">
-            <i class="fas fa-vials"></i>
-            <span class="counter-text">Exámenes prequirúrgicos pendientes:</span>
-            <span id="prequirurgicoCount" class="counter-number">0</span>
+          <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
+            <!-- Contador de tickets con exámenes prequirúrgicos -->
+            <div id="prequirurgicoCounter" class="prequirurgico-counter" style="display: none;">
+              <i class="fas fa-vials"></i>
+              <span class="counter-text">Exámenes prequirúrgicos pendientes:</span>
+              <span id="prequirurgicoCount" class="counter-number">0</span>
+            </div>
+            <!-- Contador de tickets con vía pendiente -->
+            <div id="viaCounter" class="prequirurgico-counter" style="display: none;">
+              <i class="fas fa-syringe"></i>
+              <span class="counter-text">Vía pendiente:</span>
+              <span id="viaCount" class="counter-number">0</span>
+            </div>
           </div>
         </div>
         
@@ -1400,8 +1408,34 @@
                 <small style="display: block; color: #666; margin-top: 4px;">
                   Marque si el paciente requiere exámenes antes de la cirugía
                 </small>
-                
-
+                <div id="examenesStatusContainer" style="display: none; margin-top: 8px;">
+                  <label for="quirofanoExamenesStatus" style="font-size: 13px; color: #555;">
+                    Estado de los exámenes:
+                  </label>
+                  <select id="quirofanoExamenesStatus" style="margin-left: 8px; padding: 2px 6px; font-size: 12px;">
+                    <option value="pendiente">⏳ Pendientes</option>
+                    <option value="realizado">✅ Realizados</option>
+                  </select>
+                </div>
+                <!-- Campo de Vía debajo de exámenes, con misma lógica -->
+                <div class="quirofano-via-field" style="display: none; margin-top: 12px;">
+                  <label for="quirofanoVia">
+                    <input type="checkbox" id="quirofanoVia" style="margin-right: 8px;">
+                    Vía
+                  </label>
+                  <small style="display: block; color: #666; margin-top: 4px;">
+                    Marque si el paciente requiere vía
+                  </small>
+                  <div id="viaStatusContainer" style="display: none; margin-top: 8px;">
+                    <label for="quirofanoViaStatus" style="font-size: 13px; color: #555;">
+                      Estado de la vía:
+                    </label>
+                    <select id="quirofanoViaStatus" style="margin-left: 8px; padding: 2px 6px; font-size: 12px;">
+                      <option value="pendiente">⏳ Pendiente</option>
+                      <option value="realizado">✅ Realizada</option>
+                    </select>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1784,6 +1818,12 @@
           <h3>Buscar Cliente</h3>
           <div class="search-container">
             <div class="search-input-container">
+              <div class="date-filter-container">
+                <label for="consentFechaBusqueda">
+                  <i class="fas fa-calendar-day"></i> Fecha:
+                </label>
+                <input type="date" id="consentFechaBusqueda" class="date-input" title="Selecciona una fecha para filtrar clientes">
+              </div>
               <input type="text" id="consentClientSearch" placeholder="Buscar por nombre, cédula o nombre de mascota..." class="search-input">
               <button id="searchClientBtn" class="search-btn">
                 Buscar
@@ -1911,41 +1951,101 @@
   </div>
 </div>
 
-  <!-- External scripts - keep these external references -->
+  <!-- External scripts - Firebase (críticos, cargar primero) -->
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script>
-  emailjs.init('ZiyjOCMRsBnxJn_LT');
-</script>
+  
+  <!-- Scripts críticos para inicio -->
   <script src="js/firebase-config.js"></script>
-  <!-- Módulos de optimización de tiempo real -->
-  <script src="js/firebase-realtime-optimizer.js"></script>
-  <script src="js/billing-performance-optimizer.js"></script>
-  <script src="js/services-data.js"></script>
-  <script src="js/auth.js"></script>
-  <script src="js/laboratorio.js"></script>
+  <script src="js/auth.js" defer></script>
+  
+  <!-- Scripts principales con defer para no bloquear render -->
+  <script src="js/services-data.js" defer></script>
+  <script src="js/firebase-realtime-optimizer.js" defer></script>
+  <script src="js/billing-performance-optimizer.js" defer></script>
+  <script src="js/realtime-performance-manager.js" defer></script>
+  <script src="js/index.js" defer></script>
+  
+  <!-- Módulos específicos con defer (carga diferida) -->
+  <script src="js/laboratorio.js" defer></script>
+  <script src="js/consentimientos-module.js" defer></script>
+  <script src="js/quirofano-module.js" defer></script>
+  <script src="js/reportes-lab-module.js" defer></script>
+  <script src="js/patient-database.js" defer></script>
+  <script src="js/cedula-search-integration.js" defer></script>
+  <script src="js/wait-time-chart-fix.js" defer></script>
+  <script src="js/admin-users.js" defer></script>
+  <script src="js/laboratory-search-fix.js" defer></script>
+  <script src="js/services-selection-manager.js" defer></script>
+  
+  <!-- Librerías pesadas - carga diferida (solo cuando se necesiten) -->
+  <script>
+    // Sistema de carga diferida para librerías pesadas
+    window.lazyLoadLibs = {
+      chartjs: false,
+      html2pdf: false,
+      xlsx: false,
+      emailjs: false,
+      
+      loadChartJS: function() {
+        if (!this.chartjs && typeof Chart === 'undefined') {
+          return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/chart.js';
+            script.onload = () => { this.chartjs = true; resolve(); };
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+        return Promise.resolve();
+      },
+      
+      loadHtml2Pdf: function() {
+        if (!this.html2pdf && typeof html2pdf === 'undefined') {
+          return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/html2pdf.js@0.10.1/dist/html2pdf.bundle.min.js';
+            script.onload = () => { this.html2pdf = true; resolve(); };
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+        return Promise.resolve();
+      },
+      
+      loadXLSX: function() {
+        if (!this.xlsx && typeof XLSX === 'undefined') {
+          return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            script.onload = () => { this.xlsx = true; resolve(); };
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+        return Promise.resolve();
+      },
+      
+      loadEmailJS: function() {
+        if (!this.emailjs && typeof emailjs === 'undefined') {
+          return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js';
+            script.onload = () => {
+              emailjs.init('ZiyjOCMRsBnxJn_LT');
+              this.emailjs = true;
+              resolve();
+            };
+            script.onerror = reject;
+            document.head.appendChild(script);
+          });
+        }
+        return Promise.resolve();
+      }
+    };
+  </script>
 
-<script src="js/consentimientos-module.js"></script>
-<script src="js/quirofano-module.js"></script>
-  <script src="js/reportes-lab-module.js"></script>
-  <script src="js/index.js"></script>
-  <script src="js/wait-time-chart-fix.js"></script>
-  <script src="js/admin-users.js"></script>
-  <script src="js/laboratory-search-fix.js"></script>
-  <script src="js/services-selection-manager.js"></script>
-  <!-- Inicialización de optimizaciones -->
-  <script src="js/realtime-performance-manager.js"></script>
-  <!-- Optimizador de memoria -->
-  <!-- <script src="js/memory-optimizer.js"></script> -->
-  <!-- Herramientas de diagnóstico (solo en desarrollo) -->
-  <!-- Comentados porque los archivos no existen -->
-  <!-- <script src="js/diagnostico-tiempo-real.js"></script> -->
-  <!-- <script src="js/memory-diagnostic.js"></script> -->
   
 <script>
 document.addEventListener('DOMContentLoaded', function() {
