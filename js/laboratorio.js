@@ -1935,15 +1935,41 @@ function formatEmailWithLineBreak(email) {
     return email; // Si no tiene @, devolverlo sin cambios
 }
 
-// Formatear fecha
+// Formatear fecha - VERSIÓN CORREGIDA: NO usa new Date() para evitar desfases por zona horaria
 function formatDate(dateString) {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('es-ES', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric'
-    });
+    if (!dateString) return '';
+
+    // Asegurar string
+    const str = String(dateString).trim();
+
+    // Si viene en ISO con hora, extraer solo YYYY-MM-DD
+    if (str.includes('T')) {
+        const isoPart = str.split('T')[0];
+        const isoMatch = isoPart.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            const [, y, m, d] = isoMatch;
+            return `${d}/${m}/${y}`;
+        }
+    }
+
+    // Patrón YYYY-MM-DD - ESTE ES EL CASO PRINCIPAL
+    const match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        const [, y, m, d] = match;
+        return `${d}/${m}/${y}`;
+    }
+
+    // Si ya está en DD/MM/YYYY, devolverlo
+    if (str.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        return str;
+    }
+
+    // Cualquier otro formato se devuelve tal cual
+    return str;
 }
+
+// Exponer la versión correcta globalmente
+window.formatDate = formatDate;
 
 // Obtener etiqueta del estado
 function getEstadoLabel(estado) {

@@ -23,6 +23,45 @@ function getLocalDateString(date = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+// Normaliza fechas provenientes de Firebase sin desfasarlas por zona horaria
+function normalizeFechaConsulta(rawDate) {
+    if (!rawDate) return getLocalDateString();
+
+    // Si viene como timestamp numérico
+    if (typeof rawDate === 'number') {
+        const d = new Date(rawDate);
+        return isNaN(d) ? getLocalDateString() : getLocalDateString(d);
+    }
+
+    if (typeof rawDate === 'string') {
+        // Extrae solo la porción YYYY-MM-DD si está incluida
+        const match = rawDate.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+            // Retornar directamente el formato YYYY-MM-DD sin procesamiento adicional
+            return match[0];
+        }
+
+        // Si tiene formato ISO completo (con hora), extraer solo la parte de fecha
+        if (rawDate.includes('T')) {
+            return rawDate.split('T')[0];
+        }
+
+        // Para otros formatos, intentar parsear agregando zona horaria local explícita
+        // para evitar que se interprete como UTC
+        try {
+            const parsed = new Date(rawDate + 'T00:00:00');
+            if (!isNaN(parsed)) {
+                return getLocalDateString(parsed);
+            }
+        } catch (e) {
+            // Si falla, devolver fecha actual
+        }
+    }
+
+    // Cualquier otro tipo devuelve la fecha local actual
+    return getLocalDateString();
+}
+
 // Generar un identificador aleatorio seguro para cada ticket
 function generateRandomId(length = 16) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -1552,6 +1591,7 @@ function loadTickets() {
                     if (entry && entry.id != null && entry.mascota) {
                         tickets.push({
                             ...entry,
+                            fechaConsulta: normalizeFechaConsulta(entry.fechaConsulta || entry.fecha || entry.fechaProgramada),
                             firebaseKey: key
                         });
                         if (entry.id >= currentTicketId) currentTicketId = entry.id + 1;
@@ -1584,7 +1624,11 @@ function loadTickets() {
                 ticketsRef.child(snapshot.key).remove();
                 return;
             }
-            const newTicket = { ...entry, firebaseKey: snapshot.key };
+            const newTicket = { 
+                ...entry, 
+                fechaConsulta: normalizeFechaConsulta(entry.fechaConsulta || entry.fecha || entry.fechaProgramada),
+                firebaseKey: snapshot.key 
+            };
             // Solo agregar si no existe ya un ticket con esa firebaseKey
             if (!tickets.some(t => t.firebaseKey === newTicket.firebaseKey)) {
                 tickets.push(newTicket);
@@ -1606,6 +1650,7 @@ function loadTickets() {
         ticketsRef.on('child_changed', snapshot => {
             const updatedTicket = {
                 ...snapshot.val(),
+                fechaConsulta: normalizeFechaConsulta(snapshot.val().fechaConsulta || snapshot.val().fecha || snapshot.val().fechaProgramada),
                 firebaseKey: snapshot.key
             };
             
@@ -1999,6 +2044,11 @@ function renderTickets(filter = 'todos', date = null) {
     }
     
     filteredTickets.forEach((ticket, index) => {
+        // Normalizar fecha antes de renderizar (por si acaso)
+        if (ticket.fechaConsulta) {
+            ticket.fechaConsulta = normalizeFechaConsulta(ticket.fechaConsulta);
+        }
+        
         const ticketElement = document.createElement('div');
         
         // Set base class
@@ -2372,16 +2422,42 @@ function renderTickets(filter = 'todos', date = null) {
     }
 }
 
-// Reemplazar la función formatDate actual con esta versión mejorada
+// Reemplazar la función formatDate actual con una versión que NO usa new Date()
+// para evitar desfases por huso horario (UTC-6 en CR)
 function formatDate(dateString) {
     if (!dateString) return '';
-    
-    // Dividir la fecha en sus componentes (formato YYYY-MM-DD)
-    const [year, month, day] = dateString.split('-');
-    
-    // Devolver fecha formateada sin crear un objeto Date (evita problemas de zona horaria)
-    return `${day}/${month}/${year}`;
+
+    // Asegurar string
+    const str = String(dateString).trim();
+
+    // Si viene en ISO con hora, extraer solo YYYY-MM-DD
+    if (str.includes('T')) {
+        const isoPart = str.split('T')[0];
+        const isoMatch = isoPart.match(/(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+            const [, y, m, d] = isoMatch;
+            return `${d}/${m}/${y}`;
+        }
+    }
+
+    // Patrón YYYY-MM-DD - ESTE ES EL CASO PRINCIPAL
+    const match = str.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if (match) {
+        const [, y, m, d] = match;
+        return `${d}/${m}/${y}`;
+    }
+
+    // Si ya está en DD/MM/YYYY, devolverlo
+    if (str.match(/^\d{2}\/\d{2}\/\d{4}$/)) {
+        return str;
+    }
+
+    // Cualquier otro formato se devuelve tal cual
+    return str;
 }
+
+// Exponer la versión correcta globalmente por si existe otra definición en caché
+window.formatDate = formatDate;
 
 // Función para convertir hora militar (24h) a formato 12 horas con AM/PM
 function formatTime12Hour(timeString) {
