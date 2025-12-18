@@ -27,7 +27,7 @@ const razasCaninas = [
     "Galgo Inglés-español", "Golden Retriever", "Gran Danés", "Greyhound", 
     "Husky Siberiano", "Jack Russell Terrier", "Labrador Retriever", "Maltés", 
     "Pastor Alemán", "Pastor Australiano", "Pequinés", "Pomerania", "Pug", "Rottweiler", "Samoyedo", 
-    "San Bernardo", "Schnauzer", "Shih Tzu", "Shar Pei", "SRD", "Yorkshire Terrier", "Weimaraner", "Fila Brasileiro" 
+    "San Bernardo", "Schnauzer", "Shih Tzu", "Shar Pei", "SRD", "Yorkshire Terrier", "Weimaraner", "Fila Brasileiro", "Gran Basset Grifón"
 ];
 
 const razasFelinas = [
