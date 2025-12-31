@@ -134,6 +134,9 @@
             <button id="estadisticasBtn" class="submenu-btn" onclick="navigateToEstadisticas();">
               <i class="fas fa-chart-pie"></i> Estadísticas
             </button>
+            <button id="adminUsersSubmenuBtn" class="submenu-btn" style="display:none;" onclick="openAdminUsersModal();">
+              <i class="fas fa-users-cog"></i> Administrar usuarios
+            </button>
           </div>
         </div>
       </nav>
@@ -356,8 +359,22 @@
 
       <!-- Sección para visualizar tickets -->
       <section id="verTicketsSection" class="hidden">
+        <!-- Selector de empresa para administradores -->
+        <div id="empresaSelectorContainer" style="display: none; margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.15);">
+          <label for="empresaSelector" style="color: white; font-weight: 600; margin-right: 10px; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-building"></i> Seleccionar Empresa:
+          </label>
+          <select id="empresaSelector" style="padding: 8px 12px; border-radius: 5px; border: 2px solid white; background: white; color: #333; font-weight: 500; cursor: pointer; min-width: 300px;">
+            <option value="veterinaria_smp">Veterinaria San Martín de Porres</option>
+            <option value="instituto_smp">Instituto Veterinario San Martín de Porres</option>
+          </select>
+          <span id="currentEmpresaBadge" style="margin-left: 15px; padding: 6px 12px; background: rgba(255,255,255,0.2); color: white; border-radius: 5px; font-size: 13px; font-weight: 600;">
+            <i class="fas fa-check-circle"></i> <span id="currentEmpresaText">Veterinaria San Martín de Porres</span>
+          </span>
+        </div>
+        
         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-          <h2><i class="fas fa-list"></i> Sala de Espera</h2>
+          <h2><i class="fas fa-list"></i> Sala de Espera - <span id="salaEsperaEmpresaName">Veterinaria SMP</span></h2>
           
           <div style="display: flex; flex-direction: column; gap: 8px; align-items: flex-end;">
             <!-- Contador de tickets con exámenes prequirúrgicos -->
@@ -727,7 +744,6 @@
             <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
             <option value="Medico Externo">Médico Externo</option>
             <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-            <option value="Dra. Christiane Buchheim">Dra. Christiane Buchheim</option>
             <option value="N.A">N.A</option>
           </select>
         </div>
@@ -1870,6 +1886,10 @@
               <h4>Control Anestésico</h4>
               <p>Control de anestesia y medicamentos administrados durante cirugía</p>
             </div>
+            <div class="template-card" data-template="internamiento">
+              <h4>Consentimiento Internamiento</h4>
+              <p>Consentimiento informado para internamiento y procedimientos</p>
+            </div>
           </div>
         </div>
 
@@ -1940,11 +1960,20 @@
       <div class="form-group">
         <label for="newUserRole">Rol</label>
         <select id="newUserRole" required>
+          <option value="admin">Administrador</option>
           <option value="recepcion">Recepción</option>
           <option value="consulta_externa">Consulta Externa</option>
+          <option value="laboratorio">Laboratorio</option>
           <option value="quirofano">Quirofano</option>
           <option value="internos">Internos</option>
           <option value="visitas">Visitas</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label for="newUserEmpresa"><i class="fas fa-building"></i> Empresa</label>
+        <select id="newUserEmpresa" required>
+          <option value="veterinaria_smp">Veterinaria San Martín de Porres</option>
+          <option value="instituto_smp">Instituto Veterinario San Martín de Porres</option>
         </select>
       </div>
       <button type="submit" class="btn-save" style="width:100%;margin-bottom:10px;">Crear usuario</button>
@@ -1977,6 +2006,9 @@
   <script src="js/cedula-search-integration.js" defer></script>
   <script src="js/wait-time-chart-fix.js" defer></script>
   <script src="js/admin-users.js" defer></script>
+  <!-- Scripts de migración (descomentar solo para migración inicial) -->
+  <!-- <script src="js/migrate-users-empresa.js" defer></script> -->
+ <!--<script src="js/migrate-tickets-empresa.js" defer></script> -->
   <script src="js/laboratory-search-fix.js" defer></script>
   <script src="js/services-selection-manager.js" defer></script>
   
