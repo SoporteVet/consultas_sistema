@@ -78,9 +78,9 @@ function isTicketCreatedToday(ticket) {
 
 // Plantillas permitidas por origen
 const ALLOWED_TEMPLATES_BY_SOURCE = {
-    consulta: ['anestesia', 'emergencias', 'transfusion', 'cesarea', 'eutanasia', 'cirugia', 'alta_voluntaria', 'control_anestesico'],
+    consulta: ['anestesia', 'emergencias', 'transfusion', 'cesarea', 'eutanasia', 'cirugia', 'alta_voluntaria', 'control_anestesico', 'internamiento'],
     quirofano: ['anestesia', 'cirugia', 'cesarea', 'control_anestesico'],
-    internos: ['alta_voluntaria', 'anestesia', 'transfusion', 'eutanasia']
+    internos: ['alta_voluntaria', 'anestesia', 'transfusion', 'eutanasia', 'internamiento']
 };
 
 // Mapeo de plantillas disponibles
@@ -124,6 +124,11 @@ const CONSENT_TEMPLATES = {
         name: 'Control Anestésico y Medicamentoso',
         file: 'pages/control_anestesico.html',
         description: 'Control de anestesia y medicamentos administrados durante cirugía'
+    },
+    internamiento: {
+        name: 'Consentimiento Internamiento',
+        file: 'pages/consentimiento_internamiento.html',
+        description: 'Consentimiento informado para internamiento y procedimientos'
     }
 };
 
