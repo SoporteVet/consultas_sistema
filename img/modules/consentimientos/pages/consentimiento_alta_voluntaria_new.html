@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consentimiento Informado para Alta Voluntaria - <span id="shortDate"></span></title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.4; color: #333; }
+        .container { max-width: 800px; margin: 0 auto; padding: 20px; background: white; }
+        
+        /* Header */
+        .header { text-align: center; border-bottom: 3px solid #0066cc; padding-bottom: 15px; margin-bottom: 20px; }
+        .header h1 { color: #0066cc; font-size: 20px; margin-bottom: 5px; }
+        .header h2 { color: #333; font-size: 14px; font-weight: normal; }
+        
+        /* Banner */
+        .banner { background: #e3f2fd; border: 1px solid #bbdefb; padding: 15px; margin: 20px 0; border-radius: 5px; display: flex; align-items: center; }
+        .banner .icon { color: #1976d2; font-size: 20px; margin-right: 10px; }
+        .banner .content h3 { color: #1976d2; margin-bottom: 5px; font-size: 16px; }
+        .banner .content p { color: #333; font-size: 14px; margin: 0; }
+        
+        /* Form Grid */
+        .form-section { margin: 20px 0; }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        .form-group label { font-weight: 600; color: #333; margin-bottom: 5px; font-size: 14px; }
+        .form-group input, .form-group textarea, .form-group select { 
+            padding: 8px 12px; border: 2px solid #ddd; border-radius: 4px; font-size: 14px; 
+            transition: border-color 0.2s; outline: none; 
+        }
+        .form-group input:focus, .form-group textarea:focus, .form-group select:focus { border-color: #0066cc; }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        
+        /* Content Text */
+        .content-text { text-align: justify; margin: 15px 0; padding: 15px; background: #f8f9fa; border-radius: 5px; }
+        .content-text h3 { color: #0066cc; margin-bottom: 10px; font-size: 16px; }
+        .content-text p { margin-bottom: 10px; line-height: 1.6; font-size: 14px; }
+        .content-text ul { margin: 10px 0 10px 20px; }
+        .content-text li { margin-bottom: 5px; }
+        
+        /* Procedures Grid */
+        .procedures-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0; }
+        .procedure-item { padding: 10px; background: #f0f8ff; border-radius: 4px; border-left: 3px solid #0066cc; }
+        .procedure-item strong { color: #0066cc; }
+        
+        /* Signature Section */
+        .signature-section { margin: 30px 0; }
+        .signature-container { border: 2px solid #ddd; border-radius: 5px; padding: 15px; text-align: center; margin: 15px 0; }
+        .signature-pad { border: 1px solid #ccc; border-radius: 3px; background: white; }
+        .signature-buttons { margin-top: 10px; }
+        .signature-buttons button { 
+            background: #6c757d; color: white; border: none; padding: 8px 15px; 
+            border-radius: 3px; cursor: pointer; font-size: 12px; 
+        }
+        .signature-buttons button:hover { background: #5a6268; }
+        
+        /* PDF Button */
+        .pdf-button-container { text-align: center; margin: 30px 0; }
+        .pdf-button { 
+            background: #0066cc; color: white; border: none; padding: 15px 30px; 
+            border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: 600; 
+        }
+        .pdf-button:hover { background: #0052a3; }
+        
+        /* Signature Line */
+        .signature-line { border-bottom: 1px solid #333; margin: 10px 0; height: 1px; position: relative; }
+        .signature-label { font-size: 12px; color: #666; margin-top: 5px; }
+        
+        /* Print Styles */
+        @media print {
+            .banner, .pdf-button-container, .signature-buttons { display: none !important; }
+            .container { padding: 10px; max-width: none; }
+            body { font-size: 12px; }
+            .form-group input, .form-group textarea, .form-group select { border: none; border-bottom: 1px solid #333; background: transparent; }
+            .content-text { background: transparent; }
+            .page-break { page-break-before: always; }
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid, .procedures-grid { grid-template-columns: 1fr; }
+            .container { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Página 1 -->
+    <div id="altaPage1" class="container">
+        <!-- Banner de autocompletado -->
+        <div id="autocompleteBanner" class="banner">
+            <div class="icon">ℹ️</div>
+            <div class="content">
+                <h3>Datos Precompletados</h3>
+                <p>Los datos del propietario y mascota se han completado automáticamente. Verifique que sean correctos antes de continuar.</p>
+            </div>
+        </div>
+
+        <div class="header">
+            <h1>CONSENTIMIENTO INFORMADO PARA ALTA VOLUNTARIA</h1>
+            <h2>Fecha: <span id="shortDate"></span></h2>
+        </div>
+
+        <div class="form-section">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="ownerName">Nombre del Propietario:</label>
+                    <input type="text" id="ownerName" placeholder="Nombre completo del propietario">
+                </div>
+                <div class="form-group">
+                    <label for="ownerCedula">Cédula del Propietario:</label>
+                    <input type="text" id="ownerCedula" placeholder="Número de cédula">
+                </div>
+                <div class="form-group">
+                    <label for="petName">Nombre de la Mascota:</label>
+                    <input type="text" id="petName" placeholder="Nombre de la mascota">
+                </div>
+                <div class="form-group">
+                    <label for="petSpecies">Especie:</label>
+                    <select id="petSpecies">
+                        <option value="">Seleccione...</option>
+                        <option value="Canino">Canino</option>
+                        <option value="Felino">Felino</option>
+                        <option value="Ave">Ave</option>
+                        <option value="Otro">Otro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="petBreed">Raza:</label>
+                    <input type="text" id="petBreed" placeholder="Raza de la mascota">
+                </div>
+                <div class="form-group">
+                    <label for="petAge">Edad:</label>
+                    <input type="text" id="petAge" placeholder="Edad de la mascota">
+                </div>
+            </div>
+        </div>
+
+        <div class="content-text">
+            <h3>INFORMACIÓN SOBRE EL ALTA VOLUNTARIA</h3>
+            <p>Yo, <strong><span id="ownerNameText">[Nombre del Propietario]</span></strong>, como propietario responsable de la mascota <strong><span id="petNameText">[Nombre de la Mascota]</span></strong>, solicito el alta voluntaria de mi mascota de esta institución veterinaria.</p>
+            
+            <p><strong>DECLARO Y MANIFIESTO QUE:</strong></p>
+            <ul>
+                <li>He sido informado(a) del estado de salud actual de mi mascota por el médico veterinario tratante.</li>
+                <li>Comprendo que el alta voluntaria significa que retiro a mi mascota antes de completar el tratamiento médico recomendado.</li>
+                <li>Entiendo que esta decisión puede comprometer la recuperación y el bienestar de mi mascota.</li>
+                <li>He sido advertido(a) de los riesgos y complicaciones que pueden surgir por no completar el tratamiento.</li>
+                <li>Asumo toda la responsabilidad por las consecuencias que puedan derivarse de esta decisión.</li>
+            </ul>
+        </div>
+
+        <div class="content-text">
+            <h3>CONDICIONES Y RIESGOS DEL ALTA VOLUNTARIA</h3>
+            <div class="procedures-grid">
+                <div class="procedure-item">
+                    <strong>Riesgos Médicos:</strong><br>
+                    • Empeoramiento del cuadro clínico<br>
+                    • Recaídas o complicaciones<br>
+                    • Necesidad de tratamiento de emergencia
+                </div>
+                <div class="procedure-item">
+                    <strong>Responsabilidades:</strong><br>
+                    • Seguimiento médico continuo<br>
+                    • Administración de medicamentos<br>
+                    • Monitoreo de signos vitales
+                </div>
+                <div class="procedure-item">
+                    <strong>Recomendaciones:</strong><br>
+                    • Contactar veterinario ante cualquier cambio<br>
+                    • Mantener medicación prescrita<br>
+                    • Seguir indicaciones de cuidado
+                </div>
+                <div class="procedure-item">
+                    <strong>Advertencias:</strong><br>
+                    • El alta voluntaria no exime de responsabilidad médica<br>
+                    • Pueden requerirse tratamientos adicionales<br>
+                    • Riesgo de deterioro del estado general
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Página 2 -->
+    <div id="altaPage2" class="container page-break">
+        <div class="header">
+            <h1>CONSENTIMIENTO INFORMADO PARA ALTA VOLUNTARIA</h1>
+            <h2>Fecha: <span id="shortDate2"></span></h2>
+        </div>
+
+        <div class="content-text">
+            <h3>DECLARACIÓN DE CONSENTIMIENTO</h3>
+            <p>Por la presente, yo <strong><span id="ownerNameText2">[Nombre del Propietario]</span></strong>, con cédula de identidad N° <strong><span id="ownerCedulaText">[Cédula]</span></strong>, como propietario de la mascota <strong><span id="petNameText2">[Nombre de la Mascota]</span></strong>, declaro que:</p>
+            
+            <ul>
+                <li><strong>He sido informado(a) detalladamente</strong> sobre el estado de salud actual de mi mascota, el tratamiento recomendado y los riesgos asociados al alta voluntaria.</li>
+                <li><strong>Comprendo completamente</strong> que al solicitar el alta voluntaria, interrumpo el tratamiento médico antes de su finalización recomendada.</li>
+                <li><strong>Asumo total responsabilidad</strong> por cualquier complicación, recaída o deterioro del estado de salud de mi mascota como consecuencia de esta decisión.</li>
+                <li><strong>Eximo de responsabilidad</strong> al equipo médico veterinario y a la institución por cualquier consecuencia derivada del alta voluntaria.</li>
+                <li><strong>Me comprometo</strong> a buscar atención veterinaria inmediata si el estado de mi mascota se deteriora.</li>
+            </ul>
+
+            <p><strong>CONDICIONES ESPECÍFICAS DEL ALTA:</strong></p>
+            <p>• <strong>Fecha y hora del alta:</strong> <span id="altaDay">[día]</span> de <span id="altaMonth">[mes]</span> de <span id="altaYear">[año]</span> a las <span id="altaTime">[hora]</span></p>
+            <p>• <strong>Estado al momento del alta:</strong> [Describir el estado clínico de la mascota]</p>
+            <p>• <strong>Medicamentos prescritos:</strong> [Listar medicamentos y posología si aplica]</p>
+            <p>• <strong>Cuidados recomendados:</strong> [Indicaciones específicas de cuidado en casa]</p>
+        </div>
+
+        <div class="content-text">
+            <h3>COMPROMISO DE SEGUIMIENTO</h3>
+            <p>Me comprometo a:</p>
+            <ul>
+                <li>Administrar correctamente cualquier medicamento prescrito</li>
+                <li>Seguir las indicaciones de cuidado proporcionadas</li>
+                <li>Contactar inmediatamente a un veterinario si observo deterioro en el estado de mi mascota</li>
+                <li>Aceptar que esta decisión es voluntaria y bajo mi completa responsabilidad</li>
+            </ul>
+        </div>
+
+        <div class="signature-section">
+            <p style="text-align: center; margin-bottom: 20px;"><strong>FIRMA DEL PROPIETARIO</strong></p>
+            <div class="signature-container">
+                <canvas id="altaSigPad" class="signature-pad" width="400" height="150"></canvas>
+                <div class="signature-buttons">
+                    <button type="button" onclick="clearSignature('altaSigPad')">Limpiar Firma</button>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: 30px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+                <div style="text-align: center;">
+                    <div class="signature-line"></div>
+                    <p class="signature-label">Firma del Propietario</p>
+                    <p style="font-size: 12px; margin-top: 10px;">
+                        <strong><span id="ownerNameText3">[Nombre del Propietario]</span></strong><br>
+                        C.I.: <span id="ownerCedulaText2">[Cédula]</span>
+                    </p>
+                </div>
+                <div style="text-align: center;">
+                    <div class="signature-line"></div>
+                    <p class="signature-label">Firma del Médico Veterinario</p>
+                    <p style="font-size: 12px; margin-top: 10px;">
+                        Dr(a). _______________________<br>
+                        Reg. Prof. N° ______________
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="pdf-button-container">
+            <button class="pdf-button" onclick="generatePDF()">📄 Generar PDF</button>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Autocompletado desde URL
+            const urlParams = new URLSearchParams(window.location.search);
+            const autoFillMap = {
+                'clienteNombre': 'ownerName',
+                'clienteCedula': 'ownerCedula',
+                'mascotaNombre': 'petName'
+            };
+
+            Object.entries(autoFillMap).forEach(([urlParam, fieldId]) => {
+                const value = urlParams.get(urlParam);
+                if (value) {
+                    const field = document.getElementById(fieldId);
+                    if (field) {
+                        field.value = decodeURIComponent(value.replace(/\+/g, ' '));
+                    }
+                }
+            });
+
+            // Sincronizar datos en texto
+            function syncData() {
+                const fields = ['ownerName', 'ownerCedula', 'petName'];
+                fields.forEach(field => {
+                    const input = document.getElementById(field);
+                    const textSpans = document.querySelectorAll('#' + field + 'Text, #' + field + 'Text2, #' + field + 'Text3');
+                    
+                    if (input) {
+                        const updateText = () => {
+                            const value = input.value || `[${input.placeholder}]`;
+                            textSpans.forEach(span => {
+                                if (span) span.textContent = value;
+                            });
+                        };
+                        
+                        updateText();
+                        input.addEventListener('input', updateText);
+                    }
+                });
+            }
+
+            syncData();
+
+            // Ocultar banner si hay datos autocompletados
+            const hasAutoData = Object.values(autoFillMap).some(fieldId => document.getElementById(fieldId)?.value);
+            if (hasAutoData) {
+                const banner = document.getElementById('autocompleteBanner');
+                if (banner) banner.style.display = 'none';
+                setTimeout(() => syncData(), 100);
+            }
+
+            // Inicializar fechas y horas
+            const now = new Date();
+            document.getElementById('shortDate').textContent = now.toLocaleDateString('es-ES');
+            document.getElementById('shortDate2').textContent = now.toLocaleDateString('es-ES');
+            document.getElementById('altaTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            document.getElementById('altaDay').textContent = now.getDate();
+            document.getElementById('altaMonth').textContent = now.toLocaleString('es-ES', { month: 'long' });
+            document.getElementById('altaYear').textContent = now.getFullYear();
+
+            // Firma digital
+            const canvas = document.getElementById('altaSigPad');
+            function resizeCanvas(c) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 2);
+                c.width = c.offsetWidth * ratio;
+                c.height = c.offsetHeight * ratio;
+                c.getContext('2d').scale(ratio, ratio);
+            }
+
+            resizeCanvas(canvas);
+            window.signaturePads = {
+                altaSigPad: new SignaturePad(canvas, {
+                    backgroundColor: 'rgba(255,255,255,0)',
+                    penColor: 'rgb(0,0,100)',
+                    minWidth: 0.3,
+                    maxWidth: 1.5
+                })
+            };
+
+            window.addEventListener('resize', () => resizeCanvas(canvas));
+        });
+
+        function clearSignature(id) {
+            window.signaturePads[id].clear();
+        }
+
+        async function generatePDF() {
+            // Validar campos obligatorios
+            const ownerName = document.getElementById('ownerName').value;
+            const petName = document.getElementById('petName').value;
+            
+            if (!ownerName || !petName) {
+                alert('Por favor complete el nombre del propietario y de la mascota antes de generar el PDF.');
+                return;
+            }
+
+            // Ocultar elementos no imprimibles
+            const pdfBtn = document.querySelector('.pdf-button-container');
+            const sigBtns = document.querySelectorAll('.signature-buttons');
+            const banner = document.getElementById('autocompleteBanner');
+            
+            const originalPdfDisplay = pdfBtn.style.display;
+            const originalSigDisplays = Array.from(sigBtns).map(b => b.style.display);
+            const originalBannerDisplay = banner ? banner.style.display : 'none';
+            
+            pdfBtn.style.display = 'none';
+            sigBtns.forEach(b => b.style.display = 'none');
+            if (banner) banner.style.display = 'none';
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('p', 'mm', 'a4');
+
+                // Página 1
+                const page1 = document.getElementById('altaPage1');
+                const canvas1 = await html2canvas(page1, {
+                    scale: 1.5,
+                    useCORS: true,
+                    backgroundColor: '#fff',
+                    width: page1.scrollWidth,
+                    height: page1.scrollHeight
+                });
+
+                const img1 = canvas1.toDataURL('image/jpeg', 0.8);
+                const imgW = 190;
+                const imgH1 = (canvas1.height * imgW) / canvas1.width;
+                pdf.addImage(img1, 'JPEG', 10, 10, imgW, imgH1);
+
+                // Página 2
+                pdf.addPage();
+                const page2 = document.getElementById('altaPage2');
+                const canvas2 = await html2canvas(page2, {
+                    scale: 1.5,
+                    useCORS: true,
+                    backgroundColor: '#fff',
+                    width: page2.scrollWidth,
+                    height: page2.scrollHeight
+                });
+
+                const img2 = canvas2.toDataURL('image/jpeg', 0.8);
+                const imgH2 = (canvas2.height * imgW) / canvas2.width;
+                pdf.addImage(img2, 'JPEG', 10, 10, imgW, imgH2);
+
+                // Guardar PDF
+                const fileName = `Consentimiento_Alta_Voluntaria_${petName.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.pdf`;
+                pdf.save(fileName);
+
+            } catch (error) {
+                console.error('Error generando PDF:', error);
+                alert('Hubo un problema al generar el PDF.');
+            } finally {
+                // Restaurar elementos ocultos
+                pdfBtn.style.display = originalPdfDisplay;
+                sigBtns.forEach((b, i) => b.style.display = originalSigDisplays[i]);
+                if (banner) banner.style.display = originalBannerDisplay;
+            }
+        }
+    </script>
+</body>
+<script>
+// --- AUTOLLENADO DE DATOS DESDE LA URL ---
+function getQueryParams() {
+    const params = {};
+    const search = window.location.search.substring(1);
+    if (!search) return params;
+    search.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+    });
+    return params;
+}
+
+function fillFormFromParams() {
+    const params = getQueryParams();
+    let anyFilled = false;
+    // Mapeo extendido de parámetros a posibles IDs de campos
+    const map = {
+        clienteNombre: ['clienteNombre', 'ownerName', 'propietario', 'nombreCliente'],
+        clienteCedula: ['clienteCedula', 'cedula', 'ownerCedula'],
+        clienteTelefono: ['clienteTelefono', 'telefono'],
+        clienteCorreo: ['clienteCorreo', 'correo', 'email'],
+        mascotaNombre: ['mascotaNombre', 'petName', 'nombreMascota'],
+        mascotaTipo: ['mascotaTipo', 'tipoMascota', 'petSpecies', 'especie'],
+        mascotaRaza: ['mascotaRaza', 'raza', 'petBreed'],
+        mascotaEdad: ['mascotaEdad', 'edad', 'petAge'],
+        mascotaPeso: ['mascotaPeso', 'peso', 'petWeight'],
+        mascotaSexo: ['mascotaSexo', 'sexo', 'petSex'],
+        procedimiento: ['procedimiento'],
+        doctorAtiende: ['doctorAtiende', 'doctor', 'medico'],
+        fechaCirugia: ['fechaCirugia'],
+        urgencia: ['urgencia'],
+        fecha: ['fecha'],
+        hora: ['hora']
+    };
+    Object.keys(map).forEach(param => {
+        if (params[param]) {
+            // Decodificar + como espacio y soportar caracteres especiales
+            let value = params[param].replace(/\+/g, ' ');
+            map[param].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    if (el.tagName === 'SELECT') {
+                        // Seleccionar opción si existe
+                        for (let i = 0; i < el.options.length; i++) {
+                            if (el.options[i].value.toLowerCase() === value.toLowerCase()) {
+                                el.selectedIndex = i;
+                                break;
+                            }
+                        }
+                    } else {
+                        el.value = value;
+                    }
+                    anyFilled = true;
+                }
+            });
+        }
+    });
+    // Mostrar banner si se autocompletó algo
+    const banner = document.getElementById('autocompleteBanner');
+    if (banner && anyFilled) {
+        banner.innerHTML = '<span class="icon">ℹ️</span><div class="content"><h3>Datos cargados automáticamente</h3><p>Los campos se han completado con información del sistema. Puedes modificar cualquier dato si es necesario.</p></div>';
+        banner.style.display = 'flex';
+    }
+}
+document.addEventListener('DOMContentLoaded', fillFormFromParams);
+</script>
+</html>

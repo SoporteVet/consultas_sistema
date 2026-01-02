@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consentimiento Veterinario</title>
+    <style>
+        :root {
+            --primary-color: #3a7ca5;
+            --secondary-color: #f8f9fa;
+            --accent-color: #63c5da;
+            --text-color: #2c3e50;
+            --border-color: #d1e7f0;
+            --highlight-color: #e3f2fd;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --input-bg: #f0f7fa;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: var(--text-color);
+            background-color: #f5f7fa;
+            background-image: linear-gradient(135deg, #f5f7fa 0%, #e4eff5 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            width: 800px; /* Cambia max-width por width para html2canvas */
+            margin: 0 auto;
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background-color: white;
+            box-shadow: 0 5px 20px var(--shadow-color);
+            transition: box-shadow 0.3s ease;
+            margin-bottom: 40px;
+            page-break-after: always;
+        }
+        
+        .container:last-child {
+            page-break-after: auto;
+        }
+        
+        .container:hover {
+            box-shadow: 0 8px 25px var(--shadow-color);
+        }
+        
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            border-bottom: 3px solid var(--accent-color);
+            padding-bottom: 15px;
+        }
+        
+        .logo {
+            max-width: 80px;
+            margin-right: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px var(--shadow-color);
+        }
+        
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: var(--primary-color);
+            flex-grow: 1;
+            font-size: 1.6rem;
+            text-shadow: 1px 1px 2px var(--shadow-color);
+        }
+        
+        p {
+            margin-bottom: 20px;
+            text-align: justify;
+            color: var(--text-color);
+            line-height: 1.8;
+        }
+        
+        input[type="text"] {
+            border: none;
+            background-color: transparent;
+            padding: 8px 12px; /* mantener tamaño grande */
+            margin: 0;         /* alineados con el texto */
+            border-radius: 0;
+            font-weight: bold;
+            min-height: 35px;
+        }
+        
+        input[type="text"]:focus {
+            outline: none;
+            border-bottom-color: var(--primary-color);
+            background-color: var(--highlight-color);
+            box-shadow: 0 3px 8px var(--shadow-color);
+        }
+        
+        .signature-area {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        
+        .firma-container {
+            flex: 1 1 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        .signature-box {
+            width: 100%;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background-color: var(--secondary-color);
+            color: var(--text-color);
+            font-weight: 500;
+        }
+        
+        .signature-pad-container {
+            width: 100%;
+        }
+        
+        .signature-pad {
+            border: 2px dashed var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            height: 250px; /* Cambiado de 150px a 250px */
+            background-color: white;
+            touch-action: none; /* Previene acciones táctiles del navegador */
+            -webkit-touch-callout: none; /* Deshabilita el callout en iOS */
+            -webkit-user-select: none; /* Safari */
+            -khtml-user-select: none; /* Konqueror HTML */
+            -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* Internet Explorer/Edge */
+            user-select: none; /* Estándar */
+            box-shadow: 0 2px 8px var(--shadow-color);
+            transition: border 0.3s ease;
+        }
+        
+        .signature-pad:hover {
+            border-color: var(--accent-color);
+        }
+        
+        .signature-buttons {
+            display: flex;
+            margin-top: 10px;
+            gap: 10px;
+            justify-content: center;
+        }
+
+        .pdf-button-container {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px dashed var(--border-color);
+        }
+
+        .pdf-button {
+            padding: 12px 25px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.15);
+        }
+
+        .pdf-button:hover {
+            background-color: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .pdf-button:active {
+            transform: translateY(0);
+        }
+
+        /* Estilos para el banner de autocompletado */
+        .autocomplete-banner {
+            background: linear-gradient(135deg, #e3f2fd, #f3e5f5);
+            border: 2px solid var(--accent-color);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 20px auto;
+            max-width: 800px;
+            text-align: center;
+            color: var(--primary-color);
+            font-size: 0.95rem;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #666;
+            padding-left: 20px;
+        }
+
+        .autocomplete-banner{background:linear-gradient(135deg,#e3f2fd,#bbdefb);border:1px solid #2196f3;color:#1565c0;padding:12px 20px;margin-bottom:20px;border-radius:8px;font-size:0.9rem;box-shadow:0 2px 8px rgba(33,150,243,0.15);}
+        .autocomplete-banner strong{color:#0d47a1;}
+        input[type="text"]:-webkit-autofill,input[type="text"]:-webkit-autofill:hover,input[type="text"]:-webkit-autofill:focus{-webkit-box-shadow:0 0 0px 1000px white inset;-webkit-text-fill-color:var(--text-color)!important;background:white!important;}
+
+        @media print {
+            body {
+                background-color: white;
+                margin: 0;
+                padding: 0;
+            }
+            
+            .container {
+                box-shadow: none;
+                border: none;
+                padding: 10px;
+            }
+            
+            .signature-buttons, .pdf-button-container, .autocomplete-banner {
+                display: none !important;
+            }
+        }
+        
+        @media (max-width: 600px) {
+            .header {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .signature-area {
+                flex-direction: column;
+            }
+            
+            .firma-container {
+                width: 100%;
+            }
+        }
+
+        .date-short {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: var(--text-color);
+        }
+
+    </style>
+</head>
+<body>
+    <!-- Banner de autocompletado -->
+    <div class="autocomplete-banner" id="autocompleteBanner" style="display:none;">
+        <strong>ℹ️ Datos cargados automáticamente</strong> - Los campos se han completado con información desde la base de datos. Puedes modificar cualquier dato si es necesario.
+    </div>
+
+    <!-- PÁGINA 1: Datos del paciente e información de emergencia -->
+    <div class="container" id="page1">
+        <div class="header">
+            <img src="/img/logo.jpg" alt="Veterinaria San Martín de Porres" class="logo">
+            <h1>CONSENTIMIENTO INFORMADO PARA ATENCIÓN DE EMERGENCIA POR ASISTENTE VETERINARIO</h1>
+            <div id="shortDate1" class="date-short"></div>
+        </div>
+        
+        <p><strong>Nombre del paciente (mascota):</strong> <input type="text" id="petName" placeholder="Nombre de la mascota" required style="width: 300px;"></p>
+        
+        <div class="form-row" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Especie:</strong> <input type="text" id="petSpecies" placeholder="Especie" style="width: 150px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Raza:</strong> <input type="text" id="petBreed" placeholder="Raza" style="width: 180px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Edad:</strong> <input type="text" id="petAge" placeholder="Edad" style="width: 100px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Peso:</strong> <input type="text" id="petWeight" placeholder="Peso" style="width: 100px;">
+            </div>
+        </div>
+        
+        <p><strong>Propietario:</strong> <input type="text" id="ownerName" placeholder="Nombre del propietario" required style="width: 350px;"></p>
+        
+        <div class="form-row" style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Cédula:</strong> <input type="text" id="ownerId" placeholder="Cédula" style="width: 200px;">
+            </div>
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <strong>Teléfono de contacto:</strong> <input type="text" id="ownerPhone" placeholder="Teléfono" style="width: 200px;">
+            </div>
+        </div>
+        
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+        
+        <h2 style="color: var(--primary-color); font-size: 1.3rem;">SITUACIÓN DE EMERGENCIA</h2>
+        <p>
+            En determinadas circunstancias, su mascota podría requerir atención inmediata por una emergencia médica (accidentes, convulsiones, dificultad respiratoria, hemorragias, colapso, etc.). Para ofrecer una respuesta oportuna y eficaz, el asistente técnico veterinario podrá realizar acciones de primeros auxilios y estabilización básica según su capacitación, mientras se contacta al médico veterinario responsable o mientras este llega al lugar.
+        </p>
+        
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+        
+        <h2 style="color: var(--primary-color); font-size: 1.3rem;">ALCANCE DE LA ATENCIÓN POR EL ASISTENTE VETERINARIO</h2>
+        <p>
+            El asistente veterinario no realiza diagnósticos médicos ni procedimientos quirúrgicos, pero está capacitado para llevar a cabo las siguientes acciones en caso de emergencia, según indicación o protocolo establecido por el veterinario:
+        </p>
+        <ul>
+            <li>Evaluación de signos vitales (temperatura, pulso, frecuencia respiratoria).</li>
+            <li>Control de hemorragias externas.</li>
+            <li>Administración de oxígeno, fluidoterapia básica o medicamentos de emergencia si está autorizado.</li>
+            <li>Reanimación básica (RCP).</li>
+            <li>Inmovilización de extremidades o heridas.</li>
+            <li>Contención segura y transporte del paciente.</li>
+        </ul>
+        <p>
+            Estas acciones tienen como objetivo salvar la vida del animal o reducir el daño mientras se estabiliza y se espera la intervención directa del médico veterinario.
+        </p>
+    </div>
+
+    <!-- PÁGINA 2: Declaración del propietario y firma -->
+    <div class="container" id="page2">
+        <div class="header">
+            <img src="../img/logo.jpg" alt="Veterinaria San Martín de Porres" class="logo">
+            <h1>CONSENTIMIENTO INFORMADO PARA ATENCIÓN DE EMERGENCIA POR ASISTENTE VETERINARIO</h1>
+            <div id="shortDate2" class="date-short"></div>
+        </div>
+        
+        <h2 style="color: var(--primary-color); font-size: 1.3rem;">DECLARACIÓN DEL PROPIETARIO</h2>
+        <p>
+            Yo, el/la abajo firmante, declaro haber sido informado/a adecuadamente sobre la posibilidad de que mi mascota sea atendida en una situación de emergencia por un asistente veterinario debidamente capacitado, bajo la responsabilidad y supervisión del médico veterinario tratante.
+        </p>
+        <p><strong>Entiendo que:</strong></p>
+        <ul>
+            <li>El asistente actuará de forma ética y profesional, dentro de los límites de su formación.</li>
+            <li>Se intentará contactar al médico veterinario lo antes posible.</li>
+            <li>Se priorizará la vida y bienestar del animal por encima de otros factores en una situación crítica.</li>
+        </ul>
+        <p>
+            Autorizo al personal de la clínica Veterinaria San Martin de Porres a realizar las acciones necesarias ante una emergencia médica incluso si no se logra mi contacto inmediato.
+        </p>
+        
+        <p>Firmado a las <span id="currentTime"></span> horas, el día <span id="currentDay"></span> del mes <span id="currentMonth"></span> del año <span id="currentYear"></span>.</p>
+        
+        <div class="signature-area">
+            <div class="firma-container">
+                <div class="signature-box">Firma del propietario</div>
+                <div class="signature-pad-container">
+                    <canvas class="signature-pad" id="ownerSignaturePad"></canvas>
+                    <div class="signature-buttons">
+                        <button type="button" onclick="clearSignature('ownerSignaturePad')">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="pdf-button-container">
+            <button class="pdf-button" onclick="generatePDF()">Generar PDF</button>
+        </div>
+    </div>
+
+    <!-- PÁGINA 2 - OBSERVACIONES/PADECIMIENTOS PREVIOS -->
+    <div class="container" id="emergenciasObservacionesPage">
+        <div class="header">
+            <img src="../img/logo.jpg" alt="Veterinaria San Martin de Porres" class="logo">
+            <h1>OBSERVACIONES / PADECIMIENTOS PREVIOS</h1>
+            <div id="shortDate3" class="date-short"></div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h2 style="text-align: center; color: var(--primary-color); margin-bottom: 20px;">
+                Información sobre Observaciones y Padecimientos Previos del Paciente
+            </h2>
+            
+            <div style="background-color: var(--secondary-color); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <p><strong>Nombre del paciente (mascota):</strong> <input type="text" id="obsPetName" placeholder="Nombre de la mascota" readonly style="width: 300px; background-color: white;"></p>
+                <p><strong>Propietario:</strong> <input type="text" id="obsOwnerName" placeholder="Nombre del propietario" readonly style="width: 350px; background-color: white;"></p>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <label for="observacionesPadecimientos" style="display: block; font-weight: bold; margin-bottom: 15px; font-size: 1.1rem; color: var(--primary-color);">
+                    Observaciones y Padecimientos Previos:
+                </label>
+                <textarea 
+                    id="observacionesPadecimientos" 
+                    style="width: 100%; height: 400px; border: 2px solid var(--border-color); padding: 15px; font-family: inherit; font-size: 14px; resize: vertical; border-radius: 8px; line-height: 1.6;"
+                    placeholder="Describa aquí cualquier observación relevante, padecimientos previos, enfermedades conocidas, alergias, medicamentos actuales, cirugías anteriores, o cualquier otra información médica importante del paciente..."
+                ></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- Signature Pad library -->
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    <!-- HTML2Canvas para capturar todo el documento -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Set the current date and time
+            const now = new Date();
+            document.getElementById('shortDate1').textContent = now.toLocaleDateString('es-ES');
+            document.getElementById('shortDate2').textContent = now.toLocaleDateString('es-ES');
+            const shortDate3 = document.getElementById('shortDate3');
+            if (shortDate3) shortDate3.textContent = now.toLocaleDateString('es-ES');
+            document.getElementById('currentTime').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            // Función para actualizar los datos de la página de observaciones
+            function updateObservacionesPageData() {
+                const petName = document.getElementById('petName')?.value || '';
+                const ownerName = document.getElementById('ownerName')?.value || '';
+                
+                const obsPetName = document.getElementById('obsPetName');
+                const obsOwnerName = document.getElementById('obsOwnerName');
+                
+                if (obsPetName) obsPetName.value = petName;
+                if (obsOwnerName) obsOwnerName.value = ownerName;
+            }
+            
+            // Sincronizar datos cuando cambien los campos principales
+            const petNameField = document.getElementById('petName');
+            const ownerNameField = document.getElementById('ownerName');
+            if (petNameField) {
+                petNameField.addEventListener('input', updateObservacionesPageData);
+            }
+            if (ownerNameField) {
+                ownerNameField.addEventListener('input', updateObservacionesPageData);
+            }
+            
+            // Sincronizar datos iniciales
+            setTimeout(updateObservacionesPageData, 200);
+            document.getElementById('currentDay').textContent = now.getDate();
+            document.getElementById('currentMonth').textContent = now.toLocaleString('es-ES', { month: 'long' });
+            document.getElementById('currentYear').textContent = now.getFullYear();
+
+            // Autocompletado desde parámetros URL
+            const params = new URLSearchParams(window.location.search);
+            const fields = [
+                {param: 'mascotaNombre', element: 'petName'},
+                {param: 'mascotaTipo', element: 'petSpecies'},
+                {param: 'mascotaRaza', element: 'petBreed'},
+                {param: 'mascotaEdad', element: 'petAge'},
+                {param: 'mascotaPeso', element: 'petWeight'},
+                {param: 'clienteNombre', element: 'ownerName'},
+                {param: 'clienteCedula', element: 'ownerId'},
+                {param: 'clienteTelefono', element: 'ownerPhone'},
+                {param: 'clienteCorreo', element: 'ownerEmail'},
+                {param: 'procedimiento', element: 'procedureType'},
+                {param: 'doctorAtiende', element: 'attendingDoctor'},
+                {param: 'fechaCirugia', element: 'emergencyDate'},
+                {param: 'urgencia', element: 'urgencyLevel'}
+            ];
+            
+            let hasAutocomplete = false;
+            fields.forEach(field => {
+                const value = params.get(field.param);
+                if (value) {
+                    const element = document.getElementById(field.element);
+                    if (element) {
+                        element.value = decodeURIComponent(value.replace(/\+/g, ' '));
+                        hasAutocomplete = true;
+                    }
+                }
+            });
+            
+            if (hasAutocomplete) {
+                document.getElementById('autocompleteBanner').style.display = 'block';
+            }
+
+            const canvasElements = document.querySelectorAll('.signature-pad');
+            
+            // Resize canvas for better resolution
+            function resizeCanvas(canvas) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 2);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                canvas.getContext('2d').scale(ratio, ratio);
+                
+                const ctx = canvas.getContext('2d');
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                
+                return ratio;
+            }
+            
+            // Initialize SignaturePad for all canvas elements
+            window.signaturePads = {};
+            
+            canvasElements.forEach(canvas => {
+                const pixelRatio = resizeCanvas(canvas);
+                
+                window.signaturePads[canvas.id] = new SignaturePad(canvas, {
+                    backgroundColor: 'rgba(255, 255, 255, 0)',
+                    penColor: 'rgb(0, 0, 100)',
+                    velocityFilterWeight: 0.5,
+                    minWidth: 0.3,                // thinner stroke
+                    maxWidth: 1.5 * pixelRatio,   // reduced max thickness
+                    throttle: 8,
+                    minDistance: 1.0
+                });
+                
+                ['touchstart', 'touchmove', 'touchend'].forEach(eventName => {
+                    canvas.addEventListener(eventName, function(event) {
+                        if (event.cancelable) {
+                            event.preventDefault();
+                        }
+                    }, { passive: false });
+                });
+            });
+            
+            window.addEventListener('resize', function() {
+                canvasElements.forEach(canvas => {
+                    if (window.signaturePads[canvas.id]) {
+                        const data = window.signaturePads[canvas.id].isEmpty() ? 
+                            null : window.signaturePads[canvas.id].toData();
+                        const pixelRatio = resizeCanvas(canvas);
+                        window.signaturePads[canvas.id].clear();
+                        if (data) window.signaturePads[canvas.id].fromData(data);
+                    }
+                });
+            });
+        });
+
+        // Clear the signature pad
+        function clearSignature(canvasId) {
+            if (window.signaturePads && window.signaturePads[canvasId]) {
+                window.signaturePads[canvasId].clear();
+            }
+        }
+        
+        // Generate PDF en una sola página A4 escalada (todo el contenido comprimido)
+        async function generatePDF() {
+            const ownerName = document.getElementById('ownerName').value;
+            const petName = document.getElementById('petName').value;
+            if (!ownerName || !petName) {
+                alert("Complete nombre del propietario y de la mascota");
+                return;
+            }
+            
+            // Actualizar datos en la página de observaciones antes de generar PDF
+            if (typeof updateObservacionesPageData === 'function') {
+                updateObservacionesPageData();
+            }
+            let ownerLastName = '';
+            if (ownerName && ownerName.trim().split(' ').length > 1) {
+                const parts = ownerName.trim().split(' ');
+                ownerLastName = parts.length > 2 ? parts[parts.length - 1] : parts[1];
+            }
+
+            const page1 = document.getElementById('page1');
+            const page2 = document.getElementById('page2');
+            const banner = document.getElementById('autocompleteBanner');
+            const pdfBtn = document.querySelector('.pdf-button-container');
+            const sigBtns = document.querySelectorAll('.signature-buttons');
+            
+            // Ocultar controles para no capturarlos en el PDF
+            const bannerDisplay = banner ? banner.style.display : '';
+            const pdfBtnDisplay = pdfBtn.style.display;
+            const sigDisplays = [...sigBtns].map(b => b.style.display);
+            
+            if (banner) banner.style.display = 'none';
+            pdfBtn.style.display = 'none';
+            sigBtns.forEach(b => b.style.display = 'none');
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('portrait', 'mm', 'a4');
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const pageHeight = pdf.internal.pageSize.getHeight();
+
+                // Capturar y agregar página 1
+                const canvas1 = await html2canvas(page1, {
+                    scale: 2.0,
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                });
+                const imgData1 = canvas1.toDataURL('image/jpeg', 0.9);
+                const scaleFactor1 = Math.min(pageWidth / canvas1.width, pageHeight / canvas1.height);
+                const imgWidth1 = canvas1.width * scaleFactor1;
+                const imgHeight1 = canvas1.height * scaleFactor1;
+                const marginX1 = (pageWidth - imgWidth1) / 2;
+                const marginY1 = (pageHeight - imgHeight1) / 2;
+
+                pdf.addImage(imgData1, 'JPEG', marginX1, marginY1, imgWidth1, imgHeight1);
+
+                // Agregar nueva página
+                pdf.addPage();
+
+                // Capturar y agregar página 2
+                const canvas2 = await html2canvas(page2, {
+                    scale: 2.0,
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                });
+                const imgData2 = canvas2.toDataURL('image/jpeg', 0.9);
+                const scaleFactor2 = Math.min(pageWidth / canvas2.width, pageHeight / canvas2.height);
+                const imgWidth2 = canvas2.width * scaleFactor2;
+                const imgHeight2 = canvas2.height * scaleFactor2;
+                const marginX2 = (pageWidth - imgWidth2) / 2;
+                const marginY2 = (pageHeight - imgHeight2) / 2;
+
+                pdf.addImage(imgData2, 'JPEG', marginX2, marginY2, imgWidth2, imgHeight2);
+
+                // Se genera el nombre del archivo con el formato deseado:
+                // "Consentimiento_Emergencia_<petName>_<ownerLastName>.pdf"
+                const fileName = `Consentimiento_Emergencia_${petName}_${ownerLastName}.pdf`;
+                pdf.save(fileName);
+            } catch (error) {
+                console.error("Error al generar el PDF:", error);
+                alert("Hubo un problema al generar el PDF. Por favor inténtelo de nuevo.");
+            } finally {
+                // Restaurar textarea de observaciones
+                if (observacionesTextarea && observacionesTempDiv) {
+                    observacionesTextarea.style.display = '';
+                    if (observacionesTempDiv.parentNode) {
+                        observacionesTempDiv.parentNode.removeChild(observacionesTempDiv);
+                    }
+                }
+                
+                if (banner) banner.style.display = bannerDisplay;
+                pdfBtn.style.display = pdfBtnDisplay;
+                sigBtns.forEach((b, i) => b.style.display = sigDisplays[i]);
+            }
+        }
+    </script>
+</body>
+<script>
+// --- AUTOLLENADO DE DATOS DESDE LA URL ---
+function getQueryParams() {
+    const params = {};
+    const search = window.location.search.substring(1);
+    if (!search) return params;
+    search.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        params[decodeURIComponent(key)] = decodeURIComponent((value || '').replace(/\+/g, ' '));
+    });
+    return params;
+}
+
+function fillFormFromParams() {
+    const params = getQueryParams();
+    let anyFilled = false;
+    // Mapeo de parámetros a posibles IDs de campos
+    const map = {
+        clienteNombre: ['clienteNombre', 'ownerName', 'propietario', 'nombreCliente'],
+        clienteCedula: ['clienteCedula', 'cedula'],
+        clienteTelefono: ['clienteTelefono', 'telefono'],
+        clienteCorreo: ['clienteCorreo', 'correo'],
+        mascotaNombre: ['mascotaNombre', 'petName', 'nombreMascota'],
+        mascotaTipo: ['mascotaTipo', 'tipoMascota'],
+        mascotaRaza: ['mascotaRaza', 'raza'],
+        mascotaEdad: ['mascotaEdad', 'edad'],
+        mascotaPeso: ['mascotaPeso', 'peso'],
+        procedimiento: ['procedimiento'],
+        doctorAtiende: ['doctorAtiende', 'doctor'],
+        fechaCirugia: ['fechaCirugia'],
+        urgencia: ['urgencia'],
+        fecha: ['fecha'],
+        hora: ['hora']
+    };
+    Object.keys(map).forEach(param => {
+        if (params[param]) {
+            map[param].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = params[param].replace(/\+/g, ' ');
+                    anyFilled = true;
+                }
+            });
+        }
+    });
+    // Mostrar banner si se autocompletó algo
+    const banner = document.getElementById('autocompleteBanner');
+    if (banner && anyFilled) {
+        banner.innerHTML = '<span class="icon">ℹ️</span><div class="content"><h3>Datos cargados automáticamente</h3><p>Los campos se han completado con información del sistema. Puedes modificar cualquier dato si es necesario.</p></div>';
+        banner.style.display = 'flex';
+    }
+}
+document.addEventListener('DOMContentLoaded', fillFormFromParams);
+</script>
+</html>
