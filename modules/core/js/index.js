@@ -1600,20 +1600,37 @@ function loadTickets(loadAllData = false) {
         }
         
         // Carga inicial limitada o completa según parámetro
-        const loadQuery = loadAllData 
-            ? ticketsRef.once('value')
-            : ticketsRef.orderByChild('fechaCreacion').startAt(cutoffDate).once('value');
+        // IMPORTANTE: Para asegurar que todos los dispositivos vean tickets actuales,
+        // cargamos todos los tickets y filtramos localmente considerando tanto
+        // fechaCreacion como fechaConsulta
+        const loadQuery = ticketsRef.once('value');
         
         loadQuery.then(snapshot => {
             tickets = [];
             currentTicketId = 1;
             const data = snapshot.val() || {};
             const keys = Object.keys(data);
+            const today = getLocalDateString();
+            const cutoffDateObj = cutoffDate ? new Date(cutoffDate) : null;
             
             // Procesar todos los tickets (optimizado para no bloquear)
             keys.forEach(key => {
                 const entry = data[key];
                 if (entry && entry.id != null && entry.mascota) {
+                    // Si no se cargan todos los datos, filtrar por fecha
+                    if (!loadAllData && cutoffDateObj) {
+                        const ticketCreacionDate = entry.fechaCreacion ? entry.fechaCreacion.split('T')[0] : '';
+                        const ticketConsultaDate = entry.fechaConsulta || '';
+                        
+                        // Incluir si tiene fechaCreacion reciente O fechaConsulta actual/futura/reciente
+                        const isRecentCreacion = ticketCreacionDate && ticketCreacionDate >= cutoffDate;
+                        const isCurrentConsulta = ticketConsultaDate && (ticketConsultaDate >= today || ticketConsultaDate >= cutoffDate);
+                        
+                        if (!isRecentCreacion && !isCurrentConsulta) {
+                            return; // Saltar tickets antiguos
+                        }
+                    }
+                    
                     tickets.push({
                         ...entry,
                         firebaseKey: key
@@ -1660,13 +1677,25 @@ function setupTicketsIncrementalListeners() {
         
         // Solo procesar tickets recientes si no se cargaron todos los datos
         if (!ticketsAllDataLoaded) {
-            const ticketDate = entry.fechaCreacion ? entry.fechaCreacion.split('T')[0] : '';
+            const today = getLocalDateString();
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - ticketsLoadDateRange);
             const cutoffDateStr = cutoffDate.toISOString().split('T')[0];
             
-            if (ticketDate < cutoffDateStr) {
-                return; // Ignorar tickets antiguos
+            // Verificar fechaCreacion
+            const ticketCreacionDate = entry.fechaCreacion ? entry.fechaCreacion.split('T')[0] : '';
+            // Verificar fechaConsulta (importante para tickets actuales)
+            const ticketConsultaDate = entry.fechaConsulta || '';
+            
+            // Incluir el ticket si:
+            // 1. Tiene fechaCreacion reciente (dentro del rango)
+            // 2. O tiene fechaConsulta actual o futura (tickets de consulta actuales)
+            // 3. O tiene fechaConsulta dentro del rango reciente
+            const isRecentCreacion = ticketCreacionDate && ticketCreacionDate >= cutoffDateStr;
+            const isCurrentConsulta = ticketConsultaDate && (ticketConsultaDate >= today || ticketConsultaDate >= cutoffDateStr);
+            
+            if (!isRecentCreacion && !isCurrentConsulta) {
+                return; // Ignorar tickets antiguos que no son de consulta actual
             }
         }
         
