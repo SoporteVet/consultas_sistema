@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análisis Líquido Libre</title>
+    <link rel="stylesheet" href="../css/index_lab.css">
+    <script defer src="../js/lab-report-header.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=ABeeZee:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=League+Spartan:wght@100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+</head>
+
+<body>
+<script>
+// Autollenado desde parámetros URL
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    const p = new URLSearchParams(location.search);
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v!=null && v!=='') el.value = v; };
+    setVal('mascotaNombre', p.get('mascotaNombre'));
+    setVal('propietarioNombre', p.get('propietarioNombre'));
+    setVal('propietarioCedula', p.get('propietarioCedula'));
+    setVal('propietarioTelefono', p.get('propietarioTelefono'));
+    setVal('propietarioEmail', p.get('propietarioEmail'));
+    setVal('nombreMedico', p.get('nombreMedico'));
+    setVal('mascotaRaza', p.get('mascotaRaza'));
+    setVal('mascotaEdad', p.get('mascotaEdad'));
+    setVal('mascotaPeso', p.get('mascotaPeso'));
+    
+    // Verificar el mensaje del médico después del autollenado
+    const medico = p.get('nombreMedico');
+    if (medico) {
+      setTimeout(() => {
+        verificarMedico();
+      }, 100);
+    }
+    
+    const especie = p.get('especie');
+    const sexo = p.get('mascotaSexo');
+    if (especie) {
+      const especieSelector = document.getElementById('especieSelector');
+      if (especieSelector) {
+        especieSelector.value = capitalize(especie);
+        const evt = new Event('change'); especieSelector.dispatchEvent(evt);
+      }
+    }
+    if (sexo) {
+      const sexoSelector = document.getElementById('sexoSelector');
+      if (sexoSelector) {
+        sexoSelector.value = capitalize(sexo);
+        const evt = new Event('change'); sexoSelector.dispatchEvent(evt);
+      }
+    }
+  } catch(e) { console.warn('Autollenado análisis líquido libre falló:', e); }
+  function capitalize(s){ if(!s) return s; return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
+});
+</script>
+
+<div class="controls">
+    <label for="sexoSelector">Selecciona el sexo:</label>
+    <select id="sexoSelector" onchange="actualizarSexoEnPlantilla()">
+        <option value="Seleccionar" selected>-- Seleccionar --</option>
+        <option value="Macho">Macho</option>
+        <option value="Hembra">Hembra</option>
+    </select>
+    <label for="especieSelector">Selecciona la especie:</label>
+    <select id="especieSelector" onchange="actualizarEspecieEnPlantilla()">
+        <option value="Seleccionar" selected>-- Seleccionar --</option>
+        <option value="Canino">Canino</option>
+        <option value="Felino">Felino</option>
+        <option value="Lagomorfo">Lagomorfo</option>
+        <option value="Cuilo">Cuilo</option>
+    </select>
+</div>
+
+<div class="container" id="template1" style="display: block;">
+    <div class="header">
+        <img src="/img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
+        <h1>Laboratorio Clínico Veterinario</h1>
+    </div>
+    <h3 class="subheader">ANÁLISIS LÍQUIDO LIBRE</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan="2">DATOS DE LA MASCOTA</th>
+                    <th colspan="2">DATOS DEL PROPIETARIO</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Nombre</td>
+                    <td><input type="text" id="mascotaNombre" onkeydown="moverFocoConFlechas(event, 'propietarioNombre', 'propietarioNombre', 'mascotaNombre', 'mascotaRaza')"></td>
+                    <td>Nombre</td>
+                    <td><input type="text" id="propietarioNombre"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaNombre', 'mascotaNombre', 'propietarioCedula')"></td>
+                </tr>
+                <tr>
+                    <td>Raza</td>
+                    <td><input type="text" id="mascotaRaza" list="razas"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaNombre', 'mascotaNombre', 'mascotaSexo')"></td>
+                    <datalist id="razas">
+
+                    </datalist>
+                    
+                    <td>Cédula</td>
+                    <td><input type="text" id="propietarioCedula"  onkeydown="moverFocoConFlechas(event, 'propietarioTelefono', 'mascotaRaza', 'propietarioNombre', 'propietarioTelefono')"></td>
+                </tr>
+                <tr>
+                    <td>Sexo</td>
+                    <td><input type="text" id="sexoEnPlantilla" readonly></td>
+                    <td>Teléfono</td>
+                    <td><input type="text" id="propietarioTelefono" onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaSexo', 'propietarioCedula', 'propietarioEmail')"></td>
+                </tr>
+                <tr>
+                    <td>Especie</td>
+                    <td><input type="text" id="especieEnPlantilla" readonly></td>
+                    <td>Email</td>
+                    <td><input type="text" id="propietarioEmail"  onkeydown="moverFocoConFlechas(event, 'mascotaEspecie', 'mascotaEspecie', 'propietarioTelefono', 'nombreMedico')"></td>
+                </tr>
+                <tr>
+                    <td>Edad</td>
+                    <td><input type="text" id="mascotaEdad" list="edades"  onkeydown="moverFocoConFlechas(event, 'nombreMedico', 'mascotaEspecie', 'mascotaEspecie', 'mascotaPeso')"></td>
+                    <datalist id="edades">
+                        <option value="1 mes"><option value="2 meses"><option value="3 meses"><option value="4 meses">
+                        <option value="5 meses"><option value="6 meses"><option value="7 meses"><option value="8 meses"><option value="9 meses">
+                        <option value="10 meses"><option value="11 meses"><option value="12 meses">
+                        <option value="1 año"><option value="2 años"><option value="3 años"><option value="4 años">
+                        <option value="5 años"><option value="6 años"><option value="7 años"><option value="8 años"><option value="9 años">
+                        <option value="10 años"><option value="11 años"><option value="12 años"><option value="13 años">
+                        <option value="14 años"><option value="15 años"><option value="16 años"><option value="17 años">
+                        <option value="18 años"><option value="19 años"><option value="20 años">
+                    </datalist>
+                    <td>Médico</td>
+                    <td><input type="text" id="nombreMedico" list="medicos" onkeydown="moverFocoConFlechas(event, 'mascotaPeso', 'mascotaEdad', 'propietarioEmail', 'mascotaPeso')" oninput="verificarMedico()"></td>
+                    <datalist id="medicos">
+                        <option value="N.A">
+                        <option value="Dr. Randall Azofeifa">
+                        <option value="Dr. Luis Coto">
+                        <option value="Dra. Daniela Sancho">
+                        <option value="Dra. Franciny Nuñez">
+                        <option value="Dra. Maria Chacón">
+                        <option value="Dra. Alejandra León">
+                        <option value="Dra. Karla Quesada">
+                        <option value="Dra. Kharen Moreno">
+                        <option value="Dra. Karina Madrigal">
+                        <option value="Dra. Natalia Alvarado">
+                        <option value="Dra. Eliany Lopez">
+                        <option value="Dra. Adriana Rojas">
+                        <option value="Dra. Nicole Sibaja">
+                    </datalist>
+                </tr>
+                <tr>
+                    <td>Peso</td>
+                    <td><input type="text" id="mascotaPeso" list="pesos" onkeydown="moverFocoConFlechas(event, 'nombreMedico', 'nombreMedico', 'nombreMedico', 'matrizMuestra')"></td>
+                    <datalist id="pesos">
+                        <option value="0.5 kg">
+                        <option value="1 kg">
+                        <option value="1.5 kg">
+                        <option value="2 kg">
+                        <option value="2.5 kg">
+                        <option value="3 kg">
+                        <option value="3.5 kg">
+                        <option value="4 kg">
+                        <option value="4.5 kg">
+                        <option value="5 kg">
+                        <option value="5.5 kg">
+                        <option value="6 kg">
+                        <option value="6.5 kg">
+                        <option value="7 kg">
+                        <option value="7.5 kg">
+                        <option value="8 kg">
+                        <option value="8.5 kg">
+                        <option value="9 kg">
+                        <option value="9.5 kg">
+                        <option value="10 kg">
+                        <option value="11 kg">
+                        <option value="12 kg">
+                        <option value="13 kg">
+                        <option value="14 kg">
+                        <option value="15 kg">
+                        <option value="16 kg">
+                        <option value="17 kg">
+                        <option value="18 kg">
+                        <option value="19 kg">
+                        <option value="20 kg">
+                        <option value="25 kg">
+                        <option value="30 kg">
+                        <option value="35 kg">
+                        <option value="40 kg">
+                        <option value="45 kg">
+                        <option value="50 kg">
+                        <option value="55 kg">
+                        <option value="60 kg">
+                        <option value="65 kg">
+                        <option value="70 kg">
+                        <option value="75 kg">
+                        <option value="80 kg">
+                    </datalist>
+                    <td>Fecha</td>
+                    <td><input type="date" id="propietarioFecha" class="date-input" onkeydown="moverFocoConFlechas(event, 'nombreMedico', 'mascotaPeso', 'nombreMedico', 'propietarioFecha')"></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Sección de Microbiología Clínica -->
+        <h3 class="subheader" style="margin-top: 30px; margin-bottom: 15px;">MICROBIOLOGÍA CLÍNICA</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Matriz de muestra:</td>
+                    <td>
+                        <input type="text" id="matrizMuestra" list="matrizOptions" placeholder="Seleccionar o escribir">
+                        <datalist id="matrizOptions">
+                            <option value="Fluido cavidad Abdominal">
+                            <option value="Fluido cavidad Torácica">
+                            
+                        </datalist>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Sección de Examen Físico -->
+        <h3 class="subheader" style="margin-top: 30px; margin-bottom: 15px;">EXAMEN FÍSICO</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Color</td>
+                    <td><input type="text" id="color"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Apariencia</td>
+                    <td><input type="text" id="apariencia"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Densidad</td>
+                    <td><input type="text" id="densidad"></td>
+                    <td>(1.005-1.040)</td>
+                </tr>
+                <tr>
+                    <td>Método de recolección</td>
+                    <td><input type="text" id="metodoRecoleccion"></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Sección de Examen Químico -->
+        <h3 class="subheader" style="margin-top: 30px; margin-bottom: 15px;">EXAMEN QUÍMICO</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>pH urinario</td>
+                    <td><input type="text" id="ph"></td>
+                    <td>(5.0-7.0)</td>
+                </tr>
+                <tr>
+                    <td>Proteínas</td>
+                    <td><input type="text" id="proteinas"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Cetonas</td>
+                    <td><input type="text" id="cetonas"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Nitritos</td>
+                    <td><input type="text" id="nitritos"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Leucocitos</td>
+                    <td><input type="text" id="leucocitos"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Glucosa</td>
+                    <td><input type="text" id="glucosa"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Bilirrubina</td>
+                    <td><input type="text" id="bilirrubina"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Urobilinógeno</td>
+                    <td><input type="text" id="urobilinogeno"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>Eritrocitos/hemoglobina</td>
+                    <td><input type="text" id="eritrocitos"></td>
+                    <td></td>
+                </tr>
+                <tr>
+                    <td>ASC</td>
+                    <td><input type="text" id="asc"></td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Sección de Pruebas Específicas -->
+        <h3 class="subheader" style="margin-top: 30px; margin-bottom: 15px;">PRUEBAS ESPECÍFICAS</h3>
+        <table id="rivaltaTable">
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Test de Rivalta:</td>
+                    <td>
+                        <input type="text" id="testRivalta" list="rivaltaOptions" placeholder="Seleccionar resultado">
+                        <datalist id="rivaltaOptions">
+                            <option value="Positivo">
+                            <option value="Negativo">
+                        </datalist>
+                    </td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <!-- Sección de Exámenes Microscópicos -->
+        
+        <table style="margin-bottom: 30px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden; width: 100%;">
+            <tbody>
+                <tr style="background-color: white;">
+                    <td style="padding: 10px; font-weight: bold;">Examen Microscópico Directo:</td>
+                    <td style="padding: 10px; font-weight: bold;">
+                        <textarea id="examenMicroscopico" rows="3" style="width: 100%; border: none; background: transparent; font-weight: bold; resize: vertical; white-space: pre-wrap; word-wrap: break-word;"></textarea>
+                    </td>
+                </tr>
+                <tr style="background-color: white;">
+                    <td style="padding: 10px; font-weight: bold;">Tinción Dip Quick:</td>
+                    <td style="padding: 10px; font-weight: bold;">
+                        <textarea id="tincionDipQuick" rows="3" style="width: 100%; border: none; background: transparent; font-weight: bold; resize: vertical; white-space: pre-wrap; word-wrap: break-word;"></textarea>
+                    </td>
+                </tr>
+                <tr style="background-color: white;">
+                    <td style="padding: 10px; font-weight: bold;">Tinción Gram:</td>
+                    <td style="padding: 10px; font-weight: bold;">
+                        <textarea id="tincionGram" rows="3" style="width: 100%; border: none; background: transparent; font-weight: bold; resize: vertical; white-space: pre-wrap; word-wrap: break-word;"></textarea>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+    <div class="footer">
+        <p id="mensajeMedico" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados</p>
+        <p>Facebook: Veterinaria San Martin de Porres Teléfono: 4000 – 1365 Ext: 106</p>
+        <p>WhatsApp: 8839-2214 San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
+        <p>Correo: laboratorio@vetsanmartin.com</p>
+    </div>
+</div>
+
+<div class="controls">
+    <button id="pdfButton" onclick="generatePDF()">Generar PDF</button>
+    <button id="menuButton" onclick="window.location.href='index.html'">Volver al Menú</button>
+    <button id="removeRivaltaButton" onclick="toggleRivaltaTest()">Eliminar Test de Rivalta</button>
+    <div id="loadingPdf" class="loading-indicator">
+        <div class="spinner"></div>
+        <span>Generando PDF...</span>
+    </div>
+</div>
+
+<script>
+// Razas de perros y gatos
+const razasCaninas = ["Labrador Retriever", "Golden Retriever", "Pastor Alemán", "Bulldog Francés", "Bulldog Inglés", "Beagle", "Poodle", "Rottweiler", "Yorkshire Terrier", "Dachshund", "Siberian Husky", "Shih Tzu", "Boston Terrier", "Pomerania", "Border Collie", "Cocker Spaniel", "Boxer", "Chihuahua", "Schnauzer Miniatura", "Mastín", "Doberman", "Akita", "San Bernardo", "Weimaraner", "Collie", "Basset Hound", "Maltés", "Newfoundland", "Chow Chow", "Dálmata", "Pitbull", "Jack Russell Terrier", "Pug", "Cane Corso", "Mestizo"];
+
+const razasFelinas = ["Persa", "Maine Coon", "Ragdoll", "Siamés", "Bengalí", "Abisinio", "Británico de Pelo Corto", "Ruso Azul", "Sphynx", "Ragamuffin", "Birmano", "Manx", "Devon Rex", "Cornish Rex", "Oriental", "Angora Turco", "Noruego del Bosque", "Siberiano", "Balinés", "Tonkinés", "Burmés", "Exótico de Pelo Corto", "Fold Escocés", "Munchkin", "Doméstico de Pelo Corto", "Doméstico de Pelo Largo", "Mestizo"];
+
+// Función para actualizar el campo de raza
+function actualizarRazasPorEspecie() {
+    const especie = document.getElementById('especieSelector').value;
+    // Crear el datalist si no existe
+    let datalistRazas = document.getElementById('razas');
+    if (!datalistRazas) {
+        datalistRazas = document.createElement('datalist');
+        datalistRazas.id = 'razas';
+        document.body.appendChild(datalistRazas);
+    }
+    
+    // Limpiar opciones existentes
+    datalistRazas.innerHTML = '';
+    
+    let razas = [];
+    if (especie === 'Canino') {
+        razas = razasCaninas;
+    } else if (especie === 'Felino') {
+        razas = razasFelinas;
+    }
+    
+    razas.forEach(raza => {
+        const option = document.createElement('option');
+        option.value = raza;
+        datalistRazas.appendChild(option);
+    });
+}
+
+function actualizarSexoEnPlantilla() {
+    const sexo = document.getElementById('sexoSelector').value;
+    document.getElementById('sexoEnPlantilla').value = sexo.charAt(0).toUpperCase() + sexo.slice(1);
+}
+
+function actualizarEspecieEnPlantilla() {
+    const especie = document.getElementById('especieSelector').value;
+    document.getElementById('especieEnPlantilla').value = especie;
+    
+    // Actualizar las razas disponibles según la especie
+    actualizarRazasPorEspecie();
+}
+
+function verificarMedico() {
+    const medico = document.getElementById('nombreMedico').value;
+    const mensaje = document.getElementById('mensajeMedico');
+    if (medico === 'N.A' || medico === 'NA' || medico === '' || medico === 'N.A.' || medico.toLowerCase() === 'na') {
+        mensaje.style.display = 'none';
+    } else {
+        mensaje.style.display = 'block';
+    }
+}
+
+// Variable para controlar el estado del Test de Rivalta
+let rivaltaVisible = true;
+
+function toggleRivaltaTest() {
+    const rivaltaTable = document.getElementById('rivaltaTable');
+    const button = document.getElementById('removeRivaltaButton');
+    
+    if (rivaltaVisible) {
+        // Ocultar el Test de Rivalta
+        rivaltaTable.style.display = 'none';
+        button.textContent = 'Mostrar Test de Rivalta';
+        rivaltaVisible = false;
+    } else {
+        // Mostrar el Test de Rivalta
+        rivaltaTable.style.display = 'table';
+        button.textContent = 'Eliminar Test de Rivalta';
+        rivaltaVisible = true;
+    }
+}
+
+function formatearFecha(input) {
+    const fecha = new Date(input.value);
+    const dia = String(fecha.getDate()).padStart(2, '0');
+    const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+    const año = fecha.getFullYear();
+    input.value = `${dia}-${mes}-${año}`;
+}
+
+function moverFocoConFlechas(event, derechaId, izquierdaId, arribaId, abajoId) {
+    switch (event.key) {
+        case 'ArrowRight':
+            event.preventDefault();
+            document.getElementById(derechaId).focus();
+            break;
+        case 'ArrowLeft':
+            event.preventDefault();
+            document.getElementById(izquierdaId).focus();
+            break;
+        case 'ArrowUp':
+            event.preventDefault();
+            document.getElementById(arribaId).focus();
+            break;
+        case 'ArrowDown':
+            event.preventDefault();
+            document.getElementById(abajoId).focus();
+            break;
+    }
+}
+
+// Inicializar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Asegurarse de que existe el selector de especies
+    const especieSelector = document.getElementById('especieSelector');
+    if (especieSelector) {
+        // Si ya hay una especie seleccionada al cargar
+        if (especieSelector.value !== "Seleccionar") {
+            actualizarRazasPorEspecie();
+        }
+    }
+});
+
+async function generatePDF() {
+    // Mostrar el indicador de carga
+    const loadingIndicator = document.getElementById('loadingPdf');
+    const pdfButton = document.getElementById('pdfButton');
+    
+    loadingIndicator.style.display = 'flex';
+    pdfButton.disabled = true;
+    
+    try {
+        const { jsPDF } = window.jspdf;
+        const selectedTemplate = document.getElementById('template1');
+
+        if (!selectedTemplate) {
+            alert('No se encontró la plantilla.');
+            return;
+        }
+
+        // Obtener el nombre de la mascota y el primer apellido del propietario
+        const mascotaNombre = document.getElementById('mascotaNombre').value || 'Sin_nombre';
+        const propietarioNombre = document.getElementById('propietarioNombre').value || 'Sin_apellido';
+        
+        // Extraer el primer apellido (segundo elemento después de dividir por espacios)
+        const nombreArray = propietarioNombre.split(' ');
+        // Si hay al menos dos palabras, tomar la segunda como primer apellido
+        // Si no, usar el valor completo o el default
+        const propietarioApellido = nombreArray.length > 1 ? nombreArray[1] : nombreArray[0];
+
+        // Espera a que todas las imágenes dentro del elemento se carguen
+        const images = selectedTemplate.getElementsByTagName('img');
+        const loadImages = Array.from(images).map(img => {
+            return new Promise((resolve, reject) => {
+                if (img.complete) {
+                    resolve();
+                } else {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                }
+            });
+        });
+
+        await Promise.all(loadImages);
+
+        // Convertir textareas con saltos de línea en divs para preservar formato en PDF
+        const textareaIds = ['examenMicroscopico', 'tincionDipQuick', 'tincionGram'];
+        const textareaBackups = [];
+        
+        textareaIds.forEach(id => {
+            const textarea = document.getElementById(id);
+            if (textarea) {
+                // Guardar el textarea original
+                const computedStyle = window.getComputedStyle(textarea);
+                textareaBackups.push({
+                    id: id,
+                    element: textarea,
+                    parent: textarea.parentNode,
+                    value: textarea.value
+                });
+                
+                // Crear un div que reemplace el textarea
+                const div = document.createElement('div');
+                div.id = id + '_pdf';
+                
+                // Copiar todos los estilos del textarea
+                div.style.width = computedStyle.width;
+                div.style.height = computedStyle.height || textarea.offsetHeight + 'px';
+                div.style.minHeight = textarea.offsetHeight + 'px';
+                div.style.padding = computedStyle.padding;
+                div.style.margin = computedStyle.margin;
+                div.style.border = computedStyle.border;
+                div.style.background = computedStyle.background;
+                div.style.backgroundColor = computedStyle.backgroundColor;
+                div.style.fontWeight = computedStyle.fontWeight;
+                div.style.fontSize = computedStyle.fontSize;
+                div.style.fontFamily = computedStyle.fontFamily;
+                div.style.lineHeight = computedStyle.lineHeight;
+                div.style.color = computedStyle.color;
+                div.style.textAlign = computedStyle.textAlign;
+                div.style.verticalAlign = computedStyle.verticalAlign;
+                div.style.whiteSpace = 'pre-wrap';
+                div.style.wordWrap = 'break-word';
+                div.style.overflow = 'visible';
+                div.style.boxSizing = computedStyle.boxSizing;
+                
+                // Convertir saltos de línea en <br>
+                let content = textarea.value || '';
+                if (content.trim() === '') {
+                    div.innerHTML = '&nbsp;';
+                } else {
+                    // Escapar HTML y luego convertir saltos de línea
+                    const tempDiv = document.createElement('div');
+                    tempDiv.textContent = content;
+                    const escapedContent = tempDiv.innerHTML;
+                    div.innerHTML = escapedContent.replace(/\n/g, '<br>');
+                }
+                
+                // Reemplazar el textarea con el div
+                textarea.parentNode.replaceChild(div, textarea);
+            }
+        });
+
+        // Genera el canvas con manejo de errores CORS
+        let canvas;
+        let imgData;
+        
+        try {
+            canvas = await html2canvas(selectedTemplate, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                allowTaint: true,
+                backgroundColor: '#ffffff'
+            });
+            imgData = canvas.toDataURL('image/jpeg', 1.0);
+        } catch (corsError) {
+            console.warn('Error CORS con allowTaint, intentando sin allowTaint:', corsError);
+            try {
+                canvas = await html2canvas(selectedTemplate, {
+                    scale: 2,
+                    useCORS: false,
+                    logging: false,
+                    allowTaint: false,
+                    backgroundColor: '#ffffff'
+                });
+                imgData = canvas.toDataURL('image/jpeg', 1.0);
+            } catch (noTaintError) {
+                console.warn('Error sin allowTaint, intentando con PNG:', noTaintError);
+                try {
+                    canvas = await html2canvas(selectedTemplate, {
+                        scale: 2,
+                        useCORS: false,
+                        logging: false,
+                        allowTaint: false,
+                        backgroundColor: '#ffffff'
+                    });
+                    imgData = canvas.toDataURL('image/png', 1.0);
+                } catch (pngError) {
+                    console.warn('Error con PNG, usando método alternativo:', pngError);
+                    // Método alternativo: crear canvas sin imágenes problemáticas
+                    const tempDiv = selectedTemplate.cloneNode(true);
+                    const problematicImages = tempDiv.querySelectorAll('img');
+                    problematicImages.forEach(img => {
+                        const placeholder = document.createElement('div');
+                        placeholder.style.width = '60px';
+                        placeholder.style.height = '60px';
+                        placeholder.style.backgroundColor = '#f0f0f0';
+                        placeholder.style.border = '1px solid #ccc';
+                        placeholder.style.display = 'flex';
+                        placeholder.style.alignItems = 'center';
+                        placeholder.style.justifyContent = 'center';
+                        placeholder.style.fontSize = '12px';
+                        placeholder.textContent = '[Logo]';
+                        img.parentNode.replaceChild(placeholder, img);
+                    });
+                    
+                    canvas = await html2canvas(tempDiv, {
+                        scale: 2,
+                        useCORS: false,
+                        logging: false,
+                        allowTaint: false,
+                        backgroundColor: '#ffffff'
+                    });
+                    imgData = canvas.toDataURL('image/png', 1.0);
+                }
+            }
+        }
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 140; 
+        const pageHeight = 357;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        // Calcular la posición para centrar la imagen con márgenes
+        const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
+        const y = 5;
+
+        // Agrega la imagen de la plantilla escalada y centrada
+        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+
+        // Genera el nombre del archivo según la plantilla actual y datos
+        const fileName = `Análisis Líquido Libre ${mascotaNombre} ${propietarioApellido}.pdf`;
+        
+        // Generar el blob del PDF
+        const pdfBlob = pdf.output('blob');
+        
+        // Intentar usar la API File System Access para guardar el archivo
+        if ('showSaveFilePicker' in window) {
+            try {
+                const fileHandle = await window.showSaveFilePicker({
+                    suggestedName: fileName,
+                    types: [{
+                        description: 'Archivo PDF',
+                        accept: { 'application/pdf': ['.pdf'] }
+                    }]
+                });
+                
+                const writable = await fileHandle.createWritable();
+                await writable.write(pdfBlob);
+                await writable.close();
+                
+                console.log('Archivo guardado con éxito usando File System Access API');
+            } catch (err) {
+                // Si el usuario cancela el guardado o hay un error
+                if (err.name !== 'AbortError') {
+                    console.error('Error al usar File System Access API:', err);
+                    // Caer en el método tradicional
+                    pdf.save(fileName);
+                }
+            }
+        } else {
+            pdf.save(fileName);
+        }
+        
+        // Restaurar los textareas originales
+        textareaBackups.forEach(backup => {
+            const div = document.getElementById(backup.id + '_pdf');
+            if (div && backup.element) {
+                div.parentNode.replaceChild(backup.element, div);
+            }
+        });
+    } catch (error) {
+        console.error('Error al generar el PDF:', error);
+        alert('Ocurrió un error al generar el PDF: ' + error.message);
+        
+        // Asegurar que los textareas se restauren incluso si hay error
+        textareaBackups.forEach(backup => {
+            const div = document.getElementById(backup.id + '_pdf');
+            if (div && backup.element) {
+                div.parentNode.replaceChild(backup.element, div);
+            }
+        });
+    } finally {
+        // Ocultar el indicador de carga y habilitar el botón nuevamente
+        loadingIndicator.style.display = 'none';
+        pdfButton.disabled = false;
+    }
+}
+</script>
+
+</body>
+</html>

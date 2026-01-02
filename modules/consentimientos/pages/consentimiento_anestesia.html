@@ -1,0 +1,828 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consentimiento Informado - Procedimientos bajo Anestesia</title>
+    <script src="https://cdn.jsdelivr.net/npm/signature_pad@4.1.5/dist/signature_pad.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    
+    <!-- Script para verificar carga de librerías -->
+    <script>
+        window.addEventListener('load', function() {
+            console.log('Verificando librerías cargadas:');
+            console.log('SignaturePad:', typeof SignaturePad !== 'undefined');
+            console.log('html2canvas:', typeof html2canvas !== 'undefined');
+            console.log('jsPDF:', typeof window.jsPDF !== 'undefined');
+        });
+    </script>
+    <style>
+        :root {
+            --primary-color: #3a7ca5;
+            --secondary-color: #f8f9fa;
+            --accent-color: #63c5da;
+            --text-color: #2c3e50;
+            --border-color: #d1e7f0;
+            --highlight-color: #e3f2fd;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --input-bg: #f0f7fa;
+        }
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 20px;
+            color: var(--text-color);
+            background-color: #f5f7fa;
+            background-image: linear-gradient(135deg, #f5f7fa 0%, #e4eff5 100%);
+            min-height: 100vh;
+        }
+        .container {
+            width: 800px;
+            margin: 0 auto 40px; /* center and add bottom spacing for uniform page offset */
+            padding: 30px;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            background-color: white;
+            box-shadow: 0 5px 20px var(--shadow-color);
+            transition: box-shadow 0.3s ease;
+            page-break-after: always; /* forzar salto de página en PDF */
+        }
+        .container:last-child {
+            page-break-after: auto; /* no salto después del último contenedor */
+        }
+        .container:hover { box-shadow: 0 8px 25px var(--shadow-color); }
+        .header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 3px solid var(--accent-color);
+            padding-bottom: 15px;
+            justify-content: space-between;
+        }
+        .logo { max-width: 80px; margin-right: 15px; border-radius: 10px; box-shadow: 0 2px 5px var(--shadow-color); }
+        h1 { text-align: center; margin-bottom: 30px; color: var(--primary-color); flex-grow: 1; font-size: 1.6rem; text-shadow: 1px 1px 2px var(--shadow-color); }
+        p { margin-bottom: 20px; text-align: justify; color: var(--text-color); line-height: 1.8; }
+        input[type="text"], input[type="email"], input[type="date"], input[type="tel"] {
+            border: none;
+            background-color: transparent;
+            padding: 8px 12px;
+            margin: 0;
+            font-weight: bold;
+            min-height: 35px;
+            min-width: 200px; /* Ancho mínimo para inputs */
+        }
+        input[type="text"]:focus, input[type="email"]:focus, input[type="date"]:focus, input[type="tel"]:focus {
+            outline: none;
+            border-bottom-color: var(--primary-color);
+            background-color: var(--highlight-color);
+            box-shadow: 0 3px 8px var(--shadow-color);
+        }
+        /* Indicador de datos automáticos */
+        .auto-data-indicator {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 8px;
+            padding: 10px 15px;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .auto-data-indicator i {
+            font-size: 1.1em;
+        }
+        .signature-area {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 40px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .firma-container { flex: 1 1 300px; display: flex; flex-direction: column; align-items: center; }
+        .signature-box { width: 100%; padding: 10px; text-align: center; margin-bottom: 10px; border-radius: 5px; background-color: var(--secondary-color); color: var(--text-color); font-weight: 500; }
+        .signature-pad-container { width: 100%; }
+        .signature-pad { border: 2px dashed var(--border-color); border-radius: 8px; width: 100%; height: 250px; background-color: white; touch-action: none; user-select: none; box-shadow: 0 2px 8px var(--shadow-color); transition: border 0.3s ease; }
+        .signature-pad:hover { border-color: var(--accent-color); }
+        .signature-buttons { display: flex; margin-top: 10px; gap: 10px; justify-content: center; }
+        .pdf-button-container { text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px dashed var(--border-color); }
+        .pdf-button { padding: 12px 25px; background-color: #4CAF50; color: white; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.3s ease; box-shadow: 0 3px 10px rgba(0,0,0,0.15); }
+        .pdf-button:hover { background-color: #45a049; transform: translateY(-2px); box-shadow: 0 5px 15px rgba(0,0,0,0.2); }
+        .pdf-button:active { transform: translateY(0); }
+        @media print {
+            body { background-color: white; margin: 0; padding: 0; }
+            .container { box-shadow: none; border: none; padding: 10px; }
+            .signature-buttons, .pdf-button-container { display: none; }
+            .auto-data-indicator { display: none !important; }
+        }
+        @media (max-width: 600px) {
+            .header { flex-direction: column; text-align: center; }
+            .signature-area { flex-direction: column; }
+            .firma-container { width: 100%; }
+        }
+        .date-short {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: var(--text-color);
+}
+        .footer {
+                    text-align: center;
+                    margin-top: 20px;
+                    font-size: 0.9em;
+                    color: #666;
+                }
+        
+        /* Estilos para las tablas de control anestésico */
+        .control-table, .medication-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 25px;
+            font-size: 0.95rem;
+        }
+        
+        .control-table td, .medication-table th, .medication-table td {
+            border: 1px solid #333;
+            padding: 10px 8px;
+            text-align: left;
+        }
+        
+        .control-table td:first-child {
+            background-color: var(--secondary-color);
+            font-weight: bold;
+            width: 200px;
+        }
+        
+        .medication-table th {
+            background-color: var(--secondary-color);
+            font-weight: bold;
+            text-align: center;
+        }
+        
+        .medication-table td {
+            height: 40px;
+            vertical-align: top;
+        }
+        
+        .control-section h3, .medication-section h3 {
+            background-color: var(--secondary-color);
+            padding: 12px;
+            margin: 25px 0 15px 0;
+            border-radius: 6px;
+            text-align: center;
+            font-size: 1.1rem;
+            color: var(--primary-color);
+            border: 1px solid var(--border-color);
+        }
+        
+        .observations-section p {
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .observations-section div {
+            border-bottom: 2px solid #333;
+            margin: 15px 0;
+            height: 35px;
+        }
+        
+        /* Estilos para inputs dentro de tablas */
+        .control-table input, .medication-table input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            padding: 6px 8px;
+            font-size: 14px;
+            font-family: inherit;
+            color: var(--text-color);
+        }
+        
+        .control-table input:focus, .medication-table input:focus {
+            outline: none;
+            background-color: var(--highlight-color);
+            border-radius: 3px;
+        }
+        
+        .control-table input::placeholder, .medication-table input::placeholder {
+            color: #999;
+            font-style: italic;
+        }
+        
+        #observaciones {
+            width: 100%;
+            height: 120px;
+            border: 2px solid #333;
+            padding: 10px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            border-radius: 4px;
+            color: var(--text-color);
+        }
+        
+        #observaciones:focus {
+            outline: none;
+            border-color: var(--primary-color);
+            background-color: var(--highlight-color);
+        }
+        
+        #observaciones::placeholder {
+            color: #999;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <!-- PÁGINA 1 -->
+    <div class="container">
+        <div class="header">
+            <img src="/img/logo.jpg" alt="Veterinaria San Martin de Porres" class="logo">
+            <h1>CONSENTIMIENTO INFORMADO PARA PROCEDIMIENTOS BAJO ANESTESIA</h1>
+            <div id="shortDate" class="date-short"></div>
+        </div>
+        
+        <div class="form-section">
+            <!-- Indicador de datos autocompletados -->
+            <div id="autoDataIndicator" class="auto-data-indicator" style="display: none;">
+                <i class="fas fa-check-circle"></i>
+                <span>Datos cargados automáticamente desde la base de datos</span>
+            </div>
+            
+            <p><strong>Nombre del paciente (mascota):</strong> <input type="text" id="petName" placeholder="Nombre de la mascota" required style="width: 300px;"></p>
+            
+            <div class="form-row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <strong>Especie:</strong> <input type="text" id="petSpecies" placeholder="Especie" style="width: 150px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <strong>Raza:</strong> <input type="text" id="petBreed" placeholder="Raza" style="width: 180px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <strong>Edad:</strong> <input type="text" id="petAge" placeholder="Edad" style="width: 100px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <strong>Peso:</strong> <input type="text" id="petWeight" placeholder="kg" style="width: 100px;">
+                </div>
+            </div>
+            
+            <p><strong>Propietario:</strong> <input type="text" id="ownerName" placeholder="Nombre del propietario" required style="width: 350px;"></p>
+            
+            <div class="form-row" style="display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <strong>Cédula:</strong> <input type="text" id="ownerId" placeholder="Cédula" style="width: 200px;">
+                </div>
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <strong>Teléfono de contacto:</strong> <input type="text" id="ownerPhone" placeholder="Teléfono" style="width: 200px;">
+                </div>
+            </div>
+            
+            <p><strong>Procedimiento a realizar:</strong> <input type="text" id="procedure" placeholder="Descripción del procedimiento" style="width: 100%; max-width: 600px;"></p>
+        </div>
+
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+
+        <h2>IMPORTANCIA DE LOS EXÁMENES PREQUIRÚRGICOS</h2>
+        <p>Antes de cualquier procedimiento que implique anestesia general o sedación profunda, recomendamos la realización de exámenes prequirúrgicos (como hemograma, perfil bioquímico, radiografías o ecografía según el caso). Estos estudios permiten:</p>
+        <ul>
+            <li>Evaluar el estado general de salud del paciente.</li>
+            <li>Identificar enfermedades subyacentes que podrían aumentar el riesgo anestésico.</li>
+            <li>Seleccionar el protocolo anestésico más seguro y adecuado.</li>
+            <li>Reducir el riesgo de complicaciones durante y después del procedimiento.</li>
+        </ul>
+        <p>Los exámenes prequirúrgicos no garantizan la ausencia total de riesgos, pero sí ayudan a minimizarlos y a tomar decisiones clínicas informadas.</p>
+
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+
+        <h2>RIESGOS DE LA ANESTESIA EN ANIMALES</h2>
+        <p>La anestesia es un procedimiento médico que, aunque común y rutinario, implica ciertos riesgos, especialmente en pacientes geriátricos, con enfermedades preexistentes, o con antecedentes anestésicos previos. Entre los posibles riesgos se incluyen:</p>
+        <ul>
+            <li>Reacciones adversas a los medicamentos anestésicos.</li>
+            <li>Complicaciones respiratorias o cardíacas.</li>
+            <li>Hipotermia o hipertermia.</li>
+            <li>Vómito o aspiración.</li>
+            <li>Fallo renal o hepático en animales con patologías preexistentes.</li>
+            <li>Muerte súbita (evento poco frecuente, pero posible incluso en pacientes aparentemente sanos).</li>
+        </ul>
+        <p>Durante el procedimiento, se aplican medidas de monitorización y cuidados para minimizar estos riesgos. El equipo médico estará atento a cualquier eventualidad.</p>
+    </div>
+
+    <!-- PÁGINA 2 -->
+    <div class="container">
+        <div class="header">
+            <img src="/img/logo.jpg" alt="Veterinaria San Martin de Porres" class="logo">
+            <h1>CONSENTIMIENTO INFORMADO PARA PROCEDIMIENTOS BAJO ANESTESIA</h1>
+            <div id="shortDate2" class="date-short"></div>
+        </div>
+
+        <h2>DECLARACIÓN DEL PROPIETARIO</h2>
+        <p>Yo, el/la abajo firmante, declaro haber sido informado/a adecuadamente sobre:</p>
+        <ul>
+            <li>La naturaleza del procedimiento a realizar.</li>
+            <li>Los beneficios y posibles riesgos de la anestesia en animales.</li>
+            <li>La importancia de realizar exámenes prequirúrgicos.</li>
+            <li>Las recomendaciones posoperatorias y posibles cuidados posteriores.</li>
+        </ul>
+        
+        <p>Autorizo al personal médico veterinario de la clínica Veterinaria San Martin de Porres a realizar el procedimiento mencionado, incluyendo anestesia, sedación, y cualquier acción médica adicional que se considere necesaria durante el procedimiento para preservar la vida y el bienestar de mi mascota.</p>
+        
+        <div class="checkbox-section" style="margin: 20px 0; padding: 15px; background: var(--secondary-color); border-radius: 8px;">
+            <p><strong>Además:</strong></p>
+            <div style="margin-left: 20px;">
+                <label style="display: block; margin: 10px 0; font-size: 1rem;">
+                    <input type="checkbox" id="examAccepted" style="margin-right: 10px; transform: scale(1.2);">
+                    He aceptado realizar los exámenes prequirúrgicos recomendados.
+                </label>
+                <label style="display: block; margin: 10px 0; font-size: 1rem;">
+                    <input type="checkbox" id="examDeclined" style="margin-right: 10px; transform: scale(1.2);">
+                    He decidido no realizar los exámenes prequirúrgicos bajo mi responsabilidad.
+                </label>
+                
+                <div <p><strong>En caso de limpieza dental, estoy de acuerdo en retirar las piezas dentales dañadas o flojas:</strong></p>
+                    <div style="margin-left: 20px;">
+                        <label style="display: block; margin: 10px 0; font-size: 1rem;">
+                            <input type="checkbox" id="examAccepted" style="margin-right: 10px; transform: scale(1.2);">
+                            Sí, estoy de acuerdo en que se retiren las piezas dentales dañadas o flojas.
+                        </label>
+                        <label style="display: block; margin: 10px 0; font-size: 1rem;">
+                            <input type="checkbox" id="examDeclined" style="margin-right: 10px; transform: scale(1.2);">
+                            No, estoy en desacuerdo en que se retiren las piezas dentales dañadas o flojas.
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <p>Entiendo que, aunque se tomen todas las precauciones, siempre existe un riesgo inherente asociado al uso de anestesia.</p>
+
+        <div style="border-top: 2px solid var(--accent-color); margin: 30px 0 20px 0;"></div>
+
+        <p>Firmado a las <span id="currentTime"></span> horas, el día <span id="currentDay"></span> del mes <span id="currentMonth"></span> del año <span id="currentYear"></span>.</p>
+
+        <div class="signature-area">
+            <div class="firma-container">
+                <div class="signature-box">Firma del propietario</div>
+                <div class="signature-pad-container">
+                    <canvas class="signature-pad" id="ownerSignaturePad"></canvas>
+                    <div class="signature-buttons">
+                        <button type="button" onclick="clearSignature('ownerSignaturePad')">Limpiar</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="pdf-button-container">
+            <button class="pdf-button" onclick="generatePDF()">Generar PDF</button>
+        </div>
+    </div>
+
+    <!-- PÁGINA 3 - OBSERVACIONES/PADECIMIENTOS PREVIOS -->
+    <div class="container" id="observacionesPage">
+        <div class="header">
+            <img src="/img/logo.jpg" alt="Veterinaria San Martin de Porres" class="logo">
+            <h1>OBSERVACIONES / PADECIMIENTOS PREVIOS</h1>
+            <div id="shortDate3" class="date-short"></div>
+        </div>
+        
+        <div style="margin-top: 30px;">
+            <h2 style="text-align: center; color: var(--primary-color); margin-bottom: 20px;">
+                Información sobre Observaciones y Padecimientos Previos del Paciente
+            </h2>
+            
+            <div style="background-color: var(--secondary-color); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                <p><strong>Nombre del paciente (mascota):</strong> <input type="text" id="obsPetName" placeholder="Nombre de la mascota" readonly style="width: 300px; background-color: white;"></p>
+                <p><strong>Propietario:</strong> <input type="text" id="obsOwnerName" placeholder="Nombre del propietario" readonly style="width: 350px; background-color: white;"></p>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <label for="observacionesPadecimientos" style="display: block; font-weight: bold; margin-bottom: 15px; font-size: 1.1rem; color: var(--primary-color);">
+                    Observaciones y Padecimientos Previos:
+                </label>
+                <textarea 
+                    id="observacionesPadecimientos" 
+                    style="width: 100%; height: 400px; border: 2px solid var(--border-color); padding: 15px; font-family: inherit; font-size: 14px; resize: vertical; border-radius: 8px; line-height: 1.6;"
+                    placeholder="Describa aquí cualquier observación relevante, padecimientos previos, enfermedades conocidas, alergias, medicamentos actuales, cirugías anteriores, o cualquier otra información médica importante del paciente..."
+                ></textarea>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+    
+    document.addEventListener('DOMContentLoaded', function() {
+        // Agregar un pequeño delay para asegurar que todo esté listo
+        setTimeout(function() {
+            console.log('Iniciando configuración del consentimiento de anestesia...');
+            
+            // Leer parámetros URL y completar campos automáticamente
+            const urlParams = new URLSearchParams(window.location.search);
+        
+            // Completar campos con datos de la base de datos
+            let autoFilledCount = 0;
+            
+            if (urlParams.get('mascotaNombre')) {
+                const field = document.getElementById('petName');
+                field.value = urlParams.get('mascotaNombre').replace(/\+/g, ' ');
+                autoFilledCount++;
+            }
+            if (urlParams.get('mascotaTipo')) {
+                const field = document.getElementById('petSpecies');
+                field.value = urlParams.get('mascotaTipo').replace(/\+/g, ' ');
+                autoFilledCount++;
+            }
+            if (urlParams.get('clienteNombre')) {
+                const field = document.getElementById('ownerName');
+                field.value = urlParams.get('clienteNombre').replace(/\+/g, ' ');
+                autoFilledCount++;
+            }
+            if (urlParams.get('clienteCedula')) {
+                const field = document.getElementById('ownerId');
+                field.value = urlParams.get('clienteCedula').replace(/\+/g, ' ');
+                autoFilledCount++;
+            }
+            if (urlParams.get('clienteTelefono')) {
+                const field = document.getElementById('ownerPhone');
+                field.value = urlParams.get('clienteTelefono').replace(/\+/g, ' ');
+                autoFilledCount++;
+            }
+            
+            // Agregar campos específicos de quirófano
+            if (urlParams.get('mascotaRaza')) {
+                const field = document.getElementById('petBreed');
+                if (field) {
+                    field.value = urlParams.get('mascotaRaza').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
+            }
+            if (urlParams.get('mascotaPeso')) {
+                const field = document.getElementById('petWeight');
+                if (field) {
+                    field.value = urlParams.get('mascotaPeso').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
+            }
+            if (urlParams.get('mascotaEdad')) {
+                const field = document.getElementById('petAge');
+                if (field) {
+                    field.value = urlParams.get('mascotaEdad').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
+            }
+            if (urlParams.get('procedimiento')) {
+                const field = document.getElementById('procedureType');
+                if (field) {
+                    field.value = urlParams.get('procedimiento').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
+            }
+            if (urlParams.get('doctorAtiende')) {
+                const field = document.getElementById('attendingDoctor');
+                if (field) {
+                    field.value = urlParams.get('doctorAtiende').replace(/\+/g, ' ');
+                    autoFilledCount++;
+                }
+            }
+            
+            // Mostrar indicador si se autocompletaron campos
+            if (autoFilledCount > 0) {
+                const indicator = document.getElementById('autoDataIndicator');
+                if (indicator) {
+                    indicator.style.display = 'flex';
+                    indicator.querySelector('span').textContent = 
+                        `${autoFilledCount} campos cargados automáticamente desde la base de datos`;
+                }
+            }
+            
+            // Set the current date and time once DOM is ready
+            const now = new Date();
+            
+            // Proteger cada elemento individualmente
+            const shortDate = document.getElementById('shortDate');
+            if (shortDate) shortDate.textContent = now.toLocaleDateString('es-ES');
+            
+            const shortDate2 = document.getElementById('shortDate2');
+            if (shortDate2) shortDate2.textContent = now.toLocaleDateString('es-ES');
+            
+            const shortDate3 = document.getElementById('shortDate3');
+            if (shortDate3) shortDate3.textContent = now.toLocaleDateString('es-ES');
+            
+            const currentTime = document.getElementById('currentTime');
+            if (currentTime) currentTime.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            const currentDay = document.getElementById('currentDay');
+            if (currentDay) currentDay.textContent = now.getDate();
+            
+            const currentMonth = document.getElementById('currentMonth');
+            if (currentMonth) currentMonth.textContent = now.toLocaleString('es-ES', { month: 'long' });
+            
+            const currentYear = document.getElementById('currentYear');
+            if (currentYear) currentYear.textContent = now.getFullYear();
+
+            console.log('Fecha y hora configuradas:', {
+                fecha: now.toLocaleDateString('es-ES'),
+                hora: now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                dia: now.getDate(),
+                mes: now.toLocaleString('es-ES', { month: 'long' }),
+                año: now.getFullYear()
+            });
+
+            // Completar campos de la tercera página con los mismos datos
+            updateControlPageData();
+            
+            // Sincronizar datos en la página de observaciones
+            updateObservacionesPageData();
+
+            // Initialize signature pads and handle resizing
+            const canvasElements = document.querySelectorAll('.signature-pad');
+            console.log('Canvas elements encontrados:', canvasElements.length);
+            
+            window.signaturePads = {};
+            
+            function resizeCanvas(canvas) {
+                const ratio = Math.max(window.devicePixelRatio || 1, 2);
+                canvas.width = canvas.offsetWidth * ratio;
+                canvas.height = canvas.offsetHeight * ratio;
+                const ctx = canvas.getContext('2d');
+                ctx.scale(ratio, ratio);
+                ctx.imageSmoothingEnabled = true;
+                ctx.imageSmoothingQuality = 'high';
+                return ratio;
+            }
+            
+            // Verificar si SignaturePad está disponible
+            if (typeof SignaturePad === 'undefined') {
+                console.error('SignaturePad no está cargado. Verifica que la librería esté incluida.');
+                return;
+            }
+            
+            canvasElements.forEach((canvas, index) => {
+                try {
+                    console.log(`Inicializando canvas ${index + 1}:`, canvas.id);
+                    const pixelRatio = resizeCanvas(canvas);
+                    window.signaturePads[canvas.id] = new SignaturePad(canvas, {
+                        backgroundColor: 'rgba(255,255,255,0)',
+                        penColor: 'rgb(0,0,100)',
+                        velocityFilterWeight: 0.5,
+                        minWidth: 0.3,
+                        maxWidth: 1.5 * pixelRatio,
+                        throttle: 8,
+                        minDistance: 1.0
+                    });
+                    
+                    // Agregar event listeners para touch events
+                    ['touchstart','touchmove','touchend'].forEach(eventName => {
+                        canvas.addEventListener(eventName, e => { 
+                            if (e.cancelable) e.preventDefault(); 
+                        }, { passive: false });
+                    });
+                    
+                    console.log(`Canvas ${canvas.id} inicializado correctamente`);
+                } catch (error) {
+                    console.error(`Error inicializando canvas ${canvas.id}:`, error);
+                }
+            });
+            window.addEventListener('resize', function() {
+                canvasElements.forEach(canvas => {
+                    const pad = window.signaturePads[canvas.id];
+                    if (pad) {
+                        const data = pad.isEmpty() ? null : pad.toData();
+                        const ratio = resizeCanvas(canvas);
+                        pad.clear();
+                        if (data) pad.fromData(data);
+                    }
+                });
+            });
+        }, 100); // Ajustar el tiempo según sea necesario
+    });
+
+    // Función para actualizar los datos de la página de control
+    function updateControlPageData() {
+        // Copiar datos de los campos principales a la página de control
+        const petName = document.getElementById('petName').value;
+        const ownerName = document.getElementById('ownerName').value;
+        const procedure = document.getElementById('procedure').value;
+        
+        const controlPetName = document.getElementById('controlPetName');
+        const controlOwnerName = document.getElementById('controlOwnerName');
+        const controlProcedure = document.getElementById('controlProcedure');
+        
+        if (controlPetName) controlPetName.value = petName;
+        if (controlOwnerName) controlOwnerName.value = ownerName;
+        if (controlProcedure) controlProcedure.value = procedure;
+    }
+
+    // Función para actualizar los datos de la página de observaciones
+    function updateObservacionesPageData() {
+        const petName = document.getElementById('petName')?.value || '';
+        const ownerName = document.getElementById('ownerName')?.value || '';
+        
+        const obsPetName = document.getElementById('obsPetName');
+        const obsOwnerName = document.getElementById('obsOwnerName');
+        
+        if (obsPetName) obsPetName.value = petName;
+        if (obsOwnerName) obsOwnerName.value = ownerName;
+    }
+
+    // Agregar event listeners para sincronizar datos entre páginas
+    document.getElementById('petName')?.addEventListener('input', function() {
+        updateControlPageData();
+        updateObservacionesPageData();
+    });
+    document.getElementById('ownerName')?.addEventListener('input', function() {
+        updateControlPageData();
+        updateObservacionesPageData();
+    });
+    document.getElementById('procedure')?.addEventListener('input', updateControlPageData);
+
+    // Clear a specific signature pad by ID
+    function clearSignature(canvasId) {
+        try {
+            if (window.signaturePads && window.signaturePads[canvasId]) {
+                window.signaturePads[canvasId].clear();
+                console.log(`Firma limpiada para canvas: ${canvasId}`);
+            } else {
+                console.warn(`No se encontró el signature pad para canvas: ${canvasId}`);
+            }
+        } catch (error) {
+            console.error(`Error limpiando firma para canvas ${canvasId}:`, error);
+        }
+    }
+
+    // Generate a single-page A4 PDF with all content
+    async function generatePDF() {
+        const ownerName = document.getElementById('ownerName').value;
+        const petName = document.getElementById('petName').value;
+        if (!ownerName || !petName) {
+            alert('Complete nombre del propietario y de la mascota');
+            return;
+        }
+        
+        // Actualizar datos de la página de control y observaciones antes de generar PDF
+        updateControlPageData();
+        updateObservacionesPageData();
+        
+        let ownerLastName = '';
+        if (ownerName && ownerName.trim().split(' ').length > 1) {
+            const parts = ownerName.trim().split(' ');
+            ownerLastName = parts.length > 2 ? parts[parts.length - 1] : parts[1];
+        }
+        const pdfBtn = document.querySelector('.pdf-button-container');
+        const sigBtns = document.querySelectorAll('.signature-buttons');
+        const autoIndicator = document.getElementById('autoDataIndicator');
+        
+        const originalPdfDisplay = pdfBtn.style.display;
+        const originalSigDisplays = Array.from(sigBtns).map(b => b.style.display);
+        const originalIndicatorDisplay = autoIndicator ? autoIndicator.style.display : '';
+        
+        // Ocultar elementos durante la generación del PDF
+        pdfBtn.style.display = 'none';
+        sigBtns.forEach(b => b.style.display = 'none');
+        if (autoIndicator) autoIndicator.style.display = 'none';
+        
+        // Procesar textarea de observaciones para preservar saltos de línea
+        const observacionesTextarea = document.getElementById('observacionesPadecimientos');
+        let observacionesTempDiv = null;
+        if (observacionesTextarea && observacionesTextarea.value) {
+            // Crear un div temporal con el contenido formateado
+            observacionesTempDiv = document.createElement('div');
+            const lines = observacionesTextarea.value.split(/\r?\n/);
+            observacionesTempDiv.innerHTML = lines.map(line => {
+                if (line.trim() === '') {
+                    return '<br>';
+                } else {
+                    return `<div style="margin: 4px 0; white-space: pre-wrap; line-height: 1.6;">${line}</div>`;
+                }
+            }).join('');
+            observacionesTempDiv.style.cssText = `
+                width: 100%;
+                min-height: 400px;
+                border: 2px solid var(--border-color);
+                padding: 15px;
+                font-family: inherit;
+                font-size: 14px;
+                border-radius: 8px;
+                line-height: 1.6;
+                white-space: pre-wrap;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+                color: #333;
+                background-color: white;
+            `;
+            observacionesTextarea.style.display = 'none';
+            observacionesTextarea.parentNode.insertBefore(observacionesTempDiv, observacionesTextarea);
+        }
+        
+        try {
+            const { jsPDF } = window.jspdf;
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const containers = document.querySelectorAll('.container');
+            
+            for (let i = 0; i < containers.length; i++) {
+                const cont = containers[i];
+                const canvas = await html2canvas(cont, {
+                    scale: 1.3,  // reducido para menor tamaño de archivo
+                    useCORS: true,
+                    logging: false,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff'
+                });
+                
+                const imgData = canvas.toDataURL('image/jpeg', 0.8);  // JPEG con 80% calidad - buen equilibrio
+                const imgWidth = 190;  // ancho óptimo para A4
+                const pageHeight = 297;  // altura A4 en mm
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                const pageWidth = pdf.internal.pageSize.getWidth();
+                const x = (pageWidth - imgWidth) / 2;
+                
+                // Posicionamiento mejorado
+                let y = 10;  // margen superior consistente
+                if (imgHeight > pageHeight - 20) {
+                    // Si la imagen es muy alta, ajustar para que quepa
+                    const maxHeight = pageHeight - 20;
+                    const adjustedWidth = (canvas.width * maxHeight) / canvas.height;
+                    y = 10;
+                    pdf.addImage(imgData, 'JPEG', (pageWidth - adjustedWidth) / 2, y, adjustedWidth, maxHeight);
+                } else {
+                    pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+                }
+                
+                if (i < containers.length - 1) pdf.addPage();
+            }
+            
+            const fileName = `Consentimiento_Anestesia_${petName}_${ownerLastName}.pdf`;
+            pdf.save(fileName);
+        } catch (err) {
+            console.error('Error generando PDF:', err);
+            alert('Hubo un problema al generar el PDF.');
+        } finally {
+            // Restaurar textarea de observaciones
+            if (observacionesTextarea && observacionesTempDiv) {
+                observacionesTextarea.style.display = '';
+                if (observacionesTempDiv.parentNode) {
+                    observacionesTempDiv.parentNode.removeChild(observacionesTempDiv);
+                }
+            }
+            
+            // Restaurar elementos ocultos
+            pdfBtn.style.display = originalPdfDisplay;
+            sigBtns.forEach((b, i) => b.style.display = originalSigDisplays[i]);
+            if (autoIndicator) autoIndicator.style.display = originalIndicatorDisplay;
+        }
+    }
+</script>
+</body>
+<script>
+// --- AUTOLLENADO DE DATOS DESDE LA URL ---
+function getQueryParams() {
+    const params = {};
+    const search = window.location.search.substring(1);
+    if (!search) return params;
+    search.split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        params[decodeURIComponent(key)] = decodeURIComponent(value || '');
+    });
+    return params;
+}
+
+function fillFormFromParams() {
+    const params = getQueryParams();
+    let anyFilled = false;
+    // Mapeo de parámetros a posibles IDs de campos
+    const map = {
+        clienteNombre: ['clienteNombre', 'ownerName', 'propietario', 'nombreCliente'],
+        clienteCedula: ['clienteCedula', 'cedula'],
+        clienteTelefono: ['clienteTelefono', 'telefono'],
+        clienteCorreo: ['clienteCorreo', 'correo'],
+        mascotaNombre: ['mascotaNombre', 'petName', 'nombreMascota'],
+        mascotaTipo: ['mascotaTipo', 'tipoMascota'],
+        mascotaRaza: ['mascotaRaza', 'raza'],
+        mascotaEdad: ['mascotaEdad', 'edad'],
+        mascotaPeso: ['mascotaPeso', 'peso'],
+        procedimiento: ['procedimiento'],
+        doctorAtiende: ['doctorAtiende', 'doctor'],
+        fechaCirugia: ['fechaCirugia'],
+        urgencia: ['urgencia'],
+        fecha: ['fecha'],
+        hora: ['hora']
+    };
+    Object.keys(map).forEach(param => {
+        if (params[param]) {
+            map[param].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.value = params[param].replace(/\+/g, ' ');
+                    anyFilled = true;
+                }
+            });
+        }
+    });
+    // Mostrar banner si se autocompletó algo
+    const banner = document.getElementById('autocompleteBanner');
+    if (banner && anyFilled) {
+        banner.innerHTML = '<span class="icon">ℹ️</span><div class="content"><h3>Datos cargados automáticamente</h3><p>Los campos se han completado con información del sistema. Puedes modificar cualquier dato si es necesario.</p></div>';
+        banner.style.display = 'flex';
+    }
+}
+document.addEventListener('DOMContentLoaded', fillFormFromParams);
+</script>
+</html>
