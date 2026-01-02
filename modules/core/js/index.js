@@ -1870,7 +1870,33 @@ function addTicket() {
             return;
         }
         ticketsRef.push(nuevoTicket)
-            .then(() => {
+            .then((ref) => {
+                // Obtener la key del ticket creado
+                const firebaseKey = ref.key;
+                
+                // Agregar el ticket al array local inmediatamente para que aparezca en el dispositivo que lo crea
+                const ticketConKey = {
+                    ...nuevoTicket,
+                    firebaseKey: firebaseKey
+                };
+                
+                // Solo agregar si no existe ya (evitar duplicados)
+                if (!tickets.some(t => t.firebaseKey === firebaseKey)) {
+                    tickets.push(ticketConKey);
+                    // Update global reference
+                    window.tickets = tickets;
+                    
+                    // Renderizar inmediatamente para que el usuario vea su ticket
+                    const currentFilterBtn = document.querySelector('.filter-btn.active');
+                    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
+                    renderTickets(currentFilter);
+                    updateStatsGlobal();
+                    updatePrequirurgicoCounter();
+                    if (typeof updateViaCounter === 'function') {
+                        updateViaCounter();
+                    }
+                }
+                
                 // Guardar paciente en la base de datos relacional
                 if (window.patientDatabase && cedula) {
                     const telefono = document.getElementById('telefono')?.value || '';
