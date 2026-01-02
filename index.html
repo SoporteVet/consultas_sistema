@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Sistema de Consultas - Veterinaria</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-  <link rel="stylesheet" href="css/index.css">
-  <link rel="stylesheet" href="css/laboratorio.css">
-  <link rel="stylesheet" href="css/consentimientos.css">
-  <link rel="stylesheet" href="css/quirofano.css">
+  <link rel="stylesheet" href="modules/core/css/index.css">
+  <link rel="stylesheet" href="modules/laboratorio/css/laboratorio.css">
+  <link rel="stylesheet" href="modules/consentimientos/css/consentimientos.css">
+  <link rel="stylesheet" href="modules/quirofano/css/quirofano.css">
+  <link rel="stylesheet" href="modules/internamiento/css/internamiento.css">
   
   <link rel="icon" href="img/empresa.jpg" type="image/x-icon">
 </head>
@@ -133,9 +134,6 @@
             </button>
             <button id="estadisticasBtn" class="submenu-btn" onclick="navigateToEstadisticas();">
               <i class="fas fa-chart-pie"></i> Estadísticas
-            </button>
-            <button id="adminUsersSubmenuBtn" class="submenu-btn" style="display:none;" onclick="openAdminUsersModal();">
-              <i class="fas fa-users-cog"></i> Administrar usuarios
             </button>
           </div>
         </div>
@@ -1887,8 +1885,8 @@
               <p>Control de anestesia y medicamentos administrados durante cirugía</p>
             </div>
             <div class="template-card" data-template="internamiento">
-              <h4>Consentimiento Internamiento</h4>
-              <p>Consentimiento informado para internamiento y procedimientos</p>
+              <h4>Consentimiento Informado para Internamiento</h4>
+              <p>Autorización para internamiento de mascota</p>
             </div>
           </div>
         </div>
@@ -1904,6 +1902,7 @@
           <iframe id="consentFormIframe" src="" frameborder="0"></iframe>
         </div>
       </section>
+
 
   <!-- Plantillas para notificaciones y modales -->
   <div id="notificationContainer"></div>
@@ -1945,9 +1944,36 @@
 
   <!-- Modal de administración de usuarios -->
 <div id="adminUsersModal" class="edit-modal" style="display:none;z-index:2000;">
-  <div class="modal-content animate-scale" style="max-width:420px;">
+  <div class="modal-content animate-scale" style="max-width:900px; max-height:90vh; overflow-y:auto;">
     <span class="close-modal" id="closeAdminUsersModal" style="float:right;cursor:pointer;font-size:1.5rem;">&times;</span>
     <h3><i class="fas fa-users-cog"></i> Administración de Usuarios</h3>
+    
+    <!-- Tabs para alternar entre lista y crear -->
+    <div style="display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
+      <button id="usersListTab" class="tab-btn active" onclick="switchUsersTab('list')" style="padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
+        <i class="fas fa-list"></i> Lista de Usuarios
+      </button>
+      <button id="usersCreateTab" class="tab-btn" onclick="switchUsersTab('create')" style="padding: 10px 20px; background: #2196F3; color: white; border: none; border-radius: 5px 5px 0 0; cursor: pointer; font-weight: 600;">
+        <i class="fas fa-user-plus"></i> Crear Usuario
+      </button>
+    </div>
+    
+    <!-- Sección de Lista de Usuarios -->
+    <div id="usersListSection" style="display: block;">
+      <div style="margin-bottom: 15px;">
+        <input type="text" id="usersSearchInput" placeholder="Buscar por nombre, email o empresa..." 
+               style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; font-size: 14px;"
+               onkeyup="filterUsersList()">
+      </div>
+      <div id="usersListContainer" style="max-height: 500px; overflow-y: auto;">
+        <div style="text-align: center; padding: 20px; color: #999;">
+          <i class="fas fa-spinner fa-spin"></i> Cargando usuarios...
+        </div>
+      </div>
+    </div>
+    
+    <!-- Sección de Crear Usuario -->
+    <div id="usersCreateSection" style="display: none;">
     <form id="createUserForm">
       <div class="form-group">
         <label for="newUserEmail">Correo electrónico</label>
@@ -1978,6 +2004,7 @@
       </div>
       <button type="submit" class="btn-save" style="width:100%;margin-bottom:10px;">Crear usuario</button>
     </form>
+    </div>
   </div>
 </div>
 
@@ -1987,30 +2014,30 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   
   <!-- Scripts críticos para inicio -->
-  <script src="js/firebase-config.js"></script>
-  <script src="js/auth.js" defer></script>
+  <script src="modules/core/js/firebase-config.js"></script>
+  <script src="modules/auth/js/auth.js" defer></script>
   
   <!-- Scripts principales con defer para no bloquear render -->
-  <script src="js/services-data.js" defer></script>
-  <script src="js/firebase-realtime-optimizer.js" defer></script>
-  <script src="js/billing-performance-optimizer.js" defer></script>
-  <script src="js/realtime-performance-manager.js" defer></script>
-  <script src="js/index.js" defer></script>
+  <script src="modules/core/js/services-data.js" defer></script>
+  <script src="modules/core/js/firebase-realtime-optimizer.js" defer></script>
+  <script src="modules/core/js/billing-performance-optimizer.js" defer></script>
+  <script src="modules/core/js/realtime-performance-manager.js" defer></script>
+  <script src="modules/core/js/index.js" defer></script>
   
   <!-- Módulos específicos con defer (carga diferida) -->
-  <script src="js/laboratorio.js" defer></script>
-  <script src="js/consentimientos-module.js" defer></script>
-  <script src="js/quirofano-module.js" defer></script>
-  <script src="js/reportes-lab-module.js" defer></script>
-  <script src="js/patient-database.js" defer></script>
-  <script src="js/cedula-search-integration.js" defer></script>
-  <script src="js/wait-time-chart-fix.js" defer></script>
-  <script src="js/admin-users.js" defer></script>
+  <script src="modules/laboratorio/js/laboratorio.js" defer></script>
+  <script src="modules/consentimientos/js/consentimientos-module.js" defer></script>
+  <script src="modules/quirofano/js/quirofano-module.js" defer></script>
+  <script src="modules/laboratorio/js/reportes-lab-module.js" defer></script>
+  <script src="modules/core/js/patient-database.js" defer></script>
+  <script src="modules/core/js/cedula-search-integration.js" defer></script>
+  <script src="modules/core/js/wait-time-chart-fix.js" defer></script>
+  <script src="modules/core/js/admin-users.js" defer></script>
   <!-- Scripts de migración (descomentar solo para migración inicial) -->
-  <!-- <script src="js/migrate-users-empresa.js" defer></script> -->
- <!--<script src="js/migrate-tickets-empresa.js" defer></script> -->
-  <script src="js/laboratory-search-fix.js" defer></script>
-  <script src="js/services-selection-manager.js" defer></script>
+  <!-- <script src="modules/core/js/migrate-users-empresa.js" defer></script> -->
+  <!-- <script src="modules/core/js/migrate-tickets-empresa.js" defer></script> -->
+  <script src="modules/laboratorio/js/laboratory-search-fix.js" defer></script>
+  <script src="modules/core/js/services-selection-manager.js" defer></script>
   
   <!-- Librerías pesadas - carga diferida (solo cuando se necesiten) -->
   <script>
@@ -2177,6 +2204,492 @@ document.addEventListener('DOMContentLoaded', function() {
   });
 })();
 </script>
+
+<!-- ============================================================ -->
+<!-- SECCIÓN DE INTERNAMIENTO - MÓDULO BETA -->
+<!-- ============================================================ -->
+<section id="internamientosSection" class="section hidden">
+  
+  <!-- ============================================================ -->
+  <!-- VISTA 1: LISTA DE INTERNAMIENTOS -->
+  <!-- ============================================================ -->
+  <div id="internamiento-lista">
+    <div class="section-header">
+      <h2><i class="fas fa-bed"></i> Internamientos <span class="beta-badge" style="background: #f39c12; color: white; padding: 4px 8px; border-radius: 3px; font-size: 11px; margin-left: 10px;">BETA</span></h2>
+      <button id="btnNuevoInternamiento" class="btn btn-primary">
+        <i class="fas fa-plus"></i> Nuevo Internamiento
+      </button>
+    </div>
+
+    <div class="banner-beta" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+      <i class="fas fa-exclamation-triangle" style="font-size: 20px;"></i>
+      <div style="flex: 1;">
+        <strong>🚧 Versión BETA</strong> - Este módulo está en pruebas. Reporta cualquier problema al equipo de desarrollo.
+      </div>
+    </div>
+
+          <!-- Búsqueda -->
+          <div style="margin-bottom: 20px;">
+            <div style="position: relative;">
+              <input type="text" id="buscarInternamiento" placeholder="🔍 Buscar por nombre de mascota, propietario o expediente..." 
+                     style="width: 100%; padding: 12px 20px 12px 45px; border: 2px solid #e0e0e0; border-radius: 25px; font-size: 0.95rem; transition: all 0.3s ease;">
+              <i class="fas fa-search" style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #999;"></i>
+            </div>
+          </div>
+
+          <div class="filters-container" style="margin-bottom: 20px;">
+            <button class="filter-btn active" data-filter="activos">
+              <i class="fas fa-heartbeat"></i> Activos
+            </button>
+            <button class="filter-btn" data-filter="criticos">
+              <i class="fas fa-exclamation-triangle"></i> Críticos
+            </button>
+            <button class="filter-btn" data-filter="alta">
+              <i class="fas fa-check-circle"></i> Alta Médica
+            </button>
+            <button class="filter-btn" data-filter="todos">
+              <i class="fas fa-list"></i> Todos
+            </button>
+          </div>
+
+    <div id="internamientosActivosContainer">
+      <!-- Se llena dinámicamente por JS -->
+    </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 2: FORMULARIO DE ADMISIÓN -->
+  <!-- ============================================================ -->
+  <div id="internamiento-admision" class="hidden">
+    <div class="section-header">
+      <h2><i class="fas fa-file-medical"></i> Admisión de Internamiento</h2>
+      <button id="btnVolverAdmision" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Volver
+      </button>
+    </div>
+
+    <form id="formAdmisionInternamiento">
+      <!-- Datos del Cliente -->
+      <div class="form-section">
+        <h3><i class="fas fa-user"></i> Datos del Propietario</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="internamientoCedulaAdmision">Cédula *</label>
+            <input type="text" id="internamientoCedulaAdmision" required>
+          </div>
+          <div class="form-group">
+            <label for="internamientoNombreAdmision">Nombre Completo *</label>
+            <input type="text" id="internamientoNombreAdmision" required>
+          </div>
+          <div class="form-group">
+            <label for="internamientoTelefonoAdmision">Teléfono *</label>
+            <input type="tel" id="internamientoTelefonoAdmision" required>
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos de la Mascota -->
+      <div class="form-section">
+        <h3><i class="fas fa-paw"></i> Datos del Paciente</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="internamientoMascotaAdmision">Nombre de Mascota *</label>
+            <input type="text" id="internamientoMascotaAdmision" required>
+          </div>
+          <div class="form-group">
+            <label for="internamientoTipoMascotaAdmision">Especie *</label>
+            <select id="internamientoTipoMascotaAdmision" required>
+              <option value="perro">Perro</option>
+              <option value="gato">Gato</option>
+              <option value="ave">Ave</option>
+              <option value="conejo">Conejo</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="internamientoIdPacienteAdmision">ID Paciente (Expediente)</label>
+            <input type="text" id="internamientoIdPacienteAdmision" placeholder="Ej: 00001">
+          </div>
+        </div>
+      </div>
+
+      <!-- Datos de Ingreso -->
+            <div class="form-section">
+              <h3><i class="fas fa-notes-medical"></i> Información Clínica de Ingreso</h3>
+              <div class="form-row">
+                <div class="form-group" style="grid-column: span 2;">
+                  <label for="internamientoHistoriaClinica">
+                    Historia Clínica / Motivo de Internamiento *
+                    <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">
+                      (Incluir: Tiempo de evolución, signos clínicos principales)
+                    </span>
+                  </label>
+                  <textarea id="internamientoHistoriaClinica" rows="4" required placeholder="Descripción detallada del caso..."></textarea>
+                </div>
+              </div>
+        <div class="form-row">
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="internamientoDiagnostico">Diagnóstico Presuntivo *</label>
+            <input type="text" id="internamientoDiagnostico" required placeholder="Ej: Gastroenteritis aguda">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="internamientoPadecimientos">Padecimientos o Enfermedades Previas</label>
+            <textarea id="internamientoPadecimientos" rows="2" placeholder="Opcional - Historial médico relevante"></textarea>
+          </div>
+        </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="internamientoPesoIngreso">
+                    Peso de Ingreso (kg) *
+                    <span style="color: #27ae60; font-weight: normal; font-size: 0.85rem;">
+                      (Será referencia para monitoreo)
+                    </span>
+                  </label>
+                  <input type="number" id="internamientoPesoIngreso" step="0.1" min="0" required placeholder="Ej: 12.5">
+                </div>
+                <div class="form-group">
+                  <label for="internamientoTempIngreso">
+                    Temperatura de Ingreso (°C) *
+                    <span style="color: #3498db; font-weight: normal; font-size: 0.85rem;">
+                      (Normal: 37.5-39.2°C)
+                    </span>
+                  </label>
+                  <input type="number" id="internamientoTempIngreso" step="0.1" min="30" max="45" required placeholder="Ej: 38.5">
+                </div>
+              </div>
+        <div class="form-row">
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="internamientoNecesidades">Necesidades Especiales / Observaciones</label>
+            <textarea id="internamientoNecesidades" rows="2" placeholder="Ej: Agresivo, manejar con precaución"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Controles Rápidos -->
+      <div class="form-section">
+        <h3><i class="fas fa-check-square"></i> Controles Rápidos</h3>
+        <div class="form-row" style="display: flex; flex-wrap: wrap; gap: 15px;">
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="internamientoMuestras">
+            ¿Tomaron muestras?
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="internamientoExamenes">
+            ¿Tiene exámenes?
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="internamientoUltrasonido">
+            ¿Ultrasonido?
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="internamientoCastrado">
+            ¿Castrado?
+          </label>
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="internamientoVacunas">
+            ¿Vacunas y desparasitación al día?
+          </label>
+        </div>
+      </div>
+
+      <!-- Persona Responsable -->
+      <div class="form-section">
+        <h3><i class="fas fa-phone"></i> Persona Responsable de Comunicación</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="internamientoPersonaResponsable">Nombre del Contacto</label>
+            <input type="text" id="internamientoPersonaResponsable" placeholder="Generalmente el propietario">
+          </div>
+          <div class="form-group">
+            <label for="internamientoTelefonoResponsable">Teléfono de Contacto</label>
+            <input type="tel" id="internamientoTelefonoResponsable" placeholder="Para notificaciones">
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align: right; margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" onclick="window.internamientoModule.showInternamientosSection()">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-success" style="margin-left: 10px;">
+          <i class="fas fa-save"></i> Iniciar Internamiento
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 3: PANEL PRINCIPAL -->
+  <!-- ============================================================ -->
+  <div id="internamiento-panel" class="hidden">
+    <!-- Header dinámico -->
+    <div id="panelHeaderContainer"></div>
+
+          <!-- Contenido en 3 columnas -->
+          <div class="panel-grid">
+            <!-- Columna 1: Últimos Turnos -->
+            <div class="info-card">
+              <div id="panelUltimosTurnos"></div>
+            </div>
+
+            <!-- Columna 2: Medicaciones -->
+            <div class="info-card">
+              <div id="panelMedicaciones"></div>
+            </div>
+
+            <!-- Columna 3: Procedimientos -->
+            <div class="info-card">
+              <div id="panelProcedimientos"></div>
+            </div>
+          </div>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 4: REGISTRO DE TURNO -->
+  <!-- ============================================================ -->
+  <div id="internamiento-turno" class="hidden">
+    <div class="section-header">
+      <h2><i class="fas fa-clipboard-check"></i> Registro de Turno</h2>
+      <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal(window.internamientoModule.currentInternamientoId)">
+        <i class="fas fa-arrow-left"></i> Volver al Panel
+      </button>
+    </div>
+
+    <form id="formRegistroTurno">
+      <!-- Datos del Turno -->
+      <div class="form-section">
+        <h3><i class="fas fa-clock"></i> Datos del Turno</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="turnoFecha">Fecha *</label>
+            <input type="date" id="turnoFecha" required>
+          </div>
+          <div class="form-group">
+            <label for="turnoHora">Hora *</label>
+            <input type="time" id="turnoHora" required>
+          </div>
+          <div class="form-group">
+            <label for="turnoFranja">Turno *</label>
+            <select id="turnoFranja" required>
+              <option value="12am-6am">12am - 6am (Nocturno)</option>
+              <option value="6am-12pm">6am - 12pm (Mañana)</option>
+              <option value="12pm-6pm">12pm - 6pm (Tarde)</option>
+              <option value="6pm-12am">6pm - 12am (Noche)</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="turnoResponsable">Responsable / Quien Registra *</label>
+            <input type="text" id="turnoResponsable" required>
+            <small style="color: #6c757d; font-size: 0.85rem; display: block; margin-top: 5px;">
+              <i class="fas fa-info-circle"></i> Nombre de la persona que registra este turno
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Parámetros Vitales -->
+      <div class="form-section">
+        <h3><i class="fas fa-heartbeat"></i> Parámetros Vitales</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="turnoPeso">Peso (kg)</label>
+            <input type="number" id="turnoPeso" step="0.1" min="0" placeholder="Ej: 12.5">
+          </div>
+          <div class="form-group">
+            <label for="turnoFC">FC - Frecuencia Cardíaca (lpm) *</label>
+            <input type="number" id="turnoFC" min="0" required placeholder="Ej: 120">
+          </div>
+          <div class="form-group">
+            <label for="turnoFR">FR - Frecuencia Respiratoria (rpm)</label>
+            <input type="number" id="turnoFR" min="0" placeholder="Ej: 28">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="turnoTemperatura">Temperatura (°C) *</label>
+            <input type="number" id="turnoTemperatura" step="0.1" min="30" max="45" required placeholder="Ej: 38.5">
+          </div>
+          <div class="form-group">
+            <label for="turnoTLLC">TLLC - Tiempo Llenado Capilar (seg)</label>
+            <input type="number" id="turnoTLLC" step="0.1" min="0" placeholder="Ej: 1.5">
+          </div>
+          <div class="form-group">
+            <label for="turnoDeshidratacion">% Deshidratación</label>
+            <select id="turnoDeshidratacion">
+              <option value="0">0% - Normal</option>
+              <option value="5">5% - Leve</option>
+              <option value="7">7% - Moderada</option>
+              <option value="10">10% - Severa</option>
+              <option value="12">12% - Crítica</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="turnoMucosas">Mucosas</label>
+            <select id="turnoMucosas">
+              <option value="rosadas">Rosadas (Normal)</option>
+              <option value="palidas">Pálidas</option>
+              <option value="ictericas">Ictéricas</option>
+              <option value="cianoticas">Cianóticas</option>
+              <option value="congestivas">Congestivas</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Estado General -->
+      <div class="form-section">
+        <h3><i class="fas fa-stethoscope"></i> Estado General</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="turnoEstadoMental">Estado Mental *</label>
+            <select id="turnoEstadoMental" required>
+              <option value="alerta">Alerta</option>
+              <option value="tranquilo">Tranquilo</option>
+              <option value="deprimido">Deprimido</option>
+              <option value="excitado">Excitado</option>
+              <option value="agresivo">Agresivo</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="turnoNivelDolor">Nivel de Dolor</label>
+            <select id="turnoNivelDolor">
+              <option value="sin_dolor">Sin dolor</option>
+              <option value="leve">Leve</option>
+              <option value="moderado">Moderado</option>
+              <option value="fuerte">Fuerte</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="turnoIngestaAgua">
+              ¿Ingesta de agua?
+            </label>
+            <input type="number" id="turnoCantidadAgua" min="0" placeholder="Cantidad en ml" style="margin-top: 8px;">
+          </div>
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="turnoApetito">
+              ¿Apetito?
+            </label>
+            <input type="text" id="turnoAlimentoCantidad" placeholder="Cantidad comida" style="margin-top: 8px;">
+            <input type="text" id="turnoAlimentoTipo" placeholder="Tipo de alimento" style="margin-top: 8px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="turnoDiarreas">
+              ¿Diarreas?
+            </label>
+            <textarea id="turnoDescripcionDiarreas" rows="2" placeholder="Descripción de características" style="margin-top: 8px;"></textarea>
+          </div>
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="turnoVomitos">
+              ¿Vómitos?
+            </label>
+            <textarea id="turnoDescripcionVomitos" rows="2" placeholder="Descripción de características" style="margin-top: 8px;"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fluidoterapia -->
+      <div class="form-section">
+        <h3><i class="fas fa-tint"></i> Fluidoterapia</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label style="display: flex; align-items: center; gap: 8px;">
+              <input type="checkbox" id="turnoFluidoterapia">
+              ¿Se administró fluidoterapia?
+            </label>
+          </div>
+          <div class="form-group">
+            <label for="turnoFluidoTipo">Tipo de Fluido</label>
+            <select id="turnoFluidoTipo">
+              <option value="">Seleccionar...</option>
+              <option value="ringer_lactato">Ringer Lactato</option>
+              <option value="solucion_salina">Solución Salina 0.9%</option>
+              <option value="dextrosa_5">Dextrosa 5%</option>
+              <option value="hartmann">Hartmann</option>
+              <option value="otro">Otro</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="turnoFluidoFrecuencia">Velocidad / Frecuencia</label>
+            <input type="text" id="turnoFluidoFrecuencia" placeholder="Ej: 60 ml/h continuo">
+          </div>
+        </div>
+      </div>
+
+      <!-- Observaciones -->
+      <div class="form-section">
+        <h3><i class="fas fa-comment-medical"></i> Observaciones del Turno</h3>
+        <div class="form-row">
+          <div class="form-group" style="grid-column: span 2;">
+            <textarea id="turnoObservaciones" rows="4" placeholder="Observaciones adicionales, cambios notables, comportamiento..."></textarea>
+          </div>
+        </div>
+      </div>
+
+      <div style="text-align: right; margin-top: 20px;">
+        <button type="button" class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal(window.internamientoModule.currentInternamientoId)">
+          Cancelar
+        </button>
+        <button type="submit" class="btn btn-success" style="margin-left: 10px;">
+          <i class="fas fa-save"></i> Guardar Turno
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- VISTA 5: PLAN DE MEDICACIÓN -->
+  <!-- ============================================================ -->
+  <div id="internamiento-medicacion" class="hidden">
+    <div class="section-header">
+      <h2><i class="fas fa-pills"></i> Plan de Medicación</h2>
+      <div>
+        <button id="btnAgregarMedicamento" class="btn btn-primary">
+          <i class="fas fa-plus"></i> Agregar Medicamento
+        </button>
+        <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal(window.internamientoModule.currentInternamientoId)" style="margin-left: 10px;">
+          <i class="fas fa-arrow-left"></i> Volver al Panel
+        </button>
+      </div>
+    </div>
+
+    <div id="medicamentosListContainer">
+      <!-- Se llena dinámicamente por JS -->
+    </div>
+  </div>
+
+  <!-- Vista de Procedimientos -->
+  <div id="internamiento-procedimientos" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-evolucion" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-egreso" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+</section>
+
+<!-- Cargar módulo de internamiento -->
+<script src="modules/internamiento/js/internamiento-module.js"></script>
+<script src="modules/internamiento/js/internamiento-notificaciones.js"></script>
+<script src="modules/internamiento/js/internamiento-extended.js"></script>
+<script src="modules/internamiento/js/internamiento-egreso.js"></script>
+<script src="modules/internamiento/js/internamiento-procedimientos.js"></script>
 
 </body>
 </html>
