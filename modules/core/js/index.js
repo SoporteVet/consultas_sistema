@@ -6227,7 +6227,8 @@ window.addEventListener('DOMContentLoaded', function() {
       document.getElementById('inySueroAutologo'),
       document.getElementById('inyMetadona'),
       document.getElementById('inyOndansetron'),
-      document.getElementById('inySerentis')
+      document.getElementById('inySerentis'),
+      document.getElementById('inySostenCg')
     ];
     
     const alMenosUnoSeleccionado = checkboxes.some(checkbox => checkbox.checked);
@@ -6268,6 +6269,7 @@ window.addEventListener('DOMContentLoaded', function() {
       metadona: document.getElementById('inyMetadona').checked ? 'X' : '',
       ondansetron: document.getElementById('inyOndansetron').checked ? 'X' : '',
       serentis: document.getElementById('inySerentis').checked ? 'X' : '',
+      sostenCg: document.getElementById('inySostenCg').checked ? 'X' : '',
       dosis: dosis,
       aFavorDosis: document.getElementById('inyAFavorDosis').value,
       solicitante: solicitante,
@@ -6413,6 +6415,10 @@ window.addEventListener('DOMContentLoaded', function() {
               <input type="text" class="field-edit" value="${inyectable.serentis || ''}" style="display: none;" data-field="serentis">
             </td>
             <td>
+              <span class="field-display">${inyectable.sostenCg || ''}</span>
+              <input type="text" class="field-edit" value="${inyectable.sostenCg || ''}" style="display: none;" data-field="sostenCg">
+            </td>
+            <td>
               <span class="field-display">${inyectable.dosis || ''}</span>
               <input type="text" class="field-edit" value="${inyectable.dosis || ''}" style="display: none;" data-field="dosis">
             </td>
@@ -6468,6 +6474,7 @@ window.addEventListener('DOMContentLoaded', function() {
             <td>${inyectable.metadona || ''}</td>
             <td>${inyectable.ondansetron || ''}</td>
             <td>${inyectable.serentis || ''}</td>
+            <td>${inyectable.sostenCg || ''}</td>
             <td>${inyectable.dosis || ''}</td>
             <td>
               <label class="table-checkbox-label">
