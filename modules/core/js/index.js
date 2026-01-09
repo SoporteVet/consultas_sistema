@@ -3277,37 +3277,14 @@ function editTicket(randomId) {
                         <label for="editDoctorAtiende"><i class="fas fa-user-md"></i> Doctor que atiende</label>
                         <select id="editDoctorAtiende" name="editDoctorAtiende">
                             <option value="">Seleccione un doctor</option>
-                            <option value="Dr. Luis Coto" ${doctorSeleccionado === "Dr. Luis Coto" ? 'selected' : ''}>Dr. Luis Coto</option>
-                            <option value="Dr. Randall Azofeifa" ${doctorSeleccionado === "Dr. Randall Azofeifa" ? 'selected' : ''}>Dr. Randall Azofeifa</option>
-                            <option value="Dra. Daniela Sancho" ${doctorSeleccionado === "Dra. Daniela Sancho" ? 'selected' : ''}>Dra. Daniela Sancho</option>
-                            <option value="Dra. Francinny Nuñez" ${doctorSeleccionado === "Dra. Francinny Nuñez" ? 'selected' : ''}>Dra. Francinny Nuñez</option>
-                            <option value="Dra. Kharen Moreno" ${doctorSeleccionado === "Dra. Kharen Moreno" ? 'selected' : ''}>Dra. Kharen Moreno</option>
-                            <option value="Dra. Karina Madrigal" ${doctorSeleccionado === "Dra. Karina Madrigal" ? 'selected' : ''}>Dra. Karina Madrigal</option>
-                            <option value="Dra. Lourdes Chacón" ${doctorSeleccionado === "Dra. Lourdes Chacón" ? 'selected' : ''}>Dra. Lourdes Chacón</option>
-                            <option value="Dra. Karla Quesada" ${doctorSeleccionado === "Dra. Karla Quesada" ? 'selected' : ''}>Dra. Karla Quesada</option>
-                            <option value="Dra. Natalia Alvarado" ${doctorSeleccionado === "Dra. Natalia Alvarado" ? 'selected' : ''}>Dra. Natalia Alvarado</option>
-                            <option value="Dra. Eliany Lopez" ${doctorSeleccionado === "Dra. Eliany Lopez" ? 'selected' : ''}>Dra. Eliany Lopez</option>
-                            <option value="Dra. Adriana Rojas" ${doctorSeleccionado === "Dra. Adriana Rojas" ? 'selected' : ''}>Dra. Adriana Rojas</option>
-                            <option value="Dra. Nicole Sibaja" ${doctorSeleccionado === "Dra. Nicole Sibaja" ? 'selected' : ''}>Dra. Nicole Sibaja</option>
-                            <option value="Dra. Christiane Buchheim" ${doctorSeleccionado === "Dra. Christiane Buchheim" ? 'selected' : ''}>Dra. Christiane Buchheim</option>
+                            <!-- Los doctores se cargarán dinámicamente desde Firebase -->
                         </select>
                     </div>
                     <div class="form-group">
                         <label for="editAsistenteAtiende"><i class="fas fa-user-nurse"></i> Asistente que atiende</label>
                         <select id="editAsistenteAtiende" name="editAsistenteAtiende">
                             <option value="">Seleccione un asistente</option>
-                            <option value="Tec. Maribel Guzmán" ${asistenteSeleccionado === "Tec. Maribel Guzmán" ? 'selected' : ''}>Tec. Maribel Guzmán</option>
-                            <option value="Tec. Juliana Perez" ${asistenteSeleccionado === "Tec. Juliana Perez" ? 'selected' : ''}>Tec. Juliana Perez</option>
-                            <option value="Tec. Jafeth Bermudez" ${asistenteSeleccionado === "Tec. Jafeth Bermudez" ? 'selected' : ''}>Tec. Jafeth Bermudez</option>
-                            <option value="Tec. Gabriela Zuñiga" ${asistenteSeleccionado === "Tec. Gabriela Zuñiga" ? 'selected' : ''}>Tec. Gabriela Zuñiga</option>
-                            <option value="Tec. Indra Perez" ${asistenteSeleccionado === "Tec. Indra Perez" ? 'selected' : ''}>Tec. Indra Perez</option>
-                            <option value="Tec. Randy Arias" ${asistenteSeleccionado === "Tec. Randy Arias" ? 'selected' : ''}>Tec. Randy Arias</option>
-                            <option value="Tec. Yancy Picado" ${asistenteSeleccionado === "Tec. Yancy Picado" ? 'selected' : ''}>Tec. Yancy Picado</option>
-                            <option value="Tec. Maria Fernanda"${asistenteSeleccionado === "Tec. Maria Fernanda" ? 'selected' : ''}>Tec. Maria Fernanda</option>
-                            <option value="Tec. Nicole Gamboa" ${asistenteSeleccionado === "Tec. Nicole Gamboa" ? 'selected' : ''}>Tec. Nicole Gamboa</option>
-                            <option value="Tec. Paola López" ${asistenteSeleccionado === "Tec. Paola López" ? 'selected' : ''}>Tec. Paola López</option>
-                            <option value="Tec. Alexander Ureña" ${asistenteSeleccionado === "Tec. Alexander Ureña" ? 'selected' : ''}>Tec. Alexander Ureña</option>
-                            <option value="Tec. Yovanel Valle" ${asistenteSeleccionado === "Tec. Yovanel Valle" ? 'selected' : ''}>Tec. Yovanel Valle</option>
+                            <!-- Los asistentes se cargarán dinámicamente desde Firebase -->
                         </select>
                     </div>
                 </div>
@@ -3443,6 +3420,25 @@ function editTicket(randomId) {
     `;
     
     document.body.appendChild(modal);
+    
+    // Cargar doctores y asistentes dinámicamente en los selects del modal de edición
+    if (window.loadDoctorsIntoSelects && window.loadAssistantsIntoSelects) {
+        // Cargar doctores y asistentes
+        loadDoctorsIntoSelects().then(() => {
+            // Después de cargar, seleccionar el doctor si existe
+            const editDoctorSelect = document.getElementById('editDoctorAtiende');
+            if (editDoctorSelect && doctorSeleccionado) {
+                editDoctorSelect.value = doctorSeleccionado;
+            }
+        });
+        loadAssistantsIntoSelects().then(() => {
+            // Después de cargar, seleccionar el asistente si existe
+            const editAssistantSelect = document.getElementById('editAsistenteAtiende');
+            if (editAssistantSelect && asistenteSeleccionado) {
+                editAssistantSelect.value = asistenteSeleccionado;
+            }
+        });
+    }
     
     // Event listener para el checkbox "Listo para facturar" - SOLO para actualización visual
     const listoParaFacturarCheckbox = document.getElementById('editListoParaFacturar');
