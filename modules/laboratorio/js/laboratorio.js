@@ -2255,22 +2255,10 @@ function editLabTicket(randomId) {
                         <label>Médico que Solicita</label>
                         <select id="editLabMedico" required>
                             <option value="">Seleccione un médico</option>
-                            <option value="Dr. Luis Coto" ${ticket.medicoSolicita === 'Dr. Luis Coto' ? 'selected' : ''}>Dr. Luis Coto</option>
-                            <option value="Dr. Randall Azofeifa" ${ticket.medicoSolicita === 'Dr. Randall Azofeifa' ? 'selected' : ''}>Dr. Randall Azofeifa</option>
-                            <option value="Dra. Daniela Sancho" ${ticket.medicoSolicita === 'Dra. Daniela Sancho' ? 'selected' : ''}>Dra. Daniela Sancho</option>
-                            <option value="Dra. Francinny Nuñez" ${ticket.medicoSolicita === 'Dra. Francinny Nuñez' ? 'selected' : ''}>Dra. Francinny Nuñez</option>
-                            <option value="Dra. Kharen Moreno" ${ticket.medicoSolicita === 'Dra. Kharen Moreno' ? 'selected' : ''}>Dra. Kharen Moreno</option>
-                            <option value="Dra. Karina Madrigal" ${ticket.medicoSolicita === 'Dra. Karina Madrigal' ? 'selected' : ''}>Dra. Karina Madrigal</option>
-                            <option value="Dra. Lourdes Chacón" ${ticket.medicoSolicita === 'Dra. Lourdes Chacón' ? 'selected' : ''}>Dra. Lourdes Chacón</option>
-                            <option value="Dra. Karla Quesada" ${ticket.medicoSolicita === 'Dra. Karla Quesada' ? 'selected' : ''}>Dra. Karla Quesada</option>
-                            <option value="Dra. Natalia Alvarado" ${ticket.medicoSolicita === 'Dra. Natalia Alvarado' ? 'selected' : ''}>Dra. Natalia Alvarado</option>
-                            <option value="Dra. Eliany Lopez" ${ticket.medicoSolicita === 'Dra. Eliany Lopez' ? 'selected' : ''}>Dra. Eliany Lopez</option>
-                            <option value="Dra. Adriana Rojas" ${ticket.medicoSolicita === 'Dra. Adriana Rojas' ? 'selected' : ''}>Dra. Adriana Rojas</option>
-                            <option value="Dra. Nicole Sibaja" ${ticket.medicoSolicita === 'Dra. Nicole Sibaja' ? 'selected' : ''}>Dra. Nicole Sibaja</option>
-                            <option value="Dra. Christiane Buchheim" ${ticket.medicoSolicita === 'Dra. Christiane Buchheim' ? 'selected' : ''}>Dra. Christiane Buchheim</option>
                             <option value="Medico Externo" ${ticket.medicoSolicita === 'Medico Externo' ? 'selected' : ''}>Médico Externo</option>
                             <option value="Medico Internista" ${ticket.medicoSolicita === 'Medico Internista' ? 'selected' : ''}>Médico Internista</option>
                             <option value="N.A" ${ticket.medicoSolicita === 'N.A' ? 'selected' : ''}>N.A</option>
+                            <!-- Los doctores se cargarán dinámicamente desde Firebase -->
                         </select>
                     </div>
                     <div class="form-group">
@@ -2359,6 +2347,17 @@ function editLabTicket(randomId) {
     `;
     
     document.body.appendChild(modal);
+    
+    // Cargar doctores dinámicamente en el select del modal de edición
+    if (window.loadDoctorsIntoSelects) {
+        loadDoctorsIntoSelects().then(() => {
+            // Después de cargar, seleccionar el médico si existe
+            const editLabMedicoSelect = document.getElementById('editLabMedico');
+            if (editLabMedicoSelect && ticket.medicoSolicita) {
+                editLabMedicoSelect.value = ticket.medicoSolicita;
+            }
+        });
+    }
     
     // Configurar sincronización de facturas para el campo de edición
     setupLabFacturaSyncForEdit(ticket.randomId);
