@@ -282,48 +282,64 @@ function saveQuirofanoTicket(ticketData) {
     
     quirofanoFirebaseRef.push(ticketData)
         .then(() => {
-            // Guardar paciente en la base de datos relacional
-            if (window.patientDatabase && ticketData.cedula) {
-                window.patientDatabase.savePatientFromTicket({
-                    cedula: ticketData.cedula,
-                    nombre: ticketData.nombrePropietario,
-                    telefono: ticketData.telefono,
-                    correo: ticketData.correo,
-                    mascota: ticketData.nombreMascota,
-                    tipoMascota: ticketData.tipoMascota,
-                    idPaciente: ticketData.idPaciente,
-                    raza: ticketData.raza,
-                    edad: ticketData.edad,
-                    peso: ticketData.peso,
-                    sexo: ticketData.sexo
-                }).catch(err => console.error('Error guardando en BD de pacientes:', err));
+            try {
+                // Guardar paciente en la base de datos relacional
+                if (window.patientDatabase && ticketData.cedula) {
+                    window.patientDatabase.savePatientFromTicket({
+                        cedula: ticketData.cedula,
+                        nombre: ticketData.nombrePropietario,
+                        telefono: ticketData.telefono,
+                        correo: ticketData.correo,
+                        mascota: ticketData.nombreMascota,
+                        tipoMascota: ticketData.tipoMascota,
+                        idPaciente: ticketData.idPaciente,
+                        raza: ticketData.raza,
+                        edad: ticketData.edad,
+                        peso: ticketData.peso,
+                        sexo: ticketData.sexo
+                    }).catch(err => console.error('Error guardando en BD de pacientes:', err));
+                }
+                
+                hideLoading();
+                showNotification('Ticket de quirófano creado exitosamente', 'success');
+                
+                const form = document.getElementById('quirofanoTicketForm');
+                if (form) {
+                    form.reset();
+                }
+                
+                loadQuirofanoTickets();
+                
+                // Actualizar variable global inmediatamente después de crear
+                setTimeout(() => {
+                    try {
+                        // Actualizar contador de exámenes prequirúrgicos
+                        if (typeof window.updatePrequirurgicoCounter === 'function') {
+                            window.updatePrequirurgicoCounter();
+                        }
+                        
+                        // Actualizar contador de vía
+                        if (typeof window.updateViaCounter === 'function') {
+                            window.updateViaCounter();
+                        }
+                        
+                        // Redirigir a la vista de ver tickets después de actualizar
+                        redirectToQuirofanoView();
+                    } catch (err) {
+                        console.error('Error en actualizaciones post-creación:', err);
+                    }
+                }, 500);
+            } catch (err) {
+                // Si hay un error en el procesamiento posterior, no mostrar error al usuario
+                // porque el ticket ya se creó exitosamente en Firebase
+                console.error('Error en procesamiento post-creación:', err);
+                hideLoading();
+                showNotification('Ticket de quirófano creado exitosamente', 'success');
             }
-            
-            hideLoading();
-            showNotification('Ticket de quirófano creado exitosamente', 'success');
-            document.getElementById('quirofanoTicketForm').reset();
-            loadQuirofanoTickets();
-            
-            // Actualizar variable global inmediatamente después de crear
-            setTimeout(() => {
-                // window.quirofanoTickets ya está actualizado
-                
-                // Actualizar contador de exámenes prequirúrgicos
-                if (typeof window.updatePrequirurgicoCounter === 'function') {
-                    window.updatePrequirurgicoCounter();
-                }
-                
-                // Actualizar contador de vía
-                if (typeof window.updateViaCounter === 'function') {
-                    window.updateViaCounter();
-                }
-                
-                // Redirigir a la vista de ver tickets después de actualizar
-                redirectToQuirofanoView();
-            }, 500);
         })
         .catch((error) => {
             hideLoading();
+            console.error('Error real al crear el ticket en Firebase:', error);
             showNotification('Error al crear el ticket', 'error');
         });
 }
@@ -970,39 +986,14 @@ function editQuirofanoTicket(randomId) {
                             <label for="editQuirofanoDoctorAtiende"><i class="fas fa-user-md"></i> Doctor que atiende</label>
                             <select id="editQuirofanoDoctorAtiende" name="doctorAtiende">
                                 <option value="">Seleccione un doctor</option>
-                                <option value="Dr. Luis Coto" ${doctorActual === 'Dr. Luis Coto' ? 'selected' : ''}>Dr. Luis Coto</option>
-                                <option value="Dr. Randall Azofeifa" ${doctorActual === 'Dr. Randall Azofeifa' ? 'selected' : ''}>Dr. Randall Azofeifa</option>
-                                <option value="Dr. Gustavo Gonzalez" ${doctorActual === 'Dr. Gustavo Gonzalez' ? 'selected' : ''}>Dr. Gustavo Gonzalez</option>
-                                <option value="Dra. Daniela Sancho" ${doctorActual === 'Dra. Daniela Sancho' ? 'selected' : ''}>Dra. Daniela Sancho</option>
-                                <option value="Dra. Francinny Nuñez" ${doctorActual === 'Dra. Francinny Nuñez' ? 'selected' : ''}>Dra. Francinny Nuñez</option>
-                                <option value="Dra. Kharen Moreno" ${doctorActual === 'Dra. Kharen Moreno' ? 'selected' : ''}>Dra. Kharen Moreno</option>
-                                <option value="Dra. Karina Madrigal" ${doctorActual === 'Dra. Karina Madrigal' ? 'selected' : ''}>Dra. Karina Madrigal</option>
-                                <option value="Dra. Lourdes Chacón" ${doctorActual === 'Dra. Lourdes Chacón' ? 'selected' : ''}>Dra. Lourdes Chacón</option>
-                                <option value="Dra. Karla Quesada" ${doctorActual === 'Dra. Karla Quesada' ? 'selected' : ''}>Dra. Karla Quesada</option>
-                                <option value="Dra. Natalia Alvarado" ${doctorActual === 'Dra. Natalia Alvarado' ? 'selected' : ''}>Dra. Natalia Alvarado</option>
-                                <option value="Dra. Eliany Lopez" ${doctorActual === 'Dra. Eliany Lopez' ? 'selected' : ''}>Dra. Eliany Lopez</option>
-                                <option value="Dra. Adriana Rojas" ${doctorActual === 'Dra. Adriana Rojas' ? 'selected' : ''}>Dra. Adriana Rojas</option>
-                                <option value="Dra. Nicole Sibaja" ${doctorActual === 'Dra. Nicole Sibaja' ? 'selected' : ''}>Dra. Nicole Sibaja</option>
-                                <option value="Dra. Christiane Buchheim" ${doctorActual === 'Dra. Christiane Buchheim' ? 'selected' : ''}>Dra. Christiane Buchheim</option>
+                                <!-- Los doctores se cargarán dinámicamente desde Firebase -->
                             </select>
                         </div>
                         <div class="form-group">
                             <label for="editQuirofanoAsistenteAtiende"><i class="fas fa-user-nurse"></i> Asistente que atiende</label>
                             <select id="editQuirofanoAsistenteAtiende" name="asistenteAtiende">
                                 <option value="">Seleccione un asistente</option>
-                                <option value="Tec. Maribel Guzmán" ${asistenteActual === 'Tec. Maribel Guzmán' ? 'selected' : ''}>Tec. Maribel Guzmán</option>
-                                <option value="Tec. Juliana Perez" ${asistenteActual === 'Tec. Juliana Perez' ? 'selected' : ''}>Tec. Juliana Perez</option>
-                                <option value="Tec. Jafeth Bermudez" ${asistenteActual === 'Tec. Jafeth Bermudez' ? 'selected' : ''}>Tec. Jafeth Bermudez</option>
-                                <option value="Tec. Johnny Chacón" ${asistenteActual === 'Tec. Johnny Chacón' ? 'selected' : ''}>Tec. Johnny Chacón</option>
-                                <option value="Tec. Gabriela Zuñiga" ${asistenteActual === 'Tec. Gabriela Zuñiga' ? 'selected' : ''}>Tec. Gabriela Zuñiga</option>
-                                <option value="Tec. Indra Perez" ${asistenteActual === 'Tec. Indra Perez' ? 'selected' : ''}>Tec. Indra Perez</option>
-                                <option value="Tec. Randy Arias" ${asistenteActual === 'Tec. Randy Arias' ? 'selected' : ''}>Tec. Randy Arias</option>
-                                <option value="Tec. Yancy Picado" ${asistenteActual === 'Tec. Yancy Picado' ? 'selected' : ''}>Tec. Yancy Picado</option>
-                                <option value="Tec. Maria Fernanda" ${asistenteActual === 'Tec. Maria Fernanda' ? 'selected' : ''}>Tec. Maria Fernanda</option>
-                                <option value="Tec. Maria José Gutierrez" ${asistenteActual === 'Tec. Maria José Gutierrez' ? 'selected' : ''}>Tec. Maria José Gutierrez</option>
-                                <option value="Tec. Jimena Urtecho" ${asistenteActual === 'Tec. Jimena Urtecho' ? 'selected' : ''}>Tec. Jimena Urtecho</option>
-                                <option value="Tec. Nicole Gamboa" ${asistenteActual === 'Tec. Nicole Gamboa' ? 'selected' : ''}>Tec. Nicole Gamboa</option>
-                                <option value="Tec. Paola López" ${asistenteActual === 'Tec. Paola López' ? 'selected' : ''}>Tec. Paola López</option>
+                                <!-- Los asistentes se cargarán dinámicamente desde Firebase -->
                             </select>
                         </div>
                     </div>
@@ -1092,6 +1083,24 @@ function editQuirofanoTicket(randomId) {
     `;
     
     document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Cargar doctores y asistentes dinámicamente en los selects del modal de edición
+    if (window.loadDoctorsIntoSelects && window.loadAssistantsIntoSelects) {
+        loadDoctorsIntoSelects().then(() => {
+            // Después de cargar, seleccionar el doctor si existe
+            const editQuirofanoDoctorSelect = document.getElementById('editQuirofanoDoctorAtiende');
+            if (editQuirofanoDoctorSelect && doctorActual) {
+                editQuirofanoDoctorSelect.value = doctorActual;
+            }
+        });
+        loadAssistantsIntoSelects().then(() => {
+            // Después de cargar, seleccionar el asistente si existe
+            const editQuirofanoAsistenteSelect = document.getElementById('editQuirofanoAsistenteAtiende');
+            if (editQuirofanoAsistenteSelect && asistenteActual) {
+                editQuirofanoAsistenteSelect.value = asistenteActual;
+            }
+        });
+    }
     
     // Event listener para el formulario de edición
     document.getElementById('quirofanoEditForm').addEventListener('submit', handleQuirofanoEdit);
@@ -1201,21 +1210,33 @@ function handleQuirofanoEdit(e) {
     // Actualizar en Firebase
     quirofanoFirebaseRef.child(ticket.firebaseKey).update(updatedData)
         .then(() => {
-            showNotification('Ticket actualizado exitosamente', 'success');
-            closeQuirofanoModal();
-            loadQuirofanoTickets();
-            
-            // Actualizar contadores
-            setTimeout(() => {
-                if (typeof window.updatePrequirurgicoCounter === 'function') {
-                    window.updatePrequirurgicoCounter();
-                }
-                if (typeof window.updateViaCounter === 'function') {
-                    window.updateViaCounter();
-                }
-            }, 300);
+            try {
+                showNotification('Ticket actualizado exitosamente', 'success');
+                closeQuirofanoModal();
+                loadQuirofanoTickets();
+                
+                // Actualizar contadores
+                setTimeout(() => {
+                    try {
+                        if (typeof window.updatePrequirurgicoCounter === 'function') {
+                            window.updatePrequirurgicoCounter();
+                        }
+                        if (typeof window.updateViaCounter === 'function') {
+                            window.updateViaCounter();
+                        }
+                    } catch (err) {
+                        console.error('Error actualizando contadores:', err);
+                    }
+                }, 300);
+            } catch (err) {
+                // Si hay un error en el procesamiento posterior, no mostrar error al usuario
+                // porque el ticket ya se actualizó exitosamente en Firebase
+                console.error('Error en procesamiento post-actualización:', err);
+                showNotification('Ticket actualizado exitosamente', 'success');
+            }
         })
         .catch((error) => {
+            console.error('Error real al actualizar el ticket en Firebase:', error);
             showNotification('Error al actualizar el ticket', 'error');
         });
 }
@@ -1292,22 +1313,34 @@ function confirmDeleteQuirofanoTicket(randomId) {
 
     quirofanoFirebaseRef.child(ticket.firebaseKey).remove()
         .then(() => {
-            showNotification('Ticket eliminado exitosamente', 'success');
-            closeQuirofanoDeleteModal();
-            closeQuirofanoModal();
-            loadQuirofanoTickets();
-            
-            // Actualizar contadores
-            setTimeout(() => {
-                if (typeof window.updatePrequirurgicoCounter === 'function') {
-                    window.updatePrequirurgicoCounter();
-                }
-                if (typeof window.updateViaCounter === 'function') {
-                    window.updateViaCounter();
-                }
-            }, 300);
+            try {
+                showNotification('Ticket eliminado exitosamente', 'success');
+                closeQuirofanoDeleteModal();
+                closeQuirofanoModal();
+                loadQuirofanoTickets();
+                
+                // Actualizar contadores
+                setTimeout(() => {
+                    try {
+                        if (typeof window.updatePrequirurgicoCounter === 'function') {
+                            window.updatePrequirurgicoCounter();
+                        }
+                        if (typeof window.updateViaCounter === 'function') {
+                            window.updateViaCounter();
+                        }
+                    } catch (err) {
+                        console.error('Error actualizando contadores:', err);
+                    }
+                }, 300);
+            } catch (err) {
+                // Si hay un error en el procesamiento posterior, no mostrar error al usuario
+                // porque el ticket ya se eliminó exitosamente en Firebase
+                console.error('Error en procesamiento post-eliminación:', err);
+                showNotification('Ticket eliminado exitosamente', 'success');
+            }
         })
         .catch((error) => {
+            console.error('Error real al eliminar el ticket en Firebase:', error);
             showNotification('Error al eliminar el ticket', 'error');
         });
 }
@@ -1335,20 +1368,32 @@ function endQuirofanoSurgery(randomId) {
 
     quirofanoFirebaseRef.child(ticket.firebaseKey).update(updatedData)
         .then(() => {
-            showNotification('Cirugía marcada como terminada', 'success');
-            loadQuirofanoTickets();
-            
-            // Actualizar contadores
-            setTimeout(() => {
-                if (typeof window.updatePrequirurgicoCounter === 'function') {
-                    window.updatePrequirurgicoCounter();
-                }
-                if (typeof window.updateViaCounter === 'function') {
-                    window.updateViaCounter();
-                }
-            }, 300);
+            try {
+                showNotification('Cirugía marcada como terminada', 'success');
+                loadQuirofanoTickets();
+                
+                // Actualizar contadores
+                setTimeout(() => {
+                    try {
+                        if (typeof window.updatePrequirurgicoCounter === 'function') {
+                            window.updatePrequirurgicoCounter();
+                        }
+                        if (typeof window.updateViaCounter === 'function') {
+                            window.updateViaCounter();
+                        }
+                    } catch (err) {
+                        console.error('Error actualizando contadores:', err);
+                    }
+                }, 300);
+            } catch (err) {
+                // Si hay un error en el procesamiento posterior, no mostrar error al usuario
+                // porque el ticket ya se actualizó exitosamente en Firebase
+                console.error('Error en procesamiento post-terminación:', err);
+                showNotification('Cirugía marcada como terminada', 'success');
+            }
         })
         .catch((error) => {
+            console.error('Error real al terminar la cirugía en Firebase:', error);
             showNotification('Error al terminar la cirugía', 'error');
         });
 }
@@ -1442,44 +1487,53 @@ function marcarListoParaCirugia(randomId) {
     
     ticketRef.update(updateData)
     .then(() => {
-        hideLoading();
-        
-        let message = `${ticket.nombreMascota} ha sido marcado como listo para cirugía`;
-        if (ticket.examenesPrequirurgicos) {
-            message += ' y exámenes prequirúrgicos marcados como realizados automáticamente';
-        }
-        
-        showNotification(message, 'success');
-        
-        // Actualizar array local para mantener consistencia
-        const index = window.quirofanoTickets.findIndex(t => t.randomId === randomId);
-        if (index !== -1) {
-            window.quirofanoTickets[index] = ticket;
-        }
-        
-        // Actualizar contador de exámenes prequirúrgicos si existe la función
-        if (typeof window.updatePrequirurgicoCounter === 'function') {
-            window.updatePrequirurgicoCounter();
-        }
-        
-        // Actualizar contador de vía
-        if (typeof window.updateViaCounter === 'function') {
-            window.updateViaCounter();
-        }
-        
-        // Re-renderizar los tickets
-        const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
-        const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
-        const currentFilter = document.querySelector('.quirofanoFilterBtn.active')?.dataset.filter || 'todos';
-        
-        if (dateFilter) {
-            renderQuirofanoTicketsWithDateFilter(currentFilter, searchTerm, dateFilter);
-        } else {
-            renderQuirofanoTickets(currentFilter, searchTerm);
+        try {
+            hideLoading();
+            
+            let message = `${ticket.nombreMascota} ha sido marcado como listo para cirugía`;
+            if (ticket.examenesPrequirurgicos) {
+                message += ' y exámenes prequirúrgicos marcados como realizados automáticamente';
+            }
+            
+            showNotification(message, 'success');
+            
+            // Actualizar array local para mantener consistencia
+            const index = window.quirofanoTickets.findIndex(t => t.randomId === randomId);
+            if (index !== -1) {
+                window.quirofanoTickets[index] = ticket;
+            }
+            
+            // Actualizar contador de exámenes prequirúrgicos si existe la función
+            if (typeof window.updatePrequirurgicoCounter === 'function') {
+                window.updatePrequirurgicoCounter();
+            }
+            
+            // Actualizar contador de vía
+            if (typeof window.updateViaCounter === 'function') {
+                window.updateViaCounter();
+            }
+            
+            // Re-renderizar los tickets
+            const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
+            const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
+            const currentFilter = document.querySelector('.quirofanoFilterBtn.active')?.dataset.filter || 'todos';
+            
+            if (dateFilter) {
+                renderQuirofanoTicketsWithDateFilter(currentFilter, searchTerm, dateFilter);
+            } else {
+                renderQuirofanoTickets(currentFilter, searchTerm);
+            }
+        } catch (err) {
+            // Si hay un error en el procesamiento posterior, no mostrar error al usuario
+            // porque el ticket ya se actualizó exitosamente en Firebase
+            console.error('Error en procesamiento post-marcado como listo:', err);
+            hideLoading();
+            showNotification(`${ticket.nombreMascota} ha sido marcado como listo para cirugía`, 'success');
         }
     })
     .catch((error) => {
         hideLoading();
+        console.error('Error real al marcar como listo para cirugía en Firebase:', error);
         showNotification('Error al marcar como listo para cirugía', 'error');
     });
 }
@@ -1566,25 +1620,34 @@ function marcarExamenesRealizados(randomId) {
     // Guardar en Firebase
     quirofanoFirebaseRef.child(ticket.firebaseKey).update(updatedData)
         .then(() => {
-            hideLoading();
-            showNotification('Exámenes marcados como realizados exitosamente', 'success');
-            
-            // Actualizar array local
-            const index = window.quirofanoTickets.findIndex(t => t.randomId === randomId);
-            if (index !== -1) {
-                window.quirofanoTickets[index] = updatedData;
+            try {
+                hideLoading();
+                showNotification('Exámenes marcados como realizados exitosamente', 'success');
+                
+                // Actualizar array local
+                const index = window.quirofanoTickets.findIndex(t => t.randomId === randomId);
+                if (index !== -1) {
+                    window.quirofanoTickets[index] = updatedData;
+                }
+                
+                // Actualizar contador
+                if (typeof window.updatePrequirurgicoCounter === 'function') {
+                    window.updatePrequirurgicoCounter();
+                }
+                
+                // Re-renderizar tickets
+                loadQuirofanoTickets();
+            } catch (err) {
+                // Si hay un error en el procesamiento posterior, no mostrar error al usuario
+                // porque el ticket ya se actualizó exitosamente en Firebase
+                console.error('Error en procesamiento post-marcado de exámenes:', err);
+                hideLoading();
+                showNotification('Exámenes marcados como realizados exitosamente', 'success');
             }
-            
-            // Actualizar contador
-            if (typeof window.updatePrequirurgicoCounter === 'function') {
-                window.updatePrequirurgicoCounter();
-            }
-            
-            // Re-renderizar tickets
-            loadQuirofanoTickets();
         })
         .catch((error) => {
             hideLoading();
+            console.error('Error real al marcar exámenes como realizados en Firebase:', error);
             showNotification('Error al marcar exámenes como realizados', 'error');
         });
 }
@@ -1629,20 +1692,32 @@ function marcarViaRealizada(randomId) {
         viaStatus: 'realizado'
     };
     
-    quirofanoFirebaseRef.child(randomId).update(updateData)
+    // Usar firebaseKey en lugar de randomId para la referencia de Firebase
+    const ticketRef = ticket.firebaseKey ? quirofanoFirebaseRef.child(ticket.firebaseKey) : quirofanoFirebaseRef.child(randomId);
+    
+    ticketRef.update(updateData)
         .then(() => {
-            ticket.viaStatus = 'realizado';
-            const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
-            const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
-            renderQuirofanoTicketsWithDateFilter(window.currentQuirofanoFilter, searchTerm, dateFilter);
-            if (typeof window.updateViaCounter === 'function') {
-                window.updateViaCounter();
+            try {
+                ticket.viaStatus = 'realizado';
+                const searchTerm = document.getElementById('quirofanoSearchInput')?.value || '';
+                const dateFilter = document.getElementById('quirofanoFilterDate')?.value || '';
+                renderQuirofanoTicketsWithDateFilter(window.currentQuirofanoFilter, searchTerm, dateFilter);
+                if (typeof window.updateViaCounter === 'function') {
+                    window.updateViaCounter();
+                }
+                hideLoading();
+                showNotification('Vía marcada como realizada', 'success');
+            } catch (err) {
+                // Si hay un error en el procesamiento posterior, no mostrar error al usuario
+                // porque el ticket ya se actualizó exitosamente en Firebase
+                console.error('Error en procesamiento post-marcado de vía:', err);
+                hideLoading();
+                showNotification('Vía marcada como realizada', 'success');
             }
-            hideLoading();
-            showNotification('Vía marcada como realizada', 'success');
         })
-        .catch(() => {
+        .catch((error) => {
             hideLoading();
+            console.error('Error real al marcar la vía como realizada en Firebase:', error);
             showNotification('Error al marcar la vía como realizada', 'error');
         });
 }
