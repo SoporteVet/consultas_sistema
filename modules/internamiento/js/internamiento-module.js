@@ -1,9 +1,6 @@
 // ====================================================================
 // MÓDULO DE INTERNAMIENTO - SISTEMA VETERINARIO
 // ====================================================================
-// Versión: 1.0.0 BETA
-// Este módulo es completamente independiente y no modifica otros módulos
-// ====================================================================
 
 class InternamientoModule {
     constructor() {
@@ -2049,4 +2046,5 @@ if (document.readyState === 'loading') {
     // DOM ya está listo, inicializar inmediatamente
     initInternamientoModule();
 }
+
 
