@@ -1,5 +1,5 @@
 // ====================================================================
-// MÓDULO DE INTERNAMIENTO - FUNCIONES EXTENDIDAS
+// MÓDULO DE INTERNAMIENTO
 // ====================================================================
 // Extensiones y funcionalidades adicionales del módulo de internamiento
 // ====================================================================
@@ -593,4 +593,5 @@ InternamientoModule.prototype.guardarNotaEvolucion = async function(contenido, i
 };
 
 console.log('📦 Funciones extendidas de internamiento cargadas');
+
 
