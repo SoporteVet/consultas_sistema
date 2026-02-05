@@ -1,11 +1,9 @@
 // ====================================================================
 // MÓDULO DE INTERNAMIENTO - SISTEMA DE NOTIFICACIONES Y MODALES
 // ====================================================================
-// Reemplaza alert(), confirm() y prompt() nativos con versiones personalizadas
-// ====================================================================
 
 // ================================================================
-// NOTIFICACIONES (Toast en esquina inferior derecha)
+// NOTIFICACIONES
 // ================================================================
 
 InternamientoModule.prototype.showNotification = function(message, type = 'info', duration = 4000) {
@@ -499,4 +497,5 @@ if (!document.getElementById('internamiento-animations')) {
 }
 
 console.log('📦 Sistema de notificaciones del internamiento cargado');
+
 
