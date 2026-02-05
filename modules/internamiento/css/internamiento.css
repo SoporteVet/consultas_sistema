@@ -1,8 +1,6 @@
 /* ============================================================
-   MÓDULO DE INTERNAMIENTO - ESTILOS ESPECÍFICOS
-   ============================================================
-   Este archivo contiene estilos SOLO para el módulo de internamiento
-   No afecta otros módulos del sistema
+   MÓDULO DE INTERNAMIENTO
+   ===========================================================
    ============================================================ */
 
 /* Variables específicas de internamiento */
@@ -1713,4 +1711,5 @@
     font-size: 0.85rem;
     font-weight: 600;
 }
+
 
