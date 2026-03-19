@@ -817,8 +817,10 @@ nav button.active {
 }
 
 .nav-submenu.active {
-  max-height: 200px;
+  max-height: 320px; /* Evitar recorte del último botón */
   padding: 8px 0;
+  overflow-y: auto; /* Permitir scroll si aún excede el alto */
+  overflow-x: hidden;
 }
 
 .submenu-btn {

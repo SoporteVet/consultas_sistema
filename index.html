@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -97,6 +97,9 @@
             </button>
             <button id="reportesLabBtn" class="submenu-btn" onclick="navigateToLab('reportesLabSection', 'reportesLabBtn');">
               <i class="fas fa-file-medical"></i> Reportes Lab
+            </button>
+            <button id="pendientesReportarLabBtn" class="submenu-btn" onclick="navigateToLab('pendientesReportarSection', 'pendientesReportarLabBtn');">
+              <i class="fas fa-bell"></i> Pendientes por Reportar
             </button>
             <button id="inyectablesBtn" class="submenu-btn" onclick="navigateToInyectables('inyectablesSection', 'inyectablesBtn');">
               <i class="fas fa-syringe"></i> Control de Inyectables
@@ -785,6 +788,57 @@
             </div>
           </div>
           <iframe id="labReportIframe" src="" frameborder="0"></iframe>
+        </div>
+      </section>
+
+      <!-- Sección Pendientes por Reportar (Lab) -->
+      <section id="pendientesReportarSection" class="hidden">
+        <h2><i class="fas fa-bell"></i> Pendientes por Reportar</h2>
+        <p class="section-subtitle">Seleccione un médico para ver todos los exámenes que fueron reportados por el laboratorio y aún están pendientes de ser comunicados al dueño de la mascota.</p>
+
+        <!-- Selector de doctor -->
+        <div class="pendientes-doctor-selector">
+          <label for="pendientesReportarDoctorSelect"><i class="fas fa-user-md"></i> Seleccionar Médico</label>
+          <select id="pendientesReportarDoctorSelect" onchange="onPendientesReportarDoctorChange(this.value)">
+            <option value="">-- Seleccione un médico --</option>
+            <option value="Medico Externo">Médico Externo</option>
+            <option value="N.A">N.A</option>
+          </select>
+        </div>
+
+        <!-- Rango de fechas para pendientes -->
+        <div class="date-filter pendientes-date-filter" style="margin-bottom: 15px;">
+          <label for="pendientesReportarDesde"><i class="fas fa-calendar-alt"></i> Rango:</label>
+          <input type="date" id="pendientesReportarDesde" onchange="applyPendientesDateRangeFilter()">
+          <span style="font-weight:600;color:#5f6368;">hasta</span>
+          <input type="date" id="pendientesReportarHasta" onchange="applyPendientesDateRangeFilter()">
+          <button type="button" class="filter-btn active" onclick="applyPendientesDateRangeFilter()">Aplicar rango</button>
+        </div>
+
+        <!-- Alerta de tickets vencidos (se muestra solo si hay >48h) -->
+        <div id="pendientesReportarAlerta" class="pendientes-alerta" style="display:none;">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="pendientesReportarAlertaMsg"></span>
+        </div>
+
+        <!-- Resumen por médico -->
+        <div id="pendientesReportarResumen" class="pendientes-resumen" style="display:none;">
+          <div class="resumen-item">
+            <span class="resumen-numero" id="pendientesTotalCount">0</span>
+            <span class="resumen-label">Total pendientes</span>
+          </div>
+          <div class="resumen-item resumen-vencidos">
+            <span class="resumen-numero" id="pendientesVencidosCount">0</span>
+            <span class="resumen-label">Más de 48 horas</span>
+          </div>
+        </div>
+
+        <!-- Lista de pacientes pendientes -->
+        <div id="pendientesReportarContainer" class="pendientes-container">
+          <div class="pendientes-placeholder">
+            <i class="fas fa-user-md" style="font-size:2.5rem;color:#bdc3c7;margin-bottom:10px;"></i>
+            <p>Seleccione un médico para ver sus pacientes pendientes por reportar.</p>
+          </div>
         </div>
       </section>
 
