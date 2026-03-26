@@ -5757,6 +5757,18 @@ function navigateToSection(sectionId, buttonId) {
                 mostrarHorario();
             }
         }
+        
+        if (sectionId === 'rxPresupuestosSection') {
+            if (typeof window.initRxPresupuestosModule === 'function') {
+                window.initRxPresupuestosModule();
+            }
+            // Carga automática con la fecha de hoy al abrir la sección
+            if (typeof window.cargarControlRxPresupuestos === 'function') {
+                setTimeout(function () {
+                    window.cargarControlRxPresupuestos();
+                }, 150);
+            }
+        }
     } else {
         // Función showSection no disponible
     }
