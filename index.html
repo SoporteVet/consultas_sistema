@@ -785,6 +785,9 @@
               <button id="printLabReportBtn" class="close-btn" title="Generar PDF">
                 <i class="fas fa-file-pdf"></i> PDF
               </button>
+              <button id="addToLabEmailQueueBtn" class="close-btn" title="Añadir el PDF del reporte actual a la cola del próximo correo" onclick="addCurrentReportToLabEmailQueue()" style="background:#2c5282; color:#fff; border-color:#2c5282;">
+                <i class="fas fa-plus"></i> Añadir al correo
+              </button>
               <button id="sendEmailLabReportBtn" class="close-btn" title="Enviar reporte por correo electrónico" onclick="sendLabReportByEmail()" style="background:#1a6b3c; color:#fff; border-color:#1a6b3c;">
                 <i class="fas fa-envelope"></i> Enviar por Email
               </button>
@@ -800,8 +803,22 @@
         <div id="labEmailModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.55); z-index:9999; align-items:center; justify-content:center;">
           <div style="background:#fff; border-radius:12px; padding:28px 32px; max-width:520px; width:90%; box-shadow:0 8px 32px rgba(0,0,0,0.22); max-height:90vh; overflow-y:auto;">
             <h3 style="margin:0 0 20px; font-size:18px; color:#1a6b3c; display:flex; align-items:center; gap:8px;">
-              <i class="fas fa-envelope"></i> Enviar Reporte por Email
+              <i class="fas fa-envelope"></i> Enviar reporte(s) por email
             </h3>
+
+            <div style="margin-bottom:14px; padding:12px; background:#f0f7f2; border-radius:8px; border:1px solid #c8e6c9;">
+              <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                <span style="font-weight:600; font-size:13px; color:#333;"><i class="fas fa-paperclip"></i> Adjuntos (<span id="labEmailAttachmentCount">0</span>)</span>
+                <button type="button" onclick="addCurrentReportToLabEmailQueue()"
+                  style="padding:6px 12px; font-size:12px; background:#2c5282; color:#fff; border:none; border-radius:6px; cursor:pointer;">
+                  <i class="fas fa-plus"></i> Añadir reporte actual
+                </button>
+              </div>
+              <p style="margin:0 0 8px; font-size:12px; color:#555; line-height:1.45;">
+                Para varios exámenes: abra cada plantilla, pulse <strong>Añadir al correo</strong> en la barra superior, y vuelva aquí. Si la cola está vacía, se enviará solo el PDF del reporte abierto.
+              </p>
+              <ul id="labEmailAttachmentsList" style="margin:0; padding:0; list-style:none; max-height:140px; overflow-y:auto; font-size:13px;"></ul>
+            </div>
 
             <div style="margin-bottom:14px;">
               <label style="display:block; font-weight:600; margin-bottom:5px; font-size:13px; color:#444;">
