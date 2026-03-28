@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -124,7 +124,6 @@ document.addEventListener('DOMContentLoaded', function(){
     setVal('propietarioTelefono', p.get('propietarioTelefono'));
     setVal('propietarioEmail', p.get('propietarioEmail'));
     setVal('nombreMedico', p.get('nombreMedico'));
-    setVal('mascotaRaza', p.get('mascotaRaza'));
     setVal('mascotaEdad', p.get('mascotaEdad'));
     setVal('mascotaPeso', p.get('mascotaPeso'));
     
@@ -136,12 +135,14 @@ document.addEventListener('DOMContentLoaded', function(){
       }, 100);
     }
     
+    const especieMap = { perro: 'Canino', canino: 'Canino', gato: 'Felino', felino: 'Felino', conejo: 'Lagomorfo', lagomorfo: 'Lagomorfo', cuilo: 'Cuilo' };
     const especie = p.get('especie');
     const sexo = p.get('mascotaSexo');
     if (especie) {
       const especieSelector = document.getElementById('especieSelector');
       if (especieSelector) {
-        especieSelector.value = capitalize(especie);
+        const mapped = especieMap[especie.toLowerCase()] || capitalize(especie);
+        especieSelector.value = mapped;
         const evt = new Event('change'); especieSelector.dispatchEvent(evt);
       }
     }
@@ -152,6 +153,8 @@ document.addEventListener('DOMContentLoaded', function(){
         const evt = new Event('change'); sexoSelector.dispatchEvent(evt);
       }
     }
+    // Raza después de especie: actualizarRazasPorEspecie borra raza al cambiar especie
+    setVal('mascotaRaza', p.get('mascotaRaza'));
   } catch(e) { console.warn('Autollenado hemograma falló:', e); }
   function capitalize(s){ if(!s) return s; return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
 });
@@ -1065,23 +1068,24 @@ function actualizarColor(inputId, refId) {
         container = wrapper;
     }
     
-    // Limpiar clases anteriores primero (importante!)
-    container.classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
-    inputElement.classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
-    
     // Obtener el valor actual sin ninguna flecha
     const valorTexto = inputElement.value.trim().replace(/[↑↓]\s*$/, '').replace(',', '.');
     
-    // Si no hay valor, no agregar ninguna clase y salir
+    // Si no hay valor, limpiar estilo
     if (!valorTexto) {
+        container.classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
+        inputElement.classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
         inputElement.style.color = 'black';
         return;
     }
     
     const valor = parseFloat(valorTexto);
     
-    // Si no es un número, salir
+    // Número incompleto (ej. solo "," o "."): no tocar clases/color hasta tener valor válido
     if (isNaN(valor)) return;
+    
+    container.classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
+    inputElement.classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
     
     // Establecer negrita siempre
     inputElement.style.fontWeight = 'bold';
@@ -1424,21 +1428,27 @@ function actualizarColor(inputId, refId) {
                     document.getElementById('neutrofilos_porcentaje').classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
                 }
                 
-                // Lista de parámetros que pueden necesitar actualización de color
-                const parametros = [
-                    'leucocitos', 'linfocitos', 'monocitos', 'neutrofilos', 'eosinofilos', 'basofilos',
-                    'linfocitos_porcentaje', 'monocitos_porcentaje', 'neutrofilos_porcentaje', 
-                    'eosinofilos_porcentaje', 'basofilos_porcentaje'
-                ];
+                // IDs de referencia por campo (no inferir: monocitos # usa refMonocitos, % usa refmonocitos)
+                const refPorParametro = {
+                    leucocitos: 'refLeucocitos',
+                    linfocitos: 'reflinfocitos',
+                    monocitos: 'refMonocitos',
+                    neutrofilos: 'refneutrofilos',
+                    eosinofilos: 'refeosinofilos',
+                    basofilos: 'refbasofilos',
+                    linfocitos_porcentaje: 'reflinfocitos2',
+                    monocitos_porcentaje: 'refmonocitos',
+                    neutrofilos_porcentaje: 'refNeutrofilosPorcentaje',
+                    eosinofilos_porcentaje: 'refEosinofilosPorcentaje',
+                    basofilos_porcentaje: 'refBasofilosPorcentaje'
+                };
+                const parametros = Object.keys(refPorParametro);
                 
-                // Actualizar colores solo para elementos que existen
                 parametros.forEach(param => {
                     const elemento = document.getElementById(param);
                     if (elemento) {
-                        // Intentar actualizar el color si la función existe
-                        const refId = 'ref' + param.replace('_', '');
                         try {
-                            actualizarColor(param, refId);
+                            actualizarColor(param, refPorParametro[param]);
                         } catch (e) {
                             // Silenciar errores de funciones no encontradas
                         }
