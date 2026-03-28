@@ -20,6 +20,56 @@ const LAB_EMAIL_MESSAGES = {
 let labReportSelectedClient = null;
 let labReportSelectedTemplate = null;
 
+/** Cola de PDF para un solo correo con varios adjuntos: { id, fileName, pdfDataUrl } */
+const MAX_LAB_EMAIL_ATTACHMENTS = 20;
+let labEmailAttachmentsQueue = [];
+
+function nextLabEmailFileName(baseName) {
+  let name = String(baseName || 'reporte').trim();
+  if (!name.toLowerCase().endsWith('.pdf')) name += '.pdf';
+  const taken = new Set(labEmailAttachmentsQueue.map((a) => a.fileName));
+  if (!taken.has(name)) return name;
+  const dot = name.lastIndexOf('.');
+  const stem = dot > 0 ? name.slice(0, dot) : name;
+  const ext = dot > 0 ? name.slice(dot) : '.pdf';
+  let n = 2;
+  let candidate = `${stem} (${n})${ext}`;
+  while (taken.has(candidate)) {
+    n += 1;
+    candidate = `${stem} (${n})${ext}`;
+  }
+  return candidate;
+}
+
+function renderLabEmailAttachmentsList() {
+  const ul = document.getElementById('labEmailAttachmentsList');
+  const countEl = document.getElementById('labEmailAttachmentCount');
+  if (countEl) countEl.textContent = String(labEmailAttachmentsQueue.length);
+  if (!ul) return;
+  ul.innerHTML = '';
+  labEmailAttachmentsQueue.forEach((item) => {
+    const li = document.createElement('li');
+    li.style.cssText =
+      'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;margin-bottom:4px;background:#fff;border-radius:6px;border:1px solid #ddd;';
+    const span = document.createElement('span');
+    span.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
+    span.title = item.fileName;
+    span.textContent = item.fileName;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.style.cssText =
+      'flex-shrink:0;padding:4px 8px;font-size:11px;border:1px solid #c53030;background:#fff;color:#c53030;border-radius:4px;cursor:pointer;';
+    btn.innerHTML = '<i class="fas fa-times"></i> Quitar';
+    btn.addEventListener('click', () => {
+      labEmailAttachmentsQueue = labEmailAttachmentsQueue.filter((x) => x.id !== item.id);
+      renderLabEmailAttachmentsList();
+    });
+    li.appendChild(span);
+    li.appendChild(btn);
+    ul.appendChild(li);
+  });
+}
+
 // Mapeo de plantillas a archivos HTML del repositorio
 // Las rutas son relativas a index.html que está en la raíz del proyecto
 const LAB_REPORT_TEMPLATES = {
@@ -622,10 +672,53 @@ function sendLabReportByEmail() {
 
   // Mostrar el primer mensaje por defecto en el preview
   updateLabEmailPreview();
+  renderLabEmailAttachmentsList();
 
   // Abrir el modal
   const modal = document.getElementById('labEmailModal');
   if (modal) modal.style.display = 'flex';
+}
+
+async function addCurrentReportToLabEmailQueue() {
+  const iframe = document.getElementById('labReportIframe');
+  if (!iframe || !iframe.src || iframe.src === window.location.href) {
+    showLabReportNotification('Primero debes abrir un reporte.', 'warning');
+    return;
+  }
+  if (!iframe.contentWindow || typeof iframe.contentWindow.generatePDFForEmail !== 'function') {
+    showLabReportNotification('El reporte aún no está listo para generar el PDF. Espere a que cargue.', 'warning');
+    return;
+  }
+  if (labEmailAttachmentsQueue.length >= MAX_LAB_EMAIL_ATTACHMENTS) {
+    showLabReportNotification(`Máximo ${MAX_LAB_EMAIL_ATTACHMENTS} adjuntos por correo.`, 'warning');
+    return;
+  }
+
+  const addBtn = document.getElementById('addToLabEmailQueueBtn');
+  if (addBtn) {
+    addBtn.disabled = true;
+  }
+
+  try {
+    const pdfDataUrl = await iframe.contentWindow.generatePDFForEmail();
+    const templateName = labReportSelectedTemplate
+      ? (LAB_REPORT_TEMPLATES[labReportSelectedTemplate]?.name || 'Reporte')
+      : 'Reporte';
+    const petName = labReportSelectedClient?.mascota || 'Paciente';
+    const fileName = nextLabEmailFileName(`${templateName} - ${petName}.pdf`);
+    labEmailAttachmentsQueue.push({
+      id: `lab-att-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+      fileName,
+      pdfDataUrl
+    });
+    renderLabEmailAttachmentsList();
+    showLabReportNotification(`Añadido: ${fileName} (${labEmailAttachmentsQueue.length} en cola)`, 'success');
+  } catch (err) {
+    console.error('addCurrentReportToLabEmailQueue:', err);
+    showLabReportNotification(`No se pudo añadir el PDF: ${err.message}`, 'error');
+  } finally {
+    if (addBtn) addBtn.disabled = false;
+  }
 }
 
 function updateLabEmailPreview() {
@@ -655,39 +748,55 @@ async function confirmSendLabEmail() {
     return;
   }
 
-  if (!iframe || !iframe.contentWindow || typeof iframe.contentWindow.generatePDFForEmail !== 'function') {
-    showLabReportNotification('El reporte aún no está listo para generar el PDF. Espera a que cargue completamente.', 'warning');
-    return;
+  const clientName = labReportSelectedClient?.nombre || 'Propietario';
+  const petName = labReportSelectedClient?.mascota || 'Paciente';
+  const templateName = labReportSelectedTemplate
+    ? (LAB_REPORT_TEMPLATES[labReportSelectedTemplate]?.name || 'Reporte')
+    : 'Reporte';
+  const defaultFileName = `${templateName} - ${petName}.pdf`;
+
+  let attachmentsPayload;
+
+  if (labEmailAttachmentsQueue.length > 0) {
+    attachmentsPayload = labEmailAttachmentsQueue.map((a) => ({
+      fileName: a.fileName,
+      pdfBase64: a.pdfDataUrl
+    }));
+  } else {
+    if (!iframe || !iframe.contentWindow || typeof iframe.contentWindow.generatePDFForEmail !== 'function') {
+      showLabReportNotification('El reporte aún no está listo para generar el PDF. Espera a que cargue completamente.', 'warning');
+      return;
+    }
+    if (confirmBtn) {
+      confirmBtn.disabled = true;
+      confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando PDF...';
+    }
+    try {
+      const pdfDataUrl = await iframe.contentWindow.generatePDFForEmail();
+      attachmentsPayload = [{ fileName: defaultFileName, pdfBase64: pdfDataUrl }];
+    } catch (err) {
+      console.error('confirmSendLabEmail (PDF único):', err);
+      showLabReportNotification(`Error al generar el PDF: ${err.message}`, 'error');
+      if (confirmBtn) {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Confirmar Envío';
+      }
+      return;
+    }
   }
 
-  // Estado de carga
   if (confirmBtn) {
     confirmBtn.disabled = true;
-    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando PDF...';
+    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
   }
 
   try {
-    // Generar PDF base64 desde el iframe
-    const pdfDataUrl = await iframe.contentWindow.generatePDFForEmail();
-
-    if (confirmBtn) {
-      confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-    }
-
-    const clientName = labReportSelectedClient?.nombre || 'Propietario';
-    const petName = labReportSelectedClient?.mascota || 'Paciente';
-    const templateName = labReportSelectedTemplate
-      ? (LAB_REPORT_TEMPLATES[labReportSelectedTemplate]?.name || 'Reporte')
-      : 'Reporte';
-    const fileName = `${templateName} - ${petName}.pdf`;
-
     const payload = {
       to,
-      pdfBase64: pdfDataUrl,
-      fileName,
       messageType,
       clientName,
-      petName
+      petName,
+      attachments: attachmentsPayload
     };
 
     const response = await fetch(LAB_EMAIL_FUNCTION_URL, {
@@ -702,9 +811,16 @@ async function confirmSendLabEmail() {
       throw new Error(result.error || `Error del servidor: ${response.status}`);
     }
 
+    labEmailAttachmentsQueue = [];
+    renderLabEmailAttachmentsList();
     closeLabEmailModal();
-    showLabReportNotification(`✅ Reporte enviado correctamente a ${to}`, 'success');
-
+    const n = attachmentsPayload.length;
+    showLabReportNotification(
+      n > 1
+        ? `✅ ${n} reportes enviados correctamente a ${to}`
+        : `✅ Reporte enviado correctamente a ${to}`,
+      'success'
+    );
   } catch (err) {
     console.error('Error al enviar el reporte por email:', err);
     showLabReportNotification(`Error al enviar: ${err.message}`, 'error');
@@ -726,6 +842,7 @@ window.sendLabReportByEmail = sendLabReportByEmail;
 window.updateLabEmailPreview = updateLabEmailPreview;
 window.closeLabEmailModal = closeLabEmailModal;
 window.confirmSendLabEmail = confirmSendLabEmail;
+window.addCurrentReportToLabEmailQueue = addCurrentReportToLabEmailQueue;
 
 console.log('reportes-lab-module.js cargado');
 
