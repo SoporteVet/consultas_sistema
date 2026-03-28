@@ -77,6 +77,58 @@ function primerApellidoDesdeNombre(nombreCompleto) {
   return partes[partes.length - 2];
 }
 
+/** Extrae la parte base64 pura de un data URL o string base64. */
+function stripBase64Payload(pdfBase64) {
+  if (!pdfBase64 || typeof pdfBase64 !== "string") return "";
+  return pdfBase64.includes(",") ? pdfBase64.split(",")[1] : pdfBase64;
+}
+
+/** Normaliza adjuntos: array `attachments` o legado pdfBase64 + fileName. */
+function normalizeLabAttachments(body) {
+  const { attachments: rawList, pdfBase64, fileName } = body;
+
+  if (Array.isArray(rawList) && rawList.length > 0) {
+    const MAX = 20;
+    if (rawList.length > MAX) {
+      return { error: `Máximo ${MAX} adjuntos por correo.` };
+    }
+    const out = [];
+    for (let i = 0; i < rawList.length; i++) {
+      const item = rawList[i];
+      const fn = item && (item.fileName || item.filename);
+      const b64 = item && (item.pdfBase64 || item.content);
+      if (!fn || !b64) {
+        return { error: `Adjunto ${i + 1}: faltan fileName o pdfBase64.` };
+      }
+      const content = stripBase64Payload(String(b64));
+      if (!content) {
+        return { error: `Adjunto ${i + 1}: PDF vacío o inválido.` };
+      }
+      const safeName = String(fn).replace(/[/\\]/g, "_").trim() || `reporte-${i + 1}.pdf`;
+      out.push({ filename: safeName.endsWith(".pdf") ? safeName : `${safeName}.pdf`, content });
+    }
+    return { attachments: out };
+  }
+
+  if (pdfBase64 && fileName) {
+    const content = stripBase64Payload(String(pdfBase64));
+    if (!content) {
+      return { error: "PDF vacío o inválido." };
+    }
+    const safeName = String(fileName).replace(/[/\\]/g, "_").trim() || "reporte.pdf";
+    return {
+      attachments: [
+        {
+          filename: safeName.endsWith(".pdf") ? safeName : `${safeName}.pdf`,
+          content
+        }
+      ]
+    };
+  }
+
+  return { error: "Envíe adjuntos: array attachments[] o pdfBase64 + fileName." };
+}
+
 function buildHtmlBody(text, clientName, petName) {
   const escaped = text
     .replace(/&/g, "&amp;")
@@ -122,11 +174,17 @@ exports.sendLabReport = onRequest(
       return res.status(405).json({ error: "Método no permitido" });
     }
 
-    const { to, pdfBase64, fileName, messageType, clientName, petName } = req.body;
+    const { to, messageType, clientName, petName } = req.body;
 
-    if (!to || !pdfBase64 || !fileName || !messageType) {
-      return res.status(400).json({ error: "Faltan campos requeridos: to, pdfBase64, fileName, messageType" });
+    if (!to || !messageType) {
+      return res.status(400).json({ error: "Faltan campos requeridos: to, messageType" });
     }
+
+    const normalized = normalizeLabAttachments(req.body);
+    if (normalized.error) {
+      return res.status(400).json({ error: normalized.error });
+    }
+    const emailAttachments = normalized.attachments;
 
     const bodyText = EMAIL_MESSAGES[messageType] || EMAIL_MESSAGES.sin_medico;
     const htmlBody = buildHtmlBody(bodyText, clientName, petName);
@@ -136,12 +194,6 @@ exports.sendLabReport = onRequest(
     const subject = apellido
       ? `Reporte de Laboratorio - ${nombreMascota} ${apellido}`
       : `Reporte de Laboratorio - ${nombreMascota}`;
-
-    // pdfBase64 puede llegar como data URL ("data:application/pdf;base64,...")
-    // Resend espera solo la parte base64
-    const base64Content = pdfBase64.includes(",")
-      ? pdfBase64.split(",")[1]
-      : pdfBase64;
 
     const resend = new Resend(RESEND_API_KEY.value());
 
@@ -159,12 +211,7 @@ exports.sendLabReport = onRequest(
       to: toList,
       subject,
       html: htmlBody,
-      attachments: [
-        {
-          filename: fileName,
-          content: base64Content
-        }
-      ]
+      attachments: emailAttachments
     });
 
     if (error) {
