@@ -125,39 +125,9 @@ class FirebaseRealtimeOptimizer {
     }
     
     optimizeTicketsListener() {
-        if (!window.ticketsRef) return;
-        
-        // Limpiar listeners anteriores
-        this.cleanupListener('tickets');
-        
-        // Listener optimizado para tickets principales
-        const ticketsListener = {
-            ref: window.ticketsRef,
-            handlers: {
-                value: this.debounce((snapshot) => {
-                    this.handleTicketsSnapshot(snapshot);
-                }, 300),
-                
-                child_added: this.debounce((snapshot) => {
-                    this.handleTicketAdded(snapshot);
-                }, 100),
-                
-                child_changed: this.debounce((snapshot) => {
-                    this.handleTicketChanged(snapshot);
-                }, 200),
-                
-                child_removed: (snapshot) => {
-                    this.handleTicketRemoved(snapshot);
-                }
-            }
-        };
-        
-        // Configurar listeners
-        Object.entries(ticketsListener.handlers).forEach(([event, handler]) => {
-            ticketsListener.ref.on(event, handler);
-        });
-        
-        this.listeners.set('tickets', ticketsListener);
+        // Los listeners de tickets son gestionados exclusivamente por index.js
+        // (setupTicketsIncrementalListeners). No se registran listeners adicionales
+        // aquí para evitar duplicar descargas de bandwidth.
     }
     
     optimizeLabTicketsListener() {

@@ -29,6 +29,14 @@ function getLocalDateString(date = new Date()) {
     return `${year}-${month}-${day}`;
 }
 
+function refreshLabResultsPanelIfVisible() {
+    if (typeof window.renderLabResults !== 'function') return;
+    const container = document.getElementById('labResultsContainer');
+    if (container && !container.classList.contains('hidden')) {
+        window.renderLabResults();
+    }
+}
+
 // Generar un identificador aleatorio seguro para cada ticket
 function generateRandomId(length = 16) {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -1000,14 +1008,14 @@ function cargarHistorialEdiciones() {
             fechaFinFiltro = getLocalDateString(hoy);
     }
 
-    firebase.database().ref('ticket_edits').orderByChild('fecha').once('value', function(snapshot) {
+    firebase.database().ref('ticket_edits')
+        .orderByChild('fecha')
+        .startAt(fechaInicioFiltro)
+        .endAt(fechaFinFiltro)
+        .once('value', function(snapshot) {
         const edits = [];
         snapshot.forEach(child => {
-            const edit = child.val();
-            // Filtrar por fecha
-            if (edit.fecha >= fechaInicioFiltro && edit.fecha <= fechaFinFiltro) {
-                edits.push(edit);
-            }
+            edits.push(child.val());
         });
 
         // Ordenar por fecha y hora descendente
@@ -1621,12 +1629,25 @@ function loadTickets(loadAllData = false) {
             cutoffDate = daysAgo.toISOString().split('T')[0];
         }
         
-        // Carga inicial limitada o completa según parámetro
-        // IMPORTANTE: Para asegurar que todos los dispositivos vean tickets actuales,
-        // cargamos todos los tickets y filtramos localmente considerando tanto
-        // fechaCreacion como fechaConsulta
-        const loadQuery = ticketsRef.once('value');
-        
+        // Carga inicial: sin restricción (completa) o filtrada por servidor combinando
+        // fechaCreacion y fechaConsulta para reducir ancho de banda descargado
+        let loadQuery;
+        if (loadAllData || !cutoffDate) {
+            loadQuery = ticketsRef.once('value');
+        } else {
+            const _cutoff = cutoffDate;
+            loadQuery = Promise.all([
+                ticketsRef.orderByChild('fechaCreacion').startAt(_cutoff).once('value'),
+                ticketsRef.orderByChild('fechaConsulta').startAt(_cutoff).once('value')
+            ]).then(([snapCreacion, snapConsulta]) => {
+                const merged = {};
+                const doMerge = (snap) => snap.exists() && snap.forEach(c => { merged[c.key] = c.val(); });
+                doMerge(snapCreacion);
+                doMerge(snapConsulta);
+                return { val: () => merged, exists: () => Object.keys(merged).length > 0 };
+            }).catch(() => ticketsRef.once('value'));
+        }
+
         loadQuery.then(snapshot => {
             tickets = [];
             currentTicketId = 1;
@@ -1743,6 +1764,8 @@ function setupTicketsIncrementalListeners() {
                 }
                 if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
+                refreshLabResultsPanelIfVisible();
+                document.dispatchEvent(new Event('ticketsChanged'));
             }, 300); // Debounce de 300ms
         }
     };
@@ -1799,6 +1822,8 @@ function setupTicketsIncrementalListeners() {
                 }
                 if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
+                refreshLabResultsPanelIfVisible();
+                document.dispatchEvent(new Event('ticketsChanged'));
             }, 300); // Debounce de 300ms
         }
     };
@@ -1825,6 +1850,8 @@ function setupTicketsIncrementalListeners() {
                 }
                 if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
+                refreshLabResultsPanelIfVisible();
+                document.dispatchEvent(new Event('ticketsChanged'));
             }, 300); // Debounce de 300ms
         }
     };
@@ -3652,16 +3679,14 @@ function editTicket(randomId) {
     const historialContainer = modal.querySelector('#ticketEdicionesHistorial');
     if (userRoleHistorial === 'admin' && historialBody && typeof firebase !== 'undefined' && firebase.database) {
         // Limpiar listener previo si existe
-        if (window._ticketEdicionesListener) {
-            firebase.database().ref('ticket_edits').off('value', window._ticketEdicionesListener);
+        if (window._ticketEdicionesRef && window._ticketEdicionesListener) {
+            window._ticketEdicionesRef.off('value', window._ticketEdicionesListener);
+            window._ticketEdicionesRef = null;
         }
         window._ticketEdicionesListener = function(snapshot) {
             const edits = [];
             snapshot.forEach(child => {
-                const edit = child.val();
-                if (edit.randomId === ticket.randomId) {
-                    edits.push(edit);
-                }
+                edits.push(child.val());
             });
             edits.sort((a, b) => (b.fecha + ' ' + b.hora).localeCompare(a.fecha + ' ' + a.hora));
             if (edits.length === 0) {
@@ -3679,12 +3704,17 @@ function editTicket(randomId) {
             html += '</tbody></table>';
             historialBody.innerHTML = html;
         };
-        firebase.database().ref('ticket_edits').on('value', window._ticketEdicionesListener);
+        window._ticketEdicionesRef = firebase.database().ref('ticket_edits')
+            .orderByChild('randomId').equalTo(ticket.randomId);
+        window._ticketEdicionesRef.on('value', window._ticketEdicionesListener);
         // Limpiar el listener al cerrar el modal
         const closeBtn = modal.querySelector('.close-modal');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                firebase.database().ref('ticket_edits').off('value', window._ticketEdicionesListener);
+                if (window._ticketEdicionesRef) {
+                    window._ticketEdicionesRef.off('value', window._ticketEdicionesListener);
+                    window._ticketEdicionesRef = null;
+                }
             });
         }
     } else if (historialContainer) {
@@ -5404,15 +5434,8 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   };
 
-  // Actualizar tabla en tiempo real cuando cambian los tickets
-  if (typeof window.ticketsRef !== 'undefined') {
-    window.ticketsRef.on('value', function() {
-      const labResultsContainer = document.getElementById('labResultsContainer');
-      if (labResultsContainer && !labResultsContainer.classList.contains('hidden')) {
-        renderLabResults();
-      }
-    });
-  }
+  // renderLabResults() se llama automáticamente desde los debounce timers
+  // de setupTicketsIncrementalListeners a través de refreshLabResultsPanelIfVisible()
 
   // Navegación con flechas en el formulario de tickets
   (function() {
