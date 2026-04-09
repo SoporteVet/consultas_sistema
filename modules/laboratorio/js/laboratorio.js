@@ -89,44 +89,31 @@ function initLaboratorioSystem() {
     }
 }
 
-// Cargar datos de clientes desde Firebase tickets y configurar actualización en tiempo real
+// Cargar datos de clientes desde window.tickets (mantenido por index.js)
+// y actualizarse cuando cambian los tickets mediante evento 'ticketsChanged'
 function setupClientesDataListener() {
     try {
-        if (!window.database) {
-            return;
+        // Usar window.tickets ya cargado por index.js si está disponible,
+        // de lo contrario hacer una lectura única como fallback
+        const buildFromWindowTickets = () => {
+            if (!window.tickets || window.tickets.length === 0) return false;
+            const data = {};
+            window.tickets.forEach(t => { if (t.firebaseKey) data[t.firebaseKey] = t; });
+            updateClientesDataFromSnapshot({ val: () => data, exists: () => true });
+            return true;
+        };
+
+        if (!buildFromWindowTickets() && window.database) {
+            window.database.ref('tickets').once('value')
+                .then(updateClientesDataFromSnapshot)
+                .catch(() => {});
         }
 
-        const ticketsRef = window.database.ref('tickets');
-        
-        // PRIMERA CARGA: Obtener datos iniciales una sola vez
-        ticketsRef.once('value')
-            .then((snapshot) => {
-                updateClientesDataFromSnapshot(snapshot);
-            })
-            .catch((error) => {
-                // Error silencioso
-            });
-        
-        // Configurar listener en tiempo real para tickets (para cambios futuros)
-        ticketsRef.on('value', (snapshot) => {
-            updateClientesDataFromSnapshot(snapshot);
+        // Actualizar cuando index.js notifique cambios en tickets
+        document.addEventListener('ticketsChanged', () => {
+            buildFromWindowTickets();
         });
-        
-        // También escuchar cambios específicos para optimizar
-        ticketsRef.on('child_added', (snapshot) => {
-            const ticket = snapshot.val();
-            if (ticket) {
-                addClienteFromTicket(ticket);
-            }
-        });
-        
-        ticketsRef.on('child_changed', (snapshot) => {
-            const ticket = snapshot.val();
-            if (ticket) {
-                updateClienteFromTicket(ticket);
-            }
-        });
-        
+
     } catch (error) {
         // Error silencioso
     }
