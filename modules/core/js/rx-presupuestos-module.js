@@ -49,6 +49,7 @@
                     ticketId: ticket.id,
                     paciente: ticket.mascota || 'N/A',
                     cliente: ticket.nombre || 'N/A',
+                    cedula: ticket.cedula || '',
                     fechaConsulta: ticket.fechaConsulta || ''
                 });
             }
@@ -66,6 +67,7 @@
                     ticketId: ticket.id,
                     paciente: ticket.mascota || 'N/A',
                     cliente: ticket.nombre || 'N/A',
+                    cedula: ticket.cedula || '',
                     fechaConsulta: ticket.fechaConsulta || ''
                 });
             }
@@ -124,11 +126,11 @@
         if (!tbody) return;
 
         if (!fecha) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#e74c3c; font-weight:600;"><i class="fas fa-exclamation-circle"></i> Por favor seleccione una fecha</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:#e74c3c; font-weight:600;"><i class="fas fa-exclamation-circle"></i> Por favor seleccione una fecha</td></tr>';
             return;
         }
 
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#666;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; margin-bottom:8px; display:block;"></i> Cargando datos...</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:30px; color:#666;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; margin-bottom:8px; display:block;"></i> Cargando datos...</td></tr>';
         if (countBadge) countBadge.style.display = 'none';
         const summaryBar = document.getElementById('rxSummaryBar');
         if (summaryBar) summaryBar.style.display = 'none';
@@ -154,7 +156,7 @@
         }
 
         if (items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:#666;">' +
+            tbody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding:40px; color:#666;">' +
                 '<i class="fas fa-check-circle" style="color:#27ae60; font-size:2.5rem; display:block; margin-bottom:12px;"></i>' +
                 '<strong>Sin resultados</strong><br><span style="font-size:13px; color:#999;">No se encontraron RX ni Presupuestos en el campo "Por Cobrar" para el ' + formatFecha(fecha) + '</span>' +
                 '</td></tr>';
@@ -192,6 +194,7 @@
 
             tr.innerHTML =
                 '<td style="text-align:center; font-weight:700; color:#555;">' + esc(String(item.ticketId)) + '</td>' +
+                '<td style="white-space:nowrap;">' + esc(item.cedula || '—') + '</td>' +
                 '<td>' + esc(item.cliente) + '</td>' +
                 '<td>' + esc(item.paciente) + '</td>' +
                 '<td>' + tipoBadge(item.tipo) + '</td>' +
@@ -234,7 +237,7 @@
         const tds = tr ? tr.querySelectorAll('td') : [];
         const ahora = new Date();
         const horaStr = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        if (tds.length >= 7) tds[6].textContent = horaStr;
+        if (tds.length >= 8) tds[7].textContent = horaStr;
 
         // Persistir en Firebase
         firebase.database()
