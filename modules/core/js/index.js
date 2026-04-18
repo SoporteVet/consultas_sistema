@@ -780,10 +780,10 @@ function applyRoleBasedUI(role) {
         }
     }
     
-    // Expedientes: oculto para visitas
+    // Expedientes: oculto para visitas y recepción
     const expedientesBtn = document.getElementById('expedientesBtn');
     if (expedientesBtn) {
-        expedientesBtn.style.display = (role === 'visitas') ? 'none' : '';
+        expedientesBtn.style.display = (role === 'visitas' || role === 'recepcion') ? 'none' : '';
     }
 
     // Control de visibilidad del botón de vacunas basado en roles
