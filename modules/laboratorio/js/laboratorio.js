@@ -1981,12 +1981,14 @@ function toggleServiceStatus(ticketRandomId, serviceIndex) {
     // Cambiar el estado del servicio
     ticket.serviciosSeleccionados[serviceIndex].realizado = !ticket.serviciosSeleccionados[serviceIndex].realizado;
     
-    // Actualizar en Firebase
+    // Actualizar en Firebase — solo el campo que cambió (reducción de bandwidth)
     if (ticket.firebaseKey) {
-        const ticketToUpdate = { ...ticket };
-        delete ticketToUpdate.firebaseKey;
-        
-        labTicketsRef.child(ticket.firebaseKey).update(ticketToUpdate)            .then(() => {
+        const patchServicio = {
+            [`serviciosSeleccionados/${serviceIndex}/realizado`]: ticket.serviciosSeleccionados[serviceIndex].realizado,
+            lastModified: new Date().toISOString(),
+            lastModifiedBy: sessionStorage.getItem('userEmail') || 'Usuario'
+        };
+        labTicketsRef.child(ticket.firebaseKey).update(patchServicio)            .then(() => {
                 const serviceName = ticket.serviciosSeleccionados[serviceIndex].nombre;
                 const status = ticket.serviciosSeleccionados[serviceIndex].realizado ? 'realizado' : 'pendiente';
                 showNotification(`Servicio "${serviceName}" marcado como ${status}`, 'success');
@@ -2731,7 +2733,16 @@ function saveEditedLabTicket(ticket) {
     const ticketToSave = { ...ticket };
     delete ticketToSave.firebaseKey;
     
-    labTicketsRef.child(ticket.firebaseKey).update(ticketToSave)        .then(() => {
+    // Obtener estado actual para hacer diff y solo enviar campos modificados
+    labTicketsRef.child(ticket.firebaseKey).once('value').then(snap => {
+        const currentData = snap.val() || {};
+        const patch = typeof diffPatch === 'function'
+            ? diffPatch(currentData, ticketToSave)
+            : ticketToSave;
+        patch.lastModified = new Date().toISOString();
+        patch.lastModifiedBy = sessionStorage.getItem('userEmail') || 'Usuario';
+        return labTicketsRef.child(ticket.firebaseKey).update(patch);
+    })        .then(() => {
             showNotification('Ticket de laboratorio actualizado correctamente', 'success');
             closeModal();
             

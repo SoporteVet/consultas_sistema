@@ -19,16 +19,8 @@ function initLaboratorioSystemFixed() {
     }
     
     try {
-        // Limpiar listener anterior si existe
-        if (labTicketsListener && labTicketsRef) {
-            if (typeof labTicketsListener === 'function') {
-                labTicketsRef.off('value', labTicketsListener);
-            }
-            labTicketsListener = null;
-        }
-        
-        // Configurar referencia de Firebase
-        if (window.database) {
+    // Configurar referencia de Firebase
+    if (window.database) {
             labTicketsRef = window.database.ref('lab_tickets');
             setupLabFirebaseListenersFixed();
         } else {
@@ -60,13 +52,6 @@ function setupLabFirebaseListenersFixed() {
     if (!labTicketsRef) {
         console.error('Referencia de Firebase no disponible');
         return;
-    }
-    
-    // Limpiar listener anterior si existe
-    if (labTicketsListener && labTicketsRef) {
-        if (typeof labTicketsListener === 'function') {
-            labTicketsRef.off('value', labTicketsListener);
-        }
     }
     
     // Crear nuevo listener y guardar referencia
@@ -126,8 +111,10 @@ function setupLabFirebaseListenersFixed() {
         }
     };
     
-    // Configurar el listener
-    labTicketsRef.on('value', labTicketsListener);
+    // Carga única inicial; el tiempo real lo gestiona laboratorio.js (child_added/changed/removed)
+    labTicketsRef.once('value')
+        .then(snap => labTicketsListener(snap))
+        .catch(err => console.warn('[lab-ticket-manager] carga inicial:', err));
 }
 
 // Función mejorada para guardar tickets
@@ -179,12 +166,7 @@ function saveLabTicketFixed(ticketData) {
 
 // Función para limpiar listeners al salir
 function cleanupLabSystem() {
-    if (labTicketsListener && labTicketsRef) {
-        if (typeof labTicketsListener === 'function') {
-            labTicketsRef.off('value', labTicketsListener);
-        }
-        labTicketsListener = null;
-    }
+    labTicketsListener = null;
     labSystemInitialized = false;
     console.log('Sistema de laboratorio limpiado');
 }
