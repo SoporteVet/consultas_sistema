@@ -780,6 +780,12 @@ function applyRoleBasedUI(role) {
         }
     }
     
+    // Expedientes: oculto para visitas
+    const expedientesBtn = document.getElementById('expedientesBtn');
+    if (expedientesBtn) {
+        expedientesBtn.style.display = (role === 'visitas') ? 'none' : '';
+    }
+
     // Control de visibilidad del botón de vacunas basado en roles
     const vacunasBtn = document.getElementById('vacunasBtn');
     const allowedVacunasRoles = ['admin', 'consulta_externa'];
@@ -2511,6 +2517,23 @@ function renderTickets(filter = 'todos', date = null) {
                         ${estadoText}
                     </div>
                     ${ticket.expediente ? `<div class="expediente-badge"><i class="fas fa-file-medical"></i> <strong>Expediente médico:</strong> Registrado</div>` : ''}
+                    ${(() => {
+                        if (!ticket.cedula) return '';
+                        // Buscar visita previa más reciente para mismo paciente+mascota
+                        const prev = (window.tickets || []).filter(t =>
+                            t.cedula === ticket.cedula &&
+                            t.mascota === ticket.mascota &&
+                            t.fechaConsulta < ticket.fechaConsulta
+                        ).sort((a,b) => b.fechaConsulta.localeCompare(a.fechaConsulta));
+                        const lastVisit = prev.length ? `<span class="ultima-visita-badge"><i class="fas fa-history"></i> Últ. visita: ${formatDate(prev[0].fechaConsulta)}</span>` : '';
+                        const mascotaKey = ticket.idPaciente || ticket.mascota || '';
+                        return `<div class="ticket-exp-row">
+                            ${lastVisit}
+                            <button class="ticket-exp-btn" onclick="event.stopPropagation(); navigateToExpedientes('${ticket.cedula}','${mascotaKey}','${(ticket.mascota||'').replace(/'/g,"\\'")}')">
+                                <i class="fas fa-book-medical"></i> Ver expediente
+                            </button>
+                        </div>`;
+                    })()}
                     ${ticket.listoParaFacturar ? (() => {
                         let badgeContent = '<i class="fas fa-file-invoice-dollar"></i> <strong>Listo para facturar ✓</strong>';
                         if (ticket.horaListoParaFacturar) {
@@ -3467,16 +3490,49 @@ function editTicket(randomId) {
                 ${porCobrarField}
                 
                 ${userRole !== 'visitas' ? `
-                <div class="form-group" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
-                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50;">
-                        <input type="checkbox" id="editExpediente" ${safeTicket.expediente ? 'checked' : ''} 
-                               style="width: 18px; height: 18px; cursor: pointer;">
-                        <i class="fas fa-clipboard-list" style="color: #27ae60;"></i>
-                        Paciente ingresado al expediente médico
-                    </label>
-                    <small style="display: block; margin-top: 5px; color: #7f8c8d; font-style: italic;">
-                        Marcar cuando el paciente haya sido registrado en el sistema Argus
-                    </small>
+                <div class="edit-expediente-section">
+                    <input type="checkbox" id="editExpediente" ${safeTicket.expediente ? 'checked' : ''} style="display:none;">
+                    <button type="button" class="edit-expediente-toggle" id="editExpedienteToggleBtn"
+                            onclick="window._toggleEditExpediente()">
+                        <span><i class="fas fa-file-medical"></i>&nbsp; Expediente médico (SOAP)</span>
+                        <i class="fas fa-chevron-down toggle-arrow"></i>
+                    </button>
+                    <div class="edit-expediente-body" id="editExpedienteBody">
+                        <p class="edit-expediente-hint">
+                            Complete los campos que apliquen. Al guardar se creará una nueva entrada en el expediente de la mascota.
+                        </p>
+                        <div class="edit-soap-grid">
+                            <div class="edit-soap-group">
+                                <label><i class="fas fa-comment-medical"></i> S — Subjetivo (Anamnesis)</label>
+                                <textarea id="editExpSubjetivo" placeholder="Motivo referido por el propietario, síntomas…"></textarea>
+                            </div>
+                            <div class="edit-soap-group">
+                                <label><i class="fas fa-heartbeat"></i> O — Objetivo (Exploración física)</label>
+                                <textarea id="editExpObjetivo" placeholder="Constantes vitales, hallazgos al examen…"></textarea>
+                            </div>
+                            <div class="edit-soap-group">
+                                <label><i class="fas fa-diagnoses"></i> A — Análisis / Diagnóstico</label>
+                                <textarea id="editExpAnalisis" placeholder="Diagnóstico presuntivo, diferencial…"></textarea>
+                            </div>
+                            <div class="edit-soap-group">
+                                <label><i class="fas fa-pills"></i> P — Plan / Tratamiento</label>
+                                <textarea id="editExpPlan" placeholder="Medicamentos, dosis, indicaciones…"></textarea>
+                            </div>
+                            <div class="edit-soap-group edit-soap-full">
+                                <label><i class="fas fa-sticky-note"></i> Notas adicionales</label>
+                                <textarea id="editExpNotas" placeholder="Observaciones, seguimiento…"></textarea>
+                            </div>
+                        </div>
+                        <div class="edit-expediente-historial">
+                            <button type="button" class="edit-expediente-historial-toggle" onclick="window._toggleHistExpediente()">
+                                <i class="fas fa-history"></i> Ver entradas previas del expediente
+                                <i class="fas fa-chevron-down"></i>
+                            </button>
+                            <div class="edit-expediente-historial-body" id="editExpedienteHistorialBody">
+                                <div style="color:#9e9e9e;font-size:12px;padding:8px;">Cargando historial…</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 ` : ''}
                 
@@ -3540,9 +3596,15 @@ function editTicket(randomId) {
             medicoAtiende = editAsistenteAtiende;
         }
         
-        // Recoger todos los datos del formulario
+        const soapSubjetivo = (document.getElementById('editExpSubjetivo')?.value || '').trim();
+        const soapObjetivo  = (document.getElementById('editExpObjetivo')?.value  || '').trim();
+        const soapAnalisis  = (document.getElementById('editExpAnalisis')?.value  || '').trim();
+        const soapPlan      = (document.getElementById('editExpPlan')?.value      || '').trim();
+        const soapNotas     = (document.getElementById('editExpNotas')?.value     || '').trim();
+        const hasSoapContent = soapSubjetivo || soapObjetivo || soapAnalisis || soapPlan || soapNotas;
+
         const editExpediente = document.getElementById('editExpediente');
-        const expedienteValue = editExpediente ? editExpediente.checked : false;
+        const expedienteValue = (editExpediente && editExpediente.checked) || hasSoapContent;
         
         const editListoParaFacturar = document.getElementById('editListoParaFacturar');
         const listoParaFacturarValue = editListoParaFacturar ? editListoParaFacturar.checked : false;
@@ -3650,6 +3712,32 @@ function editTicket(randomId) {
         
         // Guardar el ticket actualizado
         saveEditedTicket(updatedTicket);
+
+        // Guardar entrada SOAP en /pacientes/{cedula}/mascotas/{key}/expediente
+        if (hasSoapContent && window.patientDatabase) {
+            const cedula     = (document.getElementById('editCedula')?.value     || '').trim();
+            const idPaciente = (document.getElementById('editIdPaciente')?.value || '').trim();
+            const mascotaNom = (document.getElementById('editMascota')?.value    || '').trim();
+            const mascotaKey = idPaciente || mascotaNom;
+            if (cedula && mascotaKey) {
+                const soapEntry = {
+                    fecha:      Date.now(),
+                    ticketId:   updatedTicket.id || '',
+                    randomId:   safeTicket.randomId || '',
+                    doctor:     document.getElementById('editDoctorAtiende')?.value || '',
+                    asistente:  document.getElementById('editAsistenteAtiende')?.value || '',
+                    motivo:     document.getElementById('editMotivo')?.value || '',
+                    subjetivo:  soapSubjetivo,
+                    objetivo:   soapObjetivo,
+                    analisis:   soapAnalisis,
+                    plan:       soapPlan,
+                    notas:      soapNotas,
+                    creadoPor:  sessionStorage.getItem('userName') || 'Usuario'
+                };
+                window.patientDatabase.addExpedienteEntry(cedula, mascotaKey, soapEntry)
+                    .catch(err => console.error('Error guardando expediente SOAP:', err));
+            }
+        }
     });
     
     // Nota: Se removió el límite de ediciones - el botón de guardar siempre está habilitado
@@ -3672,6 +3760,58 @@ function editTicket(randomId) {
         editUrgenciaSelect.addEventListener('change', updateEditUrgenciaDescription);
         updateEditUrgenciaDescription();
     }
+
+    // Toggles del expediente SOAP
+    window._toggleEditExpediente = function() {
+        const body = document.getElementById('editExpedienteBody');
+        const btn  = document.getElementById('editExpedienteToggleBtn');
+        if (!body || !btn) return;
+        const isOpen = body.classList.toggle('open');
+        btn.classList.toggle('open', isOpen);
+    };
+
+    window._toggleHistExpediente = function() {
+        const body = document.getElementById('editExpedienteHistorialBody');
+        if (!body) return;
+        body.classList.toggle('open');
+    };
+
+    // Precargar historial del expediente
+    (function precargarHistorialExpediente() {
+        const cedula     = (document.getElementById('editCedula')?.value     || '').trim();
+        const idPaciente = (document.getElementById('editIdPaciente')?.value || '').trim();
+        const mascotaNom = (document.getElementById('editMascota')?.value    || '').trim();
+        const mascotaKey = idPaciente || mascotaNom;
+        const histBody   = document.getElementById('editExpedienteHistorialBody');
+        if (!histBody || !cedula || !mascotaKey || !window.patientDatabase) return;
+
+        window.patientDatabase.getExpediente(cedula, mascotaKey).then(entries => {
+            if (!entries || entries.length === 0) {
+                histBody.innerHTML = '<div style="color:#9e9e9e;font-size:12px;padding:8px;">Sin entradas previas</div>';
+                return;
+            }
+            histBody.innerHTML = entries.map(entry => {
+                const fecha  = entry.fecha ? new Date(entry.fecha).toLocaleString('es-ES') : '—';
+                const campos = [
+                    { k: 'S', v: entry.subjetivo },
+                    { k: 'O', v: entry.objetivo },
+                    { k: 'A', v: entry.analisis },
+                    { k: 'P', v: entry.plan },
+                    { k: 'Notas', v: entry.notas }
+                ].filter(c => c.v && c.v.trim());
+                return `<div class="hist-entry">
+                    <div class="hist-entry-meta">
+                        <span><i class="fas fa-calendar-alt"></i> ${fecha}</span>
+                        ${entry.doctor ? `<span><i class="fas fa-user-md"></i> ${entry.doctor}</span>` : ''}
+                        ${entry.randomId ? `<span>Ticket #${entry.randomId}</span>` : ''}
+                    </div>
+                    ${campos.map(c => `<div class="hist-soap-row"><strong>${c.k}:</strong> ${c.v}</div>`).join('')}
+                </div>`;
+            }).join('');
+        }).catch(() => {
+            histBody.innerHTML = '<div style="color:#e53935;font-size:12px;">Error cargando historial</div>';
+        });
+    })();
 
     // --- En el modal de edición, mostrar la hora de atención como solo lectura ---
     // Busca el input de hora de atención y cámbialo a readonly y deshabilitado
@@ -5843,6 +5983,20 @@ function navigateToSection(sectionId, buttonId) {
 // Exportar función globalmente
 window.navigateToSection = navigateToSection;
 
+function navigateToExpedientes(cedula, mascotaKey, mascotaNom) {
+    navigateToSection('expedientesSection', 'expedientesBtn');
+    if (window.innerWidth <= 980) closeSidebar();
+    // Pasar parámetros al módulo cuando esté listo
+    const open = () => {
+        if (window.expedientesModule) {
+            window.expedientesModule.open(cedula || '', mascotaKey || '', mascotaNom || '');
+        } else {
+            setTimeout(open, 300);
+        }
+    };
+    open();
+}
+
 function navigateToConsultas() {
 
     
@@ -7021,6 +7175,8 @@ window.addEventListener('DOMContentLoaded', function() {
   let currentVacunasFecha = '';
   let currentVacunasTurno = '';
   let inventarioActual = {};
+  /** Lecturas planas de temperatura (consulta por rango de fechas). Las lecturas antiguas pueden estar en vacunasTemperatura/{fecha_turno}. */
+  const VACUNAS_TEMP_LECTURAS_REF = 'vacunasTemperaturaLecturas';
   
   // Función para sanitizar claves de Firebase
   function sanitizeFirebaseKey(key) {
@@ -7133,6 +7289,34 @@ const vacunasDisponibles = {
   trimestral: ['Trip/Leu', 'Trip/Rab', 'Leu', 'Triple Felina']
 };
   
+  function setVacunasModuleTab(which) {
+    const panVac = document.getElementById('vacunasPanelVacunas');
+    const panTemp = document.getElementById('vacunasPanelTemperatura');
+    const btnVac = document.getElementById('vacunasTabBtnVacunas');
+    const btnTemp = document.getElementById('vacunasTabBtnTemperatura');
+    if (!panVac || !panTemp || !btnVac || !btnTemp) return;
+    const isVac = which === 'vacunas';
+    panVac.classList.toggle('active', isVac);
+    panTemp.classList.toggle('active', !isVac);
+    btnVac.classList.toggle('active', isVac);
+    btnTemp.classList.toggle('active', !isVac);
+    btnVac.setAttribute('aria-selected', isVac ? 'true' : 'false');
+    btnTemp.setAttribute('aria-selected', !isVac ? 'true' : 'false');
+  }
+  
+  function setVacunasTurnoRegistroVisible(show) {
+    const rv = document.getElementById('vacunasRegistroVacunas');
+    const rt = document.getElementById('vacunasRegistroTemperatura');
+    const pv = document.getElementById('vacunasPlaceholderVacunas');
+    const pt = document.getElementById('vacunasPlaceholderTemperatura');
+    const regDisplay = show ? 'block' : 'none';
+    const phDisplay = show ? 'none' : 'block';
+    if (rv) rv.style.display = regDisplay;
+    if (rt) rt.style.display = regDisplay;
+    if (pv) pv.style.display = phDisplay;
+    if (pt) pt.style.display = phDisplay;
+  }
+  
   // Inicializar módulo de vacunas
   function initializeVacunasModule() {
     console.log('Inicializando módulo de vacunas...');
@@ -7144,10 +7328,17 @@ const vacunasDisponibles = {
       console.log('Fecha configurada:', fechaInput.value);
     }
     
-    // Ocultar el área de registro inicialmente
-    const registroArea = document.getElementById('vacunasRegistroArea');
-    if (registroArea) {
-      registroArea.style.display = 'none';
+    setVacunasTurnoRegistroVisible(false);
+    setVacunasModuleTab('vacunas');
+    
+    const histDesde = document.getElementById('vacunasTempHistDesde');
+    const histHasta = document.getElementById('vacunasTempHistHasta');
+    if (histDesde && histHasta && (!histDesde.value || !histHasta.value)) {
+      const fin = new Date();
+      const ini = new Date(fin);
+      ini.setDate(ini.getDate() - 30);
+      histDesde.value = getLocalDateString(ini);
+      histHasta.value = getLocalDateString(fin);
     }
     
     // Configurar event listeners
@@ -7188,6 +7379,34 @@ const vacunasDisponibles = {
       guardarNotasBtn.replaceWith(guardarNotasBtn.cloneNode(true));
       document.getElementById('guardarVacunasNotas').addEventListener('click', guardarVacunasNotas);
       console.log('Event listener del botón guardar notas configurado');
+    }
+    
+    const guardarTempBtn = document.getElementById('guardarVacunasTemperatura');
+    if (guardarTempBtn) {
+      guardarTempBtn.replaceWith(guardarTempBtn.cloneNode(true));
+      document.getElementById('guardarVacunasTemperatura').addEventListener('click', guardarVacunasTemperatura);
+    }
+    const limpiarTempBtn = document.getElementById('limpiarVacunasTemperatura');
+    if (limpiarTempBtn) {
+      limpiarTempBtn.replaceWith(limpiarTempBtn.cloneNode(true));
+      document.getElementById('limpiarVacunasTemperatura').addEventListener('click', limpiarFormularioTemperatura);
+    }
+    
+    const histTempBtn = document.getElementById('cargarVacunasTemperaturaHistorial');
+    if (histTempBtn) {
+      histTempBtn.replaceWith(histTempBtn.cloneNode(true));
+      document.getElementById('cargarVacunasTemperaturaHistorial').addEventListener('click', cargarVacunasTemperaturaHistorial);
+    }
+    
+    const tabBtnVac = document.getElementById('vacunasTabBtnVacunas');
+    const tabBtnTemp = document.getElementById('vacunasTabBtnTemperatura');
+    if (tabBtnVac) {
+      tabBtnVac.replaceWith(tabBtnVac.cloneNode(true));
+      document.getElementById('vacunasTabBtnVacunas').addEventListener('click', () => setVacunasModuleTab('vacunas'));
+    }
+    if (tabBtnTemp) {
+      tabBtnTemp.replaceWith(tabBtnTemp.cloneNode(true));
+      document.getElementById('vacunasTabBtnTemperatura').addEventListener('click', () => setVacunasModuleTab('temperatura'));
     }
     
     // Botón abrir turno
@@ -7247,11 +7466,7 @@ const vacunasDisponibles = {
     currentVacunasFecha = fecha;
     currentVacunasTurno = turno;
     
-    // Mostrar el área de registro
-    const registroArea = document.getElementById('vacunasRegistroArea');
-    if (registroArea) {
-      registroArea.style.display = 'block';
-    }
+    setVacunasTurnoRegistroVisible(true);
     
     // Cargar datos del turno desde Firebase
     loadVacunasData(fecha, turno);
@@ -7381,6 +7596,220 @@ const vacunasDisponibles = {
     
     // Cargar notas del turno
     loadVacunasNotas(fecha, turno);
+    loadVacunasTemperatura(fecha, turno);
+  }
+  
+  function formatVacunasFechaHoraDisplay(isoString) {
+    if (!isoString) return '';
+    const d = new Date(isoString);
+    if (isNaN(d.getTime())) return String(isoString);
+    return d.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
+  }
+  
+  function vacunasTurnoEtiqueta(turno) {
+    const map = {
+      Mañana: 'Apertura de turno',
+      Tarde: 'Entrega de turno',
+      Noche: 'Cierre de turno'
+    };
+    return map[turno] || turno || '—';
+  }
+  
+  function escapeVacunasHtml(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/"/g, '&quot;');
+  }
+  
+  function displayVacunasTemperaturaTable(rows) {
+    const tbody = document.getElementById('vacunasTemperaturaTableBody');
+    if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="3" class="no-data">No hay lecturas de temperatura para este turno</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map((r) => {
+      const temp = r.temperatura !== undefined && r.temperatura !== null
+        ? Number(r.temperatura).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
+        : '';
+      const fh = formatVacunasFechaHoraDisplay(r.fechaHoraRegistro);
+      return `<tr>
+        <td>${escapeVacunasHtml(fh)}</td>
+        <td>${escapeVacunasHtml(temp)}</td>
+        <td>${escapeVacunasHtml(r.responsable)}</td>
+      </tr>`;
+    }).join('');
+  }
+  
+  function displayVacunasTemperaturaHistorialTable(rows) {
+    const tbody = document.getElementById('vacunasTemperaturaHistorialBody');
+    if (!tbody) return;
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="no-data">No hay lecturas en el rango seleccionado</td></tr>';
+      return;
+    }
+    tbody.innerHTML = rows.map((r) => {
+      const temp = r.temperatura !== undefined && r.temperatura !== null
+        ? Number(r.temperatura).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
+        : '';
+      const fh = formatVacunasFechaHoraDisplay(r.fechaHoraRegistro);
+      return `<tr>
+        <td>${escapeVacunasHtml(r.fecha || '')}</td>
+        <td>${escapeVacunasHtml(vacunasTurnoEtiqueta(r.turno))}</td>
+        <td>${escapeVacunasHtml(fh)}</td>
+        <td>${escapeVacunasHtml(temp)}</td>
+        <td>${escapeVacunasHtml(r.responsable)}</td>
+      </tr>`;
+    }).join('');
+  }
+  
+  function cargarVacunasTemperaturaHistorial() {
+    const desde = document.getElementById('vacunasTempHistDesde');
+    const hasta = document.getElementById('vacunasTempHistHasta');
+    const desdeVal = desde ? desde.value : '';
+    const hastaVal = hasta ? hasta.value : '';
+    const tbody = document.getElementById('vacunasTemperaturaHistorialBody');
+    if (!tbody) return;
+    if (!desdeVal || !hastaVal) {
+      showNotification('Seleccione fecha desde y hasta', 'error');
+      return;
+    }
+    if (desdeVal > hastaVal) {
+      showNotification('La fecha inicial no puede ser posterior a la final', 'error');
+      return;
+    }
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
+      return;
+    }
+    const database = firebase.database();
+    database.ref(VACUNAS_TEMP_LECTURAS_REF)
+      .orderByChild('fecha')
+      .startAt(desdeVal)
+      .endAt(hastaVal)
+      .once('value')
+      .then((snapshot) => {
+        const rows = [];
+        snapshot.forEach((child) => {
+          const v = child.val();
+          if (v && typeof v.fecha === 'string' && v.fecha >= desdeVal && v.fecha <= hastaVal) {
+            rows.push({ id: child.key, ...v });
+          }
+        });
+        rows.sort((a, b) => new Date(b.fechaHoraRegistro || 0).getTime() - new Date(a.fechaHoraRegistro || 0).getTime());
+        displayVacunasTemperaturaHistorialTable(rows);
+      })
+      .catch((err) => {
+        console.error('Histórico temperatura vacunas:', err);
+        showNotification('No se pudo cargar el histórico. Verifique las reglas e índice de Firebase (vacunasTemperaturaLecturas / fecha).', 'error');
+      });
+  }
+  
+  function refrescarVacunasTemperaturaHistorialOpcional() {
+    const desde = document.getElementById('vacunasTempHistDesde');
+    const hasta = document.getElementById('vacunasTempHistHasta');
+    if (!desde || !hasta || !currentVacunasFecha) return;
+    const d0 = desde.value;
+    const d1 = hasta.value;
+    if (!d0 || !d1) return;
+    if (currentVacunasFecha >= d0 && currentVacunasFecha <= d1) {
+      cargarVacunasTemperaturaHistorial();
+    }
+  }
+  
+  function loadVacunasTemperatura(fecha, turno) {
+    const tbody = document.getElementById('vacunasTemperaturaTableBody');
+    if (!tbody) return;
+    if (!firebase || !firebase.database) {
+      return;
+    }
+    const turnoKey = `${fecha}_${turno}`;
+    const database = firebase.database();
+    const flatRef = database.ref(VACUNAS_TEMP_LECTURAS_REF).orderByChild('fecha').equalTo(fecha);
+    const legacyRef = database.ref(`vacunasTemperatura/${turnoKey}`);
+    
+    Promise.all([
+      new Promise((resolve) => { flatRef.once('value', resolve); }),
+      new Promise((resolve) => { legacyRef.once('value', resolve); })
+    ]).then(([snapFlat, snapLegacy]) => {
+      const rows = [];
+      snapFlat.forEach((child) => {
+        const v = child.val();
+        if (v && v.turno === turno) {
+          rows.push({ id: child.key, ...v });
+        }
+      });
+      const legacyData = snapLegacy.val();
+      if (legacyData) {
+        Object.entries(legacyData).forEach(([id, v]) => {
+          if (v && (v.temperatura !== undefined && v.temperatura !== null)) {
+            rows.push({ id: `legacy_${id}`, ...v });
+          }
+        });
+      }
+      rows.sort((a, b) => {
+        const ta = new Date(a.fechaHoraRegistro || 0).getTime();
+        const tb = new Date(b.fechaHoraRegistro || 0).getTime();
+        return tb - ta;
+      });
+      displayVacunasTemperaturaTable(rows);
+    }).catch((err) => {
+      console.error('loadVacunasTemperatura:', err);
+      tbody.innerHTML = '<tr><td colspan="3" class="no-data">Error al cargar lecturas (¿índice fecha en Firebase?)</td></tr>';
+    });
+  }
+  
+  function guardarVacunasTemperatura() {
+    if (!currentVacunasFecha || !currentVacunasTurno) {
+      showNotification('Debe seleccionar una fecha y turno primero', 'error');
+      return;
+    }
+    const tempInput = document.getElementById('vacunaTempCelsius');
+    const respInput = document.getElementById('vacunaTempResponsable');
+    const rawTemp = tempInput ? String(tempInput.value).trim().replace(',', '.') : '';
+    const responsable = respInput ? respInput.value.trim() : '';
+    if (rawTemp === '' || !responsable) {
+      showNotification('Indique temperatura y responsable', 'error');
+      return;
+    }
+    const temperatura = parseFloat(rawTemp);
+    if (Number.isNaN(temperatura)) {
+      showNotification('La temperatura no es válida', 'error');
+      return;
+    }
+    if (!firebase || !firebase.database) {
+      showNotification('Error: Firebase no está disponible', 'error');
+      return;
+    }
+    const now = new Date();
+    const payload = {
+      fecha: currentVacunasFecha,
+      turno: currentVacunasTurno,
+      temperatura,
+      responsable,
+      fechaHoraRegistro: now.toISOString()
+    };
+    const database = firebase.database();
+    database.ref(VACUNAS_TEMP_LECTURAS_REF).push(payload)
+      .then(() => {
+        showNotification('Lectura de temperatura registrada', 'success');
+        if (tempInput) tempInput.value = '';
+        if (respInput) respInput.value = '';
+        loadVacunasTemperatura(currentVacunasFecha, currentVacunasTurno);
+        refrescarVacunasTemperaturaHistorialOpcional();
+      })
+      .catch((err) => {
+        console.error('Error al guardar temperatura vacunas:', err);
+        showNotification('Error al guardar la lectura de temperatura', 'error');
+      });
+  }
+  
+  function limpiarFormularioTemperatura() {
+    const tempInput = document.getElementById('vacunaTempCelsius');
+    const respInput = document.getElementById('vacunaTempResponsable');
+    if (tempInput) tempInput.value = '';
+    if (respInput) respInput.value = '';
   }
   
   // Mostrar tabla de vacunas
