@@ -131,65 +131,15 @@ class FirebaseRealtimeOptimizer {
     }
     
     optimizeLabTicketsListener() {
-        // Optimizar listeners de laboratorio si existen
-        if (!window.labTicketsRef) {
-            return;
-        }
-        
-        // Limpiar listeners anteriores
-        this.cleanupListener('lab');
-        
-        // Listener optimizado para tickets de laboratorio
-        const labListener = {
-            ref: window.labTicketsRef,
-            handlers: {
-                value: this.debounce((snapshot) => {
-                    this.handleLabTicketsSnapshot(snapshot);
-                }, 300),
-                
-                child_added: this.debounce((snapshot) => {
-                    this.handleLabTicketAdded(snapshot);
-                }, 100),
-                
-                child_changed: this.debounce((snapshot) => {
-                    this.handleLabTicketChanged(snapshot);
-                }, 200)
-            }
-        };
-        
-        // Configurar listeners
-        Object.entries(labListener.handlers).forEach(([event, handler]) => {
-            labListener.ref.on(event, handler);
-        });
-        
-        this.listeners.set('lab', labListener);
+        // Listeners de lab_tickets gestionados exclusivamente por laboratorio.js
+        // No se montan listeners adicionales aquí para evitar descargas duplicadas de bandwidth
+        console.log('[optimizer] lab_tickets: listeners gestionados por laboratorio.js — sin duplicar');
     }
     
     optimizeQuirofanoListener() {
-        // Optimizar listeners de quirófano si existen
-        if (!window.quirofanoFirebaseRef) {
-            return;
-        }
-        
-        // Limpiar listeners anteriores
-        this.cleanupListener('quirofano');
-        
-        // Listener optimizado para tickets de quirófano
-        const quirofanoListener = {
-            ref: window.quirofanoFirebaseRef,
-            handlers: {
-                value: this.debounce((snapshot) => {
-                    this.handleQuirofanoSnapshot(snapshot);
-                }, 300)
-            }
-        };
-        
-        // Configurar listeners
-        Object.entries(quirofanoListener.handlers).forEach(([event, handler]) => {
-            quirofanoListener.ref.on(event, handler);
-        });
-        
-        this.listeners.set('quirofano', quirofanoListener);
+        // Listeners gestionados exclusivamente por quirofano-module.js
+        // No montar aquí para evitar descargas duplicadas de bandwidth
+        console.log('[optimizer] quirofano-tickets: listeners gestionados por quirofano-module.js');
     }
     
     handleTicketsSnapshot(snapshot) {
@@ -221,20 +171,9 @@ class FirebaseRealtimeOptimizer {
     }
     
     handleTicketAdded(snapshot) {
-        const ticket = snapshot.val();
-        if (!ticket || !ticket.mascota || ticket.id == null) {
-            // Limpiar ticket inválido
-            snapshot.ref.remove();
-            return;
-        }
-        
-        const ticketWithKey = { ...ticket, firebaseKey: snapshot.key };
-        
-        // Evitar duplicados
-        if (!window.tickets.some(t => t.firebaseKey === ticketWithKey.firebaseKey)) {
-            window.tickets.push(ticketWithKey);
-            this.updateUI('tickets', 'add', ticketWithKey);
-        }
+        // Previamente hacía snapshot.ref.remove() con datos incompletos — peligroso.
+        // Ahora es no-op: la validación y el parseo viven en index.js.
+        return;
     }
     
     handleTicketChanged(snapshot) {
