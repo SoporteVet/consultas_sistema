@@ -49,6 +49,19 @@ function generateRandomId(length = 16) {
     return result;
 }
 
+// Genera un objeto de patch con solo los campos que cambiaron respecto a la base.
+// Útil para hacer update() mínimo en Firebase y reducir bandwidth de subida.
+function diffPatch(base, updated, alwaysExclude = ['firebaseKey']) {
+    const patch = {};
+    for (const k of Object.keys(updated)) {
+        if (alwaysExclude.includes(k)) continue;
+        if (JSON.stringify(base[k]) !== JSON.stringify(updated[k])) {
+            patch[k] = updated[k];
+        }
+    }
+    return patch;
+}
+
 let consultorioAnnouncementVoice = null;
 
 function selectConsultorioVoice() {
@@ -1600,9 +1613,10 @@ function loadTickets(loadAllData = false) {
     return new Promise((resolve, reject) => {
         // Desconectar listeners anteriores si existen para evitar duplicados
         if (ticketsActiveListeners) {
-            // Verificar que los listeners sean funciones válidas antes de desconectarlos
+            // child_added usa ref filtrada; child_changed/removed usan ticketsRef sin filtro
+            const _addRef = ticketsActiveListeners.addRef || ticketsRef;
             if (typeof ticketsActiveListeners.handleChildAdded === 'function') {
-                ticketsRef.off('child_added', ticketsActiveListeners.handleChildAdded);
+                _addRef.off('child_added', ticketsActiveListeners.handleChildAdded);
             }
             if (typeof ticketsActiveListeners.handleChildChanged === 'function') {
                 ticketsRef.off('child_changed', ticketsActiveListeners.handleChildChanged);
@@ -1856,13 +1870,25 @@ function setupTicketsIncrementalListeners() {
         }
     };
     
-    // Configurar listeners incrementales
-    ticketsRef.on('child_added', handleChildAdded);
+    // child_added con filtro de fecha: evita descargar tickets históricos al suscribirse.
+    // child_changed y child_removed SIN filtro: garantiza que cualquier cambio (incluyendo
+    // porCobrar en tickets cargados vía fechaConsulta) llega a todos los clientes.
+    let _addRef;
+    if (!ticketsAllDataLoaded) {
+        const _cutoff = new Date();
+        _cutoff.setDate(_cutoff.getDate() - ticketsLoadDateRange);
+        const _cutoffStr = _cutoff.toISOString().split('T')[0];
+        _addRef = ticketsRef.orderByChild('fechaCreacion').startAt(_cutoffStr);
+    } else {
+        _addRef = ticketsRef;
+    }
+    _addRef.on('child_added', handleChildAdded);
     ticketsRef.on('child_changed', handleChildChanged);
     ticketsRef.on('child_removed', handleChildRemoved);
     
-    // Guardar referencias para poder desconectar
+    // addRef separado de ticketsRef para cleanup correcto
     ticketsActiveListeners = {
+        addRef: _addRef,
         handleChildAdded,
         handleChildChanged,
         handleChildRemoved
@@ -3938,8 +3964,11 @@ function saveEditedTicket(ticket) {
                         ticketToSave.porCobrar = currentData.porCobrar;
                     }
                 }
-                
-                return ticketsRef.child(ticket.firebaseKey).update(ticketToSave);
+                // Solo enviar campos que realmente cambiaron
+                const patch = diffPatch(currentData || {}, ticketToSave);
+                patch.lastModified = new Date().toISOString();
+                patch.lastModifiedBy = sessionStorage.getItem('userName') || 'Usuario';
+                return ticketsRef.child(ticket.firebaseKey).update(patch);
             })
                 .then(() => {
                     // Si el estado cambió a consultorio, anunciar
@@ -3998,8 +4027,11 @@ function saveEditedTicket(ticket) {
                         ticketToSave.porCobrar = currentData.porCobrar;
                     }
                 }
-                
-                return ticketsRef.child(ticket.firebaseKey).update(ticketToSave);
+                // Solo enviar campos que realmente cambiaron
+                const patch = diffPatch(currentData || {}, ticketToSave);
+                patch.lastModified = new Date().toISOString();
+                patch.lastModifiedBy = sessionStorage.getItem('userName') || 'Usuario';
+                return ticketsRef.child(ticket.firebaseKey).update(patch);
             })
                 .then(() => {
                     // Si el estado cambió a consultorio, anunciar
@@ -4146,15 +4178,23 @@ function changeStatus(randomId) {
         // Si el ticket pasa a terminado o cliente se fue, registrar hora de finalización
         if (nuevoEstado === 'terminado' || nuevoEstado === 'cliente_se_fue') {
             const ahora = new Date();
+            const horaActual = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             // Conservar la hora de atención existente si existe
             if (!ticket.horaAtencion) {
-                ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+                ticket.horaAtencion = horaActual;
             }
-            ticket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-            // Guardar en Firebase inmediatamente
-            const ticketToSave = {...ticket};
-            delete ticketToSave.firebaseKey;
-            ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+            ticket.horaFinalizacion = horaActual;
+            // Patch mínimo: solo los campos que cambian en este flujo
+            const patchFin = {
+                estado: nuevoEstado,
+                horaFinalizacion: horaActual,
+                lastModified: new Date().toISOString(),
+                lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
+            };
+            if (!ticket.horaAtencion || ticket.horaAtencion === horaActual) {
+                patchFin.horaAtencion = horaActual;
+            }
+            ticketsRef.child(ticket.firebaseKey).update(patchFin)
                 .then(() => {
                     // Refrescar la tabla después de guardar
                     if (document.getElementById('verTicketsSection').classList.contains('active')) {
@@ -4173,15 +4213,20 @@ function changeStatus(randomId) {
             showLoadingButton(saveButton);
         }
         
-        // Actualizar en Firebase
-        const ticketToSave = {...ticket};
-        delete ticketToSave.firebaseKey;
-        
-        ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+        // Patch mínimo: solo los campos que cambian al mover el ticket de estado
+        const patchEstado = {
+            estado: nuevoEstado,
+            lastModified: new Date().toISOString(),
+            lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
+        };
+        if (nuevoEstado.includes('consultorio') && !ticket.horaAtencion) {
+            patchEstado.horaAtencion = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        }
+        ticketsRef.child(ticket.firebaseKey).update(patchEstado)
             .then(() => {
                 // Si el estado cambió a consultorio, anunciar
                 if (estadoAnterior !== nuevoEstado && nuevoEstado && nuevoEstado.toLowerCase().startsWith('consultorio')) {
-                    const ticketActualizado = { ...ticket, ...ticketToSave };
+                    const ticketActualizado = { ...ticket, estado: nuevoEstado };
                     announceConsultorio(ticketActualizado, nuevoEstado, estadoAnterior);
                 }
                 
@@ -5663,22 +5708,20 @@ function confirmEndConsultationByFirebaseKey(firebaseKey) {
         showLoadingButton(endButton);
     }
 
-    // Actualizar el estado y la hora de finalización
+    // Patch mínimo: solo los campos que cambian al terminar la consulta
     const ahora = new Date();
-    const ticketToSave = {
-        ...ticket,
+    const horaFin = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const patchEnd = {
         estado: 'terminado',
-        horaFinalizacion: ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+        horaFinalizacion: horaFin,
+        lastModified: ahora.toISOString(),
+        lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
     };
-    
-    // Si no tiene hora de atención, establecerla
-    if (!ticketToSave.horaAtencion) {
-        ticketToSave.horaAtencion = ticketToSave.horaFinalizacion;
+    if (!ticket.horaAtencion) {
+        patchEnd.horaAtencion = horaFin;
     }
 
-    delete ticketToSave.firebaseKey;
-
-    ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
+    ticketsRef.child(ticket.firebaseKey).update(patchEnd)
         .then(() => {
             showNotification('Consulta terminada correctamente', 'success');
             closeModal();
