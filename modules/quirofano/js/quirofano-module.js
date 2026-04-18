@@ -437,9 +437,10 @@ function loadQuirofanoTickets(loadAllData = false) {
     
     // Desconectar listener anterior si existe
     if (quirofanoActiveListener) {
-        quirofanoFirebaseRef.off('value', quirofanoActiveListener);
-        quirofanoFirebaseRef.off('child_added', quirofanoActiveListener.handleChildAdded);
-        quirofanoFirebaseRef.off('child_changed', quirofanoActiveListener.handleChildChanged);
+        const _cleanRef = quirofanoActiveListener.ref || quirofanoFirebaseRef;
+        _cleanRef.off('child_added',   quirofanoActiveListener.handleChildAdded);
+        _cleanRef.off('child_changed', quirofanoActiveListener.handleChildChanged);
+        _cleanRef.off('child_removed', quirofanoActiveListener.handleChildRemoved);
         quirofanoActiveListener = null;
     }
     
@@ -548,8 +549,9 @@ function setupQuirofanoIncrementalListeners() {
     quirofanoFirebaseRef.on('child_changed', handleChildChanged);
     quirofanoFirebaseRef.on('child_removed', handleChildRemoved);
     
-    // Guardar referencias
+    // Guardar referencias (incluye ref para que el cleanup use la misma instancia)
     quirofanoActiveListener = {
+        ref: quirofanoFirebaseRef,
         handleChildAdded,
         handleChildChanged,
         handleChildRemoved
