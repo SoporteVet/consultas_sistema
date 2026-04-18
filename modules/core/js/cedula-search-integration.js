@@ -67,18 +67,15 @@ class CedulaSearchIntegration {
             // Si tiene al menos 5 dígitos, esperar un momento y buscar
             if (cedula.length >= 5) {
                 searchTimeout = setTimeout(() => {
-                    // Primero verificar en BD local
                     if (window.patientDatabase) {
                         const existingPatient = window.patientDatabase.findPatientByCedula(cedula);
                         if (!existingPatient) {
-                            // Si no existe en BD local, buscar en API externa
                             this.searchCedulaInAPI(cedula, formType, true);
                         }
                     } else {
-                        // Si no hay BD local disponible, buscar directamente en API
                         this.searchCedulaInAPI(cedula, formType, true);
                     }
-                }, 1000); // Esperar 1 segundo después de que el usuario deje de escribir
+                }, 1000);
             }
         });
     }
@@ -127,12 +124,10 @@ class CedulaSearchIntegration {
             return;
         }
 
-        // Primero verificar si ya existe en nuestra BD (a menos que se indique lo contrario)
+        // Primero verificar si ya existe en nuestra BD local (caché)
         if (!skipLocalCheck && window.patientDatabase) {
             const existingPatient = window.patientDatabase.findPatientByCedula(cedula);
             if (existingPatient) {
-                // Notificación eliminada según solicitud del usuario
-                // El sistema de patient-database ya mostrará el dropdown
                 return;
             }
         }
