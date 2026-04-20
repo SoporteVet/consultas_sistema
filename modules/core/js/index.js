@@ -8,7 +8,7 @@ window.tickets = tickets;
 // Variables para optimización de carga diferida
 let ticketsActiveListeners = null;
 let ticketsAllDataLoaded = false; // Flag para saber si ya se cargaron todos los datos
-let ticketsLoadDateRange = 60; // Días a cargar por defecto (últimos 60 días)
+let ticketsLoadDateRange = 30; // Días a cargar por defecto (últimos 60 días)
 let ticketsUpdateDebounceTimer = null; // Timer para debounce de actualizaciones
 
 // Function to safely add event listeners
