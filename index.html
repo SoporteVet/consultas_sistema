@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="modules/consentimientos/css/consentimientos.css">
   <link rel="stylesheet" href="modules/quirofano/css/quirofano.css">
   <link rel="stylesheet" href="modules/internamiento/css/internamiento.css">
-  <link rel="stylesheet" href="modules/expedientes/css/expedientes.css">
   
   <link rel="icon" href="img/empresa.jpg" type="image/x-icon">
 </head>
@@ -65,10 +64,7 @@
               <i class="fas fa-list-alt"></i> Ver Consultas
             </button>
             <button id="vacunasBtn" class="submenu-btn" onclick="navigateToVacunas('vacunasSection', 'vacunasBtn');">
-              <i class="fas fa-syringe"></i> Control de vacuna y temperatura
-            </button>
-            <button id="expedientesBtn" class="submenu-btn" onclick="navigateToExpedientes();">
-              <i class="fas fa-book-medical"></i> Expedientes Médicos
+              <i class="fas fa-syringe"></i> Control de Vacunas
             </button>
           </div>
         </div>
@@ -161,10 +157,6 @@
 
     <!-- Contenido principal -->
     <div class="content" id="mainContent">
-      <!-- Expedientes Médicos -->
-      <section id="expedientesSection" class="hidden">
-      </section>
-
       <!-- Sección para crear tickets -->
       <section id="crearTicketSection" class="hidden">
         <h2><i class="fas fa-paw"></i> Crear Consulta</h2>
@@ -1119,8 +1111,8 @@
 
       <!-- Sección para Control de Vacunas -->
       <section id="vacunasSection" class="hidden">
-        <h2><i class="fas fa-syringe"></i> Control de vacuna y temperatura</h2>
-
+        <h2><i class="fas fa-syringe"></i> Control de Vacunas</h2>
+        
         <!-- Selección de Fecha y Turno -->
         <div class="form-container">
           <div class="form-row">
@@ -1146,19 +1138,8 @@
           </div>
         </div>
 
-        <div class="vacunas-module-shell">
-          <div class="vacunas-module-tabstrip" role="tablist">
-            <button type="button" class="vacunas-module-tab active" id="vacunasTabBtnVacunas" role="tab" aria-selected="true">
-              <i class="fas fa-syringe"></i> Control de vacunas
-            </button>
-            <button type="button" class="vacunas-module-tab" id="vacunasTabBtnTemperatura" role="tab" aria-selected="false">
-              <i class="fas fa-thermometer-half"></i> Control de temperatura
-            </button>
-          </div>
-
-          <div id="vacunasPanelVacunas" class="vacunas-module-panel active" role="tabpanel">
-            <p id="vacunasPlaceholderVacunas" class="vacunas-module-placeholder">Seleccione fecha y turno arriba y pulse «Ver Registro del Turno» para ver inventario, registros y notas.</p>
-            <div id="vacunasRegistroVacunas" style="display: none;">
+        <!-- Área para mostrar el registro del turno seleccionado -->
+        <div id="vacunasRegistroArea" style="display: none;">
           
           <!-- Apertura de Turno e Inventario -->
           <div class="apertura-turno-container" style="margin-bottom: 30px;">
@@ -1389,90 +1370,6 @@
               <button type="button" id="guardarVacunasNotas" class="btn-submit">
                 <i class="fas fa-save"></i> Guardar Notas
               </button>
-            </div>
-          </div>
-            </div>
-          </div>
-
-          <div id="vacunasPanelTemperatura" class="vacunas-module-panel" role="tabpanel">
-            <p id="vacunasPlaceholderTemperatura" class="vacunas-module-placeholder">Para registrar lecturas del turno actual, seleccione fecha y turno arriba y pulse «Ver Registro del Turno».</p>
-            <div id="vacunasRegistroTemperatura" style="display: none;">
-              <div class="form-container" style="margin-top: 0;">
-                <h3><i class="fas fa-snowflake"></i> Registrar temperatura — turno actual</h3>
-                <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
-                  <i class="fas fa-info-circle"></i> Lecturas del <strong>turno cargado</strong>. La <strong>fecha y hora</strong> se guardan automáticamente al registrar.
-                </p>
-                <div class="form-row">
-                  <div class="form-group">
-                    <label for="vacunaTempCelsius"><i class="fas fa-thermometer-half"></i> Temperatura (°C): *</label>
-                    <input type="number" id="vacunaTempCelsius" step="any" inputmode="decimal" placeholder="Ej. 4,2" autocomplete="off">
-                  </div>
-                  <div class="form-group">
-                    <label for="vacunaTempResponsable"><i class="fas fa-user"></i> Responsable: *</label>
-                    <input type="text" id="vacunaTempResponsable" placeholder="Nombre de quien registra la lectura" autocomplete="off">
-                  </div>
-                </div>
-                <div class="form-actions">
-                  <button type="button" id="guardarVacunasTemperatura" class="btn-submit">
-                    <i class="fas fa-save"></i> Registrar lectura
-                  </button>
-                  <button type="button" id="limpiarVacunasTemperatura" class="btn-cancel">
-                    <i class="fas fa-eraser"></i> Limpiar
-                  </button>
-                </div>
-                <div class="table-responsive" style="margin-top: 15px;">
-                  <table class="vacunas-table">
-                    <thead>
-                      <tr>
-                        <th>Fecha y hora del registro</th>
-                        <th>Temperatura (°C)</th>
-                        <th>Responsable</th>
-                      </tr>
-                    </thead>
-                    <tbody id="vacunasTemperaturaTableBody">
-                      <tr><td colspan="3" class="no-data">No hay lecturas de temperatura para este turno</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-container vacunas-historico-temp-wrap" style="margin-top: 28px;">
-              <h3><i class="fas fa-chart-line"></i> Histórico general — temperatura de refrigeración</h3>
-              <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
-                Consulte todas las lecturas registradas en un intervalo de fechas (todos los turnos).
-              </p>
-              <div class="form-row">
-                <div class="form-group">
-                  <label for="vacunasTempHistDesde"><i class="fas fa-calendar"></i> Desde:</label>
-                  <input type="date" id="vacunasTempHistDesde">
-                </div>
-                <div class="form-group">
-                  <label for="vacunasTempHistHasta"><i class="fas fa-calendar"></i> Hasta:</label>
-                  <input type="date" id="vacunasTempHistHasta">
-                </div>
-              </div>
-              <div class="form-actions">
-                <button type="button" id="cargarVacunasTemperaturaHistorial" class="btn-submit">
-                  <i class="fas fa-search"></i> Ver histórico
-                </button>
-              </div>
-              <div class="table-responsive" style="margin-top: 15px;">
-                <table class="vacunas-table">
-                  <thead>
-                    <tr>
-                      <th>Fecha (turno)</th>
-                      <th>Turno</th>
-                      <th>Fecha y hora del registro</th>
-                      <th>Temperatura (°C)</th>
-                      <th>Responsable</th>
-                    </tr>
-                  </thead>
-                  <tbody id="vacunasTemperaturaHistorialBody">
-                    <tr><td colspan="5" class="no-data">Seleccione fechas y pulse «Ver histórico»</td></tr>
-                  </tbody>
-                </table>
-              </div>
             </div>
           </div>
         </div>
@@ -2295,7 +2192,6 @@
             <thead>
               <tr>
                 <th style="width:60px;"># Ticket</th>
-                <th style="width:110px;">Cédula</th>
                 <th>Cliente</th>
                 <th>Mascota</th>
                 <th style="width:140px;">Tipo</th>
@@ -2306,7 +2202,7 @@
             </thead>
             <tbody id="rxPresupuestosBody">
               <tr>
-                <td colspan="8" style="text-align:center; padding:40px; color:#999;">
+                <td colspan="7" style="text-align:center; padding:40px; color:#999;">
                   <i class="fas fa-calendar-day" style="font-size:2.5rem; display:block; margin-bottom:10px; color:#ddd;"></i>
                   Seleccione una fecha y presione Buscar
                 </td>
@@ -2497,7 +2393,6 @@
   <script src="modules/quirofano/js/quirofano-module.js" defer></script>
   <script src="modules/laboratorio/js/reportes-lab-module.js" defer></script>
   <script src="modules/core/js/patient-database.js" defer></script>
-  <script src="modules/expedientes/js/expedientes-module.js" defer></script>
   <script src="modules/core/js/cedula-search-integration.js" defer></script>
   <script src="modules/core/js/wait-time-chart-fix.js" defer></script>
   <script src="modules/core/js/admin-users.js" defer></script>

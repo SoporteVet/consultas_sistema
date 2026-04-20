@@ -8,11 +8,8 @@ window.tickets = tickets;
 // Variables para optimización de carga diferida
 let ticketsActiveListeners = null;
 let ticketsAllDataLoaded = false; // Flag para saber si ya se cargaron todos los datos
-let ticketsLoadDateRange = 30; // Días a cargar por defecto (últimos 30 días)
+let ticketsLoadDateRange = 60; // Días a cargar por defecto (últimos 60 días)
 let ticketsUpdateDebounceTimer = null; // Timer para debounce de actualizaciones
-// Acumuladores para el debounce — evita que cambios rápidos consecutivos pierdan actualizaciones de DOM
-let _pendingNeedsFullRerender = false;
-let _pendingDOMUpdates = [];
 
 // Function to safely add event listeners
 function safeAddEventListener(elementId, eventType, handler) {
@@ -50,19 +47,6 @@ function generateRandomId(length = 16) {
         result += chars[array[i] % chars.length];
     }
     return result;
-}
-
-// Genera un objeto de patch con solo los campos que cambiaron respecto a la base.
-// Útil para hacer update() mínimo en Firebase y reducir bandwidth de subida.
-function diffPatch(base, updated, alwaysExclude = ['firebaseKey']) {
-    const patch = {};
-    for (const k of Object.keys(updated)) {
-        if (alwaysExclude.includes(k)) continue;
-        if (JSON.stringify(base[k]) !== JSON.stringify(updated[k])) {
-            patch[k] = updated[k];
-        }
-    }
-    return patch;
 }
 
 let consultorioAnnouncementVoice = null;
@@ -783,12 +767,6 @@ function applyRoleBasedUI(role) {
         }
     }
     
-    // Expedientes: oculto para visitas y recepción
-    const expedientesBtn = document.getElementById('expedientesBtn');
-    if (expedientesBtn) {
-        expedientesBtn.style.display = (role === 'visitas' || role === 'recepcion') ? 'none' : '';
-    }
-
     // Control de visibilidad del botón de vacunas basado en roles
     const vacunasBtn = document.getElementById('vacunasBtn');
     const allowedVacunasRoles = ['admin', 'consulta_externa'];
@@ -1022,11 +1000,7 @@ function cargarHistorialEdiciones() {
             fechaFinFiltro = fechaFin;
             break;
         case 'todo':
-            // Limitar a los últimos 90 días para evitar descargar todo el historial de ticket_edits
-            // (este nodo crece sin límite y puede pesar varios MB en producción)
-            const _todoLimit = new Date();
-            _todoLimit.setDate(_todoLimit.getDate() - 90);
-            fechaInicioFiltro = _todoLimit.toISOString().split('T')[0];
+            fechaInicioFiltro = '2000-01-01';
             fechaFinFiltro = '2100-12-31';
             break;
         default:
@@ -1626,10 +1600,9 @@ function loadTickets(loadAllData = false) {
     return new Promise((resolve, reject) => {
         // Desconectar listeners anteriores si existen para evitar duplicados
         if (ticketsActiveListeners) {
-            // child_added usa ref filtrada; child_changed/removed usan ticketsRef sin filtro
-            const _addRef = ticketsActiveListeners.addRef || ticketsRef;
+            // Verificar que los listeners sean funciones válidas antes de desconectarlos
             if (typeof ticketsActiveListeners.handleChildAdded === 'function') {
-                _addRef.off('child_added', ticketsActiveListeners.handleChildAdded);
+                ticketsRef.off('child_added', ticketsActiveListeners.handleChildAdded);
             }
             if (typeof ticketsActiveListeners.handleChildChanged === 'function') {
                 ticketsRef.off('child_changed', ticketsActiveListeners.handleChildChanged);
@@ -1738,37 +1711,6 @@ function loadTickets(loadAllData = false) {
 
 // Configurar listeners incrementales (más eficientes que 'value')
 function setupTicketsIncrementalListeners() {
-    // Función central de debounce para UI — acumula cambios y los aplica juntos
-    function _scheduleTicketsUIUpdate(updatedTicket, needsFull) {
-        if (needsFull) _pendingNeedsFullRerender = true;
-        if (updatedTicket && !needsFull) _pendingDOMUpdates.push(updatedTicket);
-
-        if (ticketsUpdateDebounceTimer) clearTimeout(ticketsUpdateDebounceTimer);
-        ticketsUpdateDebounceTimer = setTimeout(() => {
-            const currentFilterBtn = document.querySelector('.filter-btn.active');
-            const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
-
-            if (_pendingNeedsFullRerender) {
-                renderTickets(currentFilter);
-            } else {
-                // Actualizar en DOM solo los tickets que cambiaron (sin rerenderizar todo)
-                _pendingDOMUpdates.forEach(t => updateTicketInDOM(t));
-            }
-
-            // Resetear acumuladores
-            _pendingNeedsFullRerender = false;
-            _pendingDOMUpdates = [];
-
-            updateStatsGlobal();
-            updatePrequirurgicoCounter();
-            if (typeof updateViaCounter === 'function') updateViaCounter();
-            if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
-            if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-            refreshLabResultsPanelIfVisible();
-            document.dispatchEvent(new Event('ticketsChanged'));
-        }, 300);
-    }
-
     const handleChildAdded = (snapshot) => {
         const entry = snapshot.val();
         if (!entry || entry.id == null || !entry.mascota) {
@@ -1783,33 +1725,63 @@ function setupTicketsIncrementalListeners() {
             cutoffDate.setDate(cutoffDate.getDate() - ticketsLoadDateRange);
             const cutoffDateStr = cutoffDate.toISOString().split('T')[0];
             
+            // Verificar fechaCreacion
             const ticketCreacionDate = entry.fechaCreacion ? entry.fechaCreacion.split('T')[0] : '';
+            // Verificar fechaConsulta (importante para tickets actuales)
             const ticketConsultaDate = entry.fechaConsulta || '';
             
+            // Incluir el ticket si:
+            // 1. Tiene fechaCreacion reciente (dentro del rango)
+            // 2. O tiene fechaConsulta actual o futura (tickets de consulta actuales)
+            // 3. O tiene fechaConsulta dentro del rango reciente
             const isRecentCreacion = ticketCreacionDate && ticketCreacionDate >= cutoffDateStr;
             const isCurrentConsulta = ticketConsultaDate && (ticketConsultaDate >= today || ticketConsultaDate >= cutoffDateStr);
             
             if (!isRecentCreacion && !isCurrentConsulta) {
-                return;
+                return; // Ignorar tickets antiguos que no son de consulta actual
             }
         }
         
         const newTicket = { ...entry, firebaseKey: snapshot.key };
+        // Solo agregar si no existe ya un ticket con esa firebaseKey
         if (!tickets.some(t => t.firebaseKey === newTicket.firebaseKey)) {
             tickets.push(newTicket);
+            // Update global reference
             window.tickets = tickets;
-            _scheduleTicketsUIUpdate(null, true); // Siempre full rerender al agregar
+            
+            // OPTIMIZACIÓN: Usar debounce para actualizaciones de UI
+            if (ticketsUpdateDebounceTimer) {
+                clearTimeout(ticketsUpdateDebounceTimer);
+            }
+            ticketsUpdateDebounceTimer = setTimeout(() => {
+                const currentFilterBtn = document.querySelector('.filter-btn.active');
+                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
+                renderTickets(currentFilter);
+                updateStatsGlobal();
+                updatePrequirurgicoCounter();
+                if (typeof updateViaCounter === 'function') {
+                    updateViaCounter();
+                }
+                if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
+                if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
+                refreshLabResultsPanelIfVisible();
+                document.dispatchEvent(new Event('ticketsChanged'));
+            }, 300); // Debounce de 300ms
         }
     };
     
     const handleChildChanged = (snapshot) => {
-        const updatedTicket = { ...snapshot.val(), firebaseKey: snapshot.key };
+        const updatedTicket = {
+            ...snapshot.val(),
+            firebaseKey: snapshot.key
+        };
         
         const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
         if (index !== -1) {
             const oldTicket = tickets[index];
             const previousEstado = oldTicket ? oldTicket.estado : null;
             tickets[index] = updatedTicket;
+            // Update global reference
             window.tickets = tickets;
             
             if (
@@ -1820,33 +1792,39 @@ function setupTicketsIncrementalListeners() {
                 announceConsultorio(updatedTicket, updatedTicket.estado, previousEstado);
             }
             
-            // Re-render completo si cambió algo que afecta el orden, filtro o campos del card no
-            // cubiertos por updateTicketInDOM (numFactura, medicoAtiende, via, viaStatus, etc.)
+            // Actualización optimizada: solo re-renderizar si es necesario
             const needsFullRerender = (
                 oldTicket.estado !== updatedTicket.estado ||
                 oldTicket.fechaConsulta !== updatedTicket.fechaConsulta ||
-                oldTicket.urgencia !== updatedTicket.urgencia ||
-                oldTicket.numFactura !== updatedTicket.numFactura ||
-                oldTicket.medicoAtiende !== updatedTicket.medicoAtiende ||
-                oldTicket.via !== updatedTicket.via ||
-                oldTicket.viaStatus !== updatedTicket.viaStatus ||
-                oldTicket.motivo !== updatedTicket.motivo ||
-                oldTicket.nombre !== updatedTicket.nombre ||
-                oldTicket.mascota !== updatedTicket.mascota
+                oldTicket.urgencia !== updatedTicket.urgencia
             );
             
-            _scheduleTicketsUIUpdate(updatedTicket, needsFullRerender);
-        } else {
-            // Ticket llegó via child_changed pero no estaba en el array local
-            // (puede ser un ticket con fechaConsulta reciente pero fuera del filtro de child_added)
-            // Añadirlo para mantener consistencia entre computadoras
-            const today = getLocalDateString();
-            const ticketConsultaDate = updatedTicket.fechaConsulta || '';
-            if (ticketConsultaDate >= today || ticketsAllDataLoaded) {
-                tickets.push(updatedTicket);
-                window.tickets = tickets;
-                _scheduleTicketsUIUpdate(null, true);
+            // OPTIMIZACIÓN: Usar debounce para actualizaciones de UI
+            if (ticketsUpdateDebounceTimer) {
+                clearTimeout(ticketsUpdateDebounceTimer);
             }
+            ticketsUpdateDebounceTimer = setTimeout(() => {
+                if (needsFullRerender) {
+                    // Re-renderizado completo (incluye porCobrar actualizado)
+                    const currentFilterBtn = document.querySelector('.filter-btn.active');
+                    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
+                    renderTickets(currentFilter);
+                } else {
+                    // Actualización parcial para campos como porCobrar, numFactura, listoParaFacturar, etc.
+                    // SIEMPRE actualizar el DOM cuando cambian estos campos importantes
+                    updateTicketInDOM(updatedTicket);
+                }
+                
+                updateStatsGlobal();
+                updatePrequirurgicoCounter();
+                if (typeof updateViaCounter === 'function') {
+                    updateViaCounter();
+                }
+                if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
+                if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
+                refreshLabResultsPanelIfVisible();
+                document.dispatchEvent(new Event('ticketsChanged'));
+            }, 300); // Debounce de 300ms
         }
     };
     
@@ -1854,30 +1832,37 @@ function setupTicketsIncrementalListeners() {
         const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
         if (index !== -1) {
             tickets.splice(index, 1);
+            // Update global reference
             window.tickets = tickets;
-            _scheduleTicketsUIUpdate(null, true);
+            
+            // OPTIMIZACIÓN: Usar debounce para actualizaciones de UI
+            if (ticketsUpdateDebounceTimer) {
+                clearTimeout(ticketsUpdateDebounceTimer);
+            }
+            ticketsUpdateDebounceTimer = setTimeout(() => {
+                const currentFilterBtn = document.querySelector('.filter-btn.active');
+                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
+                renderTickets(currentFilter);
+                updateStatsGlobal();
+                updatePrequirurgicoCounter();
+                if (typeof updateViaCounter === 'function') {
+                    updateViaCounter();
+                }
+                if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
+                if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
+                refreshLabResultsPanelIfVisible();
+                document.dispatchEvent(new Event('ticketsChanged'));
+            }, 300); // Debounce de 300ms
         }
     };
     
-    // child_added con filtro de fecha: evita descargar tickets históricos al suscribirse.
-    // child_changed y child_removed SIN filtro: garantiza que cualquier cambio (incluyendo
-    // porCobrar en tickets cargados vía fechaConsulta) llega a todos los clientes.
-    let _addRef;
-    if (!ticketsAllDataLoaded) {
-        const _cutoff = new Date();
-        _cutoff.setDate(_cutoff.getDate() - ticketsLoadDateRange);
-        const _cutoffStr = _cutoff.toISOString().split('T')[0];
-        _addRef = ticketsRef.orderByChild('fechaCreacion').startAt(_cutoffStr);
-    } else {
-        _addRef = ticketsRef;
-    }
-    _addRef.on('child_added', handleChildAdded);
+    // Configurar listeners incrementales
+    ticketsRef.on('child_added', handleChildAdded);
     ticketsRef.on('child_changed', handleChildChanged);
     ticketsRef.on('child_removed', handleChildRemoved);
     
-    // addRef separado de ticketsRef para cleanup correcto
+    // Guardar referencias para poder desconectar
     ticketsActiveListeners = {
-        addRef: _addRef,
         handleChildAdded,
         handleChildChanged,
         handleChildRemoved
@@ -2500,23 +2485,6 @@ function renderTickets(filter = 'todos', date = null) {
                         ${estadoText}
                     </div>
                     ${ticket.expediente ? `<div class="expediente-badge"><i class="fas fa-file-medical"></i> <strong>Expediente médico:</strong> Registrado</div>` : ''}
-                    ${(() => {
-                        if (!ticket.cedula) return '';
-                        // Buscar visita previa más reciente para mismo paciente+mascota
-                        const prev = (window.tickets || []).filter(t =>
-                            t.cedula === ticket.cedula &&
-                            t.mascota === ticket.mascota &&
-                            t.fechaConsulta < ticket.fechaConsulta
-                        ).sort((a,b) => b.fechaConsulta.localeCompare(a.fechaConsulta));
-                        const lastVisit = prev.length ? `<span class="ultima-visita-badge"><i class="fas fa-history"></i> Últ. visita: ${formatDate(prev[0].fechaConsulta)}</span>` : '';
-                        const mascotaKey = ticket.idPaciente || ticket.mascota || '';
-                        return `<div class="ticket-exp-row">
-                            ${lastVisit}
-                            <button class="ticket-exp-btn" onclick="event.stopPropagation(); navigateToExpedientes('${ticket.cedula}','${mascotaKey}','${(ticket.mascota||'').replace(/'/g,"\\'")}')">
-                                <i class="fas fa-book-medical"></i> Ver expediente
-                            </button>
-                        </div>`;
-                    })()}
                     ${ticket.listoParaFacturar ? (() => {
                         let badgeContent = '<i class="fas fa-file-invoice-dollar"></i> <strong>Listo para facturar ✓</strong>';
                         if (ticket.horaListoParaFacturar) {
@@ -3473,49 +3441,16 @@ function editTicket(randomId) {
                 ${porCobrarField}
                 
                 ${userRole !== 'visitas' ? `
-                <div class="edit-expediente-section">
-                    <input type="checkbox" id="editExpediente" ${safeTicket.expediente ? 'checked' : ''} style="display:none;">
-                    <button type="button" class="edit-expediente-toggle" id="editExpedienteToggleBtn"
-                            onclick="window._toggleEditExpediente()">
-                        <span><i class="fas fa-file-medical"></i>&nbsp; Expediente médico (SOAP)</span>
-                        <i class="fas fa-chevron-down toggle-arrow"></i>
-                    </button>
-                    <div class="edit-expediente-body" id="editExpedienteBody">
-                        <p class="edit-expediente-hint">
-                            Complete los campos que apliquen. Al guardar se creará una nueva entrada en el expediente de la mascota.
-                        </p>
-                        <div class="edit-soap-grid">
-                            <div class="edit-soap-group">
-                                <label><i class="fas fa-comment-medical"></i> S — Subjetivo (Anamnesis)</label>
-                                <textarea id="editExpSubjetivo" placeholder="Motivo referido por el propietario, síntomas…"></textarea>
-                            </div>
-                            <div class="edit-soap-group">
-                                <label><i class="fas fa-heartbeat"></i> O — Objetivo (Exploración física)</label>
-                                <textarea id="editExpObjetivo" placeholder="Constantes vitales, hallazgos al examen…"></textarea>
-                            </div>
-                            <div class="edit-soap-group">
-                                <label><i class="fas fa-diagnoses"></i> A — Análisis / Diagnóstico</label>
-                                <textarea id="editExpAnalisis" placeholder="Diagnóstico presuntivo, diferencial…"></textarea>
-                            </div>
-                            <div class="edit-soap-group">
-                                <label><i class="fas fa-pills"></i> P — Plan / Tratamiento</label>
-                                <textarea id="editExpPlan" placeholder="Medicamentos, dosis, indicaciones…"></textarea>
-                            </div>
-                            <div class="edit-soap-group edit-soap-full">
-                                <label><i class="fas fa-sticky-note"></i> Notas adicionales</label>
-                                <textarea id="editExpNotas" placeholder="Observaciones, seguimiento…"></textarea>
-                            </div>
-                        </div>
-                        <div class="edit-expediente-historial">
-                            <button type="button" class="edit-expediente-historial-toggle" onclick="window._toggleHistExpediente()">
-                                <i class="fas fa-history"></i> Ver entradas previas del expediente
-                                <i class="fas fa-chevron-down"></i>
-                            </button>
-                            <div class="edit-expediente-historial-body" id="editExpedienteHistorialBody">
-                                <div style="color:#9e9e9e;font-size:12px;padding:8px;">Cargando historial…</div>
-                            </div>
-                        </div>
-                    </div>
+                <div class="form-group" style="border-top: 1px solid #eee; padding-top: 15px; margin-top: 15px;">
+                    <label style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: #2c3e50;">
+                        <input type="checkbox" id="editExpediente" ${safeTicket.expediente ? 'checked' : ''} 
+                               style="width: 18px; height: 18px; cursor: pointer;">
+                        <i class="fas fa-clipboard-list" style="color: #27ae60;"></i>
+                        Paciente ingresado al expediente médico
+                    </label>
+                    <small style="display: block; margin-top: 5px; color: #7f8c8d; font-style: italic;">
+                        Marcar cuando el paciente haya sido registrado en el sistema Argus
+                    </small>
                 </div>
                 ` : ''}
                 
@@ -3579,15 +3514,9 @@ function editTicket(randomId) {
             medicoAtiende = editAsistenteAtiende;
         }
         
-        const soapSubjetivo = (document.getElementById('editExpSubjetivo')?.value || '').trim();
-        const soapObjetivo  = (document.getElementById('editExpObjetivo')?.value  || '').trim();
-        const soapAnalisis  = (document.getElementById('editExpAnalisis')?.value  || '').trim();
-        const soapPlan      = (document.getElementById('editExpPlan')?.value      || '').trim();
-        const soapNotas     = (document.getElementById('editExpNotas')?.value     || '').trim();
-        const hasSoapContent = soapSubjetivo || soapObjetivo || soapAnalisis || soapPlan || soapNotas;
-
+        // Recoger todos los datos del formulario
         const editExpediente = document.getElementById('editExpediente');
-        const expedienteValue = (editExpediente && editExpediente.checked) || hasSoapContent;
+        const expedienteValue = editExpediente ? editExpediente.checked : false;
         
         const editListoParaFacturar = document.getElementById('editListoParaFacturar');
         const listoParaFacturarValue = editListoParaFacturar ? editListoParaFacturar.checked : false;
@@ -3617,16 +3546,16 @@ function editTicket(randomId) {
             usuarioListoParaFacturar = null;
         }
         
-        // Procesar porCobrar: la base es el valor más reciente del array local (sincronizado en tiempo real)
+        // Procesar el campo porCobrar con validaciones mejoradas y actualización optimista
+        // PROTECCIÓN: Obtener el valor más reciente del ticket para preservar el porCobrar existente
         const currentTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
-        const porCobrarBase = (currentTicket && currentTicket.porCobrar) ? currentTicket.porCobrar : (ticket.porCobrar || '');
-        let updatedPorCobrar = porCobrarBase;
-        let porCobrarAddition = ''; // Solo lo que el usuario escribió en esta sesión
+        let updatedPorCobrar = (currentTicket && currentTicket.porCobrar) ? currentTicket.porCobrar : (ticket.porCobrar || '');
         
         const editPorCobrar = document.getElementById('editPorCobrar');
         if (editPorCobrar && canEditPorCobrar) {
             const newContent = editPorCobrar.value.trim();
             if (newContent.length > 0) {
+                // Si hay contenido nuevo, agregarlo al historial existente
                 const timestamp = new Date().toLocaleString('es-ES', {
                     year: 'numeric',
                     month: '2-digit',
@@ -3635,11 +3564,11 @@ function editTicket(randomId) {
                     minute: '2-digit'
                 });
                 const userName = sessionStorage.getItem('userName') || 'Usuario';
-                const separator = porCobrarBase ? '\n\n' : '';
-                porCobrarAddition = `${separator}--- ${timestamp} (${userName}) ---\n${newContent}`;
-                updatedPorCobrar = porCobrarBase + porCobrarAddition;
+                const separator = updatedPorCobrar ? '\n\n' : '';
+                const newEntry = `${separator}--- ${timestamp} (${userName}) ---\n${newContent}`;
+                updatedPorCobrar = updatedPorCobrar + newEntry;
                 
-                // Actualización optimista en DOM
+                // Actualización optimista: mostrar inmediatamente en el DOM
                 const ticketElement = document.querySelector(`[data-ticket-id="${ticket.randomId}"]`);
                 if (ticketElement) {
                     const porCobrarElement = ticketElement.querySelector('.por-cobrar-info');
@@ -3656,7 +3585,8 @@ function editTicket(randomId) {
                     }
                 }
             }
-            // Si el usuario no escribió nada, updatedPorCobrar = porCobrarBase (sin cambios)
+            // PROTECCIÓN: Si no hay texto nuevo, mantener el valor existente (no se elimina)
+            // updatedPorCobrar ya tiene el valor preservado de arriba
         }
         
         const updatedTicket = {
@@ -3681,10 +3611,7 @@ function editTicket(randomId) {
             listoParaFacturar: listoParaFacturarValue,
             fechaListoParaFacturar: fechaListoParaFacturar,
             horaListoParaFacturar: horaListoParaFacturar,
-            usuarioListoParaFacturar: usuarioListoParaFacturar,
-            // Internos para merge seguro en la transacción (se eliminan antes de guardar en Firebase)
-            _porCobrarBase: porCobrarBase,
-            _porCobrarAddition: porCobrarAddition
+            usuarioListoParaFacturar: usuarioListoParaFacturar
         };
         
         // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
@@ -3697,32 +3624,6 @@ function editTicket(randomId) {
         
         // Guardar el ticket actualizado
         saveEditedTicket(updatedTicket);
-
-        // Guardar entrada SOAP en /pacientes/{cedula}/mascotas/{key}/expediente
-        if (hasSoapContent && window.patientDatabase) {
-            const cedula     = (document.getElementById('editCedula')?.value     || '').trim();
-            const idPaciente = (document.getElementById('editIdPaciente')?.value || '').trim();
-            const mascotaNom = (document.getElementById('editMascota')?.value    || '').trim();
-            const mascotaKey = idPaciente || mascotaNom;
-            if (cedula && mascotaKey) {
-                const soapEntry = {
-                    fecha:      Date.now(),
-                    ticketId:   updatedTicket.id || '',
-                    randomId:   safeTicket.randomId || '',
-                    doctor:     document.getElementById('editDoctorAtiende')?.value || '',
-                    asistente:  document.getElementById('editAsistenteAtiende')?.value || '',
-                    motivo:     document.getElementById('editMotivo')?.value || '',
-                    subjetivo:  soapSubjetivo,
-                    objetivo:   soapObjetivo,
-                    analisis:   soapAnalisis,
-                    plan:       soapPlan,
-                    notas:      soapNotas,
-                    creadoPor:  sessionStorage.getItem('userName') || 'Usuario'
-                };
-                window.patientDatabase.addExpedienteEntry(cedula, mascotaKey, soapEntry)
-                    .catch(err => console.error('Error guardando expediente SOAP:', err));
-            }
-        }
     });
     
     // Nota: Se removió el límite de ediciones - el botón de guardar siempre está habilitado
@@ -3745,58 +3646,6 @@ function editTicket(randomId) {
         editUrgenciaSelect.addEventListener('change', updateEditUrgenciaDescription);
         updateEditUrgenciaDescription();
     }
-
-    // Toggles del expediente SOAP
-    window._toggleEditExpediente = function() {
-        const body = document.getElementById('editExpedienteBody');
-        const btn  = document.getElementById('editExpedienteToggleBtn');
-        if (!body || !btn) return;
-        const isOpen = body.classList.toggle('open');
-        btn.classList.toggle('open', isOpen);
-    };
-
-    window._toggleHistExpediente = function() {
-        const body = document.getElementById('editExpedienteHistorialBody');
-        if (!body) return;
-        body.classList.toggle('open');
-    };
-
-    // Precargar historial del expediente
-    (function precargarHistorialExpediente() {
-        const cedula     = (document.getElementById('editCedula')?.value     || '').trim();
-        const idPaciente = (document.getElementById('editIdPaciente')?.value || '').trim();
-        const mascotaNom = (document.getElementById('editMascota')?.value    || '').trim();
-        const mascotaKey = idPaciente || mascotaNom;
-        const histBody   = document.getElementById('editExpedienteHistorialBody');
-        if (!histBody || !cedula || !mascotaKey || !window.patientDatabase) return;
-
-        window.patientDatabase.getExpediente(cedula, mascotaKey).then(entries => {
-            if (!entries || entries.length === 0) {
-                histBody.innerHTML = '<div style="color:#9e9e9e;font-size:12px;padding:8px;">Sin entradas previas</div>';
-                return;
-            }
-            histBody.innerHTML = entries.map(entry => {
-                const fecha  = entry.fecha ? new Date(entry.fecha).toLocaleString('es-ES') : '—';
-                const campos = [
-                    { k: 'S', v: entry.subjetivo },
-                    { k: 'O', v: entry.objetivo },
-                    { k: 'A', v: entry.analisis },
-                    { k: 'P', v: entry.plan },
-                    { k: 'Notas', v: entry.notas }
-                ].filter(c => c.v && c.v.trim());
-                return `<div class="hist-entry">
-                    <div class="hist-entry-meta">
-                        <span><i class="fas fa-calendar-alt"></i> ${fecha}</span>
-                        ${entry.doctor ? `<span><i class="fas fa-user-md"></i> ${entry.doctor}</span>` : ''}
-                        ${entry.randomId ? `<span>Ticket #${entry.randomId}</span>` : ''}
-                    </div>
-                    ${campos.map(c => `<div class="hist-soap-row"><strong>${c.k}:</strong> ${c.v}</div>`).join('')}
-                </div>`;
-            }).join('');
-        }).catch(() => {
-            histBody.innerHTML = '<div style="color:#e53935;font-size:12px;">Error cargando historial</div>';
-        });
-    })();
 
     // --- En el modal de edición, mostrar la hora de atención como solo lectura ---
     // Busca el input de hora de atención y cámbialo a readonly y deshabilitado
@@ -3875,9 +3724,8 @@ function editTicket(randomId) {
 
 function getTicketDiff(oldTicket, newTicket) {
     const diff = {};
-    const skipKeys = new Set(['firebaseKey', '_porCobrarBase', '_porCobrarAddition']);
     Object.keys(newTicket).forEach(key => {
-        if (skipKeys.has(key)) return;
+        if (key === 'firebaseKey') return;
         if (oldTicket[key] !== newTicket[key]) {
             diff[key] = { antes: oldTicket[key] || '', despues: newTicket[key] || '' };
         }
@@ -3919,15 +3767,9 @@ function saveEditedTicket(ticket) {
         showLoadingButton(saveButton);
     }
     
-    // Extraer metadatos internos de merge ANTES de crear ticketToSave
-    const _porCobrarBase = ticket._porCobrarBase !== undefined ? ticket._porCobrarBase : '';
-    const _porCobrarAddition = ticket._porCobrarAddition !== undefined ? ticket._porCobrarAddition : '';
-
-    // Eliminar la propiedad firebaseKey y campos internos antes de guardar en Firebase
+    // Eliminar la propiedad firebaseKey antes de guardar
     const ticketToSave = {...ticket};
     delete ticketToSave.firebaseKey;
-    delete ticketToSave._porCobrarBase;
-    delete ticketToSave._porCobrarAddition;
     
     // Asegurarse de que ningún campo sea undefined
     Object.keys(ticketToSave).forEach(key => {
@@ -4005,19 +3847,27 @@ function saveEditedTicket(ticket) {
     
     if (onlyPorCobrarChanged) {
         // Actualización rápida solo para porCobrar
-        // Preservar porCobrar existente usando el array local (sin leer Firebase de nuevo)
-        if (!ticketToSave.porCobrar || ticketToSave.porCobrar.trim().length === 0) {
-            const localTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
-            if (localTicket && localTicket.porCobrar && localTicket.porCobrar.trim().length > 0) {
-                ticketToSave.porCobrar = localTicket.porCobrar;
-            }
-        }
-
-        const updatePromise = ticketsRef.child(ticket.firebaseKey).update({
-            porCobrar: ticketToSave.porCobrar,
-            lastModified: new Date().toISOString(),
-            lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
-        });
+        // PROTECCIÓN: Verificar que hay contenido antes de actualizar
+        const updatePorCobrar = () => {
+            const porCobrarUpdate = {
+                porCobrar: ticketToSave.porCobrar,
+                lastModified: new Date().toISOString(),
+                lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
+            };
+            
+            return ticketsRef.child(ticket.firebaseKey).update(porCobrarUpdate);
+        };
+        
+        // Si el nuevo valor está vacío, obtener el valor existente para preservarlo
+        const updatePromise = (!ticketToSave.porCobrar || ticketToSave.porCobrar.trim().length === 0)
+            ? ticketsRef.child(ticket.firebaseKey).once('value').then((snapshot) => {
+                const currentData = snapshot.val();
+                if (currentData && currentData.porCobrar && currentData.porCobrar.trim().length > 0) {
+                    ticketToSave.porCobrar = currentData.porCobrar;
+                }
+                return updatePorCobrar();
+            })
+            : updatePorCobrar();
         
         updatePromise
             .then(() => {
@@ -4052,103 +3902,147 @@ function saveEditedTicket(ticket) {
         return;
     }
     
-    // Para otros cambios, usar transacción con merge inteligente de porCobrar
+    // Para otros cambios, usar transacción (simplificada)
     ticketsRef.child(ticket.firebaseKey).transaction((currentData) => {
         if (currentData === null) {
             return; // Abortar transacción
         }
         
-        // MERGE SEGURO DE PORCOBRAR:
-        // Compara el valor en el servidor con la base que el usuario tenía al abrir el modal.
-        // Si el servidor ya tiene más contenido (otra computadora agregó algo), se preserva
-        // todo lo del servidor y solo se añade la nueva entrada de este usuario.
-        const serverPorCobrar = currentData.porCobrar || '';
-        const clientPorCobrar = ticketToSave.porCobrar || '';
-
-        let mergedPorCobrar;
-        if (!_porCobrarAddition) {
-            // El usuario no agregó nada nuevo: preservar siempre lo que hay en el servidor
-            mergedPorCobrar = serverPorCobrar || clientPorCobrar;
-        } else if (serverPorCobrar === _porCobrarBase) {
-            // Sin conflicto: el servidor no cambió desde que el usuario abrió el modal
-            mergedPorCobrar = clientPorCobrar;
-        } else {
-            // Conflicto detectado: otra computadora agregó contenido al servidor.
-            // Se preserva todo lo del servidor y se adjunta solo la nueva entrada de este usuario.
-            mergedPorCobrar = serverPorCobrar + _porCobrarAddition;
+        // PROTECCIÓN: Preservar porCobrar existente si el nuevo valor está vacío
+        const existingPorCobrar = currentData.porCobrar;
+        const newPorCobrar = ticketToSave.porCobrar;
+        
+        // Si ya existe un porCobrar guardado y el nuevo está vacío, mantener el existente
+        if (existingPorCobrar && existingPorCobrar.trim().length > 0 && 
+            (!newPorCobrar || newPorCobrar.trim().length === 0)) {
+            ticketToSave.porCobrar = existingPorCobrar;
         }
-
-        // Garantía final: nunca vaciar un porCobrar que tenga contenido en el servidor
-        if (!mergedPorCobrar && serverPorCobrar) {
-            mergedPorCobrar = serverPorCobrar;
-        }
-
+        
+        // Merge simple sin validaciones complejas
         const mergedData = {
             ...currentData,
             ...ticketToSave,
-            porCobrar: mergedPorCobrar,
             lastModified: new Date().toISOString(),
             lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
         };
         
         return mergedData;
     }, (error, committed, snapshot) => {
-        // Función de respaldo compartida para error y !committed
-        const _fallbackDirectSave = () => {
-            // Merge seguro de porCobrar usando el array local como referencia del servidor
-            const localTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
-            const localPorCobrar = (localTicket && localTicket.porCobrar) || '';
-            if (!_porCobrarAddition) {
-                // Sin nueva entrada: conservar lo que hay en local
-                if (localPorCobrar) ticketToSave.porCobrar = localPorCobrar;
-            } else if (localPorCobrar !== _porCobrarBase) {
-                // Conflicto: otra computadora agregó algo → adjuntar solo la nueva entrada
-                ticketToSave.porCobrar = localPorCobrar + _porCobrarAddition;
-            }
-            // Si no hay conflicto, ticketToSave.porCobrar ya tiene el valor correcto
-            if (!ticketToSave.porCobrar && localPorCobrar) {
-                ticketToSave.porCobrar = localPorCobrar;
-            }
-            const patch = diffPatch(localTicket || {}, ticketToSave);
-            patch.lastModified = new Date().toISOString();
-            patch.lastModifiedBy = sessionStorage.getItem('userName') || 'Usuario';
-            return ticketsRef.child(ticket.firebaseKey).update(patch)
+        if (error) {
+            // RESPALDO: Intentar guardado directo si la transacción falla
+            // PROTECCIÓN: Obtener el valor actual de porCobrar antes de actualizar
+            ticketsRef.child(ticket.firebaseKey).once('value').then((snapshot) => {
+                const currentData = snapshot.val();
+                if (currentData && currentData.porCobrar && currentData.porCobrar.trim().length > 0) {
+                    if (!ticketToSave.porCobrar || ticketToSave.porCobrar.trim().length === 0) {
+                        ticketToSave.porCobrar = currentData.porCobrar;
+                    }
+                }
+                
+                return ticketsRef.child(ticket.firebaseKey).update(ticketToSave);
+            })
                 .then(() => {
+                    // Si el estado cambió a consultorio, anunciar
                     if (diff.estado && ticketToSave.estado && ticketToSave.estado.toLowerCase().startsWith('consultorio')) {
                         const ticketActualizado = { ...ticket, ...ticketToSave };
                         announceConsultorio(ticketActualizado, ticketToSave.estado, previousEstado);
                     }
+                    
+                    // Actualizar el array local con los nuevos datos
                     const localTicketIndex = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
                     if (localTicketIndex !== -1) {
-                        tickets[localTicketIndex] = { ...tickets[localTicketIndex], ...ticketToSave, firebaseKey: ticket.firebaseKey };
+                        tickets[localTicketIndex] = {
+                            ...tickets[localTicketIndex],
+                            ...ticketToSave,
+                            firebaseKey: ticket.firebaseKey
+                        };
                     }
+                    
                     closeModal();
                     showNotification('Consulta actualizada correctamente', 'success');
+                    
+                    // Actualizar la página actual
                     if (currentSection && currentSection.id === 'verTicketsSection') {
                         renderTickets(currentFilter);
+                        
+                        // Mantener el filtro activo
                         document.querySelectorAll('.filter-btn').forEach(btn => {
                             btn.classList.remove('active');
-                            if (btn.getAttribute('data-filter') === currentFilter) btn.classList.add('active');
+                            if (btn.getAttribute('data-filter') === currentFilter) {
+                                btn.classList.add('active');
+                            }
                         });
+                        
                         setActiveButton(verTicketsBtn);
                     } else if (currentSection && currentSection.id === 'horarioSection') {
                         mostrarHorario();
                     } else {
                         renderTickets();
                     }
+                    
                     updateStatsGlobal();
-                });
-        };
-
-        if (error) {
-            _fallbackDirectSave().catch(backupError => {
+                })
+                .catch(backupError => {
                     if (saveButton) {
                         hideLoadingButton(saveButton);
                     }
                     showNotification('Error al guardar los cambios: ' + backupError.message, 'error');
                 });
         } else if (!committed) {
-            _fallbackDirectSave().catch(backupError => {
+            // RESPALDO: Si la transacción se abortó por validaciones muy estrictas, intentar guardado directo
+            // PROTECCIÓN: Obtener el valor actual de porCobrar antes de actualizar
+            ticketsRef.child(ticket.firebaseKey).once('value').then((snapshot) => {
+                const currentData = snapshot.val();
+                if (currentData && currentData.porCobrar && currentData.porCobrar.trim().length > 0) {
+                    if (!ticketToSave.porCobrar || ticketToSave.porCobrar.trim().length === 0) {
+                        ticketToSave.porCobrar = currentData.porCobrar;
+                    }
+                }
+                
+                return ticketsRef.child(ticket.firebaseKey).update(ticketToSave);
+            })
+                .then(() => {
+                    // Si el estado cambió a consultorio, anunciar
+                    if (diff.estado && ticketToSave.estado && ticketToSave.estado.toLowerCase().startsWith('consultorio')) {
+                        const ticketActualizado = { ...ticket, ...ticketToSave };
+                        announceConsultorio(ticketActualizado, ticketToSave.estado, previousEstado);
+                    }
+                    
+                    // Actualizar el array local con los nuevos datos
+                    const localTicketIndex = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
+                    if (localTicketIndex !== -1) {
+                        tickets[localTicketIndex] = {
+                            ...tickets[localTicketIndex],
+                            ...ticketToSave,
+                            firebaseKey: ticket.firebaseKey
+                        };
+                    }
+                    
+                    closeModal();
+                    showNotification('Consulta actualizada correctamente', 'success');
+                    
+                    // Actualizar la página actual
+                    if (currentSection && currentSection.id === 'verTicketsSection') {
+                        renderTickets(currentFilter);
+                        
+                        // Mantener el filtro activo
+                        document.querySelectorAll('.filter-btn').forEach(btn => {
+                            btn.classList.remove('active');
+                            if (btn.getAttribute('data-filter') === currentFilter) {
+                                btn.classList.add('active');
+                            }
+                        });
+                        
+                        setActiveButton(verTicketsBtn);
+                    } else if (currentSection && currentSection.id === 'horarioSection') {
+                        mostrarHorario();
+                    } else {
+                        renderTickets();
+                    }
+                    
+                    updateStatsGlobal();
+                })
+                .catch(backupError => {
                     if (saveButton) {
                         hideLoadingButton(saveButton);
                     }
@@ -4252,23 +4146,15 @@ function changeStatus(randomId) {
         // Si el ticket pasa a terminado o cliente se fue, registrar hora de finalización
         if (nuevoEstado === 'terminado' || nuevoEstado === 'cliente_se_fue') {
             const ahora = new Date();
-            const horaActual = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             // Conservar la hora de atención existente si existe
             if (!ticket.horaAtencion) {
-                ticket.horaAtencion = horaActual;
+                ticket.horaAtencion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
             }
-            ticket.horaFinalizacion = horaActual;
-            // Patch mínimo: solo los campos que cambian en este flujo
-            const patchFin = {
-                estado: nuevoEstado,
-                horaFinalizacion: horaActual,
-                lastModified: new Date().toISOString(),
-                lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
-            };
-            if (!ticket.horaAtencion || ticket.horaAtencion === horaActual) {
-                patchFin.horaAtencion = horaActual;
-            }
-            ticketsRef.child(ticket.firebaseKey).update(patchFin)
+            ticket.horaFinalizacion = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+            // Guardar en Firebase inmediatamente
+            const ticketToSave = {...ticket};
+            delete ticketToSave.firebaseKey;
+            ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
                 .then(() => {
                     // Refrescar la tabla después de guardar
                     if (document.getElementById('verTicketsSection').classList.contains('active')) {
@@ -4287,20 +4173,15 @@ function changeStatus(randomId) {
             showLoadingButton(saveButton);
         }
         
-        // Patch mínimo: solo los campos que cambian al mover el ticket de estado
-        const patchEstado = {
-            estado: nuevoEstado,
-            lastModified: new Date().toISOString(),
-            lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
-        };
-        if (nuevoEstado.includes('consultorio') && !ticket.horaAtencion) {
-            patchEstado.horaAtencion = new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        }
-        ticketsRef.child(ticket.firebaseKey).update(patchEstado)
+        // Actualizar en Firebase
+        const ticketToSave = {...ticket};
+        delete ticketToSave.firebaseKey;
+        
+        ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
             .then(() => {
                 // Si el estado cambió a consultorio, anunciar
                 if (estadoAnterior !== nuevoEstado && nuevoEstado && nuevoEstado.toLowerCase().startsWith('consultorio')) {
-                    const ticketActualizado = { ...ticket, estado: nuevoEstado };
+                    const ticketActualizado = { ...ticket, ...ticketToSave };
                     announceConsultorio(ticketActualizado, nuevoEstado, estadoAnterior);
                 }
                 
@@ -5782,20 +5663,22 @@ function confirmEndConsultationByFirebaseKey(firebaseKey) {
         showLoadingButton(endButton);
     }
 
-    // Patch mínimo: solo los campos que cambian al terminar la consulta
+    // Actualizar el estado y la hora de finalización
     const ahora = new Date();
-    const horaFin = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    const patchEnd = {
+    const ticketToSave = {
+        ...ticket,
         estado: 'terminado',
-        horaFinalizacion: horaFin,
-        lastModified: ahora.toISOString(),
-        lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
+        horaFinalizacion: ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
     };
-    if (!ticket.horaAtencion) {
-        patchEnd.horaAtencion = horaFin;
+    
+    // Si no tiene hora de atención, establecerla
+    if (!ticketToSave.horaAtencion) {
+        ticketToSave.horaAtencion = ticketToSave.horaFinalizacion;
     }
 
-    ticketsRef.child(ticket.firebaseKey).update(patchEnd)
+    delete ticketToSave.firebaseKey;
+
+    ticketsRef.child(ticket.firebaseKey).update(ticketToSave)
         .then(() => {
             showNotification('Consulta terminada correctamente', 'success');
             closeModal();
@@ -5916,20 +5799,6 @@ function navigateToSection(sectionId, buttonId) {
 
 // Exportar función globalmente
 window.navigateToSection = navigateToSection;
-
-function navigateToExpedientes(cedula, mascotaKey, mascotaNom) {
-    navigateToSection('expedientesSection', 'expedientesBtn');
-    if (window.innerWidth <= 980) closeSidebar();
-    // Pasar parámetros al módulo cuando esté listo
-    const open = () => {
-        if (window.expedientesModule) {
-            window.expedientesModule.open(cedula || '', mascotaKey || '', mascotaNom || '');
-        } else {
-            setTimeout(open, 300);
-        }
-    };
-    open();
-}
 
 function navigateToConsultas() {
 
@@ -7109,8 +6978,6 @@ window.addEventListener('DOMContentLoaded', function() {
   let currentVacunasFecha = '';
   let currentVacunasTurno = '';
   let inventarioActual = {};
-  /** Lecturas planas de temperatura (consulta por rango de fechas). Las lecturas antiguas pueden estar en vacunasTemperatura/{fecha_turno}. */
-  const VACUNAS_TEMP_LECTURAS_REF = 'vacunasTemperaturaLecturas';
   
   // Función para sanitizar claves de Firebase
   function sanitizeFirebaseKey(key) {
@@ -7223,34 +7090,6 @@ const vacunasDisponibles = {
   trimestral: ['Trip/Leu', 'Trip/Rab', 'Leu', 'Triple Felina']
 };
   
-  function setVacunasModuleTab(which) {
-    const panVac = document.getElementById('vacunasPanelVacunas');
-    const panTemp = document.getElementById('vacunasPanelTemperatura');
-    const btnVac = document.getElementById('vacunasTabBtnVacunas');
-    const btnTemp = document.getElementById('vacunasTabBtnTemperatura');
-    if (!panVac || !panTemp || !btnVac || !btnTemp) return;
-    const isVac = which === 'vacunas';
-    panVac.classList.toggle('active', isVac);
-    panTemp.classList.toggle('active', !isVac);
-    btnVac.classList.toggle('active', isVac);
-    btnTemp.classList.toggle('active', !isVac);
-    btnVac.setAttribute('aria-selected', isVac ? 'true' : 'false');
-    btnTemp.setAttribute('aria-selected', !isVac ? 'true' : 'false');
-  }
-  
-  function setVacunasTurnoRegistroVisible(show) {
-    const rv = document.getElementById('vacunasRegistroVacunas');
-    const rt = document.getElementById('vacunasRegistroTemperatura');
-    const pv = document.getElementById('vacunasPlaceholderVacunas');
-    const pt = document.getElementById('vacunasPlaceholderTemperatura');
-    const regDisplay = show ? 'block' : 'none';
-    const phDisplay = show ? 'none' : 'block';
-    if (rv) rv.style.display = regDisplay;
-    if (rt) rt.style.display = regDisplay;
-    if (pv) pv.style.display = phDisplay;
-    if (pt) pt.style.display = phDisplay;
-  }
-  
   // Inicializar módulo de vacunas
   function initializeVacunasModule() {
     console.log('Inicializando módulo de vacunas...');
@@ -7262,17 +7101,10 @@ const vacunasDisponibles = {
       console.log('Fecha configurada:', fechaInput.value);
     }
     
-    setVacunasTurnoRegistroVisible(false);
-    setVacunasModuleTab('vacunas');
-    
-    const histDesde = document.getElementById('vacunasTempHistDesde');
-    const histHasta = document.getElementById('vacunasTempHistHasta');
-    if (histDesde && histHasta && (!histDesde.value || !histHasta.value)) {
-      const fin = new Date();
-      const ini = new Date(fin);
-      ini.setDate(ini.getDate() - 30);
-      histDesde.value = getLocalDateString(ini);
-      histHasta.value = getLocalDateString(fin);
+    // Ocultar el área de registro inicialmente
+    const registroArea = document.getElementById('vacunasRegistroArea');
+    if (registroArea) {
+      registroArea.style.display = 'none';
     }
     
     // Configurar event listeners
@@ -7313,34 +7145,6 @@ const vacunasDisponibles = {
       guardarNotasBtn.replaceWith(guardarNotasBtn.cloneNode(true));
       document.getElementById('guardarVacunasNotas').addEventListener('click', guardarVacunasNotas);
       console.log('Event listener del botón guardar notas configurado');
-    }
-    
-    const guardarTempBtn = document.getElementById('guardarVacunasTemperatura');
-    if (guardarTempBtn) {
-      guardarTempBtn.replaceWith(guardarTempBtn.cloneNode(true));
-      document.getElementById('guardarVacunasTemperatura').addEventListener('click', guardarVacunasTemperatura);
-    }
-    const limpiarTempBtn = document.getElementById('limpiarVacunasTemperatura');
-    if (limpiarTempBtn) {
-      limpiarTempBtn.replaceWith(limpiarTempBtn.cloneNode(true));
-      document.getElementById('limpiarVacunasTemperatura').addEventListener('click', limpiarFormularioTemperatura);
-    }
-    
-    const histTempBtn = document.getElementById('cargarVacunasTemperaturaHistorial');
-    if (histTempBtn) {
-      histTempBtn.replaceWith(histTempBtn.cloneNode(true));
-      document.getElementById('cargarVacunasTemperaturaHistorial').addEventListener('click', cargarVacunasTemperaturaHistorial);
-    }
-    
-    const tabBtnVac = document.getElementById('vacunasTabBtnVacunas');
-    const tabBtnTemp = document.getElementById('vacunasTabBtnTemperatura');
-    if (tabBtnVac) {
-      tabBtnVac.replaceWith(tabBtnVac.cloneNode(true));
-      document.getElementById('vacunasTabBtnVacunas').addEventListener('click', () => setVacunasModuleTab('vacunas'));
-    }
-    if (tabBtnTemp) {
-      tabBtnTemp.replaceWith(tabBtnTemp.cloneNode(true));
-      document.getElementById('vacunasTabBtnTemperatura').addEventListener('click', () => setVacunasModuleTab('temperatura'));
     }
     
     // Botón abrir turno
@@ -7400,7 +7204,11 @@ const vacunasDisponibles = {
     currentVacunasFecha = fecha;
     currentVacunasTurno = turno;
     
-    setVacunasTurnoRegistroVisible(true);
+    // Mostrar el área de registro
+    const registroArea = document.getElementById('vacunasRegistroArea');
+    if (registroArea) {
+      registroArea.style.display = 'block';
+    }
     
     // Cargar datos del turno desde Firebase
     loadVacunasData(fecha, turno);
@@ -7530,220 +7338,6 @@ const vacunasDisponibles = {
     
     // Cargar notas del turno
     loadVacunasNotas(fecha, turno);
-    loadVacunasTemperatura(fecha, turno);
-  }
-  
-  function formatVacunasFechaHoraDisplay(isoString) {
-    if (!isoString) return '';
-    const d = new Date(isoString);
-    if (isNaN(d.getTime())) return String(isoString);
-    return d.toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' });
-  }
-  
-  function vacunasTurnoEtiqueta(turno) {
-    const map = {
-      Mañana: 'Apertura de turno',
-      Tarde: 'Entrega de turno',
-      Noche: 'Cierre de turno'
-    };
-    return map[turno] || turno || '—';
-  }
-  
-  function escapeVacunasHtml(str) {
-    return String(str ?? '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/"/g, '&quot;');
-  }
-  
-  function displayVacunasTemperaturaTable(rows) {
-    const tbody = document.getElementById('vacunasTemperaturaTableBody');
-    if (!tbody) return;
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="3" class="no-data">No hay lecturas de temperatura para este turno</td></tr>';
-      return;
-    }
-    tbody.innerHTML = rows.map((r) => {
-      const temp = r.temperatura !== undefined && r.temperatura !== null
-        ? Number(r.temperatura).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
-        : '';
-      const fh = formatVacunasFechaHoraDisplay(r.fechaHoraRegistro);
-      return `<tr>
-        <td>${escapeVacunasHtml(fh)}</td>
-        <td>${escapeVacunasHtml(temp)}</td>
-        <td>${escapeVacunasHtml(r.responsable)}</td>
-      </tr>`;
-    }).join('');
-  }
-  
-  function displayVacunasTemperaturaHistorialTable(rows) {
-    const tbody = document.getElementById('vacunasTemperaturaHistorialBody');
-    if (!tbody) return;
-    if (!rows.length) {
-      tbody.innerHTML = '<tr><td colspan="5" class="no-data">No hay lecturas en el rango seleccionado</td></tr>';
-      return;
-    }
-    tbody.innerHTML = rows.map((r) => {
-      const temp = r.temperatura !== undefined && r.temperatura !== null
-        ? Number(r.temperatura).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 1 })
-        : '';
-      const fh = formatVacunasFechaHoraDisplay(r.fechaHoraRegistro);
-      return `<tr>
-        <td>${escapeVacunasHtml(r.fecha || '')}</td>
-        <td>${escapeVacunasHtml(vacunasTurnoEtiqueta(r.turno))}</td>
-        <td>${escapeVacunasHtml(fh)}</td>
-        <td>${escapeVacunasHtml(temp)}</td>
-        <td>${escapeVacunasHtml(r.responsable)}</td>
-      </tr>`;
-    }).join('');
-  }
-  
-  function cargarVacunasTemperaturaHistorial() {
-    const desde = document.getElementById('vacunasTempHistDesde');
-    const hasta = document.getElementById('vacunasTempHistHasta');
-    const desdeVal = desde ? desde.value : '';
-    const hastaVal = hasta ? hasta.value : '';
-    const tbody = document.getElementById('vacunasTemperaturaHistorialBody');
-    if (!tbody) return;
-    if (!desdeVal || !hastaVal) {
-      showNotification('Seleccione fecha desde y hasta', 'error');
-      return;
-    }
-    if (desdeVal > hastaVal) {
-      showNotification('La fecha inicial no puede ser posterior a la final', 'error');
-      return;
-    }
-    if (!firebase || !firebase.database) {
-      showNotification('Error: Firebase no está disponible', 'error');
-      return;
-    }
-    const database = firebase.database();
-    database.ref(VACUNAS_TEMP_LECTURAS_REF)
-      .orderByChild('fecha')
-      .startAt(desdeVal)
-      .endAt(hastaVal)
-      .once('value')
-      .then((snapshot) => {
-        const rows = [];
-        snapshot.forEach((child) => {
-          const v = child.val();
-          if (v && typeof v.fecha === 'string' && v.fecha >= desdeVal && v.fecha <= hastaVal) {
-            rows.push({ id: child.key, ...v });
-          }
-        });
-        rows.sort((a, b) => new Date(b.fechaHoraRegistro || 0).getTime() - new Date(a.fechaHoraRegistro || 0).getTime());
-        displayVacunasTemperaturaHistorialTable(rows);
-      })
-      .catch((err) => {
-        console.error('Histórico temperatura vacunas:', err);
-        showNotification('No se pudo cargar el histórico. Verifique las reglas e índice de Firebase (vacunasTemperaturaLecturas / fecha).', 'error');
-      });
-  }
-  
-  function refrescarVacunasTemperaturaHistorialOpcional() {
-    const desde = document.getElementById('vacunasTempHistDesde');
-    const hasta = document.getElementById('vacunasTempHistHasta');
-    if (!desde || !hasta || !currentVacunasFecha) return;
-    const d0 = desde.value;
-    const d1 = hasta.value;
-    if (!d0 || !d1) return;
-    if (currentVacunasFecha >= d0 && currentVacunasFecha <= d1) {
-      cargarVacunasTemperaturaHistorial();
-    }
-  }
-  
-  function loadVacunasTemperatura(fecha, turno) {
-    const tbody = document.getElementById('vacunasTemperaturaTableBody');
-    if (!tbody) return;
-    if (!firebase || !firebase.database) {
-      return;
-    }
-    const turnoKey = `${fecha}_${turno}`;
-    const database = firebase.database();
-    const flatRef = database.ref(VACUNAS_TEMP_LECTURAS_REF).orderByChild('fecha').equalTo(fecha);
-    const legacyRef = database.ref(`vacunasTemperatura/${turnoKey}`);
-    
-    Promise.all([
-      new Promise((resolve) => { flatRef.once('value', resolve); }),
-      new Promise((resolve) => { legacyRef.once('value', resolve); })
-    ]).then(([snapFlat, snapLegacy]) => {
-      const rows = [];
-      snapFlat.forEach((child) => {
-        const v = child.val();
-        if (v && v.turno === turno) {
-          rows.push({ id: child.key, ...v });
-        }
-      });
-      const legacyData = snapLegacy.val();
-      if (legacyData) {
-        Object.entries(legacyData).forEach(([id, v]) => {
-          if (v && (v.temperatura !== undefined && v.temperatura !== null)) {
-            rows.push({ id: `legacy_${id}`, ...v });
-          }
-        });
-      }
-      rows.sort((a, b) => {
-        const ta = new Date(a.fechaHoraRegistro || 0).getTime();
-        const tb = new Date(b.fechaHoraRegistro || 0).getTime();
-        return tb - ta;
-      });
-      displayVacunasTemperaturaTable(rows);
-    }).catch((err) => {
-      console.error('loadVacunasTemperatura:', err);
-      tbody.innerHTML = '<tr><td colspan="3" class="no-data">Error al cargar lecturas (¿índice fecha en Firebase?)</td></tr>';
-    });
-  }
-  
-  function guardarVacunasTemperatura() {
-    if (!currentVacunasFecha || !currentVacunasTurno) {
-      showNotification('Debe seleccionar una fecha y turno primero', 'error');
-      return;
-    }
-    const tempInput = document.getElementById('vacunaTempCelsius');
-    const respInput = document.getElementById('vacunaTempResponsable');
-    const rawTemp = tempInput ? String(tempInput.value).trim().replace(',', '.') : '';
-    const responsable = respInput ? respInput.value.trim() : '';
-    if (rawTemp === '' || !responsable) {
-      showNotification('Indique temperatura y responsable', 'error');
-      return;
-    }
-    const temperatura = parseFloat(rawTemp);
-    if (Number.isNaN(temperatura)) {
-      showNotification('La temperatura no es válida', 'error');
-      return;
-    }
-    if (!firebase || !firebase.database) {
-      showNotification('Error: Firebase no está disponible', 'error');
-      return;
-    }
-    const now = new Date();
-    const payload = {
-      fecha: currentVacunasFecha,
-      turno: currentVacunasTurno,
-      temperatura,
-      responsable,
-      fechaHoraRegistro: now.toISOString()
-    };
-    const database = firebase.database();
-    database.ref(VACUNAS_TEMP_LECTURAS_REF).push(payload)
-      .then(() => {
-        showNotification('Lectura de temperatura registrada', 'success');
-        if (tempInput) tempInput.value = '';
-        if (respInput) respInput.value = '';
-        loadVacunasTemperatura(currentVacunasFecha, currentVacunasTurno);
-        refrescarVacunasTemperaturaHistorialOpcional();
-      })
-      .catch((err) => {
-        console.error('Error al guardar temperatura vacunas:', err);
-        showNotification('Error al guardar la lectura de temperatura', 'error');
-      });
-  }
-  
-  function limpiarFormularioTemperatura() {
-    const tempInput = document.getElementById('vacunaTempCelsius');
-    const respInput = document.getElementById('vacunaTempResponsable');
-    if (tempInput) tempInput.value = '';
-    if (respInput) respInput.value = '';
   }
   
   // Mostrar tabla de vacunas

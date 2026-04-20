@@ -315,18 +315,19 @@ function setupLabFirebaseListeners(loadAllData = false) {
     
     // Desconectar listener anterior si existe
     if (labTicketsActiveListener) {
-        // child_added puede estar en una ref filtrada (addRef), usar esa ref para el off
-        const _prevAddRef = labTicketsActiveListener.addRef || labTicketsRef;
-        if (typeof labTicketsActiveListener.handleChildAdded === 'function') {
-            _prevAddRef.off('child_added', labTicketsActiveListener.handleChildAdded);
+        // Verificar que los listeners sean funciones válidas antes de desconectarlos
+        if (typeof labTicketsActiveListener === 'function') {
+            labTicketsRef.off('value', labTicketsActiveListener);
         }
-        if (typeof labTicketsActiveListener.handleChildChanged === 'function') {
+        if (labTicketsActiveListener && typeof labTicketsActiveListener.handleChildAdded === 'function') {
+            labTicketsRef.off('child_added', labTicketsActiveListener.handleChildAdded);
+        }
+        if (labTicketsActiveListener && typeof labTicketsActiveListener.handleChildChanged === 'function') {
             labTicketsRef.off('child_changed', labTicketsActiveListener.handleChildChanged);
         }
-        if (typeof labTicketsActiveListener.handleChildRemoved === 'function') {
+        if (labTicketsActiveListener && typeof labTicketsActiveListener.handleChildRemoved === 'function') {
             labTicketsRef.off('child_removed', labTicketsActiveListener.handleChildRemoved);
         }
-        labTicketsActiveListener = null;
     }
     
     // Si ya se cargaron todos los datos y no se solicita recarga completa, usar listeners incrementales
@@ -491,25 +492,13 @@ function setupLabIncrementalListeners() {
         }
     };
     
-    // child_added con filtro de fecha en el servidor: evita descargar todo el historial de lab_tickets.
-    // child_changed y child_removed sin filtro: garantiza que cualquier cambio llega a todos los clientes.
-    let _labAddRef;
-    if (!labTicketsAllDataLoaded) {
-        const _cutoff = new Date();
-        _cutoff.setDate(_cutoff.getDate() - labTicketsLoadDateRange);
-        const _cutoffStr = _cutoff.toISOString().split('T')[0];
-        _labAddRef = labTicketsRef.orderByChild('fechaCreacion').startAt(_cutoffStr);
-    } else {
-        _labAddRef = labTicketsRef;
-    }
-
-    _labAddRef.on('child_added', handleChildAdded);
+    // Configurar listeners incrementales
+    labTicketsRef.on('child_added', handleChildAdded);
     labTicketsRef.on('child_changed', handleChildChanged);
     labTicketsRef.on('child_removed', handleChildRemoved);
     
-    // Guardar referencias (incluye addRef para cleanup correcto)
+    // Guardar referencias
     labTicketsActiveListener = {
-        addRef: _labAddRef,
         handleChildAdded,
         handleChildChanged,
         handleChildRemoved
@@ -846,17 +835,21 @@ function searchClientes(query = '') {
         }
         
         // Intentar forzar carga si no hay datos después de 2 segundos
-        // Usa window.tickets (ya sincronizado por index.js) en lugar de leer Firebase de nuevo
         setTimeout(() => {
             if (clientesData.length === 0) {
                 if (typeof forceReloadClientesData === 'function') {
                     forceReloadClientesData();
-                } else if (window.tickets && window.tickets.length > 0) {
-                    const data = {};
-                    window.tickets.forEach(t => { if (t.firebaseKey) data[t.firebaseKey] = t; });
-                    updateClientesDataFromSnapshot({ val: () => data, exists: () => true });
+                } else {
+                    // Fallback: intentar recargar manualmente
+                    const ticketsRef = window.database.ref('tickets');
+                    ticketsRef.once('value')
+                        .then((snapshot) => {
+                            updateClientesDataFromSnapshot(snapshot);
+                        })
+                        .catch((error) => {
+                            // Error silencioso
+                        });
                 }
-                // Si window.tickets también está vacío, no hay nada que hacer aún
             }
         }, 2000);
         
@@ -1988,14 +1981,12 @@ function toggleServiceStatus(ticketRandomId, serviceIndex) {
     // Cambiar el estado del servicio
     ticket.serviciosSeleccionados[serviceIndex].realizado = !ticket.serviciosSeleccionados[serviceIndex].realizado;
     
-    // Actualizar en Firebase — solo el campo que cambió (reducción de bandwidth)
+    // Actualizar en Firebase
     if (ticket.firebaseKey) {
-        const patchServicio = {
-            [`serviciosSeleccionados/${serviceIndex}/realizado`]: ticket.serviciosSeleccionados[serviceIndex].realizado,
-            lastModified: new Date().toISOString(),
-            lastModifiedBy: sessionStorage.getItem('userEmail') || 'Usuario'
-        };
-        labTicketsRef.child(ticket.firebaseKey).update(patchServicio)            .then(() => {
+        const ticketToUpdate = { ...ticket };
+        delete ticketToUpdate.firebaseKey;
+        
+        labTicketsRef.child(ticket.firebaseKey).update(ticketToUpdate)            .then(() => {
                 const serviceName = ticket.serviciosSeleccionados[serviceIndex].nombre;
                 const status = ticket.serviciosSeleccionados[serviceIndex].realizado ? 'realizado' : 'pendiente';
                 showNotification(`Servicio "${serviceName}" marcado como ${status}`, 'success');
@@ -2740,16 +2731,7 @@ function saveEditedLabTicket(ticket) {
     const ticketToSave = { ...ticket };
     delete ticketToSave.firebaseKey;
     
-    // Usar el array local labTickets para el diff (evita leer Firebase de nuevo)
-    const localTicket = labTickets.find(t => t.firebaseKey === ticket.firebaseKey) || {};
-    const patch = typeof diffPatch === 'function'
-        ? diffPatch(localTicket, ticketToSave)
-        : ticketToSave;
-    patch.lastModified = new Date().toISOString();
-    patch.lastModifiedBy = sessionStorage.getItem('userEmail') || 'Usuario';
-
-    labTicketsRef.child(ticket.firebaseKey).update(patch)
-        .then(() => {
+    labTicketsRef.child(ticket.firebaseKey).update(ticketToSave)        .then(() => {
             showNotification('Ticket de laboratorio actualizado correctamente', 'success');
             closeModal();
             
@@ -2980,16 +2962,10 @@ function clearClientesSearchCache() {
 }
 
 // Función para forzar actualización de datos de clientes
-// Usa window.tickets (sincronizado en tiempo real por index.js) para evitar leer Firebase
 function forceUpdateClientesData() {
-    if (window.tickets && window.tickets.length > 0) {
-        const data = {};
-        window.tickets.forEach(t => { if (t.firebaseKey) data[t.firebaseKey] = t; });
-        updateClientesDataFromSnapshot({ val: () => data, exists: () => true });
-        showClientesUpdateIndicator();
-    } else if (window.database) {
-        // Fallback solo si window.tickets no está disponible (situación de inicio)
-        window.database.ref('tickets').once('value', (snapshot) => {
+    if (window.database) {
+        const ticketsRef = window.database.ref('tickets');
+        ticketsRef.once('value', (snapshot) => {
             updateClientesDataFromSnapshot(snapshot);
             showClientesUpdateIndicator();
         });

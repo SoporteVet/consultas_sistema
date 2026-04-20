@@ -437,11 +437,9 @@ function loadQuirofanoTickets(loadAllData = false) {
     
     // Desconectar listener anterior si existe
     if (quirofanoActiveListener) {
-        // child_added puede estar en una ref filtrada (addRef)
-        const _prevAddRef = quirofanoActiveListener.addRef || quirofanoActiveListener.ref || quirofanoFirebaseRef;
-        _prevAddRef.off('child_added', quirofanoActiveListener.handleChildAdded);
+        quirofanoFirebaseRef.off('value', quirofanoActiveListener);
+        quirofanoFirebaseRef.off('child_added', quirofanoActiveListener.handleChildAdded);
         quirofanoFirebaseRef.off('child_changed', quirofanoActiveListener.handleChildChanged);
-        quirofanoFirebaseRef.off('child_removed', quirofanoActiveListener.handleChildRemoved);
         quirofanoActiveListener = null;
     }
     
@@ -545,26 +543,13 @@ function setupQuirofanoIncrementalListeners() {
         }
     };
     
-    // child_added con filtro de fecha en el servidor: evita descargar todo el historial de quirofano-tickets.
-    // child_changed y child_removed sin filtro: garantiza que cualquier cambio llega a todos los clientes.
-    let _quiroAddRef;
-    if (!quirofanoAllDataLoaded) {
-        const _cutoff = new Date();
-        _cutoff.setDate(_cutoff.getDate() - quirofanoLoadDateRange);
-        const _cutoffStr = _cutoff.toISOString().split('T')[0];
-        _quiroAddRef = quirofanoFirebaseRef.orderByChild('fechaCreacion').startAt(_cutoffStr);
-    } else {
-        _quiroAddRef = quirofanoFirebaseRef;
-    }
-
-    _quiroAddRef.on('child_added', handleChildAdded);
+    // Configurar listeners incrementales
+    quirofanoFirebaseRef.on('child_added', handleChildAdded);
     quirofanoFirebaseRef.on('child_changed', handleChildChanged);
     quirofanoFirebaseRef.on('child_removed', handleChildRemoved);
     
-    // Guardar referencias (addRef separado de quirofanoFirebaseRef para cleanup correcto)
+    // Guardar referencias
     quirofanoActiveListener = {
-        ref: quirofanoFirebaseRef,
-        addRef: _quiroAddRef,
         handleChildAdded,
         handleChildChanged,
         handleChildRemoved

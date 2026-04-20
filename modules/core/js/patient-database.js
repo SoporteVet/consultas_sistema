@@ -459,24 +459,6 @@ class PatientDatabase {
         }
     }
 
-    // Guardar entrada SOAP en el expediente de una mascota
-    async addExpedienteEntry(cedula, mascotaKey, entry) {
-        if (!cedula || !mascotaKey || !this.patientsRef) return;
-        const ref = this.patientsRef.child(`${cedula}/mascotas/${mascotaKey}/expediente`);
-        await ref.push(entry);
-    }
-
-    // Obtener historial de expediente de una mascota (array ordenado más reciente primero)
-    async getExpediente(cedula, mascotaKey) {
-        if (!cedula || !mascotaKey || !this.patientsRef) return [];
-        const snapshot = await this.patientsRef.child(`${cedula}/mascotas/${mascotaKey}/expediente`).once('value');
-        if (!snapshot.exists()) return [];
-        const entries = [];
-        snapshot.forEach(child => entries.push({ _key: child.key, ...child.val() }));
-        entries.sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
-        return entries;
-    }
-
     // Setup de listeners para campo de cédula
     setupCedulaListener(cedulaFieldId, formType = 'consulta') {
         const cedulaField = document.getElementById(cedulaFieldId);
@@ -554,4 +536,5 @@ if (document.readyState === 'loading') {
 
 // Exportar para uso manual
 window.initPatientDatabase = initPatientDatabase;
+
 
