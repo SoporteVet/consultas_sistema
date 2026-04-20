@@ -1,0 +1,1492 @@
+/* Quirófano Module Styles - Basado en el diseño de consultas */
+
+/* Variables para colores específicos de quirófano */
+:root {
+    --quirofano-primary: #1976d2;
+    --quirofano-secondary: #2196f3;
+    --quirofano-accent: #64b5f6;
+    --quirofano-light: #e3f2fd;
+    --quirofano-dark: #0d47a1;
+    --quirofano-hover: #1565c0;
+    
+    /* Estados de quirófano */
+    --quirofano-programado: #4caf50;
+    --quirofano-cirugia: #ff9800;
+    --quirofano-terminado: #2196f3;
+    
+    /* Urgencias de quirófano */
+    --quirofano-emergencia: #f44336;
+    --quirofano-urgente: #ff9800;
+    --quirofano-programado-urgencia: #4caf50;
+    --quirofano-electivo: #2196f3;
+}
+
+/* Encabezado de quirófano - como en la imagen */
+#verQuirofanoSection h2 {
+    font-size: 1.8rem;
+    color: var(--quirofano-primary);
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #e0e0e0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#verQuirofanoSection h2 i {
+    color: var(--quirofano-primary);
+    font-size: 1.6rem;
+}
+
+/* Filtros de fecha como en consultas - igual que index.css */
+.quirofano-filters {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #e9e9e9;
+}
+
+.quirofano-filters .form-row {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.quirofano-filters .form-group {
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.quirofano-filters .form-group label {
+    font-weight: 500;
+    color: #333;
+    margin-bottom: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    white-space: nowrap;
+}
+
+.quirofano-filters .form-group input {
+    padding: 8px 12px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    background: white;
+    transition: all 0.2s ease;
+}
+
+.quirofano-filters .form-group input:focus {
+    outline: none;
+    border-color: #4285f4;
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
+}
+
+/* Filtros específicos de quirófano */
+.quirofano-filter-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    justify-content: left;
+    padding: 0;
+    background: transparent;
+}
+
+.quirofano-filter-btn {
+    background: #f5f5f5;
+    color: #333;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 500;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 80px;
+    justify-content: center;
+    text-transform: none;
+    letter-spacing: normal;
+    box-shadow: none;
+}
+
+.quirofano-filter-btn:hover {
+    background: #e0e0e0;
+    color: #333;
+    transform: none;
+    box-shadow: none;
+}
+
+.quirofano-filter-btn.active {
+    background: var(--quirofano-primary);
+    color: white;
+    border: none;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Contenedor de tickets de quirófano */
+.quirofano-ticket-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 12px;
+    margin-top: 15px;
+}
+
+/* Estilo base para tickets de quirófano - EXACTO como consultas */
+.quirofano-ticket {
+    background: white;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: var(--shadow, 0 2px 8px rgba(0,0,0,0.07));
+    transition: all 0.3s ease;
+    border-top: 5px solid #ccc;
+    position: relative;
+    overflow: hidden;
+    animation: fadeIn 0.5s ease;
+    cursor: pointer;
+    border-radius: 8px;
+    margin-bottom: 18px;
+}
+
+.quirofano-ticket:hover {
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    transform: translateY(-4px) scale(1.02);
+    border-top-color: #4285f4;
+    background: linear-gradient(135deg, #ffffff, #f8f9ff);
+}
+
+.quirofano-ticket-hover-icon {
+    display: none;
+    position: absolute;
+    top: 12px;
+    right: 16px;
+    color: #888;
+    font-size: 1.3rem;
+    z-index: 2;
+    pointer-events: none;
+    transition: color 0.2s;
+}
+
+.quirofano-ticket:hover .quirofano-ticket-hover-icon {
+    display: inline-block;
+    color: var(--primary-color, #4285f4);
+}
+
+/* Animaciones adicionales para hover */
+.quirofano-ticket:hover .quirofano-ticket-title {
+    color: #4285f4;
+    transform: translateX(3px);
+    transition: all 0.3s ease;
+}
+
+.quirofano-ticket:hover .quirofano-ticket-number {
+    background: #4285f4;
+    color: white;
+    transform: scale(1.05);
+    transition: all 0.3s ease;
+}
+
+.quirofano-ticket:hover .quirofano-ticket-info p i {
+    color: #4285f4 !important;
+    transform: scale(1.1);
+    transition: all 0.3s ease;
+}
+
+.quirofano-ticket:hover .quirofano-ticket-actions {
+    transform: translateY(-2px);
+    transition: all 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.quirofano-ticket::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-size: 40px;
+    z-index: 0;
+}
+
+/* Estados específicos de quirófano - EXACTO como consultas */
+.quirofano-ticket-programado {
+    border-top: none !important;
+}
+
+.quirofano-ticket-cirugia {
+    border-top-color: var(--quirofano-cirugia, #ff9800);
+}
+
+.quirofano-ticket-terminado {
+    border-top-color: var(--quirofano-terminado, #2196f3);
+}
+
+/* Header del ticket de quirófano - EXACTO como consultas */
+.quirofano-ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+}
+
+.quirofano-ticket-title {
+    font-weight: 600;
+    font-size: 1.3rem;
+    color: var(--dark-color, #333);
+    transition: all 0.3s ease;
+}
+
+.quirofano-ticket-number {
+    background: rgba(66, 133, 244, 0.1);
+    color: var(--primary-color, #4285f4);
+    font-size: 0.9rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+/* Información del ticket de quirófano - EXACTO como consultas */
+.quirofano-ticket-info {
+    margin-bottom: 15px;
+}
+
+.quirofano-ticket-info p {
+    margin: 8px 0;
+    display: flex;
+    align-items: center;
+    color: #333;
+    font-size: 1.0rem;
+    transition: all 0.3s ease;
+}
+
+.quirofano-ticket-info p i {
+    width: 20px;
+    margin-right: 8px;
+    color: var(--primary-color, #4285f4);
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+}
+
+/* Colores según categorización del paciente - Tarjetas completas con colores de urgencia */
+.quirofano-ticket-urgencia-emergencia {
+    background: linear-gradient(135deg, #ffebee, #ffcdd2) !important;
+    border: 2px solid #e53935 !important;
+    border-left: 6px solid #e53935 !important;
+    border-top: 6px solid #e53935 !important;
+    box-shadow: 0 4px 12px rgba(229, 57, 53, 0.3) !important;
+    color: #b71c1c !important;
+}
+
+.quirofano-ticket-urgencia-emergencia .quirofano-ticket-title {
+    color: #000000 !important;
+}
+
+.quirofano-ticket-urgencia-emergencia .quirofano-ticket-title i {
+    color: #000000 !important;
+}
+
+.quirofano-ticket-urgencia-emergencia .quirofano-ticket-info p {
+    color: #b71c1c !important;
+}
+
+.quirofano-ticket-urgencia-emergencia .quirofano-ticket-info p i {
+    color: #e53935 !important;
+}
+
+.quirofano-ticket-urgencia-emergencia::after {
+    content: "⚠️ EMERGENCIA";
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #e53935;
+    color: white;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    animation: pulse 1.5s infinite;
+}
+
+.quirofano-ticket-urgencia-alta {
+    background: linear-gradient(135deg, #fff8e1, #ffecb3) !important;
+    border: 2px solid #ff9800 !important;
+    border-left: 6px solid #ff9800 !important;
+    border-top: 6px solid #ff9800 !important;
+    box-shadow: 0 4px 12px rgba(255, 152, 0, 0.3) !important;
+    color: #e65100 !important;
+}
+
+.quirofano-ticket-urgencia-alta .quirofano-ticket-title {
+    color: #000000 !important;
+}
+
+.quirofano-ticket-urgencia-alta .quirofano-ticket-title i {
+    color: #000000 !important;
+}
+
+.quirofano-ticket-urgencia-alta .quirofano-ticket-info p {
+    color: #e65100 !important;
+}
+
+.quirofano-ticket-urgencia-alta .quirofano-ticket-info p i {
+    color: #ff9800 !important;
+}
+
+.quirofano-ticket-urgencia-media {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9) !important;
+    border: 2px solid #4caf50 !important;
+    border-left: 6px solid #4caf50 !important;
+    border-top: 6px solid #4caf50 !important;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3) !important;
+    color: #1b5e20 !important;
+}
+
+.quirofano-ticket-urgencia-media .quirofano-ticket-title {
+    color: #000000 !important;
+}
+
+.quirofano-ticket-urgencia-media .quirofano-ticket-title i {
+    color: #000000 !important;
+}
+
+.quirofano-ticket-urgencia-media .quirofano-ticket-info p {
+    color: #1b5e20 !important;
+}
+
+.quirofano-ticket-urgencia-media .quirofano-ticket-info p i {
+    color: #4caf50 !important;
+}
+
+.quirofano-ticket-urgencia-normal {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb) !important;
+    border: 2px solid #2196f3 !important;
+    border-left: 6px solid #2196f3 !important;
+    border-top: 6px solid #2196f3 !important;
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.3) !important;
+    color: #0d47a1 !important;
+}
+
+.quirofano-ticket-urgencia-normal .quirofano-ticket-title {
+    color: #000000 !important;
+}
+
+.quirofano-ticket-urgencia-normal .quirofano-ticket-title i {
+    color: #000000 !important;
+}
+
+.quirofano-ticket-urgencia-normal .quirofano-ticket-info p {
+    color: #0d47a1 !important;
+}
+
+.quirofano-ticket-urgencia-normal .quirofano-ticket-info p i {
+    color: #2196f3 !important;
+}
+
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.05);
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* Información de urgencia específica - EXACTO como consultas */
+.quirofano-urgencia-info {
+    margin: 5px 0;
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+}
+
+.quirofano-urgencia-info.urgencia-emergencia {
+    color: #e53935;
+    background-color: rgba(229, 57, 53, 0.1);
+}
+
+.quirofano-urgencia-info.urgencia-alta {
+    color: #fb8c00;
+    background-color: rgba(251, 140, 0, 0.1);
+}
+
+.quirofano-urgencia-info.urgencia-media {
+    color: #43a047;
+    background-color: rgba(67, 160, 71, 0.1);
+}
+
+.quirofano-urgencia-info.urgencia-normal {
+    color: #43a047;
+    background-color: rgba(67, 160, 71, 0.1);
+}
+
+/* Header del ticket de quirófano - similar a consultas */
+.quirofano-ticket-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--quirofano-light);
+}
+
+.quirofano-ticket-title {
+    color: var(--quirofano-primary);
+    font-weight: 700;
+    font-size: 1.2rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quirofano-ticket-title i {
+    color: var(--quirofano-primary);
+    font-size: 1.8rem;
+    margin-right: 10px;
+}
+
+.quirofano-ticket .animal-icon {
+    font-size: 1.8rem;
+    margin-right: 10px;
+    color: var(--quirofano-primary);
+}
+
+.quirofano-ticket-number {
+    background: linear-gradient(135deg, var(--quirofano-primary), var(--quirofano-secondary));
+    color: white;
+    padding: 8px 15px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 6px rgba(33, 150, 243, 0.3);
+}
+
+/* Información del ticket de quirófano */
+.quirofano-ticket-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.quirofano-ticket-info p {
+    margin: 0;
+    color: #555;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+}
+
+.quirofano-ticket-info p i {
+    color: var(--quirofano-primary);
+    width: 16px;
+    text-align: center;
+    font-size: 0.85rem;
+}
+
+/* Información de urgencia específica */
+.quirofano-urgencia-info {
+    background: rgba(255, 255, 255, 0.8);
+    border-left: 4px solid;
+    padding: 8px 12px;
+    margin: 10px 0;
+    border-radius: 0 8px 8px 0;
+    font-weight: 600;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.quirofano-urgencia-info.urgencia-emergencia {
+    border-color: #f44336;
+    color: #f44336;
+    background: rgba(244, 67, 54, 0.1);
+}
+
+.quirofano-urgencia-info.urgencia-alta {
+    border-color: #ff9800;
+    color: #ff9800;
+    background: rgba(255, 152, 0, 0.1);
+}
+
+.quirofano-urgencia-info.urgencia-media {
+    border-color: #4caf50;
+    color: #4caf50;
+    background: rgba(76, 175, 80, 0.1);
+}
+
+.quirofano-urgencia-info.urgencia-normal {
+    border-color: #2196f3;
+    color: #2196f3;
+    background: rgba(33, 150, 243, 0.1);
+}
+
+/* Estados específicos de quirófano con animación de urgencia */
+.quirofano-ticket-urgencia-emergencia .quirofano-urgencia-info {
+    animation: pulseUrgent 2s infinite;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes pulseUrgent {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Estados de quirófano - siguiendo el diseño de consultas */
+.quirofano-estado-info {
+    margin: 5px 0;
+    display: inline-block;
+    padding: 5px 10px;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.quirofano-estado-info.estado-programado {
+    color: #4caf50;
+    background-color: rgba(76, 175, 80, 0.1);
+}
+
+.quirofano-estado-info.estado-cirugia {
+    color: #ff9800;
+    background-color: rgba(255, 152, 0, 0.1);
+    animation: pulseUrgent 2s infinite;
+}
+
+.quirofano-estado-info.estado-terminado {
+    color: #2196f3;
+    background-color: rgba(33, 150, 243, 0.1);
+}
+
+/* Modal específico de quirófano */
+.quirofano-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    animation: fadeInModalQuirofano 0.3s ease;
+}
+
+.quirofano-modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 30px;
+    width: 90%;
+    max-width: 900px; /* Más ancho que antes */
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    animation: scaleInQuirofano 0.3s ease;
+    position: relative;
+}
+
+.quirofano-modal-content h3 {
+    color: var(--quirofano-primary);
+    margin-bottom: 25px;
+    font-size: 1.5rem;
+    text-align: left;
+    border-bottom: 3px solid var(--quirofano-accent);
+    padding-bottom: 15px;
+}
+
+.quirofano-modal-content .close-modal {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 1.8rem;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.3s ease;
+}
+
+.quirofano-modal-content .close-modal:hover {
+    color: var(--quirofano-primary);
+}
+
+@keyframes fadeInModalQuirofano {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes scaleInQuirofano {
+    from {
+        opacity: 0;
+        transform: scale(0.8);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Formulario dentro del modal de quirófano - Igual que consultas */
+.quirofano-modal-content .form-container {
+    max-width: 100%;
+    margin: 0;
+}
+
+.quirofano-modal-content .form-group {
+    margin-bottom: 20px;
+}
+
+.quirofano-modal-content .form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: var(--dark-color, #333);
+}
+
+.quirofano-modal-content .form-group input,
+.quirofano-modal-content .form-group select,
+.quirofano-modal-content .form-group textarea {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    box-sizing: border-box;
+}
+
+.quirofano-modal-content .form-group textarea {
+    height: 100px;
+    resize: vertical;
+}
+
+.quirofano-modal-content .form-group input:focus,
+.quirofano-modal-content .form-group select:focus,
+.quirofano-modal-content .form-group textarea:focus {
+    border-color: var(--primary-color, #4285f4);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.2);
+    outline: none;
+}
+
+.quirofano-modal-content .form-row {
+    display: flex;
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.quirofano-modal-content .form-row .form-group {
+    flex: 1;
+    margin-bottom: 0;
+}
+
+.quirofano-modal-content .form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.quirofano-modal-content .btn-submit {
+    background: var(--primary-color, #4285f4);
+    color: white;
+    border: none;
+    padding: 12px 25px;
+    font-size: 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.quirofano-modal-content .btn-submit i {
+    margin-right: 8px;
+}
+
+.quirofano-modal-content .btn-submit:hover {
+    background: #3367d6;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.3);
+}
+
+@media (max-width: 768px) {
+    .quirofano-modal-content .form-row {
+        flex-direction: column;
+        gap: 20px;
+    }
+}
+
+/* Barra de búsqueda de quirófano - como en la imagen */
+.quirofano-search-bar {
+    margin: 20px 0;
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.quirofano-search-bar input {
+    width: 100%;
+    max-width: 400px;
+    padding: 12px 20px 12px 45px;
+    border: 1px solid #ddd;
+    border-radius: 25px;
+    font-size: 0.95rem;
+    background: white;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.quirofano-search-bar input:focus {
+    outline: none;
+    border-color: var(--quirofano-primary);
+    box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.1);
+}
+
+.quirofano-search-bar input::placeholder {
+    color: #999;
+}
+
+.quirofano-search-bar i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 1rem;
+    z-index: 1;
+}
+
+/* Mensaje de no datos para quirófano */
+.quirofano-no-data {
+    text-align: center;
+    padding: 60px 20px;
+    color: #666;
+    background: linear-gradient(135deg, #f8f9fa, white);
+    border-radius: 16px;
+    border: 2px dashed var(--quirofano-accent);
+}
+
+.quirofano-no-data i {
+    font-size: 4rem;
+    color: var(--quirofano-accent);
+    margin-bottom: 20px;
+    display: block;
+}
+
+.quirofano-no-data p {
+    font-size: 1.3rem;
+    margin: 0;
+    font-weight: 500;
+}
+
+/* Diseño responsivo para quirófano */
+@media (max-width: 992px) {
+    .quirofano-ticket-container {
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 15px;
+    }
+    
+    .quirofano-modal-content {
+        width: 95%;
+        padding: 20px;
+        margin: 10px;
+    }
+    
+    .quirofano-filter-container {
+        padding: 10px;
+    }
+    
+    .quirofano-filter-btn {
+        padding: 10px 15px;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .quirofano-ticket-container {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .quirofano-modal-content .modal-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .quirofano-modal-content .btn-cancel,
+    .quirofano-modal-content .btn-save {
+        width: 100%;
+        max-width: 200px;
+        justify-content: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .quirofano-ticket {
+        padding: 15px;
+    }
+    
+    .quirofano-ticket-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .quirofano-urgencia-badge {
+        position: static;
+        margin-bottom: 10px;
+        align-self: flex-start;
+    }
+    
+    .quirofano-filter-container {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .quirofano-filter-btn {
+        width: 100%;
+        max-width: 200px;
+        justify-content: center;
+    }
+}
+
+/* Animaciones adicionales para quirófano */
+.quirofano-animate-left {
+    animation: slideInFromLeftQuirofano 0.5s ease;
+}
+
+.quirofano-animate-right {
+    animation: slideInFromRightQuirofano 0.5s ease;
+}
+
+.quirofano-animate-scale {
+    animation: scaleInQuirofano 0.5s ease;
+}
+
+@keyframes slideInFromLeftQuirofano {
+    from {
+        opacity: 0;
+        transform: translateX(-100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideInFromRightQuirofano {
+    from {
+        opacity: 0;
+        transform: translateX(100px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Efectos especiales para tickets en cirugía */
+.quirofano-ticket-cirugia {
+    position: relative;
+    overflow: hidden;
+}
+
+.quirofano-ticket-cirugia::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    animation: shimmerQuirofano 3s infinite;
+}
+
+@keyframes shimmerQuirofano {
+    0% { left: -100%; }
+    100% { left: 100%; }
+}
+
+/* Mejoras en la accesibilidad */
+.quirofano-ticket:focus {
+    outline: 3px solid var(--quirofano-primary);
+    outline-offset: 2px;
+}
+
+.quirofano-filter-btn:focus {
+    outline: 3px solid var(--quirofano-primary);
+    outline-offset: 2px;
+}
+
+/* Indicadores de carga específicos para quirófano */
+.quirofano-loading {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    color: var(--quirofano-primary);
+}
+
+.quirofano-loading i {
+    font-size: 2rem;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Botones de acción específicos para quirófano */
+.quirofano-ticket-actions {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #e0e0e0;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.quirofano-ticket:hover .quirofano-ticket-actions {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.quirofano-action-btn {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 8px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 1.0rem;
+    font-weight: 500;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    min-width: 120px;
+}
+
+.quirofano-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.quirofano-action-btn i {
+    font-size: 1.0rem;
+}
+
+.quirofano-btn-eliminar {
+    background: #dc3545;
+    color: white;
+    border-color: #dc3545;
+}
+
+.quirofano-btn-eliminar:hover {
+    background: #c82333;
+    border-color: #bd2130;
+}
+
+.quirofano-btn-terminar {
+    background: #28a745;
+    color: white;
+    border-color: #28a745;
+}
+
+.quirofano-btn-terminar:hover {
+    background: #218838;
+    border-color: #1e7e34;
+}
+
+/* Modal de cambio de estado específico para quirófano */
+.quirofano-status-options {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    margin: 25px 0;
+}
+
+.quirofano-status-btn {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 20px;
+    border: 2px solid var(--quirofano-accent);
+    border-radius: 12px;
+    background: linear-gradient(135deg, #ffffff, #f8f9fa);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+.quirofano-status-btn:hover {
+    background: linear-gradient(135deg, var(--quirofano-light), #ffffff);
+    border-color: var(--quirofano-primary);
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(33, 150, 243, 0.2);
+}
+
+.quirofano-status-btn i {
+    font-size: 1.5rem;
+    color: var(--quirofano-primary);
+    width: 30px;
+    text-align: center;
+}
+
+.quirofano-status-btn span {
+    font-weight: 600;
+    color: var(--quirofano-primary);
+    font-size: 1.1rem;
+}
+
+.quirofano-status-btn small {
+    color: #666;
+    font-size: 0.85rem;
+    margin-top: 5px;
+    display: block;
+}
+
+.quirofano-status-btn[data-status="programado"]:hover {
+    border-color: var(--quirofano-programado);
+}
+
+.quirofano-status-btn[data-status="programado"]:hover i,
+.quirofano-status-btn[data-status="programado"]:hover span {
+    color: var(--quirofano-programado);
+}
+
+.quirofano-status-btn[data-status="cirugia"]:hover {
+    border-color: var(--quirofano-cirugia);
+}
+
+.quirofano-status-btn[data-status="cirugia"]:hover i,
+.quirofano-status-btn[data-status="cirugia"]:hover span {
+    color: var(--quirofano-cirugia);
+}
+
+.quirofano-status-btn[data-status="terminado"]:hover {
+    border-color: var(--quirofano-terminado);
+}
+
+.quirofano-status-btn[data-status="terminado"]:hover i,
+.quirofano-status-btn[data-status="terminado"]:hover span {
+    color: var(--quirofano-terminado);
+}
+
+/* Efectos especiales para diferentes estados */
+.quirofano-ticket-programado .quirofano-ticket-actions {
+    border-top-color: var(--quirofano-programado);
+}
+
+.quirofano-ticket-cirugia .quirofano-ticket-actions {
+    border-top-color: var(--quirofano-cirugia);
+}
+
+.quirofano-ticket-terminado .quirofano-ticket-actions {
+    border-top-color: var(--quirofano-terminado);
+}
+
+/* Mejora en la presentación del modal */
+.quirofano-modal-content[style*="max-width: 500px"] {
+    text-align: center;
+}
+
+.quirofano-modal-content[style*="max-width: 500px"] h3 {
+    margin-bottom: 30px;
+}
+
+/* Responsividad mejorada para móviles */
+@media (max-width: 768px) {
+    .quirofano-modal-content form {
+        grid-template-columns: 1fr;
+        gap: 15px;
+    }
+    
+    .quirofano-ticket-actions {
+        gap: 6px;
+    }
+    
+    .quirofano-action-btn {
+        width: 35px;
+        height: 35px;
+    }
+    
+    .quirofano-action-btn i {
+        font-size: 0.8rem;
+    }
+    
+    .quirofano-status-options {
+        gap: 10px;
+    }
+    
+    .quirofano-status-btn {
+        padding: 15px;
+        gap: 10px;
+    }
+    
+    .quirofano-status-btn i {
+        font-size: 1.2rem;
+    }
+    
+    .quirofano-status-btn span {
+        font-size: 1rem;
+    }
+}
+
+/* Estilos para mejorar la experiencia visual */
+.quirofano-ticket:hover {
+    cursor: pointer;
+}
+
+.quirofano-ticket-actions button:focus {
+    outline: 3px solid var(--quirofano-primary);
+    outline-offset: 2px;
+}
+
+/* Animación suave para la aparición de tickets */
+.quirofano-ticket {
+    animation: fadeInUp 0.5s ease forwards;
+    opacity: 0;
+}
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Retraso escalonado para múltiples tickets */
+.quirofano-ticket:nth-child(1) { animation-delay: 0.1s; }
+.quirofano-ticket:nth-child(2) { animation-delay: 0.2s; }
+.quirofano-ticket:nth-child(3) { animation-delay: 0.3s; }
+.quirofano-ticket:nth-child(4) { animation-delay: 0.4s; }
+.quirofano-ticket:nth-child(5) { animation-delay: 0.5s; }
+.quirofano-ticket:nth-child(n+6) { animation-delay: 0.6s; }
+
+/* Efectos adicionales para mejorar la experiencia visual */
+.quirofano-ticket-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 15px 35px rgba(0,0,0,0.15);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Efectos para iconos de categoría */
+.quirofano-categoria-icon {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+    transition: transform 0.2s ease;
+}
+
+.quirofano-ticket-card:hover .quirofano-categoria-icon {
+    transform: scale(1.1);
+}
+
+/* Efectos para badges de estado en hover */
+.quirofano-estado-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    margin: 5px 0;
+    transition: all 0.3s ease;
+}
+
+.quirofano-estado-badge.estado-programado {
+    background: rgba(76, 175, 80, 0.15);
+    color: #2e7d32;
+    border: 1px solid rgba(76, 175, 80, 0.3);
+}
+
+.quirofano-estado-badge.estado-cirugia {
+    background: rgba(255, 152, 0, 0.15);
+    color: #ef6c00;
+    border: 1px solid rgba(255, 152, 0, 0.3);
+    animation: pulseUrgent 2s infinite;
+}
+
+.quirofano-estado-badge.estado-terminado {
+    background: rgba(33, 150, 243, 0.15);
+    color: #1565c0;
+    border: 1px solid rgba(33, 150, 243, 0.3);
+}
+
+.quirofano-estado-badge:hover {
+    transform: scale(1.05);
+    transition: transform 0.2s ease;
+    cursor: pointer;
+}
+
+/* Mejora para el icono de urgencia pulsante */
+@keyframes pulseUrgentImprovedQuirofano {
+    0% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.7; 
+        transform: scale(1.1);
+    }
+    100% { 
+        opacity: 1; 
+        transform: scale(1);
+    }
+}
+
+/* Campos de solo lectura en el modal */
+.readonly-field {
+    background-color: #f8f9fa !important;
+    color: #6c757d !important;
+    cursor: not-allowed !important;
+    border-color: #dee2e6 !important;
+}
+
+.readonly-field:focus {
+    background-color: #f8f9fa !important;
+    border-color: #dee2e6 !important;
+    box-shadow: none !important;
+}
+
+/* Etiquetas especiales para campos automáticos */
+.quirofano-modal-content .form-group label:has(+ .readonly-field) {
+    color: #6c757d;
+    font-style: italic;
+    position: relative;
+}
+
+.quirofano-modal-content .form-group label:has(+ .readonly-field)::after {
+    content: " 🔒";
+    font-size: 0.8rem;
+}
+
+/* Modal de confirmación de eliminación - Estilo elegante */
+.quirofano-delete-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    animation: fadeInModalQuirofano 0.3s ease;
+}
+
+.quirofano-delete-modal-content {
+    background: white;
+    border-radius: 16px;
+    padding: 0;
+    width: 90%;
+    max-width: 420px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    animation: scaleInQuirofano 0.3s ease;
+    overflow: hidden;
+}
+
+.quirofano-delete-modal-header {
+    background: linear-gradient(135deg, #ff5252, #f44336);
+    color: white;
+    padding: 20px;
+    text-align: center;
+    position: relative;
+}
+
+.quirofano-delete-icon {
+    background: rgba(255, 255, 255, 0.2);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+}
+
+.quirofano-delete-icon i {
+    font-size: 24px;
+    color: white;
+}
+
+.quirofano-delete-modal-header h3 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    border: none;
+    padding: 0;
+}
+
+.quirofano-delete-modal-body {
+    padding: 25px;
+    text-align: center;
+}
+
+.quirofano-pet-info {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border: 2px solid #2196f3;
+    border-radius: 12px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-weight: 600;
+    color: #1565c0;
+    font-size: 1.1rem;
+}
+
+.quirofano-pet-info i {
+    font-size: 20px;
+    color: #2196f3;
+}
+
+.quirofano-delete-modal-body p {
+    margin: 15px 0;
+    color: #333;
+    font-size: 1.05rem;
+    line-height: 1.5;
+}
+
+.quirofano-delete-warning {
+    color: #666;
+    font-size: 0.95rem !important;
+    font-style: italic;
+}
+
+.quirofano-delete-modal-actions {
+    display: flex;
+    gap: 12px;
+    padding: 20px 25px 25px;
+    justify-content: center;
+}
+
+.quirofano-delete-btn-cancelar {
+    background: #f5f5f5;
+    color: #333;
+    border: 2px solid #ddd;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+}
+
+.quirofano-delete-btn-cancelar:hover {
+    background: #e0e0e0;
+    border-color: #bbb;
+    transform: translateY(-1px);
+}
+
+.quirofano-delete-btn-eliminar {
+    background: linear-gradient(135deg, #f44336, #d32f2f);
+    color: white;
+    border: 2px solid #f44336;
+    border-radius: 12px;
+    padding: 12px 24px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.quirofano-delete-btn-eliminar:hover {
+    background: linear-gradient(135deg, #d32f2f, #b71c1c);
+    border-color: #d32f2f;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(244, 67, 54, 0.4);
+}
+
+.quirofano-delete-btn-eliminar i {
+    font-size: 16px;
+}
+
+/* Animación de pulsación para el icono de advertencia */
+.quirofano-delete-icon {
+    animation: pulseDeleteIcon 2s infinite;
+}
+
+@keyframes pulseDeleteIcon {
+    0% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.4);
+    }
+    50% { 
+        transform: scale(1.05);
+        box-shadow: 0 0 0 10px rgba(255, 255, 255, 0);
+    }
+    100% { 
+        transform: scale(1);
+        box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+    }
+}
+
+/* Responsive para modal de eliminación */
+@media (max-width: 480px) {
+    .quirofano-delete-modal-content {
+        width: 95%;
+        margin: 20px;
+    }
+    
+    .quirofano-delete-modal-actions {
+        flex-direction: column;
+    }
+    
+    .quirofano-delete-btn-cancelar,
+    .quirofano-delete-btn-eliminar {
+        width: 100%;
+    }
+}

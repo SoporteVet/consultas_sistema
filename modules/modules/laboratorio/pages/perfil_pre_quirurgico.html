@@ -1,0 +1,878 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Plantillas</title>
+    <link rel="stylesheet" href="../css/index_lab.css">
+    <script defer src="../js/lab-report-header.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+</script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=ABeeZee:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=League+Spartan:wght@100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+</head>
+<body>
+<script>
+// Autollenado Perfil Pre-Quirúrgico
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    const p = new URLSearchParams(location.search);
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+    setVal('mascotaNombre', p.get('mascotaNombre'));
+    setVal('propietarioNombre', p.get('propietarioNombre'));
+    setVal('propietarioCedula', p.get('propietarioCedula'));
+    setVal('propietarioTelefono', p.get('propietarioTelefono'));
+    setVal('propietarioEmail', p.get('propietarioEmail'));
+    setVal('nombreMedico', p.get('nombreMedico'));
+    setVal('mascotaRaza', p.get('mascotaRaza'));
+    setVal('mascotaEdad', p.get('mascotaEdad'));
+    setVal('mascotaPeso', p.get('mascotaPeso'));
+    
+    // Verificar el mensaje del médico después del autollenado
+    const medico = p.get('nombreMedico');
+    if (medico) {
+      setTimeout(() => {
+        verificarMedico();
+      }, 100);
+    }
+  } catch(e){}
+});
+</script>
+    <body>
+        <div class="controls">
+            <label for="sexoSelector">Selecciona el sexo:</label>
+            <select id="sexoSelector" onchange="actualizarSexoEnPlantilla(),actualizarValoresReferencia2()">
+                <option value="Seleccionar" selected>-- Seleccionar --</option>
+                <option value="Macho">Macho</option>
+                <option value="Hembra">Hembra</option>
+            </select>
+            <label for="especieSelector">Selecciona la especie:</label>
+            <select id="especieSelector" onchange="actualizarEspecieEnPlantilla(),actualizarValoresReferencia2()">
+                <option value="Seleccionar" selected>-- Seleccionar --</option>
+                <option value="Canino">Canino</option>
+                <option value="Felino">Felino</option>
+                <option value="Lagomorfo">Lagomorfo</option>
+                <option value="Cuilo">Cuilo</option>
+            </select>
+            <label for="edadSelector">Selecciona el rango de edad:</label>
+            <select id="edadSelector" onchange="actualizarValoresReferencia2()">
+                <option value="Seleccionar" selected>-- Seleccionar --</option>
+                <option value="De 1 año a 12 años">De 1 año a 12 años</option>
+                <option value="De 6 meses a 1 año">De 6 meses a 1 año</option>
+                <option value="De 3 meses a 6 meses">De 3 meses a 6 meses</option>
+                <option value="De 0 meses a mes y medio">De 0 meses a mes y medio</option>
+                <option value="Todas las edades">Todas las edades</option>
+            </select>
+        </div>
+        <div class="container" id="template1" style="display: block;">
+        <div class="header">
+            <img src="../img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
+            <h1>Laboratorio Clínico Veterinario</h1>
+        </div>
+        <h3 class="subheader">PERFIL PRE-QUIRURGICO</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th colspan="2">DATOS DE LA MASCOTA</th>
+                        <th colspan="2">DATOS DEL PROPIETARIO</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Nombre</td>
+                        <td><input type="text" id="mascotaNombre" onkeydown="moverFocoConFlechas(event, 'propietarioNombre', 'propietarioNombre', 'mascotaNombre', 'mascotaRaza')"></td>
+                        <td>Nombre</td>
+                        <td><input type="text" id="propietarioNombre"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaNombre', 'mascotaNombre', 'propietarioCedula')"></td>
+                    </tr>
+                    <tr>
+                        <td>Raza</td>
+                        <td><input type="text" id="mascotaRaza" list="razas"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaNombre', 'mascotaNombre', 'mascotaSexo')"></td>
+                        <datalist id="razas">
+
+                        </datalist>
+                        <td>Cédula</td>
+                        <td><input type="text" id="propietarioCedula"  onkeydown="moverFocoConFlechas(event, 'propietarioTelefono', 'mascotaRaza', 'propietarioNombre', 'propietarioTelefono')"></td>
+                    </tr>
+                    <tr>
+                        <td>Sexo</td>
+                        <td><input type="text" id="sexoEnPlantilla"></td>
+                        <td>Teléfono</td>
+                        <td><input type="text" id="propietarioTelefono" onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaSexo', 'propietarioCedula', 'propietarioEmail')"></td>
+                    </tr>
+                    <tr>
+                        <td>Especie</td>
+                        <td><input type="text" id="especieEnPlantilla"></td>
+                        <td>Email</td>
+                        <td><input type="text" id="propietarioEmail"  onkeydown="moverFocoConFlechas(event, 'mascotaEspecie', 'mascotaEspecie', 'propietarioTelefono', 'nombreMedico')"></td>
+                    </tr>
+                    <tr>
+                        <td>Edad</td>
+                        <td><input type="text" id="mascotaEdad" list="edades"  onkeydown="moverFocoConFlechas(event, 'nombreMedico', 'mascotaEspecie', 'mascotaEspecie', 'mascotaPeso')"></td>
+    
+                        <datalist id="edades">
+                        <option value="1 mes"><option value="2 meses"><option value="3 meses"><option value="4 meses">
+                        <option value="5 meses"><option value="6 meses"><option value="7 meses"><option value="8 meses"><option value="9 meses">
+                        <option value="10 meses"><option value="11 meses"><option value="12 meses">
+                        <option value="1 año"><option value="2 años"><option value="3 años"><option value="4 años">
+                        <option value="5 años"><option value="6 años"><option value="7 años"><option value="8 años"><option value="9 años">
+                        <option value="10 años"><option value="11 años"><option value="12 años"><option value="13 años"></option><option value="14 años"></option>
+                        <option value="15 años"><option value="16 años"><option value="17 años"><option value="18 años"></option>
+                        <option value="19 años"><option value="20 años"></option>    
+                    </datalist>
+                        <td>Médico</td>
+                        <td>
+                            <input type="text" id="nombreMedico" list="medicos" 
+                                onkeydown="moverFocoConFlechas(event, 'propietarioFecha', 'mascotaEdad', 'propietarioEmail', 'propietarioFecha')" 
+                                oninput="verificarMedico()">
+                        </td>
+                        <datalist id="medicos">
+                            <option value="N.A">
+                            <option value="Dr. Randall Azofeifa">
+                            <option value="Dr. Luis Coto">
+                            <option value="Dr. Gustavo Gónzalez">
+                            <option value="Dra. Daniela Sancho">
+                            <option value="Dra. Franciny Nuñez">
+                            <option value="Dra. Lourdes Chacón">
+                            <option value="Dra. Alejandra León">
+                            <option value="Dra. Karla Quesada">
+                            <option value="Dra. Kharen Moreno">
+                            <option value="Dra. Karina Madrigal">
+                            <option value="Dra. Natalia Alvarado">
+                            <option value="Dra. Eliany Lopez">
+                            <option value="Dra. Adriana Rojas">
+                            <option value="Dra. Nicole Sibaja">
+                        </datalist>
+                    </tr>
+                    <tr>
+                        <script>    
+                            function actualizarSexoEnPlantilla() {
+                                const sexo = document.getElementById('sexoSelector').value;
+                                document.getElementById('sexoEnPlantilla').value = sexo.charAt(0).toUpperCase() + sexo.slice(1);
+                            }
+                            function actualizarEspecieEnPlantilla() {
+                                const especie = document.getElementById('especieSelector').value;
+                                document.getElementById('especieEnPlantilla').value = especie;
+                            }
+                            function verificarMedico() {
+                                const medico = document.getElementById('nombreMedico').value;
+                                const mensaje = document.getElementById('mensajeMedico');
+                                if (medico === 'N.A' || medico === 'NA' || medico === '' || medico === 'N.A.' || medico.toLowerCase() === 'na') {
+                                    mensaje.style.display = 'none';
+                                } else {
+                                    mensaje.style.display = 'block';
+                                }
+                            }
+                            
+                            </script>
+                    </tr>
+                    <tr>
+                        <td>Peso</td>
+    <td><input type="text" id="mascotaPeso" list="pesos" onkeydown="moverFocoConFlechas(event, 'propietarioFecha', 'mascotaEdad', 'mascotaEdad', 'mascotaPeso')"></td>
+    
+        <datalist id="pesos">
+            <option value="N.A">N.A</option><option value="0,1 kg">0,1 kg</option><option value="0,2 kg">0,2 kg</option><option value="0,3 kg">0,3 kg</option><option value="0,4 kg">0,4 kg</option>
+            <option value="0,5 kg">0,5 kg</option><option value="0,6 kg">0,6 kg</option><option value="0,7 kg">0,7 kg</option><option value="0,8 kg">0,8 kg</option><option value="0,9 kg">0,9 kg</option>
+            <option value="1,0 kg">1,0 kg</option><option value="1,1 kg">1,1 kg</option><option value="1,2 kg">1,2 kg</option><option value="1,3 kg">1,3 kg</option><option value="1,4 kg">1,4 kg</option>
+            <option value="1,5 kg">1,5 kg</option><option value="1,6 kg">1,6 kg</option><option value="1,7 kg">1,7 kg</option><option value="1,8 kg">1,8 kg</option><option value="1,9 kg">1,9 kg</option>
+            <option value="2,0 kg">2,0 kg</option><option value="2,1 kg">2,1 kg</option><option value="2,2 kg">2,2 kg</option><option value="2,3 kg">2,3 kg</option><option value="2,4 kg">2,4 kg</option>
+            <option value="2,5 kg">2,5 kg</option><option value="2,6 kg">2,6 kg</option><option value="2,7 kg">2,7 kg</option><option value="2,8 kg">2,8 kg</option><option value="2,9 kg">2,9 kg</option>
+            <option value="3,0 kg">3,0 kg</option><option value="3,1 kg">3,1 kg</option><option value="3,2 kg">3,2 kg</option><option value="3,3 kg">3,3 kg</option><option value="3,4 kg">3,4 kg</option>
+            <option value="3,5 kg">3,5 kg</option><option value="3,6 kg">3,6 kg</option><option value="3,7 kg">3,7 kg</option><option value="3,8 kg">3,8 kg</option><option value="3,9 kg">3,9 kg</option>
+            <option value="4,0 kg">4,0 kg</option><option value="4,1 kg">4,1 kg</option><option value="4,2 kg">4,2 kg</option><option value="4,3 kg">4,3 kg</option><option value="4,4 kg">4,4 kg</option>
+            <option value="4,5 kg">4,5 kg</option><option value="4,6 kg">4,6 kg</option><option value="4,7 kg">4,7 kg</option><option value="4,8 kg">4,8 kg</option><option value="4,9 kg">4,9 kg</option>
+            <option value="5,0 kg">5,0 kg</option><option value="5,1 kg">5,1 kg</option><option value="5,2 kg">5,2 kg</option><option value="5,3 kg">5,3 kg</option><option value="5,4 kg">5,4 kg</option>
+            <option value="5,5 kg">5,5 kg</option><option value="5,6 kg">5,6 kg</option><option value="5,7 kg">5,7 kg</option><option value="5,8 kg">5,8 kg</option><option value="5,9 kg">5,9 kg</option>
+            <option value="6,0 kg">6,0 kg</option><option value="6,1 kg">6,1 kg</option><option value="6,2 kg">6,2 kg</option><option value="6,3 kg">6,3 kg</option><option value="6,4 kg">6,4 kg</option>
+            <option value="6,5 kg">6,5 kg</option><option value="6,6 kg">6,6 kg</option><option value="6,7 kg">6,7 kg</option><option value="6,8 kg">6,8 kg</option><option value="6,9 kg">6,9 kg</option>
+            <option value="7,0 kg">7,0 kg</option><option value="7,1 kg">7,1 kg</option><option value="7,2 kg">7,2 kg</option><option value="7,3 kg">7,3 kg</option><option value="7,4 kg">7,4 kg</option>
+            <option value="7,5 kg">7,5 kg</option><option value="7,6 kg">7,6 kg</option><option value="7,7 kg">7,7 kg</option><option value="7,8 kg">7,8 kg</option><option value="7,9 kg">7,9 kg</option>
+            <option value="8,0 kg">8,0 kg</option><option value="8,1 kg">8,1 kg</option><option value="8,2 kg">8,2 kg</option><option value="8,3 kg">8,3 kg</option><option value="8,4 kg">8,4 kg</option>
+            <option value="8,5 kg">8,5 kg</option><option value="8,6 kg">8,6 kg</option><option value="8,7 kg">8,7 kg</option><option value="8,8 kg">8,8 kg</option><option value="8,9 kg">8,9 kg</option>
+            <option value="9,0 kg">9,0 kg</option><option value="9,1 kg">9,1 kg</option><option value="9,2 kg">9,2 kg</option><option value="9,3 kg">9,3 kg</option><option value="9,4 kg">9,4 kg</option>
+            <option value="9,5 kg">9,5 kg</option><option value="9,6 kg">9,6 kg</option><option value="9,7 kg">9,7 kg</option><option value="9,8 kg">9,8 kg</option><option value="9,9 kg">9,9 kg</option>
+            <option value="10,0 kg">10,0 kg</option><option value="10,1 kg">10,1 kg</option><option value="10,2 kg">10,2 kg</option><option value="10,3 kg">10,3 kg</option><option value="10,4 kg">10,4 kg</option>
+            <option value="10,5 kg">10,5 kg</option><option value="10,6 kg">10,6 kg</option><option value="10,7 kg">10,7 kg</option><option value="10,8 kg">10,8 kg</option><option value="10,9 kg">10,9 kg</option>
+            <option value="11,0 kg">11,0 kg</option><option value="11,1 kg">11,1 kg</option><option value="11,2 kg">11,2 kg</option><option value="11,3 kg">11,3 kg</option><option value="11,4 kg">11,4 kg</option>
+            <option value="11,5 kg">11,5 kg</option><option value="11,6 kg">11,6 kg</option><option value="11,7 kg">11,7 kg</option><option value="11,8 kg">11,8 kg</option><option value="11,9 kg">11,9 kg</option>
+            <option value="12,0 kg">12,0 kg</option>
+            
+        </datalist>
+            <td>Fecha</td>
+            <td><input type="date" id="propietarioFecha" class="date-input" onkeydown="moverFocoConFlechas(event, 'nombreMedico', 'mascotaPeso', 'nombreMedico', 'propietarioFecha')"></td>
+                    </tr>
+                    
+                    <script>
+                  function formatearFecha(input) {
+                const fecha = new Date(input.value);
+                const dia = String(fecha.getDate()).padStart(2, '0');
+                const mes = String(fecha.getMonth() + 1).padStart(2, '0');
+                const año = fecha.getFullYear();
+                input.value = `${dia}-${mes}-${año}`;
+            }
+       
+            function moverFocoConFlechas(event, derechaId, izquierdaId, arribaId, abajoId) {
+                    switch (event.key) {
+                        case 'ArrowRight':
+                            event.preventDefault();
+                            document.getElementById(derechaId).focus();
+                            break;
+                        case 'ArrowLeft':
+                            event.preventDefault();
+                            document.getElementById(izquierdaId).focus();
+                            break;
+                        case 'ArrowUp':
+                            event.preventDefault();
+                            document.getElementById(arribaId).focus();
+                            break;
+                        case 'ArrowDown':
+                        case 'Enter':
+                            event.preventDefault();
+                            document.getElementById(abajoId).focus();
+                            break;
+                    }
+                }
+                const razasCaninas = [
+    "Ainu", "Airedale terrier", "Akita", "Akita Inu", "Alaskan Malamute",
+    "American Black and Tan Coonhound", "American Bull Terrier", "American Pit Bull Terrier",
+    "American Staffordshire terrier", "American Water Spaniel", "Apso Tibetano", "Barzoi", 
+    "Basenji", "Basset Hound", "Beagle", "Bichon Frise", "Bloodhound", "Bobtail", 
+    "Border Collie", "Boston Terrier", "Bouvier des Flandres", "Boxer", "Bull terrier", 
+    "Bull Terrier Miniatura", "Bulldog Americano", "Bulldog Francés", "Bulldog Inglés", 
+    "Bullmastiff", "Cavalier King Charles Spaniel", "Chihuahua", "Chow Chow", 
+    "Cocker Spaniel Americano", "Cocker Spaniel Inglés", "Collie", "Collie Escocés", 
+    "Dachshund", "Dálmata", "Doberman", "Doberman Pincher", "Dogo Alemán", 
+    "Dogo Argentino", "Dogo de Burdeos", "French Poodle", "Galgo Español", 
+    "Galgo Inglés-español", "Golden Retriever", "Gran Danés", "Greyhound", 
+    "Husky Siberiano", "Jack Russell Terrier", "Labrador Retriever", "Maltés", 
+    "Pastor Alemán", "Pequinés", "Pomerania", "Pug", "Rottweiler", "Samoyedo", 
+    "San Bernardo", "Schnauzer", 
+    "Shih Tzu", "SRD", "Yorkshire Terrier", "Weimaraner", "Fila Brasileiro",
+];
+
+const razasFelinas = [
+    "Abisinio", "American Bobtail", "Angora Turco", "Azul Ruso", "Balinés", 
+    "Bengalí", "Bobtail japonés", "Bombay", "British Shorthair", "Burmés", 
+    "Carey", "Común Europeo", "Exótico", "Himalayo", "Javanés", 
+    "Oriental", "Persa", "Sagrado de Birmania", "Siamés", "Siberiano", 
+    "Silvestre", "SRD"
+];
+// Reemplazar la función de reemplazo de punto por coma
+function reemplazarPuntoPorComa() {
+    // Obtener todos los campos numéricos
+    const camposNumericos = [
+        'Glucosa', 'Colesterol_total', 'amilasa', 'CK', 
+        'nitrogeno_ureico', 'creatinina', 'bun_crea', 'fosforo', 'calcio',
+        'ALT', 'Fosfatasa_Alcalina', 'billirrubina_total', 'Albumina',
+        'proteinas_totales', 'Globulinas', 'alb/glo'
+    ];
+    
+    // Aplicar la funcionalidad a cada campo
+    camposNumericos.forEach(id => {
+        const campo = document.getElementById(id);
+        if (campo) {
+            // Usar keydown en lugar de input
+            campo.addEventListener('keydown', function(event) {
+                // Solo actuar cuando se presiona la tecla punto
+                if (event.key === '.') {
+                    event.preventDefault(); // Prevenir la acción por defecto
+                    
+                    // Obtener la posición actual del cursor
+                    const cursorPos = this.selectionStart;
+                    
+                    // Obtener el valor actual e insertar una coma en lugar del punto
+                    const valorActual = this.value;
+                    const nuevoValor = valorActual.slice(0, cursorPos) + ',' + valorActual.slice(cursorPos);
+                    
+                    // Establecer el nuevo valor
+                    this.value = nuevoValor;
+                    
+                    // Restaurar la posición del cursor justo después de la coma
+                    setTimeout(() => {
+                        this.setSelectionRange(cursorPos + 1, cursorPos + 1);
+                    }, 0);
+                }
+            });
+            
+            // Mover las actualizaciones de color y cálculos al evento blur
+            campo.addEventListener('blur', function() {
+                actualizarColor(id, 'ref' + id.toLowerCase());
+                if (id === 'Albumina' || id === 'proteinas_totales') {
+                    calculateValues();
+                }
+            });
+            
+            // Eliminar cualquier evento input que pueda interferir
+            const oldInputListeners = campo._inputListeners || [];
+            oldInputListeners.forEach(listener => {
+                campo.removeEventListener('input', listener);
+            });
+        }
+    });
+}
+
+// Ejecutar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    reemplazarPuntoPorComa();
+});
+// Función para actualizar el datalist de razas según la especie seleccionada
+function actualizarRazasPorEspecie() {
+    const especie = document.getElementById('especieSelector').value;
+    // Crear el datalist si no existe
+    let datalistRazas = document.getElementById('razas');
+    if (!datalistRazas) {
+        datalistRazas = document.createElement('datalist');
+        datalistRazas.id = 'razas';
+        document.body.appendChild(datalistRazas);
+    } else {
+        // Limpiar la lista actual
+        datalistRazas.innerHTML = '';
+    }
+    
+    const campoRaza = document.getElementById('mascotaRaza');
+    
+    // Restablecer el campo de raza si se cambia la especie
+    if (campoRaza.value && campoRaza.value !== "SRD") {
+        campoRaza.value = '';
+    }
+    
+    // Agregar las razas según la especie seleccionada
+    if (especie === "Canino") {
+        razasCaninas.forEach(raza => {
+            const option = document.createElement('option');
+            option.value = raza;
+            datalistRazas.appendChild(option);
+        });
+    } else if (especie === "Felino") {
+        razasFelinas.forEach(raza => {
+            const option = document.createElement('option');
+            option.value = raza;
+            datalistRazas.appendChild(option);
+        });
+    } else if (especie === "Lagomorfo" || especie === "Cuilo") {
+        // Para otras especies, agregar solo opciones genéricas
+        const option = document.createElement('option');
+        option.value = "SRD";
+        datalistRazas.appendChild(option);
+    }
+}
+
+// Modificar la función existente
+function actualizarEspecieEnPlantilla() {
+    const especie = document.getElementById('especieSelector').value;
+    document.getElementById('especieEnPlantilla').value = especie;
+    
+    // Actualizar las razas disponibles según la especie
+    actualizarRazasPorEspecie();
+}
+
+// Ejecutar al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    // Asegurarse de que existe el selector de especies
+    const especieSelector = document.getElementById('especieSelector');
+    if (especieSelector) {
+        // Si ya hay una especie seleccionada al cargar
+        if (especieSelector.value !== "Seleccionar") {
+            actualizarRazasPorEspecie();
+        }
+        
+        // Agregar un listener adicional para garantizar que se actualicen las razas
+        especieSelector.addEventListener('change', actualizarRazasPorEspecie);
+    }
+    
+    // Crear datalist si no existe
+    if (!document.getElementById('razas')) {
+        const datalist = document.createElement('datalist');
+        datalist.id = 'razas';
+        document.body.appendChild(datalist);
+    }
+});
+
+// 1. Objeto de valores de referencia para Perfil Pre Quirúrgico
+const valoresReferenciaPQ = {
+  Canino: {
+    Macho: {
+      'De 1 año a 12 años': {
+        Glucosa: '80-117', AST: '15-36', ALT: '16-49',
+        nitrogeno_ureico: '10-24', urea: '20-50', creatinina: '0.7-1.2', bun_crea: '4.2-32.8', acido_urico: '0.6-1.3', fosforo: '3.3-5.7', calcio: '9.1-10.8', magnesio: '1.8-3.0',
+        albumina: '2.6-3.9', proteinas_totales: '5.5-7.3', globulinas_totales: '3.0-4.7', relacion_alb_glo: '0.6-1.1',
+        pt: '12.0-17.0', aptt: '96.0-116.0'
+      },
+      'De 6 meses a 1 año': {
+        Glucosa: '76-129', AST: '15-36', ALT: '19-47',
+        nitrogeno_ureico: '7.3-23.5', urea: '20-50', creatinina: '0.7-1.4', bun_crea: '4.2-32.8', acido_urico: '0.5-1.4', fosforo: '4.8-9.0', calcio: '9.2-13.0', magnesio: '1.8-3.0',
+        albumina: '2.7-3.5', proteinas_totales: '5.1-7.3', globulinas_totales: '3.0-4.7', relacion_alb_glo: '0.6-1.1',
+        pt: '12.0-17.0', aptt: '96.0-116.0'
+      },
+      'De 3 meses a 6 meses': {
+        Glucosa: '89-133', AST: '14-33', ALT: '13-30',
+        nitrogeno_ureico: '7-19', urea: '20-50', creatinina: '0.3-0.9', bun_crea: '4.2-32.8', acido_urico: '0.3-0.9', fosforo: '7.2-10.1', calcio: '9.8-12.4', magnesio: '1.8-3.0',
+        albumina: '2.4-3.1', proteinas_totales: '4.6-5.6', globulinas_totales: '3.0-4.7', relacion_alb_glo: '0.6-1.1',
+        pt: '12.0-17.0', aptt: '96.0-116.0'
+      },
+      'De 0 meses a mes y medio': {
+        Glucosa: '97-150', AST: '11-70', ALT: '10.0-28.0',
+        nitrogeno_ureico: '5.9-15.2', urea: '20-50', creatinina: '0.3-0.7', bun_crea: '4.2-32.8', acido_urico: '0.4-1.4', fosforo: '7.5-10.1', calcio: '9.8-12.4', magnesio: '1.6-2.6',
+        albumina: '2.3-2.6', proteinas_totales: '4.0-5.2', globulinas_totales: '3.0-4.1', relacion_alb_glo: '0.6-1.1',
+        pt: '12.0-17.0', aptt: '96.0-116.0'
+      }
+    },
+    Hembra: {
+      'De 1 año a 12 años': {
+        Glucosa: '77-126', AST: '14-42', ALT: '15-52',
+        nitrogeno_ureico: '7-23', urea: '20-50', creatinina: '0.6-1.2', bun_crea: '4.2-32.8', acido_urico: '0.5-1.4', fosforo: '3.3-6.4', calcio: '9.0-11.4', magnesio: '1.8-3.0',
+        albumina: '2.6-3.6', proteinas_totales: '5.4-7.2', globulinas_totales: '3.0-4.7', relacion_alb_glo: '0.6-1.1',
+        pt: '12.0-17.0', aptt: '96.0-116.0'
+      },
+      'De 6 meses a 1 año': {
+        Glucosa: '29-127', AST: '15-40', ALT: '16-49',
+        nitrogeno_ureico: '10-27', urea: '20-50', creatinina: '0.7-1.4', bun_crea: '4.2-32.8', acido_urico: '0.4-1.6', fosforo: '4.4-9.2', calcio: '9.4-11.7', magnesio: '1.8-3.0',
+        albumina: '2.7-3.6', proteinas_totales: '5.1-6.9', globulinas_totales: '3.0-4.7', relacion_alb_glo: '0.6-1.1',
+        pt: '12.0-17.0', aptt: '96.0-116.0'
+      },
+      'De 3 meses a 6 meses': {
+        Glucosa: '82-130', AST: '13-32', ALT: '9-27',
+        nitrogeno_ureico: '7-19', urea: '20-50', creatinina: '0.4-0.9', bun_crea: '4.2-32.8', acido_urico: '0.3-0.9', fosforo: '7.5-10.0', calcio: '10.1-12.3', magnesio: '1.8-3.0',
+        albumina: '2.4-3.1', proteinas_totales: '4.6-5.8', globulinas_totales: '3.0-4.7', relacion_alb_glo: '0.6-1.1',
+        pt: '12.0-17.0', aptt: '96.0-116.0'
+      },
+      'De 0 meses a mes y medio': {
+        Glucosa: '108-151', AST: '11-35', ALT: '9-30',
+        nitrogeno_ureico: '6.2-15.2', urea: '20-50', creatinina: '0.3-0.8', bun_crea: '4.2-32.8', acido_urico: '0.4-1.4', fosforo: '7.5-10.7', calcio: '9.9-12.0', magnesio: '1.8-3.0',
+        albumina: '2.2-2.9', proteinas_totales: '4.0-5.1', globulinas_totales: '3.0-4.7', relacion_alb_glo: '0.6-1.1',
+        pt: '12.0-17.0', aptt: '96.0-116.0'
+      }
+    }
+  },
+  Felino: {
+    Macho: {
+      'De 1 año a 12 años': {
+        Glucosa: '65-111', AST: '10-29', ALT: '20-67',
+        nitrogeno_ureico: '20-42', urea: '30-60', creatinina: '0.5-1.8', bun_crea: '4.2-32.8', acido_urico: '0.3-0.9', fosforo: '4.1-6.4', calcio: '8.3-10.4', magnesio: '1.9-2.38',
+        albumina: '2.8-3.7', proteinas_totales: '5.8-7.6', globulinas_totales: '2.6-4.5', relacion_alb_glo: '0.5-1.3',
+        pt: '13.0-20.0', aptt: '96.0-124.0'
+      },
+      'De 6 meses a 1 año': {
+        Glucosa: '67-101', AST: '19-72', ALT: '10-36',
+        nitrogeno_ureico: '14-36', urea: '30-60', creatinina: '0.4-1.2', bun_crea: '4.2-32.8', acido_urico: '0.4-1.3', fosforo: '6.2-9.1', calcio: '8.9-10.1', magnesio: '1.9-2.28',
+        albumina: '2.4-3.6', proteinas_totales: '5.3-6.9', globulinas_totales: '2.6-4.5', relacion_alb_glo: '0.5-1.3',
+        pt: '13.0-20.0', aptt: '96.0-124.0'
+      },
+      'De 3 meses a 6 meses': {
+        Glucosa: '61-102', AST: '9-34', ALT: '18-55',
+        nitrogeno_ureico: '19-34', urea: '30-60', creatinina: '0.4-0.9', bun_crea: '4.2-32.8', acido_urico: '0.4-1.1', fosforo: '7.1-9.5', calcio: '9.1-10.9', magnesio: '1.9-2.28',
+        albumina: '2.7-3.6', proteinas_totales: '5.4-6.6', globulinas_totales: '2.6-4.5', relacion_alb_glo: '0.5-1.3',
+        pt: '13.0-20.0', aptt: '96.0-124.0'
+      }
+    },
+    Hembra: {
+      'De 1 año a 12 años': {
+        Glucosa: '65-112', AST: '10-29', ALT: '22-79',
+        nitrogeno_ureico: '19-30', urea: '30-60', creatinina: '0.6-1.7', bun_crea: '4.2-32.8', acido_urico: '0.5-1.4', fosforo: '3.2-6.6', calcio: '7.8-9.2', magnesio: '1.9-2.28',
+        albumina: '2.4-3.0', proteinas_totales: '5.6-7.7', globulinas_totales: '2.6-4.5', relacion_alb_glo: '0.5-1.3',
+        pt: '13.0-20.0', aptt: '96.0-124.0'
+      },
+      'De 3 meses a 6  meses': {
+        Glucosa: '59-99', AST: '10-27', ALT: '19-58',
+        nitrogeno_ureico: '19-33', urea: '30-60', creatinina: '0.4-0.9', bun_crea: '4.2-32.8', acido_urico: '0.4-1.2', fosforo: '6.9-9.5', calcio: '8.9-10.9', magnesio: '1.9-2.28',
+        albumina: '2.5-3.5', proteinas_totales: '5.4-6.8', globulinas_totales: '2.6-4.5', relacion_alb_glo: '0.5-1.3',
+        pt: '13.0-20.0', aptt: '96.0-124.0'
+      },
+      'De 6 meses a 1 año': {
+        Glucosa: '67-102', AST: '11-33', ALT: '25-77',
+        nitrogeno_ureico: '19-37', urea: '30-60', creatinina: '0.3-1.2', bun_crea: '4.2-32.8', acido_urico: '0.3-1.3', fosforo: '4.9-8.3', calcio: '8.5-10.3', magnesio: '1.9-2.28',
+        albumina: '2.5-3.6', proteinas_totales: '5.4-7.2', globulinas_totales: '2.6-4.5', relacion_alb_glo: '0.5-1.3',
+        pt: '13.0-20.0', aptt: '96.0-124.0'
+      }
+    }
+  }
+};
+
+// 2. Función para actualizar los valores de referencia
+function actualizarValoresReferenciaPQ() {
+  const especie = document.getElementById('especieSelector').value;
+  const sexo = document.getElementById('sexoSelector').value;
+  const edad = document.getElementById('edadSelector').value;
+  if (valoresReferenciaPQ[especie] && valoresReferenciaPQ[especie][sexo] && valoresReferenciaPQ[especie][sexo][edad]) {
+    const ref = valoresReferenciaPQ[especie][sexo][edad];
+    for (const key in ref) {
+      const refCell = document.getElementById('ref' + key);
+      if (refCell) refCell.innerText = ref[key].replace(/\./g, ',');
+    }
+  } else {
+    // Limpiar si no hay selección válida
+    const refIds = ['Glucosa','AST','ALT','nitrogeno_ureico','urea','creatinina','bun_crea','acido_urico','fosforo','calcio','magnesio','albumina','proteinas_totales','globulinas_totales','relacion_alb_glo','pt','aptt'];
+    refIds.forEach(id => {
+      const refCell = document.getElementById('ref'+id);
+      if (refCell) refCell.innerText = '';
+    });
+  }
+}
+// 3. Llamar a actualizarValoresReferenciaPQ en los selectores
+['especieSelector','sexoSelector','edadSelector'].forEach(id => {
+  const sel = document.getElementById(id);
+  if (sel) sel.addEventListener('change', actualizarValoresReferenciaPQ);
+});
+
+function actualizarColor(inputId, refId, event) {
+    const inputElement = document.getElementById(inputId);
+    const refElement = document.getElementById(refId);
+    if (!inputElement || !refElement || !refElement.textContent) return;
+    let valorTexto = inputElement.value.trim();
+    valorTexto = valorTexto.replace(/\s*[↑↓]$/, '');
+    if (!valorTexto) {
+        inputElement.style.color = 'black';
+        return;
+    }
+    const valor = parseFloat(valorTexto.replace(',', '.'));
+    if (isNaN(valor)) return;
+    const rangoTexto = refElement.textContent;
+    const coincidencia = rangoTexto.match(/([\d,]+)\s*-\s*([\d,]+)/);
+    if (coincidencia) {
+        const min = parseFloat(coincidencia[1].replace(',', '.'));
+        const max = parseFloat(coincidencia[2].replace(',', '.'));
+        if (valor < min) {
+            inputElement.style.color = '#0096d2'; // Celeste
+            if (event && (event.type === 'blur' || (event.type === 'keydown' && event.key === 'Enter'))) {
+                inputElement.value = valorTexto + ' ↓';
+            }
+        } else if (valor > max) {
+            inputElement.style.color = 'red';
+            if (event && (event.type === 'blur' || (event.type === 'keydown' && event.key === 'Enter'))) {
+                inputElement.value = valorTexto + ' ↑';
+            }
+        } else {
+            inputElement.style.color = 'black';
+            inputElement.value = valorTexto;
+        }
+    }
+}
+// Asignar eventos a todos los campos de resultado relevantes
+const parametrosColor = [
+    { campo: 'Glucosa', ref: 'refGlucosa' },
+    { campo: 'AST', ref: 'refAST' },
+    { campo: 'ALT', ref: 'refALT' },
+    { campo: 'nitrogeno_ureico', ref: 'refnitrogeno_ureico' },
+    { campo: 'urea', ref: 'refurea' },
+    { campo: 'creatinina', ref: 'refcreatinina' },
+    { campo: 'bun_crea', ref: 'refbun_crea' },
+    { campo: 'acido_urico', ref: 'refacido_urico' },
+    { campo: 'fosforo', ref: 'reffosforo' },
+    { campo: 'calcio', ref: 'refcalcio' },
+    { campo: 'magnesio', ref: 'refmagnesio' },
+    { campo: 'albumina', ref: 'refalbumina' },
+    { campo: 'proteinas_totales', ref: 'refproteinas_totales' },
+    { campo: 'globulinas_totales', ref: 'refglobulinas_totales' },
+    { campo: 'relacion_alb_glo', ref: 'refrelacion_alb_glo' },
+    { campo: 'pt', ref: 'refpt' },
+    { campo: 'aptt', ref: 'refaptt' }
+];
+document.addEventListener('DOMContentLoaded', function() {
+    parametrosColor.forEach(param => {
+        const input = document.getElementById(param.campo);
+        if (input) {
+            input.addEventListener('blur', function(event) {
+                actualizarColor(param.campo, param.ref, event);
+            });
+            input.addEventListener('keydown', function(event) {
+                if (event.key === 'Enter') {
+                    actualizarColor(param.campo, param.ref, event);
+                }
+            });
+        }
+    });
+});
+const camposParametros = [
+    'Glucosa', 'AST', 'ALT',
+    'nitrogeno_ureico', 'urea', 'creatinina', 'bun_crea', 'acido_urico', 'fosforo', 'calcio', 'magnesio',
+    'albumina', 'proteinas_totales', 'globulinas_totales', 'relacion_alb_glo',
+    'pt', 'aptt'
+];
+function moverFocoParametros(event) {
+    const actual = event.target.id;
+    const idx = camposParametros.indexOf(actual);
+    if (event.key === 'Enter' || event.key === 'ArrowDown') {
+        event.preventDefault();
+        if (idx !== -1 && idx < camposParametros.length - 1) {
+            document.getElementById(camposParametros[idx + 1]).focus();
+        }
+    } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        if (idx > 0) {
+            document.getElementById(camposParametros[idx - 1]).focus();
+        }
+    }
+}
+document.addEventListener('DOMContentLoaded', function() {
+    camposParametros.forEach(id => {
+        const input = document.getElementById(id);
+        if (input) {
+            // Elimina otros keydown previos para evitar conflictos
+            input.onkeydown = null;
+            input.addEventListener('keydown', function(event) {
+                // Reemplazo de punto por coma
+                if (event.key === '.') {
+                    event.preventDefault();
+                    const cursorPos = this.selectionStart;
+                    const valorActual = this.value;
+                    const nuevoValor = valorActual.slice(0, cursorPos) + ',' + valorActual.slice(cursorPos);
+                    this.value = nuevoValor;
+                    setTimeout(() => {
+                        this.setSelectionRange(cursorPos + 1, cursorPos + 1);
+                    }, 0);
+                    return;
+                }
+                // Navegación
+                moverFocoParametros(event);
+            });
+        }
+    });
+});
+            
+                    </script>
+                </tbody>
+            </table>
+        <h3 class="titulos">Funcionamiento</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th>VALOR DE REFERENCIA</th>
+                    <th>UNIDADES</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Glucosa</td>
+                    <td><input type="text" id="Glucosa"></td>
+                    <td id="refGlucosa">77-126</td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>AST</td>
+                    <td><input type="text" id="AST"></td>
+                    <td id="refAST">14-42</td>
+                    <td>U/L</td>
+                </tr>
+                <tr>
+                    <td>ALT</td>
+                    <td><input type="text" id="ALT"></td>
+                    <td id="refALT">15-52</td>
+                    <td>U/L</td>
+                </tr>
+                <tr>
+                    <td>Nitrógeno Ureico</td>
+                    <td><input type="text" id="nitrogeno_ureico"></td>
+                    <td id="refnitrogeno_ureico">7-23</td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>Urea</td>
+                    <td><input type="text" id="urea"></td>
+                    <td id="refurea">20-50</td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>Creatinina</td>
+                    <td><input type="text" id="creatinina"></td>
+                    <td id="refcreatinina">0,6-1,2</td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>Relación BUN/Crea</td>
+                    <td><input type="text" id="bun_crea"></td>
+                    <td id="refbun_crea">4,2-32,8</td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>Ácido Úrico</td>
+                    <td><input type="text" id="acido_urico"></td>
+                    <td id="refacido_urico">0,5-1,5</td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>Fósforo</td>
+                    <td><input type="text" id="fosforo"></td>
+                    <td id="reffosforo">3,5-6,4</td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>Calcio</td>
+                    <td><input type="text" id="calcio"></td>
+                    <td id="refcalcio">9,0-11,4</td>
+                    <td>mg/dl</td>
+                </tr>
+                <tr>
+                    <td>Magnesio</td>
+                    <td><input type="text" id="magnesio"></td>
+                    <td id="refmagnesio">1,8-3,0</td>
+                    <td>mg/dl</td>
+                </tr>
+            </tbody>
+        </table>
+        <h3 class="titulos">Química Sanguínea</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th>VALOR DE REFERENCIA</th>
+                    <th>UNIDADES</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Albúmina</td>
+                    <td><input type="text" id="albumina"></td>
+                    <td id="refalbumina">2,6-3,6</td>
+                    <td>g/dl</td>
+                </tr>
+                <tr>
+                    <td>Proteínas Totales</td>
+                    <td><input type="text" id="proteinas_totales"></td>
+                    <td id="refproteinas_totales">5,4-7,2</td>
+                    <td>g/dl</td>
+                </tr>
+                <tr>
+                    <td>Globulinas Totales</td>
+                    <td><input type="text" id="globulinas_totales"></td>
+                    <td id="refglobulinas_totales">3,0-4,7</td>
+                    <td>g/dl</td>
+                </tr>
+                <tr>
+                    <td>Relación Albúmina/Globulina</td>
+                    <td><input type="text" id="relacion_alb_glo"></td>
+                    <td id="refrelacion_alb_glo">0,6-1,1</td>
+                    <td></td>
+                </tr>
+            </tbody>
+        </table>
+        <h3 class="titulos">Tiempos de Coagulación</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>PARÁMETRO</th>
+                    <th>RESULTADO</th>
+                    <th>VALOR DE REFERENCIA</th>
+                    <th>UNIDADES</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>PT</td>
+                    <td><input type="text" id="pt"></td>
+                    <td id="refpt">12,0-17,0</td>
+                    <td>S</td>
+                </tr>
+                <tr>
+                    <td>APTT</td>
+                    <td><input type="text" id="aptt"></td>
+                    <td id="refaptt">96,0-116,0</td>
+                    <td>S</td>
+                </tr>
+            </tbody>
+        </table>
+        <h3 class="titulos">Índices de Interferencia</h3>
+        <table>
+            <tbody>
+                <tr>
+                    <td>Suero Hemolítico:</td>
+                    <td><input type="text" id="suero_hemolitico" list="opcionesInterferencia" style="width:140px;"></td>
+                </tr>
+                <tr>
+                    <td>Suero Lipémico:</td>
+                    <td><input type="text" id="suero_lipemico" list="opcionesInterferencia" style="width:140px;"></td>
+                </tr>
+                <tr>
+                    <td>Suero Ictérico:</td>
+                    <td><input type="text" id="suero_icterico" list="opcionesInterferencia" style="width:140px;"></td>
+                </tr>
+            </tbody>
+        </table>
+        <datalist id="opcionesInterferencia">
+            <option value="No se observa">
+            <option value="Se observa">
+        </datalist>
+        <div class="footer">
+            <p id="mensajeMedico" style="display:none">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
+            <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
+            <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
+            <p>Correo: laboratorio@vetsanmartin.com</p>
+        </div>
+    </div>
+    <div class="controls">
+        <button id="pdfButton" onclick="generatePDF()">Generar PDF</button>
+        <button id="menuButton" onclick="window.location.href='index.html'">Volver al Menú</button>
+        <div id="loadingPdf" class="loading-indicator">
+            <div class="spinner"></div>
+            <span>Generando PDF...</span>
+        </div>
+    </div>
+    <script>
+    function actualizarSexoEnPlantilla() {
+        const sexo = document.getElementById('sexoSelector').value;
+        document.getElementById('sexoEnPlantilla').value = sexo.charAt(0).toUpperCase() + sexo.slice(1);
+    }
+    function actualizarEspecieEnPlantilla() {
+        const especie = document.getElementById('especieSelector').value;
+        document.getElementById('especieEnPlantilla').value = especie;
+    }
+    async function generatePDF() {
+        const loadingIndicator = document.getElementById('loadingPdf');
+        const pdfButton = document.getElementById('pdfButton');
+        loadingIndicator.style.display = 'flex';
+        pdfButton.disabled = true;
+        try {
+            if (!window.jspdf || !window.html2canvas) {
+                throw new Error("Las bibliotecas necesarias no están cargadas correctamente");
+            }
+            const { jsPDF } = window.jspdf;
+            const selectedTemplate = document.getElementById('template1');
+            if (!selectedTemplate) {
+                throw new Error('No se encontró la plantilla');
+            }
+            const mascotaNombre = document.getElementById('mascotaNombre').value || 'Sin_nombre';
+            const propietarioNombre = document.getElementById('propietarioNombre').value || 'Sin_apellido';
+            const nombreArray = propietarioNombre.split(' ');
+            const propietarioApellido = nombreArray.length > 1 ? nombreArray[1] : nombreArray[0];
+            const images = selectedTemplate.getElementsByTagName('img');
+            const loadImages = Array.from(images).map(img => {
+                return new Promise((resolve, reject) => {
+                    if (img.complete) {
+                        resolve();
+                    } else {
+                        img.onload = resolve;
+                        img.onerror = reject;
+                    }
+                });
+            });
+            await Promise.all(loadImages);
+            const canvas = await html2canvas(selectedTemplate, {
+                scale: 2,
+                useCORS: true,
+                logging: false,
+                allowTaint: true,
+                backgroundColor: '#ffffff'
+            });
+            const imgData = canvas.toDataURL('image/jpeg', 1.0);
+            const pdf = new jsPDF('p', 'mm', 'a4');
+            const imgWidth = 140;
+            const pageHeight = 297;
+            const imgHeight = (canvas.height * imgWidth) / canvas.width;
+            const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
+            const y = 5;
+            pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+            const fileName = `Perfil Pre Quirúrgico ${mascotaNombre} ${propietarioApellido}.pdf`;
+            pdf.save(fileName);
+        } catch (error) {
+            alert('Error al generar el PDF: ' + error.message);
+        } finally {
+            loadingIndicator.style.display = 'none';
+            pdfButton.disabled = false;
+        }
+    }
+    </script>
+</body>
+</html> 
