@@ -1,10 +1,7 @@
 // Mostrar el botón solo para admin
 function showAdminUsersBtnIfAdmin() {
   if (sessionStorage.getItem('userRole') === 'admin') {
-    const adminUsersBtn = document.getElementById('adminUsersBtn');
-    if (adminUsersBtn) {
-      adminUsersBtn.style.display = 'block';
-    }
+    document.getElementById('adminUsersBtn').style.display = 'block';
     const adminUsersSubmenuBtn = document.getElementById('adminUsersSubmenuBtn');
     if (adminUsersSubmenuBtn) adminUsersSubmenuBtn.style.display = 'block';
   }
@@ -213,14 +210,6 @@ document.addEventListener('DOMContentLoaded', () => {
       openAdminUsersModal();
     });
   }
-
-  // Fallback para botones recreados dinámicamente en el DOM.
-  document.addEventListener('click', (e) => {
-    const trigger = e.target.closest('#adminUsersBtn, #adminUsersSubmenuBtn');
-    if (!trigger) return;
-    e.preventDefault();
-    openAdminUsersModal();
-  });
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
       modal.style.display = 'none';
@@ -550,8 +539,7 @@ async function loadDoctorsIntoSelects() {
       'quirofanoDoctorAtiende',
       'editQuirofanoDoctorAtiende',
       'labMedicoFilter',
-      'editLabMedico',
-      'pendientesReportarDoctorSelect'
+      'editLabMedico'
     ];
     
     selectIds.forEach(selectId => {
@@ -566,8 +554,6 @@ async function loadDoctorsIntoSelects() {
         } else if (selectId === 'editLabMedico') {
           // Para editLabMedico, mantener opciones especiales
           select.innerHTML = '<option value="">Seleccione un médico</option><option value="Medico Externo">Médico Externo</option><option value="Medico Internista">Médico Internista</option><option value="N.A">N.A</option>';
-        } else if (selectId === 'pendientesReportarDoctorSelect') {
-          select.innerHTML = '<option value="">-- Seleccione un médico --</option><option value="Medico Externo">Médico Externo</option><option value="N.A">N.A</option>';
         } else {
           select.innerHTML = firstOption;
         }

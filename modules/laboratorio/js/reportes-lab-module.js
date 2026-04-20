@@ -1,74 +1,8 @@
 // reportes-lab-module.js - Módulo de Reportes de Laboratorio
 
-// URL de la Firebase Cloud Function (actualizar después del deploy)
-const LAB_EMAIL_FUNCTION_URL = 'https://sendlabreport-kfopngff6a-uc.a.run.app';
-
-// Textos de los 5 tipos de mensaje de correo
-const LAB_EMAIL_MESSAGES = {
-  consulta_externa: `Buenas. De parte de laboratorio, es un gusto saludarle.\n\nSe adjuntan los resultados de los exámenes realizados. El médico veterinario encargado cuenta con un plazo de 24 a 48 horas para brindarle el reporte correspondiente.\n\nSi en ese plazo no ha sido contactado por el médico o los resultados aún no han sido reportados, y el paciente presenta una recaída o algún síntoma que comprometa su salud, le solicitamos traerlo a revaloración médica. De esta manera, se podrán interpretar los resultados y brindarle la receta médica correspondiente.\n\nDespués de las 8:00 p.m., puede comunicarse a la central telefónica 4000-1365 para verificar la disponibilidad médica para una revaloración de emergencia.\n\nSi el médico veterinario ya se comunicó con usted, por favor omita este mensaje.\n\nLaboratorio Clínico Veterinario San Martín de Porres\nTel.: 4000-1365 Ext. 106\nWhatsApp: 8839-2214`,
-
-  internos: `Buenas. De parte de laboratorio, es un gusto saludarle.\n\nSe adjuntan los resultados de los exámenes realizados. El médico en turno en el Área de Internamiento le estará brindando el reporte de los mismos durante el siguiente reporte diario del paciente, a excepción que sea una emergencia.\n\nHorario de reportes de internamiento: 9:00am a 2:00pm. Puede variar de acuerdo al estado de los pacientes. La salud de nuestros pacientes es la prioridad. Whatsapp de internamiento 8686-2140, no se aceptan llamadas vía Whatsapp.\n\nLaboratorio Clínico Veterinario San Martin de Porres.\nTel.: 4000 1365 Ext 106  Whatsapp: 8839-2214`,
-
-  paquetes: `Buenas. De parte de laboratorio, es un gusto saludarle.\n\nSe adjunta el hemograma realizado en paquete de castración o de limpieza dental, el cual fue reportado antes del procedimiento.\n\nEn caso de que la mascota presente una recaída que comprometa su salud se recomienda traerla a revaloración de manera inmediata antes de las 7:30pm. Después de las 8:00pm comunicarse a la central telefónica 4000-1365 para verificar la disponibilidad médica para una revaloración de emergencia.\n\nLaboratorio Clínico Veterinario San Martin de Porres.\nTel.: 4000 1365 Ext 106  Whatsapp: 8839-2214`,
-
-  reportado: `Buenas. De parte de laboratorio, es un gusto saludarle.\n\nSe adjunta el Examen realizado, el cual fue reportado en consulta.\n\nEn caso de que la mascota presente una recaída que comprometa su salud se recomienda traerla a revaloración de manera inmediata antes de las 7:30pm. Después de las 8:00pm comunicarse a la central telefónica 4000-1365 para verificar la disponibilidad médica para una revaloración de emergencia.\n\nLaboratorio Clínico Veterinario San Martin de Porres.\nTel.: 4000 1365 Ext 106  Whatsapp: 8839-2214`,
-
-  sin_medico: `Buenas. De parte de laboratorio, es un gusto saludarle.\n\nSe adjunta el Examen realizado.\n\nLaboratorio Clínico Veterinario San Martin de Porres.\nTel.: 4000 1365 Ext 106  Whatsapp: 8839-2214`
-};
-
 // Estado del módulo
 let labReportSelectedClient = null;
 let labReportSelectedTemplate = null;
-
-/** Cola de PDF para un solo correo con varios adjuntos: { id, fileName, pdfDataUrl } */
-const MAX_LAB_EMAIL_ATTACHMENTS = 20;
-let labEmailAttachmentsQueue = [];
-
-function nextLabEmailFileName(baseName) {
-  let name = String(baseName || 'reporte').trim();
-  if (!name.toLowerCase().endsWith('.pdf')) name += '.pdf';
-  const taken = new Set(labEmailAttachmentsQueue.map((a) => a.fileName));
-  if (!taken.has(name)) return name;
-  const dot = name.lastIndexOf('.');
-  const stem = dot > 0 ? name.slice(0, dot) : name;
-  const ext = dot > 0 ? name.slice(dot) : '.pdf';
-  let n = 2;
-  let candidate = `${stem} (${n})${ext}`;
-  while (taken.has(candidate)) {
-    n += 1;
-    candidate = `${stem} (${n})${ext}`;
-  }
-  return candidate;
-}
-
-function renderLabEmailAttachmentsList() {
-  const ul = document.getElementById('labEmailAttachmentsList');
-  const countEl = document.getElementById('labEmailAttachmentCount');
-  if (countEl) countEl.textContent = String(labEmailAttachmentsQueue.length);
-  if (!ul) return;
-  ul.innerHTML = '';
-  labEmailAttachmentsQueue.forEach((item) => {
-    const li = document.createElement('li');
-    li.style.cssText =
-      'display:flex;align-items:center;justify-content:space-between;gap:8px;padding:6px 8px;margin-bottom:4px;background:#fff;border-radius:6px;border:1px solid #ddd;';
-    const span = document.createElement('span');
-    span.style.cssText = 'overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0;';
-    span.title = item.fileName;
-    span.textContent = item.fileName;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.style.cssText =
-      'flex-shrink:0;padding:4px 8px;font-size:11px;border:1px solid #c53030;background:#fff;color:#c53030;border-radius:4px;cursor:pointer;';
-    btn.innerHTML = '<i class="fas fa-times"></i> Quitar';
-    btn.addEventListener('click', () => {
-      labEmailAttachmentsQueue = labEmailAttachmentsQueue.filter((x) => x.id !== item.id);
-      renderLabEmailAttachmentsList();
-    });
-    li.appendChild(span);
-    li.appendChild(btn);
-    ul.appendChild(li);
-  });
-}
 
 // Mapeo de plantillas a archivos HTML del repositorio
 // Las rutas son relativas a index.html que está en la raíz del proyecto
@@ -106,61 +40,6 @@ function capitalizeFirstLetter(text) {
   
   // Para texto que no es nombre propio, aplicar capitalización estándar
   return text.toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
-}
-
-function loadScriptOnce(targetDoc, scriptId, src) {
-  return new Promise((resolve, reject) => {
-    if (!targetDoc) {
-      reject(new Error('Documento no disponible para cargar librerías.'));
-      return;
-    }
-
-    const existing = targetDoc.getElementById(scriptId);
-    if (existing) {
-      if (existing.getAttribute('data-loaded') === 'true') {
-        resolve();
-      } else {
-        existing.addEventListener('load', () => resolve(), { once: true });
-        existing.addEventListener('error', () => reject(new Error(`No se pudo cargar: ${src}`)), { once: true });
-      }
-      return;
-    }
-
-    const script = targetDoc.createElement('script');
-    script.id = scriptId;
-    script.src = src;
-    script.async = true;
-    script.onload = () => {
-      script.setAttribute('data-loaded', 'true');
-      resolve();
-    };
-    script.onerror = () => reject(new Error(`No se pudo cargar: ${src}`));
-    targetDoc.head.appendChild(script);
-  });
-}
-
-async function ensurePdfLibrariesAvailable(iframeWin, parentWin) {
-  const hasJsPdf = () => Boolean(
-    (iframeWin.jspdf && iframeWin.jspdf.jsPDF) ||
-    iframeWin.jsPDF ||
-    (parentWin.jspdf && parentWin.jspdf.jsPDF) ||
-    parentWin.jsPDF
-  );
-  const hasHtml2Canvas = () => Boolean(
-    typeof iframeWin.html2canvas === 'function' ||
-    typeof parentWin.html2canvas === 'function'
-  );
-
-  if (hasJsPdf() && hasHtml2Canvas()) return;
-
-  // Cargar en la ventana principal para reutilizar en todas las plantillas
-  const doc = parentWin.document;
-  await loadScriptOnce(doc, 'lab-html2canvas-loader', 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
-  await loadScriptOnce(doc, 'lab-jspdf-loader', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-
-  if (!hasJsPdf() || !hasHtml2Canvas()) {
-    throw new Error('No se pudieron cargar html2canvas/jsPDF para generar el PDF.');
-  }
 }
 
 // Asegurar inicialización aunque el DOM ya esté listo
@@ -203,7 +82,6 @@ function setupReportesLabEventListeners() {
   const templateCards = document.querySelectorAll('#labReportTemplateGrid .template-card');
   const closeBtn = document.getElementById('closeLabReportBtn');
   const printBtn = document.getElementById('printLabReportBtn');
-  const sendEmailBtn = document.getElementById('sendEmailLabReportBtn');
 
   if (searchBtn) searchBtn.addEventListener('click', searchLabReportClients);
   if (searchInput) {
@@ -229,15 +107,6 @@ function setupReportesLabEventListeners() {
 
   if (closeBtn) closeBtn.addEventListener('click', closeLabReportViewer);
   if (printBtn) printBtn.addEventListener('click', printLabReportFromIframe);
-  if (sendEmailBtn) sendEmailBtn.addEventListener('click', sendLabReportByEmail);
-
-  // Cerrar modal de email al hacer clic fuera del contenido
-  const emailModal = document.getElementById('labEmailModal');
-  if (emailModal) {
-    emailModal.addEventListener('click', (e) => {
-      if (e.target === emailModal) closeLabEmailModal();
-    });
-  }
 }
 
 function renderLabReportTemplates() {
@@ -264,25 +133,6 @@ function renderLabReportTemplates() {
   console.log(`${Object.keys(LAB_REPORT_TEMPLATES).length} plantillas renderizadas`);
 }
 
-/**
- * Marca de tiempo para ordenar tickets (más alto = más reciente).
- * Prioriza fechaCreacion (ISO), luego fecha/fechaServicio, luego id numérico.
- */
-function getLabTicketRecencyTimestamp(t) {
-  if (!t || typeof t !== 'object') return 0;
-  if (t.fechaCreacion) {
-    const ms = new Date(t.fechaCreacion).getTime();
-    if (!Number.isNaN(ms)) return ms;
-  }
-  const fechaAlt = t.fecha || t.fechaServicio;
-  if (fechaAlt) {
-    const ms = new Date(fechaAlt).getTime();
-    if (!Number.isNaN(ms)) return ms;
-  }
-  if (typeof t.id === 'number' && Number.isFinite(t.id)) return t.id;
-  return 0;
-}
-
 function searchLabReportClients() {
   const input = document.getElementById('labReportClientSearch');
   const resultsContainer = document.getElementById('labReportClientResults');
@@ -304,7 +154,7 @@ function searchLabReportClients() {
     return;
   }
 
-  // Unificar por cliente+mascota: conservar siempre el ticket más reciente
+  // Unificar por cliente+mascota
   const clientsMap = new Map();
   source.forEach(t => {
     const match = (
@@ -317,14 +167,12 @@ function searchLabReportClients() {
     if (!match) return;
 
     const key = `${t.cedula || t.idPaciente || t.nombre}|${t.mascota || ''}`;
-    const ts = getLabTicketRecencyTimestamp(t);
-    const prev = clientsMap.get(key);
-    if (!prev || ts > prev.ts) {
-      clientsMap.set(key, { ts, client: normalizeLabTicketToClient(t) });
+    if (!clientsMap.has(key)) {
+      clientsMap.set(key, normalizeLabTicketToClient(t));
     }
   });
 
-  const clients = Array.from(clientsMap.values()).map(entry => entry.client);
+  const clients = Array.from(clientsMap.values());
   displayLabReportClientResults(clients);
 }
 
@@ -336,12 +184,12 @@ function normalizeLabTicketToClient(t) {
     correo: t.correo || '',
     mascota: capitalizeFirstLetter(t.mascota || t.nombreMascota || ''),
     tipoMascota: t.tipoMascota || 'otro',
-    raza: capitalizeFirstLetter(t.raza || t.razaMascota || t.raza_mascota || ''),
+    raza: capitalizeFirstLetter(t.raza || ''),
     edad: (t.edad || '').toLowerCase(), // Convertir edad a minúsculas
     peso: t.peso || '',
     sexo: t.sexo || '',
     idPaciente: t.idPaciente || '',
-    fecha: t.fecha || t.fechaServicio || (t.fechaCreacion ? String(t.fechaCreacion).split('T')[0] : ''),
+    fecha: t.fecha || t.fechaServicio || '',
     medico: t.medicoSolicita || t.medicoAtiende || '', // No aplicar capitalizeFirstLetter a nombres de doctores
     estado: t.estado || '',
     factura: t.factura || t.numFactura || '',
@@ -453,9 +301,7 @@ function openLabReportViewer(templateKey) {
     params.set('mascotaPeso', c.peso || '');
     params.set('mascotaRaza', c.raza || '');
     params.set('mascotaSexo', c.sexo || '');
-    const _especieMap = { perro: 'Canino', gato: 'Felino', conejo: 'Lagomorfo', lagomorfo: 'Lagomorfo', cuilo: 'Cuilo' };
-    const _especieMapped = _especieMap[(c.tipoMascota || '').toLowerCase()] || capitalizeFirstLetter(c.tipoMascota || '');
-    params.set('especie', _especieMapped);
+    params.set('especie', capitalizeFirstLetter(c.tipoMascota || ''));
     params.set('propietarioFecha', c.fecha || '');
     params.set('idPaciente', c.idPaciente || '');
   }
@@ -469,151 +315,6 @@ function openLabReportViewer(templateKey) {
   iframe.style.display = 'block';
   
   iframe.src = url;
-
-  // Inyectar función de captura PDF para email cuando cargue el iframe
-  iframe.onload = function() {
-    try {
-      const iframeWin = iframe.contentWindow;
-      const iframeDoc = iframe.contentDocument || iframeWin.document;
-
-      iframeWin.generatePDFForEmail = async function() {
-        const parentWin = window;
-        await ensurePdfLibrariesAvailable(iframeWin, parentWin);
-
-        // Compatibilidad entre versiones/cargas de jsPDF en plantillas y ventana padre
-        const JsPdfCtor = (iframeWin.jspdf && iframeWin.jspdf.jsPDF)
-          || iframeWin.jsPDF
-          || (parentWin.jspdf && parentWin.jspdf.jsPDF)
-          || parentWin.jsPDF;
-        if (!JsPdfCtor) {
-          throw new Error('jsPDF no disponible en esta plantilla ni en la ventana principal.');
-        }
-        const html2canvasFn = (typeof iframeWin.html2canvas === 'function')
-          ? iframeWin.html2canvas
-          : (typeof parentWin.html2canvas === 'function' ? parentWin.html2canvas : null);
-        if (!html2canvasFn) {
-          throw new Error('html2canvas no disponible en esta plantilla ni en la ventana principal.');
-        }
-
-        // Si la plantilla ya tiene su propia generación de PDF, reutilizarla para
-        // conservar exactamente el formato/CSS del PDF normal.
-        if (typeof iframeWin.generatePDF === 'function') {
-          let capturedDataUri = null;
-          const constructorRestores = [];
-          const patchPdfInstance = (pdfInstance) => {
-            if (!pdfInstance || typeof pdfInstance !== 'object') return pdfInstance;
-
-            const originalSave = typeof pdfInstance.save === 'function' ? pdfInstance.save.bind(pdfInstance) : null;
-            const originalOutput = typeof pdfInstance.output === 'function' ? pdfInstance.output.bind(pdfInstance) : null;
-
-            if (originalOutput) {
-              pdfInstance.output = function patchedOutput(...args) {
-                const outputType = args && args.length ? args[0] : undefined;
-                if (!capturedDataUri && (outputType === 'blob' || outputType === 'arraybuffer')) {
-                  capturedDataUri = originalOutput('datauristring');
-                }
-                return originalOutput(...args);
-              };
-            }
-
-            if (originalSave) {
-              pdfInstance.save = function patchedSave(...args) {
-                if (!capturedDataUri && originalOutput) {
-                  capturedDataUri = originalOutput('datauristring');
-                }
-                return capturedDataUri || originalSave(...args);
-              };
-            }
-
-            return pdfInstance;
-          };
-
-          const wrapJsPdfCtor = (owner, prop) => {
-            if (!owner || !owner[prop] || owner[prop].__labEmailWrapped) return;
-            const OriginalCtor = owner[prop];
-            const WrappedCtor = function wrappedJsPdfCtor(...args) {
-              const pdfInstance = new OriginalCtor(...args);
-              return patchPdfInstance(pdfInstance);
-            };
-            WrappedCtor.prototype = OriginalCtor.prototype;
-            WrappedCtor.__labEmailWrapped = true;
-            owner[prop] = WrappedCtor;
-            constructorRestores.push(() => { owner[prop] = OriginalCtor; });
-          };
-
-          wrapJsPdfCtor(iframeWin, 'jsPDF');
-          if (iframeWin.jspdf && iframeWin.jspdf.jsPDF) {
-            wrapJsPdfCtor(iframeWin.jspdf, 'jsPDF');
-          }
-
-          // Capturar también en APIs de guardado modernas usadas por algunas plantillas.
-          const originalShowSaveFilePicker = iframeWin.showSaveFilePicker;
-          iframeWin.showSaveFilePicker = async function patchedShowSaveFilePicker() {
-            const err = new Error('Email mode - skip local save dialog');
-            err.name = 'AbortError';
-            throw err;
-          };
-
-          try {
-            await Promise.resolve(iframeWin.generatePDF());
-            if (capturedDataUri) return capturedDataUri;
-          } finally {
-            constructorRestores.forEach((restore) => restore());
-            iframeWin.showSaveFilePicker = originalShowSaveFilePicker;
-          }
-        }
-
-        // Intentar encontrar el elemento de la plantilla (varía por template)
-        const el = iframeDoc.getElementById('template1')
-          || iframeDoc.querySelector('.container')
-          || iframeDoc.querySelector('.report-container')
-          || iframeDoc.querySelector('[id*="Page"]')
-          || iframeDoc.body;
-
-        if (!el) throw new Error('No se encontró el elemento de la plantilla');
-
-        const canvas = await html2canvasFn(el, {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          allowTaint: true,
-          backgroundColor: '#ffffff'
-        });
-
-        const imgData = canvas.toDataURL('image/jpeg', 1.0);
-        const pdf = new JsPdfCtor('p', 'mm', 'a4');
-        const imgWidth = 150;
-        const pageHeight = 297;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-        const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
-
-        // Manejar reportes multipágina
-        let posY = 5;
-        let remainingHeight = imgHeight;
-        let sourceY = 0;
-
-        while (remainingHeight > 0) {
-          const sliceHeight = Math.min(remainingHeight, pageHeight - 10);
-          const sliceCanvas = iframeDoc.createElement('canvas');
-          sliceCanvas.width = canvas.width;
-          sliceCanvas.height = (sliceHeight * canvas.width) / imgWidth;
-          const ctx = sliceCanvas.getContext('2d');
-          ctx.drawImage(canvas, 0, sourceY * (canvas.width / imgWidth), canvas.width, sliceCanvas.height, 0, 0, sliceCanvas.width, sliceCanvas.height);
-          const sliceData = sliceCanvas.toDataURL('image/jpeg', 1.0);
-          if (sourceY > 0) pdf.addPage();
-          pdf.addImage(sliceData, 'JPEG', x, posY, imgWidth, sliceHeight);
-          sourceY += sliceHeight;
-          remainingHeight -= sliceHeight;
-        }
-
-        return pdf.output('datauristring');
-      };
-      console.log('✅ generatePDFForEmail inyectado en iframe');
-    } catch (e) {
-      console.warn('No se pudo inyectar generatePDFForEmail en el iframe:', e);
-    }
-  };
-
   container.style.display = 'block';
   container.scrollIntoView({ behavior: 'smooth' });
   
@@ -651,198 +352,14 @@ function showLabReportNotification(message, type = 'info') {
     showNotification(message, type);
     return;
   }
+  // Fallback simple
   console.log(`[${type.toUpperCase()}] ${message}`);
 }
-
-// ─── ENVÍO POR EMAIL ─────────────────────────────────────────────────────────
-
-function sendLabReportByEmail() {
-  const iframe = document.getElementById('labReportIframe');
-
-  if (!iframe || !iframe.src || iframe.src === window.location.href) {
-    showLabReportNotification('Primero debes abrir un reporte.', 'warning');
-    return;
-  }
-
-  const emailValue = labReportSelectedClient ? (labReportSelectedClient.correo || '') : '';
-
-  // Prellenar el campo de email en el modal
-  const recipientInput = document.getElementById('labEmailRecipient');
-  if (recipientInput) recipientInput.value = emailValue;
-
-  // Mostrar el primer mensaje por defecto en el preview
-  updateLabEmailPreview();
-  renderLabEmailAttachmentsList();
-
-  // Abrir el modal
-  const modal = document.getElementById('labEmailModal');
-  if (modal) modal.style.display = 'flex';
-}
-
-async function addCurrentReportToLabEmailQueue() {
-  const iframe = document.getElementById('labReportIframe');
-  if (!iframe || !iframe.src || iframe.src === window.location.href) {
-    showLabReportNotification('Primero debes abrir un reporte.', 'warning');
-    return;
-  }
-  if (!iframe.contentWindow || typeof iframe.contentWindow.generatePDFForEmail !== 'function') {
-    showLabReportNotification('El reporte aún no está listo para generar el PDF. Espere a que cargue.', 'warning');
-    return;
-  }
-  if (labEmailAttachmentsQueue.length >= MAX_LAB_EMAIL_ATTACHMENTS) {
-    showLabReportNotification(`Máximo ${MAX_LAB_EMAIL_ATTACHMENTS} adjuntos por correo.`, 'warning');
-    return;
-  }
-
-  const addBtn = document.getElementById('addToLabEmailQueueBtn');
-  if (addBtn) {
-    addBtn.disabled = true;
-  }
-
-  try {
-    const pdfDataUrl = await iframe.contentWindow.generatePDFForEmail();
-    const templateName = labReportSelectedTemplate
-      ? (LAB_REPORT_TEMPLATES[labReportSelectedTemplate]?.name || 'Reporte')
-      : 'Reporte';
-    const petName = labReportSelectedClient?.mascota || 'Paciente';
-    const fileName = nextLabEmailFileName(`${templateName} - ${petName}.pdf`);
-    labEmailAttachmentsQueue.push({
-      id: `lab-att-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
-      fileName,
-      pdfDataUrl
-    });
-    renderLabEmailAttachmentsList();
-    showLabReportNotification(`Añadido: ${fileName} (${labEmailAttachmentsQueue.length} en cola)`, 'success');
-  } catch (err) {
-    console.error('addCurrentReportToLabEmailQueue:', err);
-    showLabReportNotification(`No se pudo añadir el PDF: ${err.message}`, 'error');
-  } finally {
-    if (addBtn) addBtn.disabled = false;
-  }
-}
-
-function updateLabEmailPreview() {
-  const select = document.getElementById('labEmailMessageType');
-  const preview = document.getElementById('labEmailPreview');
-  if (!select || !preview) return;
-  const key = select.value;
-  preview.value = LAB_EMAIL_MESSAGES[key] || '';
-}
-
-function closeLabEmailModal() {
-  const modal = document.getElementById('labEmailModal');
-  if (modal) modal.style.display = 'none';
-}
-
-async function confirmSendLabEmail() {
-  const recipientInput = document.getElementById('labEmailRecipient');
-  const messageTypeSelect = document.getElementById('labEmailMessageType');
-  const confirmBtn = document.getElementById('confirmSendEmailBtn');
-  const iframe = document.getElementById('labReportIframe');
-
-  const to = (recipientInput?.value || '').trim();
-  const messageType = messageTypeSelect?.value || 'sin_medico';
-
-  if (!to || !to.includes('@')) {
-    showLabReportNotification('Ingresa un correo electrónico válido.', 'warning');
-    return;
-  }
-
-  const clientName = labReportSelectedClient?.nombre || 'Propietario';
-  const petName = labReportSelectedClient?.mascota || 'Paciente';
-  const templateName = labReportSelectedTemplate
-    ? (LAB_REPORT_TEMPLATES[labReportSelectedTemplate]?.name || 'Reporte')
-    : 'Reporte';
-  const defaultFileName = `${templateName} - ${petName}.pdf`;
-
-  let attachmentsPayload;
-
-  if (labEmailAttachmentsQueue.length > 0) {
-    attachmentsPayload = labEmailAttachmentsQueue.map((a) => ({
-      fileName: a.fileName,
-      pdfBase64: a.pdfDataUrl
-    }));
-  } else {
-    if (!iframe || !iframe.contentWindow || typeof iframe.contentWindow.generatePDFForEmail !== 'function') {
-      showLabReportNotification('El reporte aún no está listo para generar el PDF. Espera a que cargue completamente.', 'warning');
-      return;
-    }
-    if (confirmBtn) {
-      confirmBtn.disabled = true;
-      confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generando PDF...';
-    }
-    try {
-      const pdfDataUrl = await iframe.contentWindow.generatePDFForEmail();
-      attachmentsPayload = [{ fileName: defaultFileName, pdfBase64: pdfDataUrl }];
-    } catch (err) {
-      console.error('confirmSendLabEmail (PDF único):', err);
-      showLabReportNotification(`Error al generar el PDF: ${err.message}`, 'error');
-      if (confirmBtn) {
-        confirmBtn.disabled = false;
-        confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Confirmar Envío';
-      }
-      return;
-    }
-  }
-
-  if (confirmBtn) {
-    confirmBtn.disabled = true;
-    confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
-  }
-
-  try {
-    const payload = {
-      to,
-      messageType,
-      clientName,
-      petName,
-      attachments: attachmentsPayload
-    };
-
-    const response = await fetch(LAB_EMAIL_FUNCTION_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const result = await response.json();
-
-    if (!response.ok || result.error) {
-      throw new Error(result.error || `Error del servidor: ${response.status}`);
-    }
-
-    labEmailAttachmentsQueue = [];
-    renderLabEmailAttachmentsList();
-    closeLabEmailModal();
-    const n = attachmentsPayload.length;
-    showLabReportNotification(
-      n > 1
-        ? `✅ ${n} reportes enviados correctamente a ${to}`
-        : `✅ Reporte enviado correctamente a ${to}`,
-      'success'
-    );
-  } catch (err) {
-    console.error('Error al enviar el reporte por email:', err);
-    showLabReportNotification(`Error al enviar: ${err.message}`, 'error');
-  } finally {
-    if (confirmBtn) {
-      confirmBtn.disabled = false;
-      confirmBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Confirmar Envío';
-    }
-  }
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
 
 // Exponer funciones globales usadas desde HTML
 window.selectLabReportClient = selectLabReportClient;
 window.initReportesLabModule = initReportesLabModule;
 window.capitalizeFirstLetter = capitalizeFirstLetter;
-window.sendLabReportByEmail = sendLabReportByEmail;
-window.updateLabEmailPreview = updateLabEmailPreview;
-window.closeLabEmailModal = closeLabEmailModal;
-window.confirmSendLabEmail = confirmSendLabEmail;
-window.addCurrentReportToLabEmailQueue = addCurrentReportToLabEmailQueue;
 
 console.log('reportes-lab-module.js cargado');
 

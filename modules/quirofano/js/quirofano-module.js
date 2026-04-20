@@ -1034,21 +1034,6 @@ function editQuirofanoTicket(randomId) {
                                     <option value="realizado" ${ticket.examenesStatus === 'realizado' ? 'selected' : ''}>✅ Realizados</option>
                                 </select>
                             </div>
-
-                            <!-- Checkbox: Exámenes revisados (solo cuando el ticket está listo para cirugía) -->
-                            <div id="editExamenesRevisadosContainer" style="display: ${ticket.estado === 'listo-para-cirugia' ? 'block' : 'none'}; margin-top: 10px;">
-                                <label for="editQuirofanoExamenesRevisados" style="font-size: 14px;">
-                                    <input type="checkbox"
-                                           id="editQuirofanoExamenesRevisados"
-                                           name="examenesRevisados"
-                                           ${ticket.examenesRevisados ? 'checked' : ''}
-                                           style="margin-right: 8px;">
-                                    Exámenes Revisados
-                                </label>
-                                <small style="display: block; color: #666; margin-top: 4px;">
-                                    Marque cuando los exámenes ya hayan sido revisados.
-                                </small>
-                            </div>
                         </div>
                         <div class="form-group">
                             <!-- Campo vacío para mantener estructura -->
@@ -1133,15 +1118,6 @@ function editQuirofanoTicket(randomId) {
             }
         });
     }
-
-    // Mostrar/ocultar "Exámenes revisados" según el estado seleccionado
-    const editEstadoSelect = document.getElementById('editQuirofanoEstado');
-    const editExamenesRevisadosContainer = document.getElementById('editExamenesRevisadosContainer');
-    if (editEstadoSelect && editExamenesRevisadosContainer) {
-        editEstadoSelect.addEventListener('change', function() {
-            editExamenesRevisadosContainer.style.display = this.value === 'listo-para-cirugia' ? 'block' : 'none';
-        });
-    }
     
     // Event listener para el checkbox de vía en edición
     const editViaCheckbox = document.getElementById('editQuirofanoVia');
@@ -1183,8 +1159,6 @@ function handleQuirofanoEdit(e) {
         medicoAtiende = asistenteAtiende;
     }
     
-    const editExamenesRevisadosCheckbox = document.getElementById('editQuirofanoExamenesRevisados');
-
     const updatedData = {
         ...ticket,
         nombreMascota: document.getElementById('editQuirofanoMascota').value,
@@ -1210,7 +1184,6 @@ function handleQuirofanoEdit(e) {
         estado: document.getElementById('editQuirofanoEstado').value,
         observaciones: document.getElementById('editQuirofanoMotivo').value,
         examenesPrequirurgicos: document.getElementById('editQuirofanoExamenesPrequirurgicos').checked,
-        examenesRevisados: editExamenesRevisadosCheckbox ? editExamenesRevisadosCheckbox.checked : false,
         examenesStatus: document.getElementById('editQuirofanoExamenesPrequirurgicos').checked ? 
             document.getElementById('editQuirofanoExamenesStatus').value : null,
         via: document.getElementById('editQuirofanoVia') ? document.getElementById('editQuirofanoVia').checked : false,
@@ -1223,12 +1196,6 @@ function handleQuirofanoEdit(e) {
     // Actualizar horas automáticamente según el cambio de estado
     const nuevoEstado = document.getElementById('editQuirofanoEstado').value;
     const estadoAnterior = ticket.estado;
-
-    // Regla: no permitir pasar a "terminado" si no están los exámenes revisados
-    if (nuevoEstado === 'terminado' && !updatedData.examenesRevisados) {
-        showNotification('Para marcar como terminado se deben tener "Exámenes revisados" activado.', 'warning');
-        return;
-    }
     
     // Si cambia a "cirugia" y no tenía hora de atención, agregarla
     if (nuevoEstado === 'cirugia' && estadoAnterior !== 'cirugia' && !ticket.horaAtencion) {
@@ -1244,11 +1211,6 @@ function handleQuirofanoEdit(e) {
     quirofanoFirebaseRef.child(ticket.firebaseKey).update(updatedData)
         .then(() => {
             try {
-                // Mantener consistencia en memoria local para evitar carreras
-                const index = window.quirofanoTickets.findIndex(t => t.randomId === quirofanoCurrentEditingId);
-                if (index !== -1) {
-                    window.quirofanoTickets[index] = updatedData;
-                }
                 showNotification('Ticket actualizado exitosamente', 'success');
                 closeQuirofanoModal();
                 loadQuirofanoTickets();
@@ -1390,12 +1352,6 @@ function endQuirofanoSurgery(randomId) {
 
     if (ticket.estado === 'terminado') {
         showNotification('Esta cirugía ya está terminada', 'info');
-        return;
-    }
-
-    // Regla: no permitir pasar a "terminado" sin el check "Exámenes revisados"
-    if (!ticket.examenesRevisados) {
-        showNotification('Para terminar la cirugía se deben tener "Exámenes revisados" activado.', 'warning');
         return;
     }
 

@@ -25,18 +25,19 @@ class PatientDatabase {
 
     setupListeners() {
         if (!this.patientsRef) return;
-        // Usar child_added/changed/removed en lugar de on('value') para que
-        // cambios individuales solo descarguen el nodo afectado, no todo el árbol.
-        // El primer child_added envía todos los pacientes existentes; los siguientes
-        // solo envían el paciente nuevo/modificado.
-        this.patientsRef.on('child_added', (snapshot) => {
-            this.patients.set(snapshot.key, snapshot.val());
-        });
-        this.patientsRef.on('child_changed', (snapshot) => {
-            this.patients.set(snapshot.key, snapshot.val());
-        });
-        this.patientsRef.on('child_removed', (snapshot) => {
-            this.patients.delete(snapshot.key);
+        // Listener para cargar todos los pacientes
+        this.patientsRef.on('value', (snapshot) => {
+
+            if (snapshot.exists()) {
+                const data = snapshot.val();
+                this.patients.clear();
+                
+                Object.entries(data).forEach(([cedula, patientData]) => {
+                    this.patients.set(cedula, patientData);
+                });
+                
+                console.log(`📊 Cargados ${this.patients.size} pacientes en cache`);
+            }
         });
     }
 

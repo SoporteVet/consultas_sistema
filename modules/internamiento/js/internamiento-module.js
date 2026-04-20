@@ -55,37 +55,24 @@ class InternamientoModule {
     setupFirebaseListeners() {
         if (!this.internamientosRef) return;
 
-        // Usar child_added/changed/removed para que cambios individuales solo descarguen
-        // el internamiento afectado. Se aplica debounce para consolidar la primera carga
-        // (donde child_added dispara para cada registro existente).
-        let refreshTimer = null;
-        const scheduleRefresh = () => {
-            clearTimeout(refreshTimer);
-            refreshTimer = setTimeout(() => this.refreshInternamientosList(), 200);
-        };
+        // Listener para internamientos activos
+        const activeListener = this.internamientosRef
+            .orderByChild('estado/actual')
+            .on('value', (snapshot) => {
+                this.internamientos.clear();
+                
+                if (snapshot.exists()) {
+                    snapshot.forEach((childSnapshot) => {
+                        const data = childSnapshot.val();
+                        this.internamientos.set(childSnapshot.key, data);
+                    });
+                    
+                    console.log(`📊 Cargados ${this.internamientos.size} internamientos`);
+                    this.refreshInternamientosList();
+                }
+            });
 
-        const handleAdded = (snapshot) => {
-            this.internamientos.set(snapshot.key, snapshot.val());
-            scheduleRefresh();
-        };
-        const handleChanged = (snapshot) => {
-            this.internamientos.set(snapshot.key, snapshot.val());
-            scheduleRefresh();
-        };
-        const handleRemoved = (snapshot) => {
-            this.internamientos.delete(snapshot.key);
-            scheduleRefresh();
-        };
-
-        this.internamientosRef.on('child_added', handleAdded);
-        this.internamientosRef.on('child_changed', handleChanged);
-        this.internamientosRef.on('child_removed', handleRemoved);
-
-        this.listeners.push(
-            { type: 'child_added', fn: handleAdded },
-            { type: 'child_changed', fn: handleChanged },
-            { type: 'child_removed', fn: handleRemoved }
-        );
+        this.listeners.push(activeListener);
     }
 
     // ================================================================
@@ -2006,11 +1993,11 @@ class InternamientoModule {
     // ================================================================
     
     destroy() {
-        this.listeners.forEach(item => {
+        // Limpiar listeners
+        this.listeners.forEach(listener => {
+            // Firebase off() para cada listener
             if (this.internamientosRef) {
-                const type = (item && item.type) ? item.type : 'value';
-                const fn   = (item && item.fn)   ? item.fn   : item;
-                this.internamientosRef.off(type, fn);
+                this.internamientosRef.off('value', listener);
             }
         });
         

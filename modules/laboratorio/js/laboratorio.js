@@ -89,31 +89,44 @@ function initLaboratorioSystem() {
     }
 }
 
-// Cargar datos de clientes desde window.tickets (mantenido por index.js)
-// y actualizarse cuando cambian los tickets mediante evento 'ticketsChanged'
+// Cargar datos de clientes desde Firebase tickets y configurar actualización en tiempo real
 function setupClientesDataListener() {
     try {
-        // Usar window.tickets ya cargado por index.js si está disponible,
-        // de lo contrario hacer una lectura única como fallback
-        const buildFromWindowTickets = () => {
-            if (!window.tickets || window.tickets.length === 0) return false;
-            const data = {};
-            window.tickets.forEach(t => { if (t.firebaseKey) data[t.firebaseKey] = t; });
-            updateClientesDataFromSnapshot({ val: () => data, exists: () => true });
-            return true;
-        };
-
-        if (!buildFromWindowTickets() && window.database) {
-            window.database.ref('tickets').once('value')
-                .then(updateClientesDataFromSnapshot)
-                .catch(() => {});
+        if (!window.database) {
+            return;
         }
 
-        // Actualizar cuando index.js notifique cambios en tickets
-        document.addEventListener('ticketsChanged', () => {
-            buildFromWindowTickets();
+        const ticketsRef = window.database.ref('tickets');
+        
+        // PRIMERA CARGA: Obtener datos iniciales una sola vez
+        ticketsRef.once('value')
+            .then((snapshot) => {
+                updateClientesDataFromSnapshot(snapshot);
+            })
+            .catch((error) => {
+                // Error silencioso
+            });
+        
+        // Configurar listener en tiempo real para tickets (para cambios futuros)
+        ticketsRef.on('value', (snapshot) => {
+            updateClientesDataFromSnapshot(snapshot);
         });
-
+        
+        // También escuchar cambios específicos para optimizar
+        ticketsRef.on('child_added', (snapshot) => {
+            const ticket = snapshot.val();
+            if (ticket) {
+                addClienteFromTicket(ticket);
+            }
+        });
+        
+        ticketsRef.on('child_changed', (snapshot) => {
+            const ticket = snapshot.val();
+            if (ticket) {
+                updateClienteFromTicket(ticket);
+            }
+        });
+        
     } catch (error) {
         // Error silencioso
     }
@@ -1380,18 +1393,6 @@ function showLabSection(sectionId) {
                         // Error silencioso
                     }
                 }
-            }, 100);
-        } else if (sectionId === 'pendientesReportarSection') {
-            const pendientesBtn = document.getElementById('pendientesReportarLabBtn');
-            if (pendientesBtn) {
-                pendientesBtn.classList.add('active');
-                if (typeof setActiveButton === 'function') {
-                    setActiveButton(pendientesBtn);
-                }
-            }
-            // Cargar doctores en el selector y resetear la vista
-            setTimeout(() => {
-                initPendientesReportarSection();
             }, 100);
         }
         
@@ -3707,352 +3708,4 @@ function getUserReportOption(ticket) {
         <option value="reportado_cliente" ${ticket.estado === 'reportado_cliente' ? 'selected' : ''}>Reportado al Cliente</option>
         <option value="cliente_no_contesta" ${ticket.estado === 'cliente_no_contesta' ? 'selected' : ''}>Cliente no contesta</option>
     `;
-}
-
-// ============================================================
-// MÓDULO: PENDIENTES POR REPORTAR
-// ============================================================
-
-// Inicializar la sección Pendientes por Reportar
-function initPendientesReportarSection() {
-    const select = document.getElementById('pendientesReportarDoctorSelect');
-    if (!select) return;
-
-    // Cargar doctores dinámicamente
-    if (window.loadDoctorsIntoSelects) {
-        loadDoctorsIntoSelects();
-    }
-
-    // Configurar rango de fechas por defecto (últimas 48 horas hasta hoy)
-    setDefaultPendientesDateRange();
-
-    // Resetear vista
-    select.value = '';
-    document.getElementById('pendientesReportarAlerta').style.display = 'none';
-    document.getElementById('pendientesReportarResumen').style.display = 'none';
-    document.getElementById('pendientesReportarContainer').innerHTML = `
-        <div class="pendientes-placeholder">
-            <i class="fas fa-user-md" style="font-size:2.5rem;color:#bdc3c7;margin-bottom:10px;"></i>
-            <p>Seleccione un médico para ver sus pacientes pendientes por reportar.</p>
-        </div>`;
-}
-
-// Formatear fecha local a YYYY-MM-DD
-function formatLocalDateToYMD(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-}
-
-// Establecer rango de fechas por defecto (48 horas atrás hasta hoy)
-function setDefaultPendientesDateRange() {
-    const desdeInput = document.getElementById('pendientesReportarDesde');
-    const hastaInput = document.getElementById('pendientesReportarHasta');
-    if (!desdeInput || !hastaInput) return;
-
-    const now = new Date();
-    const fortyEightHoursAgo = new Date(now.getTime() - (48 * 60 * 60 * 1000));
-    desdeInput.value = formatLocalDateToYMD(fortyEightHoursAgo);
-    hastaInput.value = formatLocalDateToYMD(now);
-}
-
-// Obtener fecha/hora base del ticket para filtrar pendientes
-function getPendientesTicketDate(ticket) {
-    const fechaStr = ticket.fechaReportado || ticket.fechaCreacion || ticket.fecha;
-    const horaStr = ticket.horaReportado || ticket.horaCreacion || '00:00';
-    if (!fechaStr) return null;
-
-    const parsed = new Date(`${fechaStr}T${horaStr}`);
-    if (!isNaN(parsed.getTime())) return parsed;
-
-    // Fallback cuando la hora no viene compatible
-    const fallback = new Date(fechaStr);
-    return isNaN(fallback.getTime()) ? null : fallback;
-}
-
-// Aplicar filtro de rango de fechas manualmente
-function applyPendientesDateRangeFilter() {
-    const medico = document.getElementById('pendientesReportarDoctorSelect')?.value;
-    if (!medico) return;
-    renderPendientesReportar(medico);
-}
-
-// Callback al cambiar el médico seleccionado
-function onPendientesReportarDoctorChange(medicoNombre) {
-    const alerta = document.getElementById('pendientesReportarAlerta');
-    const resumen = document.getElementById('pendientesReportarResumen');
-    const container = document.getElementById('pendientesReportarContainer');
-
-    if (!medicoNombre) {
-        alerta.style.display = 'none';
-        resumen.style.display = 'none';
-        container.innerHTML = `
-            <div class="pendientes-placeholder">
-                <i class="fas fa-user-md" style="font-size:2.5rem;color:#bdc3c7;margin-bottom:10px;"></i>
-                <p>Seleccione un médico para ver sus pacientes pendientes por reportar.</p>
-            </div>`;
-        return;
-    }
-
-    renderPendientesReportar(medicoNombre);
-}
-
-// Calcular si un ticket tiene más de 48 horas desde su creación/estado reportado
-function ticketSuperaLimite48h(ticket) {
-    const fechaStr = ticket.fechaReportado || ticket.fechaCreacion || ticket.fecha;
-    const horaStr = ticket.horaReportado || ticket.horaCreacion || '00:00';
-
-    if (!fechaStr) return false;
-
-    const fechaHora = new Date(`${fechaStr}T${horaStr}`);
-    if (isNaN(fechaHora.getTime())) return false;
-
-    const ahora = new Date();
-    const diffMs = ahora - fechaHora;
-    const diffHoras = diffMs / (1000 * 60 * 60);
-    return diffHoras > 48;
-}
-
-// Formatear tiempo transcurrido desde la fecha del ticket
-function formatTiempoTranscurrido(ticket) {
-    const fechaStr = ticket.fechaReportado || ticket.fechaCreacion || ticket.fecha;
-    const horaStr = ticket.horaReportado || ticket.horaCreacion || '00:00';
-
-    if (!fechaStr) return 'Fecha desconocida';
-
-    const fechaHora = new Date(`${fechaStr}T${horaStr}`);
-    if (isNaN(fechaHora.getTime())) return 'Fecha inválida';
-
-    const ahora = new Date();
-    const diffMs = ahora - fechaHora;
-    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
-    const diffDias = Math.floor(diffHoras / 24);
-    const horasRestantes = diffHoras % 24;
-
-    if (diffDias > 0) {
-        return `${diffDias} día${diffDias > 1 ? 's' : ''} y ${horasRestantes}h`;
-    }
-    return `${diffHoras}h`;
-}
-
-// Obtener nombre legible de los servicios del ticket
-function getServicesNamesForPendientes(ticket) {
-    if (!ticket.serviciosSeleccionados || ticket.serviciosSeleccionados.length === 0) {
-        return '<em style="color:#aaa;">Sin servicios registrados</em>';
-    }
-    return ticket.serviciosSeleccionados.map(s => `<span class="pendiente-servicio-tag">${s.nombre || s}</span>`).join(' ');
-}
-
-// Renderizar la lista de pendientes para un médico dado
-function renderPendientesReportar(medicoNombre) {
-    const container = document.getElementById('pendientesReportarContainer');
-    const alerta = document.getElementById('pendientesReportarAlerta');
-    const resumen = document.getElementById('pendientesReportarResumen');
-
-    container.innerHTML = '<div class="pendientes-loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
-
-    // Usar los tickets ya cargados en memoria
-    const allTickets = window.labTickets || labTickets || [];
-
-    // Filtrar por empresa
-    const currentEmpresa = typeof getCurrentEmpresa === 'function' ? getCurrentEmpresa() : null;
-    let tickets = allTickets.filter(t => {
-        if (currentEmpresa) {
-            if (!t.empresa) return currentEmpresa === 'veterinaria_smp';
-            return t.empresa === currentEmpresa;
-        }
-        return true;
-    });
-
-    // Filtrar por estado "reportado" (reportado por lab, pendiente de reportar al cliente)
-    tickets = tickets.filter(t => t.estado === 'reportado');
-
-    // Filtrar por médico seleccionado
-    tickets = tickets.filter(t =>
-        t.medicoSolicita && t.medicoSolicita.toLowerCase().includes(medicoNombre.toLowerCase())
-    );
-
-    // Filtrar por rango de fechas seleccionado
-    const desdeInput = document.getElementById('pendientesReportarDesde');
-    const hastaInput = document.getElementById('pendientesReportarHasta');
-    const desdeValue = desdeInput ? desdeInput.value : '';
-    const hastaValue = hastaInput ? hastaInput.value : '';
-
-    if (desdeValue || hastaValue) {
-        const desdeDate = desdeValue ? new Date(`${desdeValue}T00:00:00`) : null;
-        const hastaDate = hastaValue ? new Date(`${hastaValue}T23:59:59`) : null;
-
-        tickets = tickets.filter(ticket => {
-            const ticketDate = getPendientesTicketDate(ticket);
-            if (!ticketDate) return false;
-            if (desdeDate && ticketDate < desdeDate) return false;
-            if (hastaDate && ticketDate > hastaDate) return false;
-            return true;
-        });
-    }
-
-    // Detectar tickets con más de 48 horas
-    const ticketsVencidos = tickets.filter(ticketSuperaLimite48h);
-
-    // Actualizar contadores
-    document.getElementById('pendientesTotalCount').textContent = tickets.length;
-    document.getElementById('pendientesVencidosCount').textContent = ticketsVencidos.length;
-    resumen.style.display = tickets.length > 0 ? 'flex' : 'none';
-
-    // Mostrar alerta si hay tickets vencidos
-    if (ticketsVencidos.length > 0) {
-        const nombres = ticketsVencidos.map(t => `${t.mascota} (${t.nombre})`).join(', ');
-        document.getElementById('pendientesReportarAlertaMsg').innerHTML =
-            `<strong>¡Atención!</strong> Los siguientes pacientes llevan más de 48 horas sin ser reportados al dueño: <br><strong>${nombres}</strong>`;
-        alerta.style.display = 'flex';
-    } else {
-        alerta.style.display = 'none';
-    }
-
-    if (tickets.length === 0) {
-        container.innerHTML = `
-            <div class="no-tickets">
-                <i class="fas fa-check-circle" style="font-size:3rem;color:#27ae60;margin-bottom:15px;"></i>
-                <h3>¡Todo al día!</h3>
-                <p>No hay exámenes pendientes por reportar para <strong>${medicoNombre}</strong> en el rango de fechas seleccionado.</p>
-            </div>`;
-        return;
-    }
-
-    // Ordenar: vencidos primero, luego por fecha más antigua
-    tickets.sort((a, b) => {
-        const aVencido = ticketSuperaLimite48h(a) ? 0 : 1;
-        const bVencido = ticketSuperaLimite48h(b) ? 0 : 1;
-        if (aVencido !== bVencido) return aVencido - bVencido;
-        const dateA = new Date(`${a.fechaCreacion || a.fecha}T${a.horaCreacion || '00:00'}`);
-        const dateB = new Date(`${b.fechaCreacion || b.fecha}T${b.horaCreacion || '00:00'}`);
-        return dateA - dateB;
-    });
-
-    container.innerHTML = '';
-
-    tickets.forEach(ticket => {
-        const esVencido = ticketSuperaLimite48h(ticket);
-        const tiempoTexto = formatTiempoTranscurrido(ticket);
-        const animalIcon = typeof getAnimalIcon === 'function' ? getAnimalIcon(ticket.tipoMascota) : '🐾';
-
-        const card = document.createElement('div');
-        card.className = `pendiente-card${esVencido ? ' pendiente-card--vencido' : ''}`;
-        card.setAttribute('data-ticket-id', ticket.randomId || ticket.firebaseKey);
-
-        card.innerHTML = `
-            <div class="pendiente-card-header">
-                <div class="pendiente-card-titulo">
-                    <span class="pendiente-animal-icon">${animalIcon}</span>
-                    <strong class="pendiente-mascota">${ticket.mascota || 'Sin nombre'}</strong>
-                    <span class="pendiente-cliente">${ticket.nombre || ''}</span>
-                </div>
-                <div class="pendiente-card-badges">
-                    ${esVencido ? `<span class="badge-vencido"><i class="fas fa-exclamation-triangle"></i> +48h sin reportar</span>` : ''}
-                    <span class="badge-tiempo"><i class="fas fa-clock"></i> Hace ${tiempoTexto}</span>
-                </div>
-            </div>
-            <div class="pendiente-card-body">
-                <div class="pendiente-info-row">
-                    <div class="pendiente-info-item">
-                        <i class="fas fa-id-card"></i>
-                        <span><strong>ID Paciente:</strong> ${ticket.idPaciente || 'N/A'}</span>
-                    </div>
-                    <div class="pendiente-info-item">
-                        <i class="fas fa-vials"></i>
-                        <span><strong>Exámenes:</strong></span>
-                        <div class="pendiente-servicios">${getServicesNamesForPendientes(ticket)}</div>
-                    </div>
-                </div>
-                <div class="pendiente-info-row">
-                    <div class="pendiente-info-item pendiente-contacto">
-                        <i class="fas fa-phone"></i>
-                        <span><strong>Teléfono:</strong> ${ticket.telefono ? `<a href="tel:${ticket.telefono}">${ticket.telefono}</a>` : '<em style="color:#aaa;">No registrado</em>'}</span>
-                    </div>
-                    <div class="pendiente-info-item pendiente-contacto">
-                        <i class="fas fa-envelope"></i>
-                        <span><strong>Correo:</strong> ${ticket.correo ? `<a href="mailto:${ticket.correo}">${ticket.correo}</a>` : '<em style="color:#aaa;">No registrado</em>'}</span>
-                    </div>
-                </div>
-                ${ticket.observaciones ? `
-                <div class="pendiente-info-row">
-                    <div class="pendiente-info-item">
-                        <i class="fas fa-sticky-note"></i>
-                        <span><strong>Observaciones:</strong> ${ticket.observaciones}</span>
-                    </div>
-                </div>` : ''}
-            </div>
-            <div class="pendiente-card-footer">
-                <label class="pendiente-check-label">
-                    <input type="checkbox" class="pendiente-reportado-check"
-                        data-ticket-key="${ticket.firebaseKey || ''}"
-                        data-ticket-id="${ticket.randomId || ''}"
-                        onchange="onPendienteCheckChange(this)">
-                    <span class="pendiente-check-text">Marcar como reportado al cliente</span>
-                </label>
-            </div>
-        `;
-
-        container.appendChild(card);
-    });
-}
-
-// Manejar el cambio del checkbox "Reportado al cliente"
-function onPendienteCheckChange(checkbox) {
-    if (!checkbox.checked) return;
-
-    const firebaseKey = checkbox.getAttribute('data-ticket-key');
-    const ticketId = checkbox.getAttribute('data-ticket-id');
-    const card = checkbox.closest('.pendiente-card');
-
-    // Confirmar acción
-    if (!confirm('¿Confirma que ya reportó los exámenes al dueño de la mascota? El ticket pasará a estado "Reportado al Cliente".')) {
-        checkbox.checked = false;
-        return;
-    }
-
-    // Deshabilitar checkbox mientras se procesa
-    checkbox.disabled = true;
-    card.style.opacity = '0.6';
-
-    const updateData = {
-        estado: 'reportado_cliente',
-        fechaReportadoCliente: getLocalDateString(),
-        horaReportadoCliente: new Date().toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })
-    };
-
-    const refKey = firebaseKey || ticketId;
-    if (!refKey || !window.database) {
-        showNotification('Error: no se pudo actualizar el ticket', 'error');
-        checkbox.checked = false;
-        checkbox.disabled = false;
-        card.style.opacity = '1';
-        return;
-    }
-
-    window.database.ref(`lab_tickets/${refKey}`).update(updateData)
-        .then(() => {
-            showNotification('¡Ticket marcado como reportado al cliente!', 'success');
-            card.classList.add('pendiente-card--done');
-            setTimeout(() => {
-                card.style.transition = 'all 0.4s ease';
-                card.style.opacity = '0';
-                card.style.maxHeight = '0';
-                card.style.overflow = 'hidden';
-                setTimeout(() => {
-                    card.remove();
-                    // Actualizar contadores
-                    const currentMedico = document.getElementById('pendientesReportarDoctorSelect')?.value;
-                    if (currentMedico) renderPendientesReportar(currentMedico);
-                }, 400);
-            }, 800);
-        })
-        .catch(err => {
-            console.error('Error al actualizar ticket:', err);
-            showNotification('Error al actualizar el ticket. Intente de nuevo.', 'error');
-            checkbox.checked = false;
-            checkbox.disabled = false;
-            card.style.opacity = '1';
-        });
 }

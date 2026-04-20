@@ -8,7 +8,7 @@ window.tickets = tickets;
 // Variables para optimización de carga diferida
 let ticketsActiveListeners = null;
 let ticketsAllDataLoaded = false; // Flag para saber si ya se cargaron todos los datos
-let ticketsLoadDateRange = 30; // Días a cargar por defecto (últimos 60 días)
+let ticketsLoadDateRange = 60; // Días a cargar por defecto (últimos 60 días)
 let ticketsUpdateDebounceTimer = null; // Timer para debounce de actualizaciones
 
 // Function to safely add event listeners
@@ -27,14 +27,6 @@ function getLocalDateString(date = new Date()) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
-}
-
-function refreshLabResultsPanelIfVisible() {
-    if (typeof window.renderLabResults !== 'function') return;
-    const container = document.getElementById('labResultsContainer');
-    if (container && !container.classList.contains('hidden')) {
-        window.renderLabResults();
-    }
 }
 
 // Generar un identificador aleatorio seguro para cada ticket
@@ -1008,14 +1000,14 @@ function cargarHistorialEdiciones() {
             fechaFinFiltro = getLocalDateString(hoy);
     }
 
-    firebase.database().ref('ticket_edits')
-        .orderByChild('fecha')
-        .startAt(fechaInicioFiltro)
-        .endAt(fechaFinFiltro)
-        .once('value', function(snapshot) {
+    firebase.database().ref('ticket_edits').orderByChild('fecha').once('value', function(snapshot) {
         const edits = [];
         snapshot.forEach(child => {
-            edits.push(child.val());
+            const edit = child.val();
+            // Filtrar por fecha
+            if (edit.fecha >= fechaInicioFiltro && edit.fecha <= fechaFinFiltro) {
+                edits.push(edit);
+            }
         });
 
         // Ordenar por fecha y hora descendente
@@ -1454,28 +1446,6 @@ function formatPorCobrarDisplay(porCobrarText) {
     return formattedContent || porCobrarText;
 }
 
-function getUrgenciaColor(urgencia) {
-    const urgency = (urgencia || 'consulta').toLowerCase();
-    const urgenciaColors = {
-        emergencia: '#d32f2f',
-        urgencia: '#fb8c00',
-        leve: '#43a047',
-        consulta: '#1976d2',
-        prequirurgico: '#8e24aa',
-        alta: '#d32f2f',
-        media: '#fb8c00',
-        normal: '#1976d2',
-        critico: '#d32f2f',
-        general: '#1976d2'
-    };
-    return urgenciaColors[urgency] || '#1976d2';
-}
-
-function renderPorCobrarInfo(porCobrarText, urgencia) {
-    const urgenciaColor = getUrgenciaColor(urgencia);
-    return `<i class='fas fa-money-bill-wave' style="color: ${urgenciaColor};"></i> <strong style="color: ${urgenciaColor}; font-weight: 700;">Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px; color: ${urgenciaColor}; font-weight: 700;">${formatPorCobrarDisplay(porCobrarText)}</div>`;
-}
-
 // NUEVA FUNCIÓN: Validar integridad del por cobrar
 function validatePorCobrarIntegrity(ticket) {
     if (!ticket.porCobrar) return true;
@@ -1538,14 +1508,14 @@ function updateTicketInDOM(updatedTicket) {
     if (updatedTicket.porCobrar) {
         if (porCobrarElement) {
             // Actualizar contenido existente
-            porCobrarElement.innerHTML = renderPorCobrarInfo(updatedTicket.porCobrar, updatedTicket.urgencia);
+            porCobrarElement.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedTicket.porCobrar)}</div>`;
         } else {
             // Agregar por cobrar si no existía
             const ticketInfo = ticketElement.querySelector('.ticket-info');
             if (ticketInfo) {
                 const porCobrarDiv = document.createElement('div');
                 porCobrarDiv.className = 'por-cobrar-info';
-                porCobrarDiv.innerHTML = renderPorCobrarInfo(updatedTicket.porCobrar, updatedTicket.urgencia);
+                porCobrarDiv.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedTicket.porCobrar)}</div>`;
                 ticketInfo.appendChild(porCobrarDiv);
             }
         }
@@ -1629,25 +1599,12 @@ function loadTickets(loadAllData = false) {
             cutoffDate = daysAgo.toISOString().split('T')[0];
         }
         
-        // Carga inicial: sin restricción (completa) o filtrada por servidor combinando
-        // fechaCreacion y fechaConsulta para reducir ancho de banda descargado
-        let loadQuery;
-        if (loadAllData || !cutoffDate) {
-            loadQuery = ticketsRef.once('value');
-        } else {
-            const _cutoff = cutoffDate;
-            loadQuery = Promise.all([
-                ticketsRef.orderByChild('fechaCreacion').startAt(_cutoff).once('value'),
-                ticketsRef.orderByChild('fechaConsulta').startAt(_cutoff).once('value')
-            ]).then(([snapCreacion, snapConsulta]) => {
-                const merged = {};
-                const doMerge = (snap) => snap.exists() && snap.forEach(c => { merged[c.key] = c.val(); });
-                doMerge(snapCreacion);
-                doMerge(snapConsulta);
-                return { val: () => merged, exists: () => Object.keys(merged).length > 0 };
-            }).catch(() => ticketsRef.once('value'));
-        }
-
+        // Carga inicial limitada o completa según parámetro
+        // IMPORTANTE: Para asegurar que todos los dispositivos vean tickets actuales,
+        // cargamos todos los tickets y filtramos localmente considerando tanto
+        // fechaCreacion como fechaConsulta
+        const loadQuery = ticketsRef.once('value');
+        
         loadQuery.then(snapshot => {
             tickets = [];
             currentTicketId = 1;
@@ -1764,8 +1721,6 @@ function setupTicketsIncrementalListeners() {
                 }
                 if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-                refreshLabResultsPanelIfVisible();
-                document.dispatchEvent(new Event('ticketsChanged'));
             }, 300); // Debounce de 300ms
         }
     };
@@ -1822,8 +1777,6 @@ function setupTicketsIncrementalListeners() {
                 }
                 if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-                refreshLabResultsPanelIfVisible();
-                document.dispatchEvent(new Event('ticketsChanged'));
             }, 300); // Debounce de 300ms
         }
     };
@@ -1850,8 +1803,6 @@ function setupTicketsIncrementalListeners() {
                 }
                 if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-                refreshLabResultsPanelIfVisible();
-                document.dispatchEvent(new Event('ticketsChanged'));
             }, 300); // Debounce de 300ms
         }
     };
@@ -2495,7 +2446,7 @@ function renderTickets(filter = 'todos', date = null) {
                         }
                         return `<div class="listo-para-facturar-badge">${badgeContent}</div>`;
                     })() : ''}
-                    ${ticket.porCobrar ? `<div class="por-cobrar-info">${renderPorCobrarInfo(ticket.porCobrar, ticket.urgencia)}</div>` : ''}
+                    ${ticket.porCobrar ? `<div class="por-cobrar-info"><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(ticket.porCobrar)}</div></div>` : ''}
                 </div>
             `;
         }
@@ -3573,13 +3524,13 @@ function editTicket(randomId) {
                 if (ticketElement) {
                     const porCobrarElement = ticketElement.querySelector('.por-cobrar-info');
                     if (porCobrarElement) {
-                        porCobrarElement.innerHTML = renderPorCobrarInfo(updatedPorCobrar, ticket.urgencia);
+                        porCobrarElement.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedPorCobrar)}</div>`;
                     } else {
                         const ticketInfo = ticketElement.querySelector('.ticket-info');
                         if (ticketInfo) {
                             const porCobrarDiv = document.createElement('div');
                             porCobrarDiv.className = 'por-cobrar-info';
-                            porCobrarDiv.innerHTML = renderPorCobrarInfo(updatedPorCobrar, ticket.urgencia);
+                            porCobrarDiv.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedPorCobrar)}</div>`;
                             ticketInfo.appendChild(porCobrarDiv);
                         }
                     }
@@ -3679,14 +3630,16 @@ function editTicket(randomId) {
     const historialContainer = modal.querySelector('#ticketEdicionesHistorial');
     if (userRoleHistorial === 'admin' && historialBody && typeof firebase !== 'undefined' && firebase.database) {
         // Limpiar listener previo si existe
-        if (window._ticketEdicionesRef && window._ticketEdicionesListener) {
-            window._ticketEdicionesRef.off('value', window._ticketEdicionesListener);
-            window._ticketEdicionesRef = null;
+        if (window._ticketEdicionesListener) {
+            firebase.database().ref('ticket_edits').off('value', window._ticketEdicionesListener);
         }
         window._ticketEdicionesListener = function(snapshot) {
             const edits = [];
             snapshot.forEach(child => {
-                edits.push(child.val());
+                const edit = child.val();
+                if (edit.randomId === ticket.randomId) {
+                    edits.push(edit);
+                }
             });
             edits.sort((a, b) => (b.fecha + ' ' + b.hora).localeCompare(a.fecha + ' ' + a.hora));
             if (edits.length === 0) {
@@ -3704,17 +3657,12 @@ function editTicket(randomId) {
             html += '</tbody></table>';
             historialBody.innerHTML = html;
         };
-        window._ticketEdicionesRef = firebase.database().ref('ticket_edits')
-            .orderByChild('randomId').equalTo(ticket.randomId);
-        window._ticketEdicionesRef.on('value', window._ticketEdicionesListener);
+        firebase.database().ref('ticket_edits').on('value', window._ticketEdicionesListener);
         // Limpiar el listener al cerrar el modal
         const closeBtn = modal.querySelector('.close-modal');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                if (window._ticketEdicionesRef) {
-                    window._ticketEdicionesRef.off('value', window._ticketEdicionesListener);
-                    window._ticketEdicionesRef = null;
-                }
+                firebase.database().ref('ticket_edits').off('value', window._ticketEdicionesListener);
             });
         }
     } else if (historialContainer) {
@@ -5434,8 +5382,15 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   };
 
-  // renderLabResults() se llama automáticamente desde los debounce timers
-  // de setupTicketsIncrementalListeners a través de refreshLabResultsPanelIfVisible()
+  // Actualizar tabla en tiempo real cuando cambian los tickets
+  if (typeof window.ticketsRef !== 'undefined') {
+    window.ticketsRef.on('value', function() {
+      const labResultsContainer = document.getElementById('labResultsContainer');
+      if (labResultsContainer && !labResultsContainer.classList.contains('hidden')) {
+        renderLabResults();
+      }
+    });
+  }
 
   // Navegación con flechas en el formulario de tickets
   (function() {
@@ -5780,18 +5735,6 @@ function navigateToSection(sectionId, buttonId) {
                 mostrarHorario();
             }
         }
-        
-        if (sectionId === 'rxPresupuestosSection') {
-            if (typeof window.initRxPresupuestosModule === 'function') {
-                window.initRxPresupuestosModule();
-            }
-            // Carga automática con la fecha de hoy al abrir la sección
-            if (typeof window.cargarControlRxPresupuestos === 'function') {
-                setTimeout(function () {
-                    window.cargarControlRxPresupuestos();
-                }, 150);
-            }
-        }
     } else {
         // Función showSection no disponible
     }
@@ -6028,135 +5971,10 @@ function updateViaCounter() {
     }
 }
 
-function getQuirofanoPendingTicketsByType(type) {
-    if (!Array.isArray(window.quirofanoTickets)) return [];
-
-    if (type === 'via') {
-        return window.quirofanoTickets.filter(ticket =>
-            ticket &&
-            ticket.via === true &&
-            (ticket.viaStatus === 'pendiente' || !ticket.viaStatus)
-        );
-    }
-
-    return window.quirofanoTickets.filter(ticket =>
-        ticket &&
-        ticket.examenesPrequirurgicos === true &&
-        (ticket.examenesStatus === 'pendiente' || !ticket.examenesStatus)
-    );
-}
-
-function escapePendingTicketText(value) {
-    const text = value == null ? '' : String(value);
-    return text
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-}
-
-function closePendingQuirofanoModal() {
-    const modal = document.getElementById('pendingQuirofanoModal');
-    if (modal) modal.remove();
-}
-
-function renderPendingQuirofanoModal(type) {
-    const isVia = type === 'via';
-    const pendingTickets = getQuirofanoPendingTicketsByType(type);
-    const title = isVia ? 'Vias pendientes de quirofano' : 'Examenes prequirurgicos pendientes';
-    const actionLabel = isVia ? 'Marcar via como realizada' : 'Marcar examenes como realizados';
-    const actionFn = isVia ? 'marcarViaRealizada' : 'marcarExamenesRealizados';
-    const emptyText = isVia ? 'No hay vias pendientes en este momento.' : 'No hay examenes pendientes en este momento.';
-    const icon = isVia ? 'fa-syringe' : 'fa-vials';
-
-    closePendingQuirofanoModal();
-
-    const overlay = document.createElement('div');
-    overlay.id = 'pendingQuirofanoModal';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
-
-    const ticketsHtml = pendingTickets.map(ticket => {
-        const rawTicketId = String(ticket.randomId || ticket.id || '');
-        const jsTicketId = rawTicketId.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
-        const ticketId = escapePendingTicketText(rawTicketId || '-');
-        const numero = escapePendingTicketText(ticket.numero || '-');
-        const mascota = escapePendingTicketText(ticket.nombreMascota || '-');
-        const propietario = escapePendingTicketText(ticket.nombrePropietario || '-');
-        const fecha = escapePendingTicketText(typeof formatQuirofanoDate === 'function' ? formatQuirofanoDate(ticket.fechaProgramada) : (ticket.fechaProgramada || '-'));
-        const procedimiento = escapePendingTicketText(ticket.procedimiento || '-');
-
-        return `
-            <div style="border:1px solid #e3e6ea;border-radius:8px;padding:10px;background:#fff;">
-                <div style="display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;">
-                    <strong style="color:#2c3e50;">#${numero} - ${mascota}</strong>
-                    <button type="button"
-                            onclick="event.stopPropagation(); ${actionFn}('${jsTicketId}'); setTimeout(() => { if (typeof window.renderPendingQuirofanoModal === 'function') window.renderPendingQuirofanoModal('${type}'); }, 500);"
-                            style="background:#28a745;color:#fff;border:none;border-radius:6px;padding:6px 10px;cursor:pointer;font-size:12px;font-weight:600;">
-                        <i class="fas fa-check"></i> ${actionLabel}
-                    </button>
-                </div>
-                <div style="margin-top:6px;font-size:13px;color:#4d5761;line-height:1.4;">
-                    <div><strong>Ticket:</strong> ${ticketId}</div>
-                    <div><strong>Propietario:</strong> ${propietario}</div>
-                    <div><strong>Fecha:</strong> ${fecha}</div>
-                    <div><strong>Procedimiento:</strong> ${procedimiento}</div>
-                </div>
-            </div>
-        `;
-    }).join('');
-
-    overlay.innerHTML = `
-        <div style="width:min(760px,96vw);max-height:86vh;overflow:auto;background:#f9fbfd;border-radius:10px;box-shadow:0 10px 32px rgba(0,0,0,.25);">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;border-bottom:1px solid #e1e5ea;background:#fff;">
-                <h3 style="margin:0;font-size:18px;color:#1f2d3d;"><i class="fas ${icon}"></i> ${title} (${pendingTickets.length})</h3>
-                <button type="button" onclick="closePendingQuirofanoModal()" style="background:#e9ecef;border:1px solid #d3d8de;border-radius:6px;padding:6px 10px;cursor:pointer;">
-                    Cerrar
-                </button>
-            </div>
-            <div style="padding:12px;display:grid;gap:10px;">
-                ${pendingTickets.length ? ticketsHtml : `<div style="padding:16px;background:#fff;border:1px dashed #cfd6de;border-radius:8px;color:#5f6b77;">${emptyText}</div>`}
-                <div style="font-size:12px;color:#6c757d;background:#fff;border:1px solid #e3e6ea;border-radius:8px;padding:10px;">
-                    Si no desea marcar desde aqui, use los datos mostrados para buscar manualmente el ticket en quirofano.
-                </div>
-            </div>
-        </div>
-    `;
-
-    overlay.addEventListener('click', (e) => {
-        if (e.target === overlay) closePendingQuirofanoModal();
-    });
-
-    document.body.appendChild(overlay);
-}
-
-function setupPendingQuirofanoCountersActions() {
-    const prequirurgicoCounter = document.getElementById('prequirurgicoCounter');
-    const viaCounter = document.getElementById('viaCounter');
-
-    if (prequirurgicoCounter && !prequirurgicoCounter.dataset.boundClick) {
-        prequirurgicoCounter.dataset.boundClick = 'true';
-        prequirurgicoCounter.style.cursor = 'pointer';
-        prequirurgicoCounter.title = 'Ver examenes pendientes';
-        prequirurgicoCounter.addEventListener('click', () => renderPendingQuirofanoModal('examenes'));
-    }
-
-    if (viaCounter && !viaCounter.dataset.boundClick) {
-        viaCounter.dataset.boundClick = 'true';
-        viaCounter.style.cursor = 'pointer';
-        viaCounter.title = 'Ver vias pendientes';
-        viaCounter.addEventListener('click', () => renderPendingQuirofanoModal('via'));
-    }
-}
-
 // Exponer la función globalmente
 window.navigateToQuirofano = navigateToQuirofano;
 window.updatePrequirurgicoCounter = updatePrequirurgicoCounter;
 window.updateViaCounter = updateViaCounter;
-window.renderPendingQuirofanoModal = renderPendingQuirofanoModal;
-window.closePendingQuirofanoModal = closePendingQuirofanoModal;
-
-document.addEventListener('DOMContentLoaded', setupPendingQuirofanoCountersActions);
 
 // Funciones mejoradas para manejo del sidebar en móviles
 function toggleSidebar() {
