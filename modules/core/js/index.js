@@ -8,8 +8,11 @@ window.tickets = tickets;
 // Variables para optimización de carga diferida
 let ticketsActiveListeners = null;
 let ticketsAllDataLoaded = false; // Flag para saber si ya se cargaron todos los datos
-let ticketsLoadDateRange = 60; // Días a cargar por defecto (últimos 60 días)
+let ticketsLoadDateRange = 30; // Días a cargar por defecto (últimos 30 días)
 let ticketsUpdateDebounceTimer = null; // Timer para debounce de actualizaciones
+// Acumuladores para el debounce — evita que cambios rápidos consecutivos pierdan actualizaciones de DOM
+let _pendingNeedsFullRerender = false;
+let _pendingDOMUpdates = [];
 
 // Function to safely add event listeners
 function safeAddEventListener(elementId, eventType, handler) {
@@ -1019,7 +1022,11 @@ function cargarHistorialEdiciones() {
             fechaFinFiltro = fechaFin;
             break;
         case 'todo':
-            fechaInicioFiltro = '2000-01-01';
+            // Limitar a los últimos 90 días para evitar descargar todo el historial de ticket_edits
+            // (este nodo crece sin límite y puede pesar varios MB en producción)
+            const _todoLimit = new Date();
+            _todoLimit.setDate(_todoLimit.getDate() - 90);
+            fechaInicioFiltro = _todoLimit.toISOString().split('T')[0];
             fechaFinFiltro = '2100-12-31';
             break;
         default:
@@ -1731,6 +1738,37 @@ function loadTickets(loadAllData = false) {
 
 // Configurar listeners incrementales (más eficientes que 'value')
 function setupTicketsIncrementalListeners() {
+    // Función central de debounce para UI — acumula cambios y los aplica juntos
+    function _scheduleTicketsUIUpdate(updatedTicket, needsFull) {
+        if (needsFull) _pendingNeedsFullRerender = true;
+        if (updatedTicket && !needsFull) _pendingDOMUpdates.push(updatedTicket);
+
+        if (ticketsUpdateDebounceTimer) clearTimeout(ticketsUpdateDebounceTimer);
+        ticketsUpdateDebounceTimer = setTimeout(() => {
+            const currentFilterBtn = document.querySelector('.filter-btn.active');
+            const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
+
+            if (_pendingNeedsFullRerender) {
+                renderTickets(currentFilter);
+            } else {
+                // Actualizar en DOM solo los tickets que cambiaron (sin rerenderizar todo)
+                _pendingDOMUpdates.forEach(t => updateTicketInDOM(t));
+            }
+
+            // Resetear acumuladores
+            _pendingNeedsFullRerender = false;
+            _pendingDOMUpdates = [];
+
+            updateStatsGlobal();
+            updatePrequirurgicoCounter();
+            if (typeof updateViaCounter === 'function') updateViaCounter();
+            if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
+            if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
+            refreshLabResultsPanelIfVisible();
+            document.dispatchEvent(new Event('ticketsChanged'));
+        }, 300);
+    }
+
     const handleChildAdded = (snapshot) => {
         const entry = snapshot.val();
         if (!entry || entry.id == null || !entry.mascota) {
@@ -1745,63 +1783,33 @@ function setupTicketsIncrementalListeners() {
             cutoffDate.setDate(cutoffDate.getDate() - ticketsLoadDateRange);
             const cutoffDateStr = cutoffDate.toISOString().split('T')[0];
             
-            // Verificar fechaCreacion
             const ticketCreacionDate = entry.fechaCreacion ? entry.fechaCreacion.split('T')[0] : '';
-            // Verificar fechaConsulta (importante para tickets actuales)
             const ticketConsultaDate = entry.fechaConsulta || '';
             
-            // Incluir el ticket si:
-            // 1. Tiene fechaCreacion reciente (dentro del rango)
-            // 2. O tiene fechaConsulta actual o futura (tickets de consulta actuales)
-            // 3. O tiene fechaConsulta dentro del rango reciente
             const isRecentCreacion = ticketCreacionDate && ticketCreacionDate >= cutoffDateStr;
             const isCurrentConsulta = ticketConsultaDate && (ticketConsultaDate >= today || ticketConsultaDate >= cutoffDateStr);
             
             if (!isRecentCreacion && !isCurrentConsulta) {
-                return; // Ignorar tickets antiguos que no son de consulta actual
+                return;
             }
         }
         
         const newTicket = { ...entry, firebaseKey: snapshot.key };
-        // Solo agregar si no existe ya un ticket con esa firebaseKey
         if (!tickets.some(t => t.firebaseKey === newTicket.firebaseKey)) {
             tickets.push(newTicket);
-            // Update global reference
             window.tickets = tickets;
-            
-            // OPTIMIZACIÓN: Usar debounce para actualizaciones de UI
-            if (ticketsUpdateDebounceTimer) {
-                clearTimeout(ticketsUpdateDebounceTimer);
-            }
-            ticketsUpdateDebounceTimer = setTimeout(() => {
-                const currentFilterBtn = document.querySelector('.filter-btn.active');
-                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
-                renderTickets(currentFilter);
-                updateStatsGlobal();
-                updatePrequirurgicoCounter();
-                if (typeof updateViaCounter === 'function') {
-                    updateViaCounter();
-                }
-                if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
-                if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-                refreshLabResultsPanelIfVisible();
-                document.dispatchEvent(new Event('ticketsChanged'));
-            }, 300); // Debounce de 300ms
+            _scheduleTicketsUIUpdate(null, true); // Siempre full rerender al agregar
         }
     };
     
     const handleChildChanged = (snapshot) => {
-        const updatedTicket = {
-            ...snapshot.val(),
-            firebaseKey: snapshot.key
-        };
+        const updatedTicket = { ...snapshot.val(), firebaseKey: snapshot.key };
         
         const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
         if (index !== -1) {
             const oldTicket = tickets[index];
             const previousEstado = oldTicket ? oldTicket.estado : null;
             tickets[index] = updatedTicket;
-            // Update global reference
             window.tickets = tickets;
             
             if (
@@ -1812,39 +1820,33 @@ function setupTicketsIncrementalListeners() {
                 announceConsultorio(updatedTicket, updatedTicket.estado, previousEstado);
             }
             
-            // Actualización optimizada: solo re-renderizar si es necesario
+            // Re-render completo si cambió algo que afecta el orden, filtro o campos del card no
+            // cubiertos por updateTicketInDOM (numFactura, medicoAtiende, via, viaStatus, etc.)
             const needsFullRerender = (
                 oldTicket.estado !== updatedTicket.estado ||
                 oldTicket.fechaConsulta !== updatedTicket.fechaConsulta ||
-                oldTicket.urgencia !== updatedTicket.urgencia
+                oldTicket.urgencia !== updatedTicket.urgencia ||
+                oldTicket.numFactura !== updatedTicket.numFactura ||
+                oldTicket.medicoAtiende !== updatedTicket.medicoAtiende ||
+                oldTicket.via !== updatedTicket.via ||
+                oldTicket.viaStatus !== updatedTicket.viaStatus ||
+                oldTicket.motivo !== updatedTicket.motivo ||
+                oldTicket.nombre !== updatedTicket.nombre ||
+                oldTicket.mascota !== updatedTicket.mascota
             );
             
-            // OPTIMIZACIÓN: Usar debounce para actualizaciones de UI
-            if (ticketsUpdateDebounceTimer) {
-                clearTimeout(ticketsUpdateDebounceTimer);
+            _scheduleTicketsUIUpdate(updatedTicket, needsFullRerender);
+        } else {
+            // Ticket llegó via child_changed pero no estaba en el array local
+            // (puede ser un ticket con fechaConsulta reciente pero fuera del filtro de child_added)
+            // Añadirlo para mantener consistencia entre computadoras
+            const today = getLocalDateString();
+            const ticketConsultaDate = updatedTicket.fechaConsulta || '';
+            if (ticketConsultaDate >= today || ticketsAllDataLoaded) {
+                tickets.push(updatedTicket);
+                window.tickets = tickets;
+                _scheduleTicketsUIUpdate(null, true);
             }
-            ticketsUpdateDebounceTimer = setTimeout(() => {
-                if (needsFullRerender) {
-                    // Re-renderizado completo (incluye porCobrar actualizado)
-                    const currentFilterBtn = document.querySelector('.filter-btn.active');
-                    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
-                    renderTickets(currentFilter);
-                } else {
-                    // Actualización parcial para campos como porCobrar, numFactura, listoParaFacturar, etc.
-                    // SIEMPRE actualizar el DOM cuando cambian estos campos importantes
-                    updateTicketInDOM(updatedTicket);
-                }
-                
-                updateStatsGlobal();
-                updatePrequirurgicoCounter();
-                if (typeof updateViaCounter === 'function') {
-                    updateViaCounter();
-                }
-                if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
-                if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-                refreshLabResultsPanelIfVisible();
-                document.dispatchEvent(new Event('ticketsChanged'));
-            }, 300); // Debounce de 300ms
         }
     };
     
@@ -1852,27 +1854,8 @@ function setupTicketsIncrementalListeners() {
         const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
         if (index !== -1) {
             tickets.splice(index, 1);
-            // Update global reference
             window.tickets = tickets;
-            
-            // OPTIMIZACIÓN: Usar debounce para actualizaciones de UI
-            if (ticketsUpdateDebounceTimer) {
-                clearTimeout(ticketsUpdateDebounceTimer);
-            }
-            ticketsUpdateDebounceTimer = setTimeout(() => {
-                const currentFilterBtn = document.querySelector('.filter-btn.active');
-                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
-                renderTickets(currentFilter);
-                updateStatsGlobal();
-                updatePrequirurgicoCounter();
-                if (typeof updateViaCounter === 'function') {
-                    updateViaCounter();
-                }
-                if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
-                if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-                refreshLabResultsPanelIfVisible();
-                document.dispatchEvent(new Event('ticketsChanged'));
-            }, 300); // Debounce de 300ms
+            _scheduleTicketsUIUpdate(null, true);
         }
     };
     
@@ -3634,16 +3617,16 @@ function editTicket(randomId) {
             usuarioListoParaFacturar = null;
         }
         
-        // Procesar el campo porCobrar con validaciones mejoradas y actualización optimista
-        // PROTECCIÓN: Obtener el valor más reciente del ticket para preservar el porCobrar existente
+        // Procesar porCobrar: la base es el valor más reciente del array local (sincronizado en tiempo real)
         const currentTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
-        let updatedPorCobrar = (currentTicket && currentTicket.porCobrar) ? currentTicket.porCobrar : (ticket.porCobrar || '');
+        const porCobrarBase = (currentTicket && currentTicket.porCobrar) ? currentTicket.porCobrar : (ticket.porCobrar || '');
+        let updatedPorCobrar = porCobrarBase;
+        let porCobrarAddition = ''; // Solo lo que el usuario escribió en esta sesión
         
         const editPorCobrar = document.getElementById('editPorCobrar');
         if (editPorCobrar && canEditPorCobrar) {
             const newContent = editPorCobrar.value.trim();
             if (newContent.length > 0) {
-                // Si hay contenido nuevo, agregarlo al historial existente
                 const timestamp = new Date().toLocaleString('es-ES', {
                     year: 'numeric',
                     month: '2-digit',
@@ -3652,11 +3635,11 @@ function editTicket(randomId) {
                     minute: '2-digit'
                 });
                 const userName = sessionStorage.getItem('userName') || 'Usuario';
-                const separator = updatedPorCobrar ? '\n\n' : '';
-                const newEntry = `${separator}--- ${timestamp} (${userName}) ---\n${newContent}`;
-                updatedPorCobrar = updatedPorCobrar + newEntry;
+                const separator = porCobrarBase ? '\n\n' : '';
+                porCobrarAddition = `${separator}--- ${timestamp} (${userName}) ---\n${newContent}`;
+                updatedPorCobrar = porCobrarBase + porCobrarAddition;
                 
-                // Actualización optimista: mostrar inmediatamente en el DOM
+                // Actualización optimista en DOM
                 const ticketElement = document.querySelector(`[data-ticket-id="${ticket.randomId}"]`);
                 if (ticketElement) {
                     const porCobrarElement = ticketElement.querySelector('.por-cobrar-info');
@@ -3673,8 +3656,7 @@ function editTicket(randomId) {
                     }
                 }
             }
-            // PROTECCIÓN: Si no hay texto nuevo, mantener el valor existente (no se elimina)
-            // updatedPorCobrar ya tiene el valor preservado de arriba
+            // Si el usuario no escribió nada, updatedPorCobrar = porCobrarBase (sin cambios)
         }
         
         const updatedTicket = {
@@ -3699,7 +3681,10 @@ function editTicket(randomId) {
             listoParaFacturar: listoParaFacturarValue,
             fechaListoParaFacturar: fechaListoParaFacturar,
             horaListoParaFacturar: horaListoParaFacturar,
-            usuarioListoParaFacturar: usuarioListoParaFacturar
+            usuarioListoParaFacturar: usuarioListoParaFacturar,
+            // Internos para merge seguro en la transacción (se eliminan antes de guardar en Firebase)
+            _porCobrarBase: porCobrarBase,
+            _porCobrarAddition: porCobrarAddition
         };
         
         // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
@@ -3890,8 +3875,9 @@ function editTicket(randomId) {
 
 function getTicketDiff(oldTicket, newTicket) {
     const diff = {};
+    const skipKeys = new Set(['firebaseKey', '_porCobrarBase', '_porCobrarAddition']);
     Object.keys(newTicket).forEach(key => {
-        if (key === 'firebaseKey') return;
+        if (skipKeys.has(key)) return;
         if (oldTicket[key] !== newTicket[key]) {
             diff[key] = { antes: oldTicket[key] || '', despues: newTicket[key] || '' };
         }
@@ -3933,9 +3919,15 @@ function saveEditedTicket(ticket) {
         showLoadingButton(saveButton);
     }
     
-    // Eliminar la propiedad firebaseKey antes de guardar
+    // Extraer metadatos internos de merge ANTES de crear ticketToSave
+    const _porCobrarBase = ticket._porCobrarBase !== undefined ? ticket._porCobrarBase : '';
+    const _porCobrarAddition = ticket._porCobrarAddition !== undefined ? ticket._porCobrarAddition : '';
+
+    // Eliminar la propiedad firebaseKey y campos internos antes de guardar en Firebase
     const ticketToSave = {...ticket};
     delete ticketToSave.firebaseKey;
+    delete ticketToSave._porCobrarBase;
+    delete ticketToSave._porCobrarAddition;
     
     // Asegurarse de que ningún campo sea undefined
     Object.keys(ticketToSave).forEach(key => {
@@ -4013,27 +4005,19 @@ function saveEditedTicket(ticket) {
     
     if (onlyPorCobrarChanged) {
         // Actualización rápida solo para porCobrar
-        // PROTECCIÓN: Verificar que hay contenido antes de actualizar
-        const updatePorCobrar = () => {
-            const porCobrarUpdate = {
-                porCobrar: ticketToSave.porCobrar,
-                lastModified: new Date().toISOString(),
-                lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
-            };
-            
-            return ticketsRef.child(ticket.firebaseKey).update(porCobrarUpdate);
-        };
-        
-        // Si el nuevo valor está vacío, obtener el valor existente para preservarlo
-        const updatePromise = (!ticketToSave.porCobrar || ticketToSave.porCobrar.trim().length === 0)
-            ? ticketsRef.child(ticket.firebaseKey).once('value').then((snapshot) => {
-                const currentData = snapshot.val();
-                if (currentData && currentData.porCobrar && currentData.porCobrar.trim().length > 0) {
-                    ticketToSave.porCobrar = currentData.porCobrar;
-                }
-                return updatePorCobrar();
-            })
-            : updatePorCobrar();
+        // Preservar porCobrar existente usando el array local (sin leer Firebase de nuevo)
+        if (!ticketToSave.porCobrar || ticketToSave.porCobrar.trim().length === 0) {
+            const localTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
+            if (localTicket && localTicket.porCobrar && localTicket.porCobrar.trim().length > 0) {
+                ticketToSave.porCobrar = localTicket.porCobrar;
+            }
+        }
+
+        const updatePromise = ticketsRef.child(ticket.firebaseKey).update({
+            porCobrar: ticketToSave.porCobrar,
+            lastModified: new Date().toISOString(),
+            lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
+        });
         
         updatePromise
             .then(() => {
@@ -4068,153 +4052,103 @@ function saveEditedTicket(ticket) {
         return;
     }
     
-    // Para otros cambios, usar transacción (simplificada)
+    // Para otros cambios, usar transacción con merge inteligente de porCobrar
     ticketsRef.child(ticket.firebaseKey).transaction((currentData) => {
         if (currentData === null) {
             return; // Abortar transacción
         }
         
-        // PROTECCIÓN: Preservar porCobrar existente si el nuevo valor está vacío
-        const existingPorCobrar = currentData.porCobrar;
-        const newPorCobrar = ticketToSave.porCobrar;
-        
-        // Si ya existe un porCobrar guardado y el nuevo está vacío, mantener el existente
-        if (existingPorCobrar && existingPorCobrar.trim().length > 0 && 
-            (!newPorCobrar || newPorCobrar.trim().length === 0)) {
-            ticketToSave.porCobrar = existingPorCobrar;
+        // MERGE SEGURO DE PORCOBRAR:
+        // Compara el valor en el servidor con la base que el usuario tenía al abrir el modal.
+        // Si el servidor ya tiene más contenido (otra computadora agregó algo), se preserva
+        // todo lo del servidor y solo se añade la nueva entrada de este usuario.
+        const serverPorCobrar = currentData.porCobrar || '';
+        const clientPorCobrar = ticketToSave.porCobrar || '';
+
+        let mergedPorCobrar;
+        if (!_porCobrarAddition) {
+            // El usuario no agregó nada nuevo: preservar siempre lo que hay en el servidor
+            mergedPorCobrar = serverPorCobrar || clientPorCobrar;
+        } else if (serverPorCobrar === _porCobrarBase) {
+            // Sin conflicto: el servidor no cambió desde que el usuario abrió el modal
+            mergedPorCobrar = clientPorCobrar;
+        } else {
+            // Conflicto detectado: otra computadora agregó contenido al servidor.
+            // Se preserva todo lo del servidor y se adjunta solo la nueva entrada de este usuario.
+            mergedPorCobrar = serverPorCobrar + _porCobrarAddition;
         }
-        
-        // Merge simple sin validaciones complejas
+
+        // Garantía final: nunca vaciar un porCobrar que tenga contenido en el servidor
+        if (!mergedPorCobrar && serverPorCobrar) {
+            mergedPorCobrar = serverPorCobrar;
+        }
+
         const mergedData = {
             ...currentData,
             ...ticketToSave,
+            porCobrar: mergedPorCobrar,
             lastModified: new Date().toISOString(),
             lastModifiedBy: sessionStorage.getItem('userName') || 'Usuario'
         };
         
         return mergedData;
     }, (error, committed, snapshot) => {
-        if (error) {
-            // RESPALDO: Intentar guardado directo si la transacción falla
-            // PROTECCIÓN: Obtener el valor actual de porCobrar antes de actualizar
-            ticketsRef.child(ticket.firebaseKey).once('value').then((snapshot) => {
-                const currentData = snapshot.val();
-                if (currentData && currentData.porCobrar && currentData.porCobrar.trim().length > 0) {
-                    if (!ticketToSave.porCobrar || ticketToSave.porCobrar.trim().length === 0) {
-                        ticketToSave.porCobrar = currentData.porCobrar;
-                    }
-                }
-                // Solo enviar campos que realmente cambiaron
-                const patch = diffPatch(currentData || {}, ticketToSave);
-                patch.lastModified = new Date().toISOString();
-                patch.lastModifiedBy = sessionStorage.getItem('userName') || 'Usuario';
-                return ticketsRef.child(ticket.firebaseKey).update(patch);
-            })
+        // Función de respaldo compartida para error y !committed
+        const _fallbackDirectSave = () => {
+            // Merge seguro de porCobrar usando el array local como referencia del servidor
+            const localTicket = tickets.find(t => t.firebaseKey === ticket.firebaseKey);
+            const localPorCobrar = (localTicket && localTicket.porCobrar) || '';
+            if (!_porCobrarAddition) {
+                // Sin nueva entrada: conservar lo que hay en local
+                if (localPorCobrar) ticketToSave.porCobrar = localPorCobrar;
+            } else if (localPorCobrar !== _porCobrarBase) {
+                // Conflicto: otra computadora agregó algo → adjuntar solo la nueva entrada
+                ticketToSave.porCobrar = localPorCobrar + _porCobrarAddition;
+            }
+            // Si no hay conflicto, ticketToSave.porCobrar ya tiene el valor correcto
+            if (!ticketToSave.porCobrar && localPorCobrar) {
+                ticketToSave.porCobrar = localPorCobrar;
+            }
+            const patch = diffPatch(localTicket || {}, ticketToSave);
+            patch.lastModified = new Date().toISOString();
+            patch.lastModifiedBy = sessionStorage.getItem('userName') || 'Usuario';
+            return ticketsRef.child(ticket.firebaseKey).update(patch)
                 .then(() => {
-                    // Si el estado cambió a consultorio, anunciar
                     if (diff.estado && ticketToSave.estado && ticketToSave.estado.toLowerCase().startsWith('consultorio')) {
                         const ticketActualizado = { ...ticket, ...ticketToSave };
                         announceConsultorio(ticketActualizado, ticketToSave.estado, previousEstado);
                     }
-                    
-                    // Actualizar el array local con los nuevos datos
                     const localTicketIndex = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
                     if (localTicketIndex !== -1) {
-                        tickets[localTicketIndex] = {
-                            ...tickets[localTicketIndex],
-                            ...ticketToSave,
-                            firebaseKey: ticket.firebaseKey
-                        };
+                        tickets[localTicketIndex] = { ...tickets[localTicketIndex], ...ticketToSave, firebaseKey: ticket.firebaseKey };
                     }
-                    
                     closeModal();
                     showNotification('Consulta actualizada correctamente', 'success');
-                    
-                    // Actualizar la página actual
                     if (currentSection && currentSection.id === 'verTicketsSection') {
                         renderTickets(currentFilter);
-                        
-                        // Mantener el filtro activo
                         document.querySelectorAll('.filter-btn').forEach(btn => {
                             btn.classList.remove('active');
-                            if (btn.getAttribute('data-filter') === currentFilter) {
-                                btn.classList.add('active');
-                            }
+                            if (btn.getAttribute('data-filter') === currentFilter) btn.classList.add('active');
                         });
-                        
                         setActiveButton(verTicketsBtn);
                     } else if (currentSection && currentSection.id === 'horarioSection') {
                         mostrarHorario();
                     } else {
                         renderTickets();
                     }
-                    
                     updateStatsGlobal();
-                })
-                .catch(backupError => {
+                });
+        };
+
+        if (error) {
+            _fallbackDirectSave().catch(backupError => {
                     if (saveButton) {
                         hideLoadingButton(saveButton);
                     }
                     showNotification('Error al guardar los cambios: ' + backupError.message, 'error');
                 });
         } else if (!committed) {
-            // RESPALDO: Si la transacción se abortó por validaciones muy estrictas, intentar guardado directo
-            // PROTECCIÓN: Obtener el valor actual de porCobrar antes de actualizar
-            ticketsRef.child(ticket.firebaseKey).once('value').then((snapshot) => {
-                const currentData = snapshot.val();
-                if (currentData && currentData.porCobrar && currentData.porCobrar.trim().length > 0) {
-                    if (!ticketToSave.porCobrar || ticketToSave.porCobrar.trim().length === 0) {
-                        ticketToSave.porCobrar = currentData.porCobrar;
-                    }
-                }
-                // Solo enviar campos que realmente cambiaron
-                const patch = diffPatch(currentData || {}, ticketToSave);
-                patch.lastModified = new Date().toISOString();
-                patch.lastModifiedBy = sessionStorage.getItem('userName') || 'Usuario';
-                return ticketsRef.child(ticket.firebaseKey).update(patch);
-            })
-                .then(() => {
-                    // Si el estado cambió a consultorio, anunciar
-                    if (diff.estado && ticketToSave.estado && ticketToSave.estado.toLowerCase().startsWith('consultorio')) {
-                        const ticketActualizado = { ...ticket, ...ticketToSave };
-                        announceConsultorio(ticketActualizado, ticketToSave.estado, previousEstado);
-                    }
-                    
-                    // Actualizar el array local con los nuevos datos
-                    const localTicketIndex = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
-                    if (localTicketIndex !== -1) {
-                        tickets[localTicketIndex] = {
-                            ...tickets[localTicketIndex],
-                            ...ticketToSave,
-                            firebaseKey: ticket.firebaseKey
-                        };
-                    }
-                    
-                    closeModal();
-                    showNotification('Consulta actualizada correctamente', 'success');
-                    
-                    // Actualizar la página actual
-                    if (currentSection && currentSection.id === 'verTicketsSection') {
-                        renderTickets(currentFilter);
-                        
-                        // Mantener el filtro activo
-                        document.querySelectorAll('.filter-btn').forEach(btn => {
-                            btn.classList.remove('active');
-                            if (btn.getAttribute('data-filter') === currentFilter) {
-                                btn.classList.add('active');
-                            }
-                        });
-                        
-                        setActiveButton(verTicketsBtn);
-                    } else if (currentSection && currentSection.id === 'horarioSection') {
-                        mostrarHorario();
-                    } else {
-                        renderTickets();
-                    }
-                    
-                    updateStatsGlobal();
-                })
-                .catch(backupError => {
+            _fallbackDirectSave().catch(backupError => {
                     if (saveButton) {
                         hideLoadingButton(saveButton);
                     }

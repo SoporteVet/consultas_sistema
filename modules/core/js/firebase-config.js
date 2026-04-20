@@ -26,50 +26,31 @@ try {
   const ticketsRef = database.ref('tickets');
   const settingsRef = database.ref('settings');
   
-  // Check connection status with better error handling - removing auto-redirect
+  // Check connection status — single listener, no nesting
   let connectionRef = database.ref('.info/connected');
+  let _connectionErrorEl = null;
   connectionRef.on('value', (snap) => {
-    // Store connection status without taking automatic action
     const isConnected = snap.val() === true;
     window.firebaseConnected = isConnected;
     
     if (isConnected) {
-      // Connected to Firebase database successfully
+      // Remove error banner if it exists
+      if (_connectionErrorEl && _connectionErrorEl.parentNode) {
+        _connectionErrorEl.parentNode.removeChild(_connectionErrorEl);
+        _connectionErrorEl = null;
+      }
     } else {
-      // Disconnected from Firebase database - check your network connection
-      
-      // Show connection error without redirecting
-      const existingError = document.getElementById('firebase-connection-error');
-      if (!existingError) {
-        const errorMessage = document.createElement('div');
-        errorMessage.id = 'firebase-connection-error';
-        errorMessage.style.position = 'fixed';
-        errorMessage.style.bottom = '20px';
-        errorMessage.style.right = '20px';
-        errorMessage.style.background = '#ff9800';
-        errorMessage.style.color = 'white';
-        errorMessage.style.padding = '10px 15px';
-        errorMessage.style.borderRadius = '5px';
-        errorMessage.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
-        errorMessage.style.zIndex = '9999';
-        errorMessage.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Conexión perdida. Reconectando...';
-        
-        document.body.appendChild(errorMessage);
-        
-        // Remove the error message when connected again
-        connectionRef.on('value', function removeError(snapshot) {
-          if (snapshot.val() === true) {
-            if (errorMessage.parentNode) {
-              errorMessage.parentNode.removeChild(errorMessage);
-            }
-            connectionRef.off('value', removeError);
-          }
-        });
+      // Show error banner only once
+      if (!_connectionErrorEl && !document.getElementById('firebase-connection-error')) {
+        _connectionErrorEl = document.createElement('div');
+        _connectionErrorEl.id = 'firebase-connection-error';
+        _connectionErrorEl.style.cssText = 'position:fixed;bottom:20px;right:20px;background:#ff9800;color:white;padding:10px 15px;border-radius:5px;box-shadow:0 2px 10px rgba(0,0,0,0.2);z-index:9999;';
+        _connectionErrorEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Conexión perdida. Reconectando...';
+        document.body.appendChild(_connectionErrorEl);
       }
     }
-  }, (error) => {
-    // Error monitoring database connection
-    // Log but don't redirect
+  }, () => {
+    // Error monitoring database connection — silent
   });
   
   // Export the Firebase services for use throughout the application
