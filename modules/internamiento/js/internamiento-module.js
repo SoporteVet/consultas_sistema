@@ -2458,7 +2458,10 @@ class InternamientoModule {
                 correo: data.correo || '',
                 mascota: data.mascota,
                 idPaciente: data.idPaciente,
-                tipoMascota: data.tipoMascota
+                tipoMascota: data.tipoMascota,
+                fechaConsulta: new Date().toISOString().split('T')[0],
+                horaConsulta: '',
+                horaLlegada: ''
             });
         }
 
@@ -9194,7 +9197,10 @@ class InternamientoModule {
                     correo: propCorreo,
                     mascota: mascotaNombre || ref.nombreMascota || '',
                     idPaciente: ref.idPaciente || '',
-                    tipoMascota: tipoMascota || ref.tipoMascota || 'otro'
+                    tipoMascota: tipoMascota || ref.tipoMascota || 'otro',
+                    fechaConsulta: new Date().toISOString().split('T')[0],
+                    horaConsulta: '',
+                    horaLlegada: ''
                 });
             }
 
