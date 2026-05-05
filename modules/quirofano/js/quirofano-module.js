@@ -231,7 +231,6 @@ function handleQuirofanoFormSubmit(e) {
             getFieldValue('quirofanoViaStatus') : null,
         fechaCreacion: new Date().toISOString(),
         fechaProgramada: getFieldValue('quirofanoFecha'),
-        horaProgramada: getFieldValue('quirofanoHora'),
         estado: 'en-preparacion',
         creadoPor: sessionStorage.getItem('userName') || 'Usuario',
         doctorAtiende: getFieldValue('quirofanoDoctorAtiende'),
@@ -296,7 +295,10 @@ function saveQuirofanoTicket(ticketData) {
                         raza: ticketData.raza,
                         edad: ticketData.edad,
                         peso: ticketData.peso,
-                        sexo: ticketData.sexo
+                        sexo: ticketData.sexo,
+                        fechaConsulta: ticketData.fechaConsulta,
+                        horaConsulta: ticketData.horaConsulta || '',
+                        horaLlegada: ticketData.horaLlegada || ''
                     }).catch(err => console.error('Error guardando en BD de pacientes:', err));
                 }
                 
@@ -941,16 +943,6 @@ function editQuirofanoTicket(randomId) {
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="editQuirofanoHora">Hora de Cirugía</label>
-                            <input type="time" id="editQuirofanoHora" name="horaProgramada" value="${ticket.horaProgramada || ''}">
-                        </div>
-                        <div class="form-group">
-                            <!-- Campo vacío para que Hora vaya sola -->
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
                             <label for="editQuirofanoUrgencia">Categorización de Paciente</label>
                             <select id="editQuirofanoUrgencia" name="tipoUrgencia" required>
                                 <option value="normal" ${ticket.tipoUrgencia === 'normal' ? 'selected' : ''}>🔵 Cirugía Regular</option>
@@ -1173,7 +1165,6 @@ function handleQuirofanoEdit(e) {
         edad: document.getElementById('editQuirofanoEdad').value,
         idPaciente: document.getElementById('editQuirofanoIdPaciente').value,
         fechaProgramada: document.getElementById('editQuirofanoFecha').value,
-        horaProgramada: document.getElementById('editQuirofanoHora').value,
         tipoUrgencia: document.getElementById('editQuirofanoUrgencia').value,
         doctorAtiende: doctorAtiende,
         asistenteAtiende: asistenteAtiende,
