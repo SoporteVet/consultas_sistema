@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -10,10 +10,16 @@
   <link rel="stylesheet" href="modules/consentimientos/css/consentimientos.css">
   <link rel="stylesheet" href="modules/quirofano/css/quirofano.css">
   <link rel="stylesheet" href="modules/internamiento/css/internamiento.css">
+  <link rel="stylesheet" href="modules/core/css/vaccine-autocomplete.css">
   
   <link rel="icon" href="img/empresa.jpg" type="image/x-icon">
 </head>
 <body>
+  <!-- Mensaje de carga inicial (se oculta cuando termina checkAuth) -->
+  <div id="initLoading" style="position:fixed;inset:0;background:#f9f9f9;display:flex;align-items:center;justify-content:center;z-index:99999;flex-direction:column;gap:1rem;">
+    <p style="color:#333;font-size:1.1rem;">Cargando…</p>
+    <p id="initLoadingHint" style="color:#666;font-size:0.9rem;max-width:320px;text-align:center;display:none;">Si no carga, abre la app con un servidor local (Live Server o <code>npx serve</code>) y entra por <strong>home.html</strong>.</p>
+  </div>
   <!-- Botón menú hamburguesa para dispositivos móviles -->
 <button id="menuToggle" class="menu-toggle" title="Mostrar/Ocultar menú" style="display:none;">
   <i class="fas fa-bars"></i>
@@ -64,7 +70,10 @@
               <i class="fas fa-list-alt"></i> Ver Consultas
             </button>
             <button id="vacunasBtn" class="submenu-btn" onclick="navigateToVacunas('vacunasSection', 'vacunasBtn');">
-              <i class="fas fa-syringe"></i> Control de Vacunas
+              <i class="fas fa-syringe"></i> Control de vacuna y temperatura
+            </button>
+            <button id="rxPresupuestosBtn" class="submenu-btn" onclick="navigateToSection('rxPresupuestosSection', 'rxPresupuestosBtn');">
+              <i class="fas fa-x-ray"></i> Control RX y Presupuestos
             </button>
           </div>
         </div>
@@ -98,6 +107,9 @@
             <button id="reportesLabBtn" class="submenu-btn" onclick="navigateToLab('reportesLabSection', 'reportesLabBtn');">
               <i class="fas fa-file-medical"></i> Reportes Lab
             </button>
+            <button id="pendientesReportarLabBtn" class="submenu-btn" onclick="navigateToLab('pendientesReportarSection', 'pendientesReportarLabBtn');">
+              <i class="fas fa-bell"></i> Pendientes por Reportar
+            </button>
             <button id="inyectablesBtn" class="submenu-btn" onclick="navigateToInyectables('inyectablesSection', 'inyectablesBtn');">
               <i class="fas fa-syringe"></i> Control de Inyectables
             </button>
@@ -121,6 +133,25 @@
           </div>
         </div>
 
+        <!-- Internamientos (siempre visible en el menú) -->
+        <div id="internamientosCategory" class="nav-category">
+          <button id="internamientosBtn" class="nav-category-btn" onclick="toggleSubmenuHTML('internamientosBtn', 'internamientosSubmenu');">
+            <i class="fas fa-bed"></i> Internamientos
+            <i class="fas fa-chevron-down category-arrow"></i>
+          </button>
+          <div id="internamientosSubmenu" class="nav-submenu">
+            <button id="crearInternamientoBtn" class="submenu-btn" onclick="typeof nuevoInternamiento === 'function' ? nuevoInternamiento() : (window.internamientoModule && window.internamientoModule.showAdmisionForm && window.internamientoModule.showAdmisionForm());">
+              <i class="fas fa-plus-circle"></i> Nuevo Internamiento
+            </button>
+            <button id="verInternamientosBtn" class="submenu-btn" onclick="typeof verInternamientos === 'function' ? verInternamientos() : (window.internamientoModule && window.internamientoModule.showInternamientosSection && window.internamientoModule.showInternamientosSection());">
+              <i class="fas fa-list-alt"></i> Ver Internamientos
+            </button>
+            <button id="visitasBtn" class="submenu-btn" onclick="window.internamientoModule && window.internamientoModule.showVisitasView && window.internamientoModule.showVisitasView();">
+              <i class="fas fa-user-friends"></i> Agregar visitas
+            </button>
+          </div>
+        </div>
+
       
         <!-- Administrativo (solo para admin) -->
         <div id="administrativoCategory" class="nav-category admin-only" style="display: none;">
@@ -134,6 +165,9 @@
             </button>
             <button id="estadisticasBtn" class="submenu-btn" onclick="navigateToEstadisticas();">
               <i class="fas fa-chart-pie"></i> Estadísticas
+            </button>
+            <button id="codigosAsistentesBtn" class="submenu-btn" onclick="if(window.internamientoModule) { window.internamientoModule.mostrarGestionCodigos(); }">
+              <i class="fas fa-key"></i> Códigos de Personal Médico
             </button>
           </div>
         </div>
@@ -194,12 +228,7 @@
               </div>
             </div>
 
-            <div class="form-row">
-              <div class="form-group">
-                <label for="hora">Hora de Consulta</label>
-                <input type="time" id="hora">
-              </div>
-            </div>
+          
 
             <div class="form-row">
               <div class="form-group">
@@ -556,8 +585,6 @@
                   <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
                   <option value="Dra. Adriana Rojas">Dra. Adriana Rojas</option>
                   <option value="Dra. Christiane Buchheim">Dra. Christiane Buchheim</option>
-                  <option value="Dr. Alexander Mesen">Dr. Alexander Mesen</option>
-                  <option value="Dra. Amanda Arroyo">Dra. Amanda Arroyo</option>
                   <option value="Medico Externo">Médico Externo</option>
 
                   <option value="N.A">N.A</option>
@@ -700,9 +727,9 @@
         
         
         <!-- Filtro de fecha para laboratorio -->
-        <div class="date-filter" style="margin-bottom: 15px;" id="labDateFilterContainer">
-          <label for="labFilterDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
-          <input type="date" id="labFilterDate">
+        <div class="date-filter" style="margin-bottom: 15px; display: none;" id="labDateFilterContainer">
+          <label for="labFilterMonth"><i class="fas fa-calendar-alt"></i> Mes (reportados):</label>
+          <input type="month" id="labFilterMonth">
         </div>
 
         <!-- Filtro por médico para laboratorio -->
@@ -718,8 +745,8 @@
 
         <!-- Filtros para laboratorio -->
         <div class="filter-container">
-          <button class="lab-filter-btn active" data-filter="todos">Todos</button>
-          <button class="lab-filter-btn" data-filter="pendiente">Pendiente</button>
+          <button class="lab-filter-btn" data-filter="todos" style="display:none" aria-hidden="true">Todos</button>
+          <button class="lab-filter-btn active" data-filter="pendiente">Pendiente</button>
           <button class="lab-filter-btn" data-filter="procesando">En Proceso</button>
           <button class="lab-filter-btn" data-filter="reportado">Reportados por Lab</button>
           <button class="lab-filter-btn" data-filter="reportado_cliente">Reportado al cliente</button>
@@ -786,6 +813,52 @@
             </div>
           </div>
           <iframe id="labReportIframe" src="" frameborder="0"></iframe>
+        </div>
+      </section>
+
+      <!-- Sección Pendientes por Reportar (Lab) -->
+      <section id="pendientesReportarSection" class="hidden">
+        <h2><i class="fas fa-bell"></i> Pendientes por Reportar</h2>
+        <p class="section-subtitle">Seleccione un médico para ver todos los exámenes que fueron reportados por el laboratorio y aún están pendientes de ser comunicados al dueño de la mascota.</p>
+
+        <div class="pendientes-doctor-selector">
+          <label for="pendientesReportarDoctorSelect"><i class="fas fa-user-md"></i> Seleccionar Médico</label>
+          <select id="pendientesReportarDoctorSelect" onchange="onPendientesReportarDoctorChange(this.value)">
+            <option value="">-- Seleccione un médico --</option>
+            <option value="Medico Externo">Médico Externo</option>
+            <option value="N.A">N.A</option>
+          </select>
+        </div>
+
+        <div class="date-filter pendientes-date-filter" style="margin-bottom: 15px;">
+          <label for="pendientesReportarDesde"><i class="fas fa-calendar-alt"></i> Rango:</label>
+          <input type="date" id="pendientesReportarDesde" onchange="applyPendientesDateRangeFilter()">
+          <span style="font-weight:600;color:#5f6368;">hasta</span>
+          <input type="date" id="pendientesReportarHasta" onchange="applyPendientesDateRangeFilter()">
+          <button type="button" class="filter-btn active" onclick="applyPendientesDateRangeFilter()">Aplicar rango</button>
+        </div>
+
+        <div id="pendientesReportarAlerta" class="pendientes-alerta" style="display:none;">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="pendientesReportarAlertaMsg"></span>
+        </div>
+
+        <div id="pendientesReportarResumen" class="pendientes-resumen" style="display:none;">
+          <div class="resumen-item">
+            <span class="resumen-numero" id="pendientesTotalCount">0</span>
+            <span class="resumen-label">Total pendientes</span>
+          </div>
+          <div class="resumen-item resumen-vencidos">
+            <span class="resumen-numero" id="pendientesVencidosCount">0</span>
+            <span class="resumen-label">Más de 48 horas</span>
+          </div>
+        </div>
+
+        <div id="pendientesReportarContainer" class="pendientes-container">
+          <div class="pendientes-placeholder">
+            <i class="fas fa-user-md" style="font-size:2.5rem;color:#bdc3c7;margin-bottom:10px;"></i>
+            <p>Seleccione un médico para ver sus pacientes pendientes por reportar.</p>
+          </div>
         </div>
       </section>
 
@@ -984,8 +1057,8 @@
 
       <!-- Sección para Control de Vacunas -->
       <section id="vacunasSection" class="hidden">
-        <h2><i class="fas fa-syringe"></i> Control de Vacunas</h2>
-        
+        <h2><i class="fas fa-syringe"></i> Control de vacuna y temperatura</h2>
+
         <!-- Selección de Fecha y Turno -->
         <div class="form-container">
           <div class="form-row">
@@ -1003,7 +1076,7 @@
               </select>
             </div>
           </div>
-          
+
           <div class="form-actions">
             <button type="button" id="cargarVacunasTurno" class="btn-submit">
               <i class="fas fa-eye"></i> Ver Registro del Turno
@@ -1011,8 +1084,19 @@
           </div>
         </div>
 
-        <!-- Área para mostrar el registro del turno seleccionado -->
-        <div id="vacunasRegistroArea" style="display: none;">
+        <div class="vacunas-module-shell">
+          <div class="vacunas-module-tabstrip" role="tablist">
+            <button type="button" class="vacunas-module-tab active" id="vacunasTabBtnVacunas" role="tab" aria-selected="true">
+              <i class="fas fa-syringe"></i> Control de vacunas
+            </button>
+            <button type="button" class="vacunas-module-tab" id="vacunasTabBtnTemperatura" role="tab" aria-selected="false">
+              <i class="fas fa-thermometer-half"></i> Control de temperatura
+            </button>
+          </div>
+
+          <div id="vacunasPanelVacunas" class="vacunas-module-panel active" role="tabpanel">
+            <p id="vacunasPlaceholderVacunas" class="vacunas-module-placeholder">Seleccione fecha y turno arriba y pulse «Ver Registro del Turno» para ver inventario, registros y notas.</p>
+            <div id="vacunasRegistroVacunas" style="display: none;">
           
           <!-- Apertura de Turno e Inventario -->
           <div class="apertura-turno-container" style="margin-bottom: 30px;">
@@ -1243,6 +1327,90 @@
               <button type="button" id="guardarVacunasNotas" class="btn-submit">
                 <i class="fas fa-save"></i> Guardar Notas
               </button>
+            </div>
+          </div>
+            </div>
+          </div>
+
+          <div id="vacunasPanelTemperatura" class="vacunas-module-panel" role="tabpanel">
+            <p id="vacunasPlaceholderTemperatura" class="vacunas-module-placeholder">Para registrar lecturas del turno actual, seleccione fecha y turno arriba y pulse «Ver Registro del Turno».</p>
+            <div id="vacunasRegistroTemperatura" style="display: none;">
+              <div class="form-container" style="margin-top: 0;">
+                <h3><i class="fas fa-snowflake"></i> Registrar temperatura — turno actual</h3>
+                <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                  <i class="fas fa-info-circle"></i> Lecturas del <strong>turno cargado</strong>. La <strong>fecha y hora</strong> se guardan automáticamente al registrar.
+                </p>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="vacunaTempCelsius"><i class="fas fa-thermometer-half"></i> Temperatura (°C): *</label>
+                    <input type="number" id="vacunaTempCelsius" step="any" inputmode="decimal" placeholder="Ej. 4,2" autocomplete="off">
+                  </div>
+                  <div class="form-group">
+                    <label for="vacunaTempResponsable"><i class="fas fa-user"></i> Responsable: *</label>
+                    <input type="text" id="vacunaTempResponsable" placeholder="Nombre de quien registra la lectura" autocomplete="off">
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="button" id="guardarVacunasTemperatura" class="btn-submit">
+                    <i class="fas fa-save"></i> Registrar lectura
+                  </button>
+                  <button type="button" id="limpiarVacunasTemperatura" class="btn-cancel">
+                    <i class="fas fa-eraser"></i> Limpiar
+                  </button>
+                </div>
+                <div class="table-responsive" style="margin-top: 15px;">
+                  <table class="vacunas-table">
+                    <thead>
+                      <tr>
+                        <th>Fecha y hora del registro</th>
+                        <th>Temperatura (°C)</th>
+                        <th>Responsable</th>
+                      </tr>
+                    </thead>
+                    <tbody id="vacunasTemperaturaTableBody">
+                      <tr><td colspan="3" class="no-data">No hay lecturas de temperatura para este turno</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-container vacunas-historico-temp-wrap" style="margin-top: 28px;">
+              <h3><i class="fas fa-chart-line"></i> Histórico general — temperatura de refrigeración</h3>
+              <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                Consulte todas las lecturas registradas en un intervalo de fechas (todos los turnos).
+              </p>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="vacunasTempHistDesde"><i class="fas fa-calendar"></i> Desde:</label>
+                  <input type="date" id="vacunasTempHistDesde">
+                </div>
+                <div class="form-group">
+                  <label for="vacunasTempHistHasta"><i class="fas fa-calendar"></i> Hasta:</label>
+                  <input type="date" id="vacunasTempHistHasta">
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="button" id="cargarVacunasTemperaturaHistorial" class="btn-submit">
+                  <i class="fas fa-search"></i> Ver histórico
+                </button>
+              </div>
+              <div class="table-responsive" style="margin-top: 15px;">
+                <table class="vacunas-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha (turno)</th>
+                      <th>Turno</th>
+                      <th>Fecha y hora del registro</th>
+                      <th>Temperatura (°C)</th>
+                      <th>Responsable</th>
+                    </tr>
+                  </thead>
+                  <tbody id="vacunasTemperaturaHistorialBody">
+                    <tr><td colspan="5" class="no-data">Seleccione fechas y pulse «Ver histórico»</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -1859,6 +2027,55 @@
         </div>
       </section>
 
+      <section id="rxPresupuestosSection" class="hidden">
+        <h2><i class="fas fa-x-ray"></i> Control de RX y Presupuestos</h2>
+
+        <div class="rx-pres-toolbar">
+          <label for="fechaRxPresupuestos">
+            <i class="fas fa-calendar-day"></i> Fecha:
+          </label>
+          <input type="date" id="fechaRxPresupuestos">
+          <button class="btn-buscar-rx" id="buscarRxPresupuestosBtn" type="button">
+            <i class="fas fa-search"></i> Buscar
+          </button>
+          <span class="rx-count-badge" id="rxPresupuestosCount" style="display:none;"></span>
+        </div>
+
+        <div class="rx-summary-bar" id="rxSummaryBar" style="display:none;">
+          <div class="rx-summary-card">
+            <div class="rx-summary-num" id="rxTotalCount">0</div>
+            <div class="rx-summary-label">Total</div>
+          </div>
+          <div class="rx-summary-card">
+            <div class="rx-summary-num" id="rxCheckedCount">0</div>
+            <div class="rx-summary-label">En sistema</div>
+          </div>
+          <div class="rx-summary-card">
+            <div class="rx-summary-num" id="rxPendingCount">0</div>
+            <div class="rx-summary-label">Pendientes</div>
+          </div>
+        </div>
+
+        <div class="rx-table-wrap">
+          <table class="rx-table">
+            <thead>
+              <tr>
+                <th># Ticket</th>
+                <th>Cedula</th>
+                <th>Cliente</th>
+                <th>Mascota</th>
+                <th>Tipo</th>
+                <th>Descripcion (Por Cobrar)</th>
+                <th>En Sistema?</th>
+                <th>Encargado</th>
+                <th>Actualizado</th>
+              </tr>
+            </thead>
+            <tbody id="rxPresupuestosBody"></tbody>
+          </table>
+        </div>
+      </section>
+
 
   <!-- Plantillas para notificaciones y modales -->
   <div id="notificationContainer"></div>
@@ -2024,15 +2241,19 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   
   <!-- Scripts críticos para inicio -->
+  <script src="modules/core/js/vaccine-autocomplete-manager.js"></script>
   <script src="modules/core/js/firebase-config.js"></script>
   <script src="modules/auth/js/auth.js" defer></script>
   
   <!-- Scripts principales con defer para no bloquear render -->
+  <script src="modules/core/js/time-picker-12h.js" defer></script>
   <script src="modules/core/js/services-data.js" defer></script>
   <script src="modules/core/js/firebase-realtime-optimizer.js" defer></script>
   <script src="modules/core/js/billing-performance-optimizer.js" defer></script>
   <script src="modules/core/js/realtime-performance-manager.js" defer></script>
   <script src="modules/core/js/index.js" defer></script>
+  <script src="modules/core/js/rx-presupuestos-module.js" defer></script>
+  <script src="modules/vacunas-temp/js/vacunas-temperatura-modulo-CODIGO.js" defer></script>
   
   <!-- Módulos específicos con defer (carga diferida) -->
   <script src="modules/laboratorio/js/laboratorio.js" defer></script>
@@ -2216,51 +2437,47 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 
 <!-- ============================================================ -->
-<!-- SECCIÓN DE INTERNAMIENTO - MÓDULO BETA -->
+<!-- SECCIÓN DE INTERNAMIENTO - MÓDULO -->
 <!-- ============================================================ -->
 <section id="internamientosSection" class="section hidden">
+  <div class="int-container" style="max-width: 1600px; margin: 0 auto; padding: 30px;">
   
   <!-- ============================================================ -->
   <!-- VISTA 1: LISTA DE INTERNAMIENTOS -->
   <!-- ============================================================ -->
   <div id="internamiento-lista">
     <div class="section-header">
-      <h2><i class="fas fa-bed"></i> Internamientos <span class="beta-badge" style="background: #f39c12; color: white; padding: 4px 8px; border-radius: 3px; font-size: 11px; margin-left: 10px;">BETA</span></h2>
+      <h2><i class="fas fa-bed"></i> Internamientos</h2>
       <button id="btnNuevoInternamiento" class="btn btn-primary">
         <i class="fas fa-plus"></i> Nuevo Internamiento
       </button>
     </div>
 
-    <div class="banner-beta" style="background: linear-gradient(135deg, #f39c12, #e67e22); color: white; padding: 12px 20px; border-radius: 6px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
-      <i class="fas fa-exclamation-triangle" style="font-size: 20px;"></i>
-      <div style="flex: 1;">
-        <strong>🚧 Versión BETA</strong> - Este módulo está en pruebas. Reporta cualquier problema al equipo de desarrollo.
+    <!-- Búsqueda -->
+    <div style="margin-bottom: 24px;">
+      <div style="position: relative;">
+        <input type="text" id="buscarInternamiento" placeholder="Buscar por nombre de mascota, propietario o expediente...">
+        <i class="fas fa-search" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 1rem;"></i>
       </div>
     </div>
 
-          <!-- Búsqueda -->
-          <div style="margin-bottom: 20px;">
-            <div style="position: relative;">
-              <input type="text" id="buscarInternamiento" placeholder="🔍 Buscar por nombre de mascota, propietario o expediente..." 
-                     style="width: 100%; padding: 12px 20px 12px 45px; border: 2px solid #e0e0e0; border-radius: 25px; font-size: 0.95rem; transition: all 0.3s ease;">
-              <i class="fas fa-search" style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #999;"></i>
-            </div>
-          </div>
-
-          <div class="filters-container" style="margin-bottom: 20px;">
-            <button class="filter-btn active" data-filter="activos">
-              <i class="fas fa-heartbeat"></i> Activos
-            </button>
-            <button class="filter-btn" data-filter="criticos">
-              <i class="fas fa-exclamation-triangle"></i> Críticos
-            </button>
-            <button class="filter-btn" data-filter="alta">
-              <i class="fas fa-check-circle"></i> Alta Médica
-            </button>
-            <button class="filter-btn" data-filter="todos">
-              <i class="fas fa-list"></i> Todos
-            </button>
-          </div>
+    <div class="filters-container">
+      <button class="filter-btn active" data-filter="activos">
+        <i class="fas fa-heartbeat"></i> Activos
+      </button>
+      <button class="filter-btn" data-filter="criticos">
+        <i class="fas fa-exclamation-triangle"></i> Críticos
+      </button>
+      <button class="filter-btn" data-filter="dados_alta">
+        <i class="fas fa-home"></i> Dados de alta
+      </button>
+      <button class="filter-btn" data-filter="defuncion">
+        <i class="fas fa-cross"></i> Defunción
+      </button>
+      <button class="filter-btn" data-filter="todos">
+        <i class="fas fa-list"></i> Todos
+      </button>
+    </div>
 
     <div id="internamientosActivosContainer">
       <!-- Se llena dinámicamente por JS -->
@@ -2295,6 +2512,10 @@ document.addEventListener('DOMContentLoaded', function() {
             <label for="internamientoTelefonoAdmision">Teléfono *</label>
             <input type="tel" id="internamientoTelefonoAdmision" required>
           </div>
+          <div class="form-group">
+            <label for="internamientoCorreoAdmision">Correo *</label>
+            <input type="email" id="internamientoCorreoAdmision" required placeholder="ejemplo@correo.com">
+          </div>
         </div>
       </div>
 
@@ -2317,8 +2538,11 @@ document.addEventListener('DOMContentLoaded', function() {
             </select>
           </div>
           <div class="form-group">
-            <label for="internamientoIdPacienteAdmision">ID Paciente (Expediente)</label>
-            <input type="text" id="internamientoIdPacienteAdmision" placeholder="Ej: 00001">
+            <label for="internamientoIdPacienteAdmision">
+              ID Paciente (Expediente)
+              <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">(Opcional)</span>
+            </label>
+            <input type="text" id="internamientoIdPacienteAdmision" placeholder="Ej: 00001 (opcional)">
           </div>
         </div>
       </div>
@@ -2329,50 +2553,78 @@ document.addEventListener('DOMContentLoaded', function() {
               <div class="form-row">
                 <div class="form-group" style="grid-column: span 2;">
                   <label for="internamientoHistoriaClinica">
-                    Historia Clínica / Motivo de Internamiento *
+                    Historia Clínica / Motivo de Internamiento
                     <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">
-                      (Incluir: Tiempo de evolución, signos clínicos principales)
+                      (Opcional - Se puede completar después en "Ver Expedientes")
                     </span>
                   </label>
-                  <textarea id="internamientoHistoriaClinica" rows="4" required placeholder="Descripción detallada del caso..."></textarea>
+                  <textarea id="internamientoHistoriaClinica" rows="4" placeholder="Descripción detallada del caso..."></textarea>
                 </div>
               </div>
         <div class="form-row">
           <div class="form-group" style="grid-column: span 2;">
-            <label for="internamientoDiagnostico">Diagnóstico Presuntivo *</label>
-            <input type="text" id="internamientoDiagnostico" required placeholder="Ej: Gastroenteritis aguda">
+            <label for="internamientoDiagnostico">
+              Diagnóstico Presuntivo
+              <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">
+                (Opcional - Se puede completar después en "Ver Expedientes")
+              </span>
+            </label>
+            <input type="text" id="internamientoDiagnostico" placeholder="Ej: Gastroenteritis aguda">
           </div>
         </div>
         <div class="form-row">
           <div class="form-group" style="grid-column: span 2;">
-            <label for="internamientoPadecimientos">Padecimientos o Enfermedades Previas</label>
-            <textarea id="internamientoPadecimientos" rows="2" placeholder="Opcional - Historial médico relevante"></textarea>
+            <label for="internamientoPadecimientos">
+              Padecimientos o Enfermedades Previas
+              <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">(Opcional)</span>
+            </label>
+            <textarea id="internamientoPadecimientos" rows="2" placeholder="Historial médico relevante (opcional)"></textarea>
           </div>
         </div>
               <div class="form-row">
                 <div class="form-group">
                   <label for="internamientoPesoIngreso">
-                    Peso de Ingreso (kg) *
-                    <span style="color: #27ae60; font-weight: normal; font-size: 0.85rem;">
-                      (Será referencia para monitoreo)
+                    Peso de Ingreso (kg)
+                    <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">
+                      (Opcional - Se puede completar después en "Ver Expedientes")
                     </span>
                   </label>
-                  <input type="number" id="internamientoPesoIngreso" step="0.1" min="0" required placeholder="Ej: 12.5">
+                  <input type="number" id="internamientoPesoIngreso" step="0.1" min="0" placeholder="Ej: 12.5">
                 </div>
                 <div class="form-group">
                   <label for="internamientoTempIngreso">
-                    Temperatura de Ingreso (°C) *
-                    <span style="color: #3498db; font-weight: normal; font-size: 0.85rem;">
-                      (Normal: 37.5-39.2°C)
+                    Temperatura de Ingreso (°C)
+                    <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">
+                      (Opcional - Normal: 37.5-39.2°C)
                     </span>
                   </label>
-                  <input type="number" id="internamientoTempIngreso" step="0.1" min="30" max="45" required placeholder="Ej: 38.5">
+                  <input type="number" id="internamientoTempIngreso" step="0.1" min="30" max="45" placeholder="Ej: 38.5">
                 </div>
               </div>
         <div class="form-row">
           <div class="form-group" style="grid-column: span 2;">
-            <label for="internamientoNecesidades">Necesidades Especiales / Observaciones</label>
-            <textarea id="internamientoNecesidades" rows="2" placeholder="Ej: Agresivo, manejar con precaución"></textarea>
+            <label for="internamientoNecesidades">
+              Necesidades Especiales / Observaciones
+              <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">(Opcional)</span>
+            </label>
+
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 8px;">
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 0.8rem;">
+                <input type="checkbox" id="internamientoAlimentacionEspecial">
+                Alimentación Especial
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 0.8rem;">
+                <input type="checkbox" id="internamientoAlergiasComidas">
+                Alergias a comidas
+              </label>
+              <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 0.8rem;">
+                <input type="checkbox" id="internamientoAlergiasMedicamentos">
+                Alergias a medicamentos
+              </label>
+              
+            </div>
+
+            <textarea id="internamientoNecesidades" rows="2" placeholder="Especifique la necesidad especial u observaciones."></textarea>
           </div>
         </div>
       </div>
@@ -2380,41 +2632,183 @@ document.addEventListener('DOMContentLoaded', function() {
       <!-- Controles Rápidos -->
       <div class="form-section">
         <h3><i class="fas fa-check-square"></i> Controles Rápidos</h3>
-        <div class="form-row" style="display: flex; flex-wrap: wrap; gap: 15px;">
-          <label style="display: flex; align-items: center; gap: 8px;">
+        <h4 style="margin-top: 6px; padding: 4px 8px; background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; border-radius: 4px; font-weight: 600; font-size: 0.9rem;">
+          <i class="fas fa-exclamation-triangle"></i>
+          Nota: Todo procedimiento marcado debe estar cobrado y facturado
+        </h4>
+        <br>
+        <div style="display: flex; flex-wrap: wrap; gap: 15px; margin-bottom: 8px;">
+          <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 0.8rem;">
             <input type="checkbox" id="internamientoMuestras">
-            ¿Tomaron muestras?
+            Toma de muestras
           </label>
-          <label style="display: flex; align-items: center; gap: 8px;">
-            <input type="checkbox" id="internamientoExamenes">
-            ¿Tiene exámenes?
-          </label>
-          <label style="display: flex; align-items: center; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 0.8rem;">
             <input type="checkbox" id="internamientoUltrasonido">
-            ¿Ultrasonido?
+            Ultrasonido
           </label>
-          <label style="display: flex; align-items: center; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 0.8rem;">
+            <input type="checkbox" id="internamientoRayosX">
+            Rayos X
+          </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 0.8rem;">
             <input type="checkbox" id="internamientoCastrado">
-            ¿Castrado?
+            Castrado
           </label>
-          <label style="display: flex; align-items: center; gap: 8px;">
+          <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 0.8rem;">
             <input type="checkbox" id="internamientoVacunas">
-            ¿Vacunas y desparasitación al día?
+            Vacunas y desparasitación al día
           </label>
+          <label style="display: flex; align-items: center; gap: 6px; font-weight: normal; font-size: 0.8rem;">
+            <input type="checkbox" id="internamientoReticulocitosChecklist">
+            Reticulocitos
+          </label>
+        </div>
+        <br>
+        <div class="form-section" id="internamientoTipoMuestraContainer" style="display: none;">
+          <h3><i class="fas fa-vial"></i> Muestras</h3>
+          <div class="form-row">
+            <div class="form-group" style="grid-column: span 2;">
+              <label for="internamientoTipoMuestra">Tipo de muestra (especifique si marcó Toma de muestras)</label>
+              <input type="text" id="internamientoTipoMuestra" placeholder="Ej.: sangre, orina, heces, citología, etc.">
+            </div>
+          </div>
+        </div>
+        <div class="form-section" id="internamientoImagenologiaSection" style="display: none;">
+          <h3><i class="fas fa-x-ray"></i> Imagenología</h3>
+          <div class="form-row">
+            <div class="form-group" id="internamientoReporteRayosXContainer" style="display: none;">
+              <label for="internamientoReporteRayosXInput">Reporte de Rayos X</label>
+              <input type="text" id="internamientoReporteRayosXInput" placeholder="Observaciones">
+            </div>
+            <div class="form-group" id="internamientoDoctorRayosXContainer" style="display: none;">
+              <label for="internamientoDoctorRayosX"><i class="fas fa-user-md"></i> ¿Qué doctor o técnico realizó los Rayos X?</label>
+              <select id="internamientoDoctorRayosX" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; background: white;">
+                <option value="">Seleccione un doctor o técnico</option>
+                <!-- Los doctores se cargarán dinámicamente desde Firebase -->
+              </select>
+            </div>
+            <div class="form-group" id="internamientoReporteUltrasonidoContainer" style="display: none;">
+              <label for="internamientoReporteUltrasonidoInput">Reporte de Ultrasonido</label>
+              <input type="tel" id="internamientoReporteUltrasonidoInput" placeholder="Observaciones">
+            </div>
+            <div class="form-group" id="internamientoDoctorUltrasonidoContainer" style="display: none;">
+              <label for="internamientoDoctorUltrasonido"><i class="fas fa-user-md"></i> ¿Qué doctor realizó el ultrasonido?</label>
+              <select id="internamientoDoctorUltrasonido" style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; background: white;">
+                <option value="">Seleccione un doctor</option>
+                <!-- Los doctores se cargarán dinámicamente desde Firebase -->
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="internamientoReticulocitosSection" class="form-section reticulocitos-section">
+          <h3><i class="fas fa-microscope"></i> Reticulocitos</h3>
+          <div class="form-row reticulocitos-row">
+            <div class="form-group reticulocitos-check-wrap">
+              <label class="reticulocitos-label">
+                <input type="checkbox" id="internamientoReticulocitosTieneExamen" class="reticulocitos-check">
+                Tiene examen de reticulocitos
+              </label>
+              <div id="internamientoReticulocitosClasificacionWrap" class="reticulocitos-clasificacion-wrap" style="display: none;">
+                <div id="internamientoReticulocitosClasificacion" class="reticulocitos-radios">
+                  <label class="reticulocitos-radio-label">
+                    <input type="radio" name="internamientoReticulocitosTipo" value="regenerativa" id="internamientoReticulocitosRegenerativa">
+                    <span>Regenerativa</span>
+                  </label>
+                  <label class="reticulocitos-radio-label">
+                    <input type="radio" name="internamientoReticulocitosTipo" value="no_regenerativa" id="internamientoReticulocitosNoRegenerativa">
+                    <span>No regenerativa</span>
+                  </label>
+                  <label class="reticulocitos-radio-label">
+                    <input type="radio" name="internamientoReticulocitosTipo" value="resultados_pendientes" id="internamientoReticulocitosResultadosPendientes">
+                    <span>Resultados pendientes</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Pendientes -->
+      <div class="form-section">
+        <h3><i class="fas fa-tasks"></i> Pendientes</h3>
+        <div class="form-row" style="margin-top: 8px;">
+          <div class="form-group" style="grid-column: span 2;">
+            <button type="button" class="btn btn-primary" onclick="window.internamientoModule.agregarProcedimiento()">
+              <i class="fas fa-plus"></i> Nueva Tarea
+            </button>
+          </div>
+        </div>
+        <div id="listaPendientesAdmision" class="form-row" style="margin-top: 12px;"></div>
+      </div>
+
+      <!-- Plan de medicación -->
+      <div class="form-section">
+        <h3><i class="fas fa-pills"></i> Plan de medicación</h3>
+        <div class="form-row" style="margin-top: 8px;">
+          <div class="form-group" style="grid-column: span 2;">
+            <button type="button" class="btn btn-primary" onclick="window.internamientoModule.showAgregarMedicamentoForm(true)">
+              <i class="fas fa-plus"></i> Agregar medicamento
+            </button>
+          </div>
+        </div>
+        <div id="listaMedicamentosAdmision" class="form-row" style="margin-top: 12px;"></div>
+      </div>
+
+      <!-- Persona de respaldo en comunicación -->
+      <div class="form-section">
+        <h3><i class="fas fa-phone"></i> Persona de respaldo en caso de comunicación además del propietario</h3>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="internamientoPersonaResponsable">Nombre del contacto</label>
+            <input type="text" id="internamientoPersonaResponsable" placeholder="Ej. familiar o amigo para notificaciones">
+          </div>
+          <div class="form-group">
+            <label for="internamientoTelefonoResponsable">Teléfono del contacto</label>
+            <input type="tel" id="internamientoTelefonoResponsable" placeholder="Para notificaciones">
+          </div>
         </div>
       </div>
 
-      <!-- Persona Responsable -->
-      <div class="form-section">
-        <h3><i class="fas fa-phone"></i> Persona Responsable de Comunicación</h3>
-        <div class="form-row">
-          <div class="form-group">
-            <label for="internamientoPersonaResponsable">Nombre del Contacto</label>
-            <input type="text" id="internamientoPersonaResponsable" placeholder="Generalmente el propietario">
+      <!-- Autenticación (código de personal médico). Se oculta al elegir un paciente en el desplegable de editar. -->
+      <div id="admisionSeccionAutenticacion" class="form-section" style="background: #f8f9fa; border-radius: 8px; padding: 16px; margin-top: 20px; border: 1px solid #e0e0e0;">
+        <h3><i class="fas fa-lock"></i> Autenticación</h3>
+        <p style="font-size: 0.9rem; color: #6c757d; margin-bottom: 12px;">Debe verificar su código de personal médico para poder iniciar el internamiento.</p>
+        <div class="form-row" style="align-items: center; gap: 15px;">
+          <div class="form-group" style="margin: 0;">
+            <button type="button" class="btn btn-primary" id="btnVerificarCodigoAdmision" onclick="window.internamientoModule.solicitarCodigoAdmision()">
+              <i class="fas fa-key"></i> Verificar código
+            </button>
           </div>
-          <div class="form-group">
-            <label for="internamientoTelefonoResponsable">Teléfono de Contacto</label>
-            <input type="tel" id="internamientoTelefonoResponsable" placeholder="Para notificaciones">
+          <div class="form-group" style="flex: 1; margin: 0;">
+            <label for="admisionNombreAutenticado" style="font-size: 0.85rem; color: #6c757d;">Persona que ingresa el internamiento</label>
+            <input type="text" id="admisionNombreAutenticado" readonly placeholder="Se mostrará al verificar el código" style="background: #e9ecef; cursor: default;">
+          </div>
+        </div>
+        <div class="form-row" style="margin-top: 12px;">
+          <div class="form-group" style="flex: 1; margin: 0;">
+            <label for="internamientoDoctorAdmision"><i class="fas fa-user-md"></i> Doctor responsable</label>
+            <select id="internamientoDoctorAdmision" required style="width: 100%; padding: 8px 12px; border: 1px solid #ced4da; border-radius: 6px; background: white;">
+              <option value="">Seleccione un doctor</option>
+              <!-- Los doctores se cargarán dinámicamente desde Firebase -->
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Autenticación para edición: solo para registrar "quién hizo los cambios" en Revisar datos de ingreso. Se muestra solo al elegir un paciente en el desplegable de editar. -->
+      <div id="admisionSeccionAuthEdicion" class="form-section" style="display: none; background: #fef3c7; border-radius: 8px; padding: 16px; margin-top: 20px; border: 1px solid #f59e0b;">
+        <h3 style="color: #92400e;"><i class="fas fa-user-edit"></i> Registrar quién hace los cambios</h3>
+        <p style="font-size: 0.9rem; color: #78350f; margin-bottom: 12px;">Verifique su código para que su nombre quede registrado en «Revisar datos de ingreso» como la persona que realizó los cambios. Debe completar esto para poder guardar.</p>
+        <div class="form-row" style="align-items: center; gap: 15px;">
+          <div class="form-group" style="margin: 0;">
+            <button type="button" class="btn btn-primary" id="btnVerificarCodigoEdicionConsulta" onclick="window.internamientoModule.solicitarCodigoEdicionConsulta()" style="background: #b45309; border-color: #b45309;">
+              <i class="fas fa-key"></i> Verificar código
+            </button>
+          </div>
+          <div class="form-group" style="flex: 1; margin: 0;">
+            <label for="admisionNombreEdicionConsulta" style="font-size: 0.85rem; color: #78350f;">Persona que realizó los cambios (se mostrará en Revisar datos de ingreso)</label>
+            <input type="text" id="admisionNombreEdicionConsulta" readonly placeholder="Se mostrará al verificar el código" style="background: #fef9c3; border: 1px solid #f59e0b; cursor: default; border-radius: 6px; padding: 8px 12px;">
           </div>
         </div>
       </div>
@@ -2423,9 +2817,29 @@ document.addEventListener('DOMContentLoaded', function() {
         <button type="button" class="btn btn-secondary" onclick="window.internamientoModule.showInternamientosSection()">
           Cancelar
         </button>
-        <button type="submit" class="btn btn-success" style="margin-left: 10px;">
+        <button type="submit" class="btn btn-success" id="btnIniciarInternamiento" style="margin-left: 10px;">
           <i class="fas fa-save"></i> Iniciar Internamiento
         </button>
+        <div id="admisionEdicionGuardarContainer" style="display: none; margin-left: 10px;">
+          <button type="button" class="btn btn-primary" id="btnGuardarEdicionIngreso">
+            <i class="fas fa-save"></i> Guardar cambios
+          </button>
+        </div>
+      </div>
+
+      <!-- Edición de ingreso (pacientes de últimas 24h - consulta externa) -->
+      <div class="form-section" style="margin-top: 28px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+        <h3><i class="fas fa-edit"></i> Editar información de ingreso</h3>
+        <p style="font-size: 0.9rem; color: #6c757d; margin-bottom: 12px;">Si necesita corregir datos de un paciente ingresado en las últimas 24 horas, selecciónelo abajo. El botón «Iniciar Internamiento» se deshabilitará y podrá guardar los cambios (se registrará como cambios por consulta externa).</p>
+        <div class="form-row">
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="admisionEditarPacienteSelect">Paciente a editar (últimas 24 h)</label>
+            <select id="admisionEditarPacienteSelect" style="width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; background: white;">
+              <option value="">— Seleccione un paciente para editar datos de ingreso —</option>
+              <!-- Opciones se llenan por JS según internamientos últimas 24h -->
+            </select>
+          </div>
+        </div>
       </div>
     </form>
   </div>
@@ -2436,6 +2850,9 @@ document.addEventListener('DOMContentLoaded', function() {
   <div id="internamiento-panel" class="hidden">
     <!-- Header dinámico -->
     <div id="panelHeaderContainer"></div>
+
+    <!-- Información extracurricular importante -->
+    <div id="panelInformacionExtracurricular" class="panel-informacion-extracurricular"></div>
 
           <!-- Contenido en 3 columnas -->
           <div class="panel-grid">
@@ -2457,14 +2874,26 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <!-- ============================================================ -->
-  <!-- VISTA 4: REGISTRO DE TURNO -->
+  <!-- VISTA: LISTA DE TURNOS -->
+  <!-- ============================================================ -->
+  <div id="internamiento-turnos" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- VISTA: FORMULARIO REGISTRO DE TURNO -->
   <!-- ============================================================ -->
   <div id="internamiento-turno" class="hidden">
     <div class="section-header">
       <h2><i class="fas fa-clipboard-check"></i> Registro de Turno</h2>
-      <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal(window.internamientoModule.currentInternamientoId)">
-        <i class="fas fa-arrow-left"></i> Volver al Panel
-      </button>
+      <div>
+        <button class="btn btn-secondary" onclick="window.internamientoModule.showTurnosView()" style="margin-right: 10px;">
+          <i class="fas fa-list"></i> Volver a lista de turnos
+        </button>
+        <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal(window.internamientoModule.currentInternamientoId)">
+          <i class="fas fa-arrow-left"></i> Volver al Panel
+        </button>
+      </div>
     </div>
 
     <form id="formRegistroTurno">
@@ -2474,26 +2903,32 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="form-row">
           <div class="form-group">
             <label for="turnoFecha">Fecha *</label>
-            <input type="date" id="turnoFecha" required>
+            <input type="date" id="turnoFecha" required readonly style="background: #f1f5f9; cursor: not-allowed;">
+            <small style="color: #6c757d; font-size: 0.8rem;">Asignada por el sistema</small>
           </div>
           <div class="form-group">
             <label for="turnoHora">Hora *</label>
-            <input type="time" id="turnoHora" required>
+            <input type="time" id="turnoHora" required readonly style="background: #f1f5f9; cursor: not-allowed;">
+            <small style="color: #6c757d; font-size: 0.8rem;">Asignada por el sistema</small>
           </div>
           <div class="form-group">
             <label for="turnoFranja">Turno *</label>
             <select id="turnoFranja" required>
-              <option value="12am-6am">12am - 6am (Nocturno)</option>
-              <option value="6am-12pm">6am - 12pm (Mañana)</option>
-              <option value="12pm-6pm">12pm - 6pm (Tarde)</option>
-              <option value="6pm-12am">6pm - 12am (Noche)</option>
+              <option value="6am-2pm">6:00 AM - 2:00 PM (Mañana)</option>
+              <option value="2pm-10pm">2:00 PM - 10:00 PM (Tarde-Noche)</option>
+              <option value="10pm-6am">10:00 PM - 6:00 AM (Noche)</option>
             </select>
           </div>
           <div class="form-group">
             <label for="turnoResponsable">Responsable / Quien Registra *</label>
-            <input type="text" id="turnoResponsable" required>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <input type="text" id="turnoResponsable" required readonly placeholder="Se asigna al ingresar el código" style="flex: 1; min-width: 180px; background: #f8f9fa;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="window.internamientoModule.asignarResponsableConCodigo()" title="Ingresar código de personal médico">
+                <i class="fas fa-lock"></i> Ingresar código
+              </button>
+            </div>
             <small style="color: #6c757d; font-size: 0.85rem; display: block; margin-top: 5px;">
-              <i class="fas fa-info-circle"></i> Nombre de la persona que registra este turno
+              <i class="fas fa-info-circle"></i> El nombre se muestra automáticamente al ingresar tu código de personal médico
             </small>
           </div>
         </div>
@@ -2538,6 +2973,28 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         <div class="form-row">
           <div class="form-group">
+            <label for="turnoPresionArterial">
+              Presión Arterial (PA)
+              <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">(mmHg - Ej: 120/80)</span>
+            </label>
+            <input type="text" id="turnoPresionArterial" placeholder="Ej: 120/80">
+            <small style="color: #6c757d; font-size: 0.8rem; display: block; margin-top: 3px;">
+              Normal: 110-160 sistólica. Alerta: <90 (baja) o >180 (alta)
+            </small>
+          </div>
+          <div class="form-group">
+            <label for="turnoPO2">
+              PO2 - Presión de Oxígeno
+              <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">(mmHg)</span>
+            </label>
+            <input type="number" id="turnoPO2" step="1" min="0" max="200" placeholder="Ej: 95">
+            <small style="color: #6c757d; font-size: 0.8rem; display: block; margin-top: 3px;">
+              Normal: 80-100 mmHg. Alerta: <80 (hipoxemia)
+            </small>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
             <label for="turnoMucosas">Mucosas</label>
             <select id="turnoMucosas">
               <option value="rosadas">Rosadas (Normal)</option>
@@ -2546,6 +3003,50 @@ document.addEventListener('DOMContentLoaded', function() {
               <option value="cianoticas">Cianóticas</option>
               <option value="congestivas">Congestivas</option>
             </select>
+          </div>
+          <div class="form-group">
+            <label for="turnoVia">Vía</label>
+            <select id="turnoVia">
+              <option value="">Seleccionar...</option>
+              <option value="permeable">Permeable</option>
+              <option value="no_tiene_via">No tiene vía</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="turnoTiempoVia">Tiempo de vía</label>
+            <select id="turnoTiempoVia">
+              <option value="">Seleccionar...</option>
+              <option value="sin_cambios">Sin cambios</option>
+              <option value="nueva_primera_vez">Nueva - Primera vez (la pusieron en internamiento)</option>
+              <option value="nueva_desde_consulta">Nueva - Ya traía vía desde consulta externa</option>
+              <option value="nueva_por_cambio">Nueva - Se tuvo que cambiar (se safó o se la arrancó el paciente)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="turnoSonda">Sonda</label>
+            <select id="turnoSonda">
+              <option value="">Seleccionar...</option>
+              <option value="permeable">Permeable</option>
+              <option value="no_tiene_sonda">No tiene sonda</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="turnoTiempoSonda">Tiempo de sonda</label>
+            <select id="turnoTiempoSonda">
+              <option value="">Seleccionar...</option>
+              <option value="sin_cambios">Sin cambios</option>
+              <option value="nueva_primera_vez">Nueva - Primera vez (la pusieron en internamiento)</option>
+              <option value="nueva_desde_consulta">Nueva - Ya traía sonda desde consulta externa</option>
+              <option value="nueva_por_cambio">Nueva - Se tuvo que cambiar (se safó o se la arrancó el paciente)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="turnoParametrosPulmonares">Registro de parámetros pulmonares</label>
+            <textarea id="turnoParametrosPulmonares" rows="3" placeholder="Opcional. Agregue aquí cualquier observación sobre parámetros pulmonares (sonidos, esfuerzo respiratorio, etc.)"></textarea>
           </div>
         </div>
       </div>
@@ -2565,13 +3066,24 @@ document.addEventListener('DOMContentLoaded', function() {
             </select>
           </div>
           <div class="form-group">
-            <label for="turnoNivelDolor">Nivel de Dolor</label>
+            <label for="turnoNivelDolor">
+              Nivel de Dolor
+              <button type="button" onclick="window.internamientoModule.showGlasgowCalculator()" 
+                      class="btn btn-sm btn-info" 
+                      style="margin-left: 10px; padding: 5px 12px; font-size: 0.85rem;">
+                <i class="fas fa-calculator"></i> Calcular Glasgow
+              </button>
+            </label>
             <select id="turnoNivelDolor">
               <option value="sin_dolor">Sin dolor</option>
               <option value="leve">Leve</option>
               <option value="moderado">Moderado</option>
               <option value="fuerte">Fuerte</option>
             </select>
+            <input type="hidden" id="glasgowPuntaje" value="0">
+            <small style="color: #6c757d; font-size: 0.8rem; display: block; margin-top: 5px;">
+              <i class="fas fa-info-circle"></i> Usa la calculadora Glasgow para evaluación objetiva del dolor
+            </small>
           </div>
         </div>
         <div class="form-row">
@@ -2591,20 +3103,85 @@ document.addEventListener('DOMContentLoaded', function() {
             <input type="text" id="turnoAlimentoTipo" placeholder="Tipo de alimento" style="margin-top: 8px;">
           </div>
         </div>
+        
+        <!-- DEFECACIÓN - Escala de Bristol -->
         <div class="form-row">
-          <div class="form-group">
-            <label style="display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="turnoDiarreas">
-              ¿Diarreas?
+          <div class="form-group" style="grid-column: span 2;">
+            <label>
+              <i class="fas fa-poop" style="color: #8B4513;"></i> 
+              Defecación - Escala de Bristol
+              <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">(Tipo de heces)</span>
             </label>
-            <textarea id="turnoDescripcionDiarreas" rows="2" placeholder="Descripción de características" style="margin-top: 8px;"></textarea>
+            <select id="turnoDefecacion" style="width: 100%; padding: 10px; border-radius: 6px;">
+              <option value="">No defecó / No observado</option>
+              <option value="tipo1">Tipo 1: Muy duras, secas (Estreñimiento severo - ALERTA)</option>
+              <option value="tipo2">Tipo 2: Duras pero formadas</option>
+              <option value="tipo3">Tipo 3: Normal, bien formadas (ÓPTIMO)</option>
+              <option value="tipo4">Tipo 4: Blandas pero con forma</option>
+              <option value="tipo5">Tipo 5: Pastosas, sin forma definida</option>
+              <option value="tipo6">Tipo 6: Líquidas con fragmentos (Diarrea moderada - ALERTA)</option>
+              <option value="tipo7">Tipo 7: Completamente líquidas (Diarrea severa - ALERTA)</option>
+            </select>
+            <small style="color: #6c757d; font-size: 0.8rem; display: block; margin-top: 5px;">
+              Tipo 3 es óptimo. Tipos 1, 6 y 7 generan alertas automáticas.
+            </small>
+            <textarea id="turnoDefecacionNotas" rows="2" placeholder="Observaciones adicionales (color, olor, presencia de sangre, mucosidad...)" style="margin-top: 8px; width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;"></textarea>
           </div>
+        </div>
+
+        <!-- MICCIÓN -->
+        <div class="form-row">
+          <div class="form-group" style="grid-column: span 2;">
+            <label>
+              <i class="fas fa-droplet" style="color: #3498db;"></i> 
+              Micción (Orina)
+            </label>
+            <div style="display: flex; gap: 15px; align-items: center; margin-bottom: 10px;">
+              <label style="display: flex; align-items: center; gap: 8px;">
+                <input type="checkbox" id="turnoMiccion">
+                ¿Orinó?
+              </label>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+              <div>
+                <label style="font-size: 0.9rem; color: #6c757d;">Color de Orina</label>
+                <select id="turnoMiccionColor" style="width: 100%; padding: 8px; border-radius: 4px;">
+                  <option value="">Seleccionar...</option>
+                  <option value="amarillo_claro">Amarillo claro (Normal)</option>
+                  <option value="amarillo">Amarillo (Normal)</option>
+                  <option value="ambar">Ámbar</option>
+                  <option value="oscuro">Oscuro (ALERTA)</option>
+                  <option value="con_sangre">Con sangre (Hematuria - ALERTA)</option>
+                  <option value="turbia">Turbia</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.9rem; color: #6c757d;">Frecuencia</label>
+                <select id="turnoMiccionFrecuencia" style="width: 100%; padding: 8px; border-radius: 4px;">
+                  <option value="">Seleccionar...</option>
+                  <option value="normal">Normal</option>
+                  <option value="aumentada">Aumentada (Poliuria)</option>
+                  <option value="disminuida">Disminuida (Oliguria - ALERTA)</option>
+                  <option value="ausente">Ausente (Anuria - ALERTA)</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size: 0.9rem; color: #6c757d;">Volumen aproximado (ml)</label>
+                <input type="number" id="turnoMiccionVolumen" min="0" placeholder="Ej: 150" style="width: 100%; padding: 8px; border-radius: 4px;">
+              </div>
+            </div>
+            <textarea id="turnoMiccionNotas" rows="2" placeholder="Observaciones adicionales sobre la micción..." style="margin-top: 8px; width: 100%; padding: 8px; border-radius: 4px; border: 1px solid #ddd;"></textarea>
+          </div>
+        </div>
+
+        <!-- VÓMITOS -->
+        <div class="form-row">
           <div class="form-group">
             <label style="display: flex; align-items: center; gap: 8px;">
               <input type="checkbox" id="turnoVomitos">
               ¿Vómitos?
             </label>
-            <textarea id="turnoDescripcionVomitos" rows="2" placeholder="Descripción de características" style="margin-top: 8px;"></textarea>
+            <textarea id="turnoDescripcionVomitos" rows="2" placeholder="Descripción de características (frecuencia, aspecto, contenido...)" style="margin-top: 8px;"></textarea>
           </div>
         </div>
       </div>
@@ -2688,18 +3265,105 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- Se llena dinámicamente por JS -->
   </div>
 
+  <div id="internamiento-cirugias" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-llamadas" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-defunciones" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-transfusiones" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-controles_adicionales" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-imagenologia" class="hidden">
+    <!-- Vista Imagenología - se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-rer" class="hidden">
+    <!-- Vista RER - se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-alimentacion_asistida" class="hidden">
+    <!-- Vista Alimentación asistida - se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-hidratacion" class="hidden">
+    <!-- Vista Hidratación - se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-curva_glucosa" class="hidden">
+    <!-- Vista Curva de glucosa - se llena dinámicamente por JS -->
+  </div>
+
   <div id="internamiento-egreso" class="hidden">
     <!-- Se llena dinámicamente por JS -->
   </div>
 
+  <div id="internamiento-visitas" class="hidden">
+    <!-- Vista Visitas - se llena dinámicamente por JS -->
+  </div>
+
+  </div><!-- Cierre de int-container -->
 </section>
 
+<!-- Fallback para que Ver/Nuevo Internamiento funcionen aunque el módulo cargue tarde o falle -->
+<script>
+(function() {
+  function showInternamientosSectionFallback(activeButtonId) {
+    activeButtonId = activeButtonId || 'verInternamientosBtn';
+    var sec = document.getElementById('internamientosSection');
+    if (!sec) { alert('No se pudo abrir Internamientos. Recargue la página (F5).'); return; }
+    var content = document.querySelector('.content');
+    if (content) {
+      var sections = content.querySelectorAll('.section');
+      for (var i = 0; i < sections.length; i++) {
+        sections[i].classList.add('hidden');
+        sections[i].classList.remove('active');
+      }
+    }
+    sec.classList.remove('hidden');
+    sec.classList.add('active');
+    if (typeof closeSidebar === 'function' && window.innerWidth <= 980) closeSidebar();
+    if (typeof setActiveSubmenuButtonHTML === 'function') setActiveSubmenuButtonHTML(activeButtonId);
+  }
+  window.verInternamientos = function() {
+    if (window.internamientoModule && typeof window.internamientoModule.showInternamientosSection === 'function') {
+      window.internamientoModule.showInternamientosSection();
+    } else {
+      showInternamientosSectionFallback('verInternamientosBtn');
+    }
+  };
+  window.nuevoInternamiento = function() {
+    if (window.internamientoModule && typeof window.internamientoModule.showAdmisionForm === 'function') {
+      window.internamientoModule.showAdmisionForm();
+    } else {
+      showInternamientosSectionFallback('crearInternamientoBtn');
+      alert('El módulo de internamiento no está listo. Recargue la página (F5) para crear uno nuevo.');
+    }
+  };
+})();
+</script>
 <!-- Cargar módulo de internamiento -->
 <script src="modules/internamiento/js/internamiento-module.js"></script>
+<script src="modules/internamiento/js/internamiento-expediente-pdf.js" defer></script>
 <script src="modules/internamiento/js/internamiento-notificaciones.js"></script>
 <script src="modules/internamiento/js/internamiento-extended.js"></script>
 <script src="modules/internamiento/js/internamiento-egreso.js"></script>
 <script src="modules/internamiento/js/internamiento-procedimientos.js"></script>
+<script src="modules/internamiento/js/internamiento-transfusion.js"></script>
+<script src="modules/internamiento/js/internamiento-glasgow.js"></script>
+<script src="modules/internamiento/js/internamiento-llamadas.js"></script>
+<script src="modules/internamiento/js/internamiento-auth-asistentes.js"></script>
 
 </body>
 </html>

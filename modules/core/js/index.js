@@ -5,11 +5,13 @@ let tickets = [];
 // Expose tickets globally for other modules (like consentimientos)
 window.tickets = tickets;
 
-// Variables para optimización de carga diferida
+// Carga por día de consulta (fechaConsulta): menos datos y listeners acotados al día activo
 let ticketsActiveListeners = null;
-let ticketsAllDataLoaded = false; // Flag para saber si ya se cargaron todos los datos
-let ticketsLoadDateRange = 30; // Días a cargar por defecto (últimos 60 días)
-let ticketsUpdateDebounceTimer = null; // Timer para debounce de actualizaciones
+let ticketsDayQuery = null;
+let ticketsConsultaLoadedDay = null; // YYYY-MM-DD de los tickets en memoria
+let ticketsUpdateDebounceTimer = null;
+let lastKnownCalendarDay = null; // Detectar cambio de día civil (medianoche)
+let ticketsLoadGeneration = 0; // Evita mezclar resultados si cambian de fecha antes de terminar el once('value')
 
 // Function to safely add event listeners
 function safeAddEventListener(elementId, eventType, handler) {
@@ -27,6 +29,169 @@ function getLocalDateString(date = new Date()) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+function getSelectedFilterDateString() {
+    const filterDateInput = document.getElementById('filterDate');
+    return (filterDateInput && filterDateInput.value) ? filterDateInput.value : getLocalDateString();
+}
+
+function detachTicketsDayListeners() {
+    if (ticketsActiveListeners && ticketsDayQuery) {
+        ticketsDayQuery.off('child_added', ticketsActiveListeners.handleChildAdded);
+        ticketsDayQuery.off('child_changed', ticketsActiveListeners.handleChildChanged);
+        ticketsDayQuery.off('child_removed', ticketsActiveListeners.handleChildRemoved);
+    }
+    ticketsActiveListeners = null;
+    ticketsDayQuery = null;
+}
+
+/** Una entrada por firebaseKey (evita duplicados en UI si hubo carreras o listeners duplicados). */
+function dedupeTicketsByFirebaseKey(arr) {
+    const out = [];
+    const seen = new Set();
+    for (const t of arr) {
+        const k = t.firebaseKey || (t.randomId ? `r:${t.randomId}` : null);
+        if (k) {
+            if (seen.has(k)) continue;
+            seen.add(k);
+            out.push(t);
+        } else {
+            out.push(t);
+        }
+    }
+    return out;
+}
+
+function ticketAlreadyInList(entry, firebaseKey) {
+    return tickets.some(
+        t =>
+            (firebaseKey && t.firebaseKey === firebaseKey) ||
+            (entry && entry.randomId && t.randomId === entry.randomId)
+    );
+}
+
+let mainTicketsNotifyDebounceTimer = null;
+
+function notifyMainTicketsUpdatedDebounced() {
+    if (mainTicketsNotifyDebounceTimer) clearTimeout(mainTicketsNotifyDebounceTimer);
+    mainTicketsNotifyDebounceTimer = setTimeout(() => {
+        mainTicketsNotifyDebounceTimer = null;
+        notifyMainTicketsUpdated();
+    }, 400);
+}
+
+/** Tiempo real: tarjetas visibles en sala de espera (no pestaña lab rápida encima). */
+function isMainTicketListVisibleInVerTickets() {
+    const sec = document.getElementById('verTicketsSection');
+    const tc = document.getElementById('ticketContainer');
+    if (!sec || sec.classList.contains('hidden')) return false;
+    if (!tc || tc.style.display === 'none') return false;
+    const labRc = document.getElementById('labResultsContainer');
+    if (labRc && !labRc.classList.contains('hidden')) return false;
+    return true;
+}
+
+/**
+ * Igual que la lógica de filtrado en renderTickets: ¿esta tarjeta entraría en la vista actual?
+ */
+function ticketMatchesActiveListFilter(ticket) {
+    const filterDateInput = document.getElementById('filterDate');
+    const selectedDate = (filterDateInput && filterDateInput.value) ? filterDateInput.value : getLocalDateString();
+    const currentFilterBtn = document.querySelector('#verTicketsSection .filter-btn.active');
+    const filter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
+    const searchInput = document.getElementById('ticketSearchInput');
+    const searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
+    const currentEmpresa = getCurrentEmpresa();
+
+    const matchesEmpresa = (() => {
+        if (!ticket.empresa) return currentEmpresa === 'veterinaria_smp';
+        return ticket.empresa === currentEmpresa;
+    })();
+    if (!matchesEmpresa) return false;
+
+    let passes = false;
+    if (filter === 'todos') {
+        passes = ticket.fechaConsulta === selectedDate && ticket.estado !== 'terminado' && ticket.estado !== 'cliente_se_fue';
+    } else if (filter === 'espera') {
+        passes = ticket.estado === 'espera';
+    } else if (filter === 'consultorio') {
+        passes = !!(
+            (
+                ticket.estado === 'consultorio1' ||
+                ticket.estado === 'consultorio2' ||
+                ticket.estado === 'consultorio3' ||
+                ticket.estado === 'consultorio4' ||
+                ticket.estado === 'consultorio5' ||
+                ticket.estado === 'rayosx' ||
+                ticket.estado === 'quirofano'
+            ) &&
+            ticket.fechaConsulta === selectedDate
+        );
+    } else if (filter === 'terminado') {
+        passes = (ticket.estado === 'terminado' || ticket.estado === 'cliente_se_fue') && ticket.fechaConsulta === selectedDate;
+    } else if (filter === 'urgentes') {
+        passes = ticket.urgencia === 'alta' && ticket.fechaConsulta === selectedDate;
+    } else if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
+        passes = ticket.fechaConsulta === selectedDate;
+    } else if (filter === 'porFacturar') {
+        passes =
+            ticket.fechaConsulta === selectedDate &&
+            (!ticket.numFactura || ticket.numFactura.trim() === '') &&
+            (!ticket.sinCosto || ticket.sinCosto !== true);
+    } else {
+        passes = ticket.fechaConsulta === selectedDate;
+    }
+
+    if (!passes) return false;
+    if (!searchText) return true;
+    return (
+        (ticket.nombre && ticket.nombre.toLowerCase().includes(searchText)) ||
+        (ticket.mascota && ticket.mascota.toLowerCase().includes(searchText)) ||
+        (ticket.idPaciente && ticket.idPaciente.toLowerCase().includes(searchText)) ||
+        (ticket.numFactura && ticket.numFactura.toLowerCase().includes(searchText))
+    );
+}
+
+function maybeShowEmptyTicketsPlaceholder() {
+    const ticketContainer = document.getElementById('ticketContainer');
+    if (!ticketContainer || !isMainTicketListVisibleInVerTickets()) return;
+    if (ticketContainer.querySelector('.ticket')) return;
+    ticketContainer.innerHTML = `
+            <div class="no-tickets">
+                <i class="fas fa-paw" style="font-size: 3rem; color: #ccc; margin-bottom: 15px;"></i>
+                <p>No hay tickets disponibles</p>
+            </div>
+        `;
+}
+
+/** Lectura puntual por rango de fechaConsulta (exportaciones / estadísticas); no sustituye la lista del día en memoria */
+function fetchTicketsByFechaConsultaRange(startStr, endStr) {
+    if (!ticketsRef) return Promise.resolve([]);
+    return ticketsRef.orderByChild('fechaConsulta').startAt(startStr).endAt(endStr).once('value').then(snapshot => {
+        const arr = [];
+        snapshot.forEach(childSnapshot => {
+            const entry = childSnapshot.val();
+            if (entry && entry.id != null && entry.mascota) {
+                arr.push({ ...entry, firebaseKey: childSnapshot.key });
+            }
+        });
+        return arr;
+    });
+}
+
+function refreshLabResultsIfVisible() {
+    const labResultsContainer = document.getElementById('labResultsContainer');
+    if (!labResultsContainer || labResultsContainer.classList.contains('hidden')) return;
+    if (typeof window.renderLabResults === 'function') {
+        window.renderLabResults();
+    }
+}
+
+/** Laboratorio y vistas que dependen de window.tickets escuchan este evento (solo día cargado, sin snapshot global). */
+function notifyMainTicketsUpdated() {
+    document.dispatchEvent(new CustomEvent('mainTicketsUpdated'));
+    refreshLabResultsIfVisible();
 }
 
 // Generar un identificador aleatorio seguro para cada ticket
@@ -386,9 +551,32 @@ const cleanDataBtn = document.getElementById('cleanDataBtn');
 document.addEventListener('DOMContentLoaded', () => {
     // Prevent auto-redirect while loading
     window.noRedirectOnAuth = true;
-    
+
+    function hideInitLoading() {
+        const el = document.getElementById('initLoading');
+        if (el) el.remove();
+    }
+
+    // Mostrar pista tras 5s por si la app se abrió con file://
+    setTimeout(() => {
+        const hint = document.getElementById('initLoadingHint');
+        if (hint) hint.style.display = 'block';
+    }, 5000);
+
+    // Timeout de seguridad: si Firebase no responde (ej. abriendo con file://), redirigir a login
+    const authTimeout = setTimeout(() => {
+        const mainContainer = document.querySelector('.main-container');
+        if (!mainContainer) return;
+        const hasVisibleSection = mainContainer.querySelector('section:not(.hidden)');
+        if (!hasVisibleSection && !sessionStorage.getItem('userRole')) {
+            window.location.href = 'home.html';
+        }
+    }, 12000);
+
     // Check authentication before doing anything else
     checkAuth().then(userData => {
+        clearTimeout(authTimeout);
+        hideInitLoading();
         if (!userData) {
             // Si no hay datos de usuario, redirigir al login
             window.location.href = 'home.html'; // O 'login.html' según corresponda
@@ -515,6 +703,8 @@ document.addEventListener('DOMContentLoaded', () => {
             showNotification('Error al conectar con el servidor', 'error');
         });
     }).catch(err => {
+        clearTimeout(authTimeout);
+        hideInitLoading();
         // Si estamos en la página de login, no mostrar error ni notificación
         if (window.location.pathname.toLowerCase().includes('home.html')) {
             return;
@@ -538,16 +728,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // mostrar filtro de fecha para admin/recepción
+    // mostrar filtro de fecha para admin/recepción (misma fecha que el día cargado; sin vista global)
     const dateFilter = document.getElementById('dateFilterContainer');
     if (dateFilter && hasPermission('canViewSchedule')) {
         dateFilter.classList.remove('hidden');
-        // inicializar con fecha actual y filtrar al cargar
         const filterDateInput = document.getElementById('filterDate');
         if (filterDateInput) {
             const today = getLocalDateString();
             filterDateInput.value = today;
-            renderTickets('fecha', today);
+            const scheduleRole = sessionStorage.getItem('userRole');
+            if (scheduleRole === 'admin') {
+                renderTickets('todos');
+            } else {
+                renderTickets('espera');
+            }
         }
     }
 
@@ -562,29 +756,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
-    // Evento para filtrar por fecha (OPTIMIZADO - detecta necesidad de datos históricos)
     safeAddEventListener('filterDate', 'change', () => {
-        const filterDateInput = document.getElementById('filterDate');
-        const selectedDate = filterDateInput ? filterDateInput.value : null;
-        
-        // Si se selecciona una fecha antigua y no se han cargado todos los datos, cargarlos
-        if (selectedDate) {
-            const selectedDateObj = new Date(selectedDate);
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - ticketsLoadDateRange);
-            
-            if (selectedDateObj < cutoffDate && !ticketsAllDataLoaded) {
-                // Fecha fuera del rango cargado, cargar todos los datos
-                loadTickets(true).then(() => {
-                    const currentFilterBtn = document.querySelector('.filter-btn.active');
-                    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
-                    renderTickets(currentFilter);
-                });
-                return;
-            }
-        }
-        
-        // Si no, solo renderizar con los datos ya cargados
         const currentFilterBtn = document.querySelector('.filter-btn.active');
         const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
         renderTickets(currentFilter);
@@ -759,6 +931,8 @@ function applyRoleBasedUI(role) {
         }
     }
     
+    const normalizedRole = String(role || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
     // Control de visibilidad del botón de vacunas basado en roles
     const vacunasBtn = document.getElementById('vacunasBtn');
     const allowedVacunasRoles = ['admin', 'consulta_externa'];
@@ -768,7 +942,7 @@ function applyRoleBasedUI(role) {
     console.log('Roles permitidos:', allowedVacunasRoles);
     
     if (vacunasBtn) {
-        if (allowedVacunasRoles.includes(role)) {
+        if (allowedVacunasRoles.includes(normalizedRole)) {
             console.log('Mostrando botón de vacunas para rol:', role);
             vacunasBtn.style.display = 'block';
         } else {
@@ -782,6 +956,26 @@ function applyRoleBasedUI(role) {
         }
     } else {
         console.error('No se encontró el botón de vacunas');
+    }
+
+    // Control de visibilidad del botón de RX y Presupuestos basado en roles
+    const rxPresupuestosBtn = document.getElementById('rxPresupuestosBtn');
+    const hiddenRxRoles = ['recepcion', 'visitas'];
+
+    if (rxPresupuestosBtn) {
+        if (hiddenRxRoles.includes(normalizedRole)) {
+            rxPresupuestosBtn.style.display = 'none';
+            rxPresupuestosBtn.style.visibility = 'hidden';
+            rxPresupuestosBtn.style.opacity = '0';
+            rxPresupuestosBtn.style.height = '0';
+            rxPresupuestosBtn.style.overflow = 'hidden';
+        } else {
+            rxPresupuestosBtn.style.display = 'flex';
+            rxPresupuestosBtn.style.visibility = 'visible';
+            rxPresupuestosBtn.style.opacity = '1';
+            rxPresupuestosBtn.style.height = '';
+            rxPresupuestosBtn.style.overflow = '';
+        }
     }
     
     // Add logout button event listener
@@ -800,11 +994,18 @@ function applyRoleBasedUI(role) {
     // Verificación adicional después de un delay
     setTimeout(() => {
         const vacunasBtnCheck = document.getElementById('vacunasBtn');
-        if (vacunasBtnCheck && !allowedVacunasRoles.includes(role)) {
+        if (vacunasBtnCheck && !allowedVacunasRoles.includes(normalizedRole)) {
             console.log('Verificación adicional: ocultando botón de vacunas');
             vacunasBtnCheck.style.display = 'none';
             vacunasBtnCheck.style.visibility = 'hidden';
             vacunasBtnCheck.style.opacity = '0';
+        }
+
+        const rxBtnCheck = document.getElementById('rxPresupuestosBtn');
+        if (rxBtnCheck && hiddenRxRoles.includes(normalizedRole)) {
+            rxBtnCheck.style.display = 'none';
+            rxBtnCheck.style.visibility = 'hidden';
+            rxBtnCheck.style.opacity = '0';
         }
     }, 100);
     
@@ -918,23 +1119,11 @@ safeAddEventListener('estadisticasBtn', 'click', () => {
         showSection(section);
         setActiveButton(document.getElementById('estadisticasBtn'));
         updateStatsGlobal();
-        
-        // Asegurarnos que se vea la sección de tiempo de espera
+
         const waitTimeSection = document.querySelector('.wait-time-statistics');
         if (waitTimeSection) {
             waitTimeSection.style.display = 'block';
         }
-        
-        // Initialize personnel statistics 
-        setTimeout(() => {
-            llenarSelectorPersonal(tickets);
-            renderizarGraficosPersonalServicios(tickets);
-            
-            // Regenerar el gráfico de tiempo de espera para asegurar que se muestre
-            renderizarGraficosTiempoEspera(tickets);
-        }, 200);
-    } else {
-        // Section 'estadisticasSection' not found
     }
 });
 
@@ -1565,153 +1754,108 @@ function updateTicketInDOM(updatedTicket) {
     }
 }
 
-// Función para cargar tickets desde Firebase (OPTIMIZADA - carga diferida)
-function loadTickets(loadAllData = false) {
+/**
+ * Carga solo tickets con fechaConsulta = dayStr y enliza listeners en tiempo real a esa consulta.
+ * Requiere índice en Firebase: .indexOn para "fechaConsulta" en /tickets.
+ */
+function loadTicketsForConsultaDay(dayStr) {
     return new Promise((resolve, reject) => {
-        // Desconectar listeners anteriores si existen para evitar duplicados
-        if (ticketsActiveListeners) {
-            // Verificar que los listeners sean funciones válidas antes de desconectarlos
-            if (typeof ticketsActiveListeners.handleChildAdded === 'function') {
-                ticketsRef.off('child_added', ticketsActiveListeners.handleChildAdded);
-            }
-            if (typeof ticketsActiveListeners.handleChildChanged === 'function') {
-                ticketsRef.off('child_changed', ticketsActiveListeners.handleChildChanged);
-            }
-            if (typeof ticketsActiveListeners.handleChildRemoved === 'function') {
-                ticketsRef.off('child_removed', ticketsActiveListeners.handleChildRemoved);
-            }
-            ticketsActiveListeners = null;
-        }
-        
-        // Si ya se cargaron todos los datos y no se solicita recarga completa, usar listeners incrementales
-        if (ticketsAllDataLoaded && !loadAllData) {
-            setupTicketsIncrementalListeners();
-            resolve();
+        if (!ticketsRef) {
+            reject(new Error('ticketsRef no disponible'));
             return;
         }
-        
-        // Calcular rango de fechas a cargar
-        let cutoffDate = null;
-        if (!loadAllData) {
-            const today = new Date();
-            const daysAgo = new Date(today);
-            daysAgo.setDate(today.getDate() - ticketsLoadDateRange);
-            cutoffDate = daysAgo.toISOString().split('T')[0];
-        }
-        
-        // Carga inicial limitada o completa según parámetro
-        // IMPORTANTE: Para asegurar que todos los dispositivos vean tickets actuales,
-        // cargamos todos los tickets y filtramos localmente considerando tanto
-        // fechaCreacion como fechaConsulta
-        const loadQuery = ticketsRef.once('value');
-        
-        loadQuery.then(snapshot => {
-            tickets = [];
-            currentTicketId = 1;
-            const data = snapshot.val() || {};
-            const keys = Object.keys(data);
-            const today = getLocalDateString();
-            const cutoffDateObj = cutoffDate ? new Date(cutoffDate) : null;
-            
-            // Procesar todos los tickets (optimizado para no bloquear)
-            keys.forEach(key => {
-                const entry = data[key];
-                if (entry && entry.id != null && entry.mascota) {
-                    // Si no se cargan todos los datos, filtrar por fecha
-                    if (!loadAllData && cutoffDateObj) {
-                        const ticketCreacionDate = entry.fechaCreacion ? entry.fechaCreacion.split('T')[0] : '';
-                        const ticketConsultaDate = entry.fechaConsulta || '';
-                        
-                        // Incluir si tiene fechaCreacion reciente O fechaConsulta actual/futura/reciente
-                        const isRecentCreacion = ticketCreacionDate && ticketCreacionDate >= cutoffDate;
-                        const isCurrentConsulta = ticketConsultaDate && (ticketConsultaDate >= today || ticketConsultaDate >= cutoffDate);
-                        
-                        if (!isRecentCreacion && !isCurrentConsulta) {
-                            return; // Saltar tickets antiguos
-                        }
-                    }
-                    
-                    tickets.push({
-                        ...entry,
-                        firebaseKey: key
-                    });
-                    if (entry.id >= currentTicketId) currentTicketId = entry.id + 1;
-                } else {
-                    ticketsRef.child(key).remove();
+        const gen = ++ticketsLoadGeneration;
+        detachTicketsDayListeners();
+        tickets = [];
+        currentTicketId = 1;
+        window.tickets = tickets;
+
+        ticketsDayQuery = ticketsRef.orderByChild('fechaConsulta').equalTo(dayStr);
+
+        ticketsDayQuery.once('value')
+            .then(snapshot => {
+                if (gen !== ticketsLoadGeneration) {
+                    return Promise.reject({ code: 'STALE_TICKETS_LOAD' });
                 }
+                snapshot.forEach(childSnapshot => {
+                    const entry = childSnapshot.val();
+                    const key = childSnapshot.key;
+                    if (entry && entry.id != null && entry.mascota) {
+                        tickets.push({
+                            ...entry,
+                            firebaseKey: key
+                        });
+                        if (entry.id >= currentTicketId) currentTicketId = entry.id + 1;
+                    } else if (key) {
+                        ticketsRef.child(key).remove();
+                    }
+                });
+                tickets = dedupeTicketsByFirebaseKey(tickets);
+                window.tickets = tickets;
+                ticketsConsultaLoadedDay = dayStr;
+                lastKnownCalendarDay = getLocalDateString();
+                return settingsRef.once('value');
+            })
+            .then(snapshot => {
+                if (gen !== ticketsLoadGeneration) {
+                    return Promise.reject({ code: 'STALE_TICKETS_LOAD' });
+                }
+                const settings = snapshot.val() || {};
+                if (settings.currentTicketId && settings.currentTicketId > currentTicketId) {
+                    currentTicketId = settings.currentTicketId;
+                } else {
+                    settingsRef.update({ currentTicketId });
+                }
+                setupTicketsIncrementalListeners();
+                notifyMainTicketsUpdated();
+                resolve();
+            })
+            .catch(error => {
+                if (error && error.code === 'STALE_TICKETS_LOAD') {
+                    resolve();
+                    return;
+                }
+                console.error('Error cargando tickets del día:', error);
+                ticketsConsultaLoadedDay = null;
+                showNotification(
+                    'No se pudieron cargar los tickets del día. Revise la conexión y que exista índice .indexOn para fechaConsulta en /tickets.',
+                    'error'
+                );
+                reject(error);
             });
-            
-            // Update global reference
-            window.tickets = tickets;
-            ticketsAllDataLoaded = loadAllData;
-            
-            return settingsRef.once('value');
-        })
-        .then(snapshot => {
-            const settings = snapshot.val() || {};
-            if (settings.currentTicketId && settings.currentTicketId > currentTicketId) {
-                currentTicketId = settings.currentTicketId;
-            } else {
-                // Guardar el valor actual en Firebase si no existe o es menor
-                settingsRef.update({ currentTicketId });
-            }
-            
-            // Configurar listeners incrementales para cambios futuros
-            setupTicketsIncrementalListeners();
-            resolve();
-        })
-        .catch(error => {
-            reject(error);
-        });
     });
 }
 
-// Configurar listeners incrementales (más eficientes que 'value')
+function loadTickets() {
+    const day = getSelectedFilterDateString();
+    return loadTicketsForConsultaDay(day);
+}
+
+/**
+ * Listeners sobre la query del día (orderBy fechaConsulta + equalTo).
+ * Firebase solo envía el hijo afectado en child_added / child_changed / child_removed — no redescarga todo /tickets.
+ */
 function setupTicketsIncrementalListeners() {
+    if (!ticketsDayQuery) return;
+
     const handleChildAdded = (snapshot) => {
         const entry = snapshot.val();
         if (!entry || entry.id == null || !entry.mascota) {
             ticketsRef.child(snapshot.key).remove();
             return;
         }
-        
-        // Solo procesar tickets recientes si no se cargaron todos los datos
-        if (!ticketsAllDataLoaded) {
-            const today = getLocalDateString();
-            const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - ticketsLoadDateRange);
-            const cutoffDateStr = cutoffDate.toISOString().split('T')[0];
-            
-            // Verificar fechaCreacion
-            const ticketCreacionDate = entry.fechaCreacion ? entry.fechaCreacion.split('T')[0] : '';
-            // Verificar fechaConsulta (importante para tickets actuales)
-            const ticketConsultaDate = entry.fechaConsulta || '';
-            
-            // Incluir el ticket si:
-            // 1. Tiene fechaCreacion reciente (dentro del rango)
-            // 2. O tiene fechaConsulta actual o futura (tickets de consulta actuales)
-            // 3. O tiene fechaConsulta dentro del rango reciente
-            const isRecentCreacion = ticketCreacionDate && ticketCreacionDate >= cutoffDateStr;
-            const isCurrentConsulta = ticketConsultaDate && (ticketConsultaDate >= today || ticketConsultaDate >= cutoffDateStr);
-            
-            if (!isRecentCreacion && !isCurrentConsulta) {
-                return; // Ignorar tickets antiguos que no son de consulta actual
-            }
-        }
-        
+
         const newTicket = { ...entry, firebaseKey: snapshot.key };
-        // Solo agregar si no existe ya un ticket con esa firebaseKey
-        if (!tickets.some(t => t.firebaseKey === newTicket.firebaseKey)) {
+        if (!ticketAlreadyInList(entry, snapshot.key)) {
             tickets.push(newTicket);
-            // Update global reference
+            tickets = dedupeTicketsByFirebaseKey(tickets);
             window.tickets = tickets;
-            
-            // OPTIMIZACIÓN: Usar debounce para actualizaciones de UI
+
             if (ticketsUpdateDebounceTimer) {
                 clearTimeout(ticketsUpdateDebounceTimer);
             }
             ticketsUpdateDebounceTimer = setTimeout(() => {
-                const currentFilterBtn = document.querySelector('.filter-btn.active');
+                const currentFilterBtn = document.querySelector('#verTicketsSection .filter-btn.active');
                 const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
                 renderTickets(currentFilter);
                 updateStatsGlobal();
@@ -1721,24 +1865,26 @@ function setupTicketsIncrementalListeners() {
                 }
                 if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-            }, 300); // Debounce de 300ms
+                notifyMainTicketsUpdatedDebounced();
+            }, 300);
         }
     };
-    
+
     const handleChildChanged = (snapshot) => {
         const updatedTicket = {
             ...snapshot.val(),
             firebaseKey: snapshot.key
         };
-        
+
         const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
         if (index !== -1) {
             const oldTicket = tickets[index];
             const previousEstado = oldTicket ? oldTicket.estado : null;
+            const matchOld = ticketMatchesActiveListFilter(oldTicket);
+
             tickets[index] = updatedTicket;
-            // Update global reference
             window.tickets = tickets;
-            
+
             if (
                 previousEstado !== updatedTicket.estado &&
                 updatedTicket.estado &&
@@ -1746,30 +1892,44 @@ function setupTicketsIncrementalListeners() {
             ) {
                 announceConsultorio(updatedTicket, updatedTicket.estado, previousEstado);
             }
-            
-            // Actualización optimizada: solo re-renderizar si es necesario
-            const needsFullRerender = (
+
+            const matchNew = ticketMatchesActiveListFilter(updatedTicket);
+            const needsFullCardRebuild =
                 oldTicket.estado !== updatedTicket.estado ||
                 oldTicket.fechaConsulta !== updatedTicket.fechaConsulta ||
-                oldTicket.urgencia !== updatedTicket.urgencia
-            );
-            
-            // OPTIMIZACIÓN: Usar debounce para actualizaciones de UI
+                oldTicket.urgencia !== updatedTicket.urgencia;
+
             if (ticketsUpdateDebounceTimer) {
                 clearTimeout(ticketsUpdateDebounceTimer);
             }
             ticketsUpdateDebounceTimer = setTimeout(() => {
-                if (needsFullRerender) {
-                    // Re-renderizado completo (incluye porCobrar actualizado)
-                    const currentFilterBtn = document.querySelector('.filter-btn.active');
-                    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
-                    renderTickets(currentFilter);
-                } else {
-                    // Actualización parcial para campos como porCobrar, numFactura, listoParaFacturar, etc.
-                    // SIEMPRE actualizar el DOM cuando cambian estos campos importantes
-                    updateTicketInDOM(updatedTicket);
+                const currentFilterBtn = document.querySelector('#verTicketsSection .filter-btn.active');
+                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
+
+                if (!isMainTicketListVisibleInVerTickets()) {
+                    updateStatsGlobal();
+                    updatePrequirurgicoCounter();
+                    if (typeof updateViaCounter === 'function') updateViaCounter();
+                    if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
+                    if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
+                    notifyMainTicketsUpdatedDebounced();
+                    return;
                 }
-                
+
+                if (matchOld && !matchNew) {
+                    const el = document.querySelector(`[data-ticket-id="${oldTicket.randomId}"]`);
+                    if (el) el.remove();
+                    maybeShowEmptyTicketsPlaceholder();
+                } else if (!matchOld && matchNew) {
+                    renderTickets(currentFilter);
+                } else if (matchOld && matchNew) {
+                    if (needsFullCardRebuild) {
+                        renderTickets(currentFilter);
+                    } else {
+                        updateTicketInDOM(updatedTicket);
+                    }
+                }
+
                 updateStatsGlobal();
                 updatePrequirurgicoCounter();
                 if (typeof updateViaCounter === 'function') {
@@ -1777,42 +1937,45 @@ function setupTicketsIncrementalListeners() {
                 }
                 if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
                 if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-            }, 300); // Debounce de 300ms
+                notifyMainTicketsUpdatedDebounced();
+            }, 300);
         }
     };
-    
+
     const handleChildRemoved = (snapshot) => {
         const index = tickets.findIndex(t => t.firebaseKey === snapshot.key);
-        if (index !== -1) {
-            tickets.splice(index, 1);
-            // Update global reference
-            window.tickets = tickets;
-            
-            // OPTIMIZACIÓN: Usar debounce para actualizaciones de UI
-            if (ticketsUpdateDebounceTimer) {
-                clearTimeout(ticketsUpdateDebounceTimer);
-            }
-            ticketsUpdateDebounceTimer = setTimeout(() => {
-                const currentFilterBtn = document.querySelector('.filter-btn.active');
-                const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
-                renderTickets(currentFilter);
-                updateStatsGlobal();
-                updatePrequirurgicoCounter();
-                if (typeof updateViaCounter === 'function') {
-                    updateViaCounter();
-                }
-                if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
-                if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
-            }, 300); // Debounce de 300ms
+        if (index === -1) return;
+
+        const removedTicket = tickets[index];
+        const wasVisible = ticketMatchesActiveListFilter(removedTicket);
+        tickets.splice(index, 1);
+        window.tickets = tickets;
+
+        if (ticketsUpdateDebounceTimer) {
+            clearTimeout(ticketsUpdateDebounceTimer);
         }
+        ticketsUpdateDebounceTimer = setTimeout(() => {
+            if (isMainTicketListVisibleInVerTickets() && wasVisible) {
+                const el = document.querySelector(`[data-ticket-id="${removedTicket.randomId}"]`);
+                if (el) el.remove();
+                maybeShowEmptyTicketsPlaceholder();
+            }
+
+            updateStatsGlobal();
+            updatePrequirurgicoCounter();
+            if (typeof updateViaCounter === 'function') {
+                updateViaCounter();
+            }
+            if (horarioSection && horarioSection.classList.contains('active')) mostrarHorario();
+            if (estadisticasSection && estadisticasSection.classList.contains('active')) renderizarGraficosPersonalServicios(tickets);
+            notifyMainTicketsUpdatedDebounced();
+        }, 300);
     };
-    
-    // Configurar listeners incrementales
-    ticketsRef.on('child_added', handleChildAdded);
-    ticketsRef.on('child_changed', handleChildChanged);
-    ticketsRef.on('child_removed', handleChildRemoved);
-    
-    // Guardar referencias para poder desconectar
+
+    ticketsDayQuery.on('child_added', handleChildAdded);
+    ticketsDayQuery.on('child_changed', handleChildChanged);
+    ticketsDayQuery.on('child_removed', handleChildRemoved);
+
     ticketsActiveListeners = {
         handleChildAdded,
         handleChildChanged,
@@ -1889,7 +2052,7 @@ function addTicket() {
         if (["consultorio1", "consultorio2", "consultorio3", "consultorio4", "consultorio5"].includes(estado)) {
             nuevoTicket.horaAtencion = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         }
-        if (fechaConsulta) nuevoTicket.fechaConsulta = fechaConsulta;
+        nuevoTicket.fechaConsulta = fechaConsulta || hoy;
         if (horaCita) nuevoTicket.horaConsulta = horaCita;
         if (horaAtencion) nuevoTicket.horaAtencion = horaAtencion;
         showLoadingButton(document.querySelector('.btn-submit'));
@@ -1909,10 +2072,9 @@ function addTicket() {
                     firebaseKey: firebaseKey
                 };
                 
-                // Solo agregar si no existe ya (evitar duplicados)
-                if (!tickets.some(t => t.firebaseKey === firebaseKey)) {
+                if (!ticketAlreadyInList(ticketConKey, firebaseKey)) {
                     tickets.push(ticketConKey);
-                    // Update global reference
+                    tickets = dedupeTicketsByFirebaseKey(tickets);
                     window.tickets = tickets;
                     
                     // Renderizar inmediatamente para que el usuario vea su ticket
@@ -1924,6 +2086,7 @@ function addTicket() {
                     if (typeof updateViaCounter === 'function') {
                         updateViaCounter();
                     }
+                    notifyMainTicketsUpdated();
                 }
                 
                 // Guardar paciente en la base de datos relacional
@@ -2014,21 +2177,22 @@ const filterDateInput = document.getElementById('filterDate');
 if (filterDateInput && !filterDateInput.value) {
     filterDateInput.value = getLocalDateString();
 }
-renderTickets('espera');
 function renderTickets(filter = 'todos', date = null) {
-    // OPTIMIZACIÓN: Si se usa filtro "todos" y no se han cargado todos los datos, cargarlos
-    if (filter === 'todos' && !ticketsAllDataLoaded) {
-        loadTickets(true).then(() => {
-            renderTickets(filter, date);
-        });
-        return;
-    }
-    
-    ticketContainer.innerHTML = '';
-    let filteredTickets;
-
     const filterDateInput = document.getElementById('filterDate');
     const selectedDate = (filterDateInput && filterDateInput.value) ? filterDateInput.value : getLocalDateString();
+
+    if (ticketsConsultaLoadedDay !== selectedDate) {
+        loadTicketsForConsultaDay(selectedDate)
+            .then(() => renderTickets(filter, date))
+            .catch(err => console.error(err));
+        return;
+    }
+
+    tickets = dedupeTicketsByFirebaseKey(tickets);
+    window.tickets = tickets;
+
+    ticketContainer.innerHTML = '';
+    let filteredTickets;
     // --- Búsqueda por texto ---
     const searchInput = document.getElementById('ticketSearchInput');
     const searchText = searchInput ? searchInput.value.trim().toLowerCase() : '';
@@ -2629,8 +2793,18 @@ function formatTime12Hour(timeString) {
 }
 
 function mostrarHorario() {
-    const fecha = fechaHorario.value;
-    
+    const fecha = fechaHorario ? fechaHorario.value : '';
+    if (!fecha) return;
+
+    if (ticketsConsultaLoadedDay !== fecha) {
+        const fd = document.getElementById('filterDate');
+        if (fd) fd.value = fecha;
+        loadTicketsForConsultaDay(fecha)
+            .then(() => mostrarHorario())
+            .catch(err => console.error(err));
+        return;
+    }
+
     // Filtrar tickets de consulta por fecha
     const ticketsDelDia = tickets.filter(ticket => {
         // Si el ticket tiene los campos nuevos de fecha y hora
@@ -2819,22 +2993,18 @@ function exportarDia() {
     }
     
     const fecha = fechaHorario.value;
-    
-    // Filtrar tickets por fecha
-    const ticketsDelDia = tickets.filter(ticket => {
-        if (ticket.fechaConsulta) {
-            return ticket.fechaConsulta === fecha;
+    if (!fecha) return;
+
+    fetchTicketsByFechaConsultaRange(fecha, fecha).then(ticketsDelDia => {
+        if (ticketsDelDia.length === 0) {
+            showNotification('No hay consultas para la fecha seleccionada', 'error');
+            return;
         }
-        return new Date(ticket.fecha).toISOString().split('T')[0] === fecha;
+        exportToCSV(ticketsDelDia, `consultas_${fecha}`);
+    }).catch(err => {
+        console.error(err);
+        showNotification('Error al obtener datos para exportar', 'error');
     });
-    
-    if (ticketsDelDia.length === 0) {
-        showNotification('No hay consultas para la fecha seleccionada', 'error');
-        return;
-    }
-    
-    // Generar el CSV
-    exportToCSV(ticketsDelDia, `consultas_${fecha}`);
 }
 
 function getTipoMascotaLabel(tipo) {
@@ -2863,28 +3033,27 @@ function getEstadoLabel(estado) {
 }
 function exportarMes() {
     const fecha = fechaHorario.value;
-const [year, month] = fecha.split('-');
-
-// Filtrar tickets del mes seleccionado
-const ticketsDelMes = tickets.filter(ticket => {
-        let ticketDate;
-        if (ticket.fechaConsulta) {
-            ticketDate = new Date(ticket.fechaConsulta);
-        } else {
-            ticketDate = new Date(ticket.fecha);
-        }
-        
-        return ticketDate.getFullYear() === parseInt(year) && 
-               ticketDate.getMonth() === parseInt(month) - 1;
-    });
-    
-    if (ticketsDelMes.length === 0) {
-        showNotification('No hay consultas para el mes seleccionado', 'error');
+    if (!fecha || fecha.split('-').length < 2) {
+        showNotification('Seleccione una fecha en el horario', 'error');
         return;
     }
-    
-    // Generar el CSV
-    exportToCSV(ticketsDelMes, `consultas_${year}_${month}`);
+    const parts = fecha.split('-');
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10);
+    const lastDay = new Date(year, month, 0).getDate();
+    const startStr = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endStr = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
+    fetchTicketsByFechaConsultaRange(startStr, endStr).then(ticketsDelMes => {
+        if (ticketsDelMes.length === 0) {
+            showNotification('No hay consultas para el mes seleccionado', 'error');
+            return;
+        }
+        exportToCSV(ticketsDelMes, `consultas_${year}_${String(month).padStart(2, '0')}`);
+    }).catch(err => {
+        console.error(err);
+        showNotification('Error al obtener datos para exportar', 'error');
+    });
 }
 
 function exportToCSV(data, filename) {
@@ -2956,30 +3125,41 @@ function exportarGoogle() {
 }
 
 function backupData() {
-    // Crear una copia sin las claves de Firebase para el backup
-    const ticketsBackup = tickets.map(ticket => {
-        const { firebaseKey, ...ticketData } = ticket;
-        return ticketData;
-    });
-    
-    const backup = {
-        tickets: ticketsBackup,
-        currentTicketId: currentTicketId,
-        timestamp: new Date().toISOString(),
-        version: '1.0'
-    };
-    
-    const jsonString = JSON.stringify(backup);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `backup_veterinaria_${new Date().toISOString().split('T')[0]}.json`;
-    link.click();
-    
-    URL.revokeObjectURL(url);
-    showNotification('Respaldo generado correctamente', 'success');
+    if (!ticketsRef) {
+        showNotification('Base de datos no disponible', 'error');
+        return;
+    }
+    showLoading();
+    ticketsRef.once('value')
+        .then(snapshot => {
+            const ticketsBackup = [];
+            snapshot.forEach(childSnapshot => {
+                const entry = childSnapshot.val();
+                if (entry && entry.id != null && entry.mascota) {
+                    ticketsBackup.push({ ...entry });
+                }
+            });
+            const backup = {
+                tickets: ticketsBackup,
+                currentTicketId: currentTicketId,
+                timestamp: new Date().toISOString(),
+                version: '1.0'
+            };
+            const jsonString = JSON.stringify(backup);
+            const blob = new Blob([jsonString], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `backup_veterinaria_${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+            URL.revokeObjectURL(url);
+            showNotification('Respaldo generado correctamente', 'success');
+        })
+        .catch(err => {
+            console.error(err);
+            showNotification('Error al generar respaldo', 'error');
+        })
+        .finally(() => hideLoading());
 }
 
 // --- LIMPIEZA DE DATOS ANTIGUOS ---
@@ -2991,57 +3171,60 @@ function cleanOldData() {
     const tresMesesAtras = new Date();
     tresMesesAtras.setMonth(tresMesesAtras.getMonth() - 3);
     
-    // Mostrar indicador de carga
     showLoading();
-    
-    // Obtener tickets a eliminar (terminados con más de 3 meses)
-    const ticketsToDelete = tickets.filter(ticket => {
-        if (ticket.estado !== 'terminado') {
-            return false; // Mantener tickets que no estén terminados
-        }
-        
-        // Para tickets terminados, verificar la fecha
-        const fechaTicket = new Date(ticket.fecha);
-        return fechaTicket < tresMesesAtras;
-    });
-    
-    // Contador para operaciones pendientes
-    let pendingOperations = ticketsToDelete.length;
-    
-    if (pendingOperations === 0) {
-        hideLoading();
-        showNotification('No hay consultas antiguas para eliminar', 'info');
-        return;
-    }
-    
-    // Eliminar cada ticket en Firebase
-    ticketsToDelete.forEach(ticket => {
-        if (!ticket.firebaseKey) {
-            pendingOperations--;
-            if (pendingOperations === 0) {
-                hideLoading();
-                showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
-            }
-            return;
-        }
-        
-        ticketsRef.child(ticket.firebaseKey).remove()
-            .then(() => {
-                pendingOperations--;
-                if (pendingOperations === 0) {
-                    hideLoading();
-                    showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
-                }
-            })
-            .catch(error => {
-    
-                pendingOperations--;
-                if (pendingOperations === 0) {
-                    hideLoading();
-                    showNotification('Hubo errores al eliminar algunas consultas antiguas', 'error');
+
+    ticketsRef.once('value')
+        .then(snapshot => {
+            const ticketsToDelete = [];
+            snapshot.forEach(childSnapshot => {
+                const ticket = { ...childSnapshot.val(), firebaseKey: childSnapshot.key };
+                if (ticket.estado !== 'terminado') return;
+                const fechaTicket = new Date(ticket.fecha);
+                if (fechaTicket < tresMesesAtras) {
+                    ticketsToDelete.push(ticket);
                 }
             });
-    });
+
+            let pendingOperations = ticketsToDelete.length;
+
+            if (pendingOperations === 0) {
+                hideLoading();
+                showNotification('No hay consultas antiguas para eliminar', 'info');
+                return;
+            }
+
+            ticketsToDelete.forEach(ticket => {
+                if (!ticket.firebaseKey) {
+                    pendingOperations--;
+                    if (pendingOperations === 0) {
+                        hideLoading();
+                        showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
+                    }
+                    return;
+                }
+
+                ticketsRef.child(ticket.firebaseKey).remove()
+                    .then(() => {
+                        pendingOperations--;
+                        if (pendingOperations === 0) {
+                            hideLoading();
+                            showNotification(`Se eliminaron ${ticketsToDelete.length} consultas antiguas`, 'success');
+                        }
+                    })
+                    .catch(() => {
+                        pendingOperations--;
+                        if (pendingOperations === 0) {
+                            hideLoading();
+                            showNotification('Hubo errores al eliminar algunas consultas antiguas', 'error');
+                        }
+                    });
+            });
+        })
+        .catch(err => {
+            console.error(err);
+            hideLoading();
+            showNotification('Error al acceder a los datos', 'error');
+        });
 }
 
 function editTicket(randomId) {
@@ -3448,8 +3631,14 @@ function editTicket(randomId) {
         });
     }
     
+    // Activar autocompletado de vacunas en el campo "Por Cobrar"
+    const editPorCobrarField = document.getElementById('editPorCobrar');
+    if (editPorCobrarField && window.vaccineAutocompleteManager) {
+        window.vaccineAutocompleteManager.attachToField(editPorCobrarField, ticket);
+    }
+    
     // Añadir event listener al formulario para guardar los cambios
-    document.getElementById('editTicketForm').addEventListener('submit', function(e) {
+    document.getElementById('editTicketForm').addEventListener('submit', async function(e) {
         e.preventDefault();
         
         // Combinar doctor y asistente
@@ -3572,6 +3761,63 @@ function editTicket(randomId) {
         }
         
         // Nota: Se removió el límite de ediciones - todos los usuarios pueden editar sin restricciones
+        
+        // INTEGRACIÓN CON SISTEMA DE VACUNAS
+        // Detectar vacunas en el campo "Por Cobrar" si hay contenido nuevo
+        if (editPorCobrar && canEditPorCobrar && window.vaccineAutocompleteManager) {
+            const newContent = editPorCobrar.value.trim();
+            
+            if (newContent.length > 0) {
+                try {
+                    // Detectar vacunas en el texto
+                    const detectedVaccines = await window.vaccineAutocompleteManager.detectVaccinesInText(
+                        newContent, 
+                        updatedTicket
+                    );
+                    
+                    // Si se detectaron vacunas, mostrar modal de confirmación
+                    if (detectedVaccines && detectedVaccines.length > 0) {
+                        const confirmation = await window.vaccineAutocompleteManager.showConfirmationModal(updatedTicket);
+                        
+                        // Si el usuario cancela, detener el proceso
+                        if (confirmation.cancelled) {
+                            return;
+                        }
+                        
+                        // Si el usuario confirma, procesar las vacunas
+                        if (confirmation.confirmed && confirmation.vaccines && confirmation.vaccines.length > 0) {
+                            // Mostrar indicador de procesamiento
+                            showNotification('Procesando vacunas...', 'info');
+                            
+                            const results = await window.vaccineAutocompleteManager.processConfirmedVaccines(
+                                confirmation,
+                                updatedTicket
+                            );
+                            
+                            // Mostrar resultado
+                            if (results.success) {
+                                showNotification(
+                                    `✓ ${results.processed} vacuna(s) registrada(s) y descontada(s) del inventario`,
+                                    'success'
+                                );
+                            } else {
+                                showNotification(
+                                    `⚠ Procesadas: ${results.processed}, Fallidas: ${results.failed}`,
+                                    'warning'
+                                );
+                                if (results.errors.length > 0) {
+                                    console.error('Errores al procesar vacunas:', results.errors);
+                                }
+                            }
+                        }
+                        // Si el usuario eligió "Solo guardar por cobrar", continuar sin procesar vacunas
+                    }
+                } catch (error) {
+                    console.error('Error al detectar o procesar vacunas:', error);
+                    // Continuar guardando el ticket aunque falle el procesamiento de vacunas
+                }
+            }
+        }
         
         // Guardar el ticket actualizado
         saveEditedTicket(updatedTicket);
@@ -3819,29 +4065,47 @@ function saveEditedTicket(ticket) {
         
         updatePromise
             .then(() => {
+                const stamp = new Date().toISOString();
+                const userName = sessionStorage.getItem('userName') || 'Usuario';
+                const finalPorCobrar = ticketToSave.porCobrar;
+                const localIdx = tickets.findIndex(t => t.firebaseKey === ticket.firebaseKey);
+                let ticketActualizado = null;
+                if (localIdx !== -1) {
+                    tickets[localIdx] = {
+                        ...tickets[localIdx],
+                        porCobrar: finalPorCobrar,
+                        lastModified: stamp,
+                        lastModifiedBy: userName
+                    };
+                    ticketActualizado = tickets[localIdx];
+                    window.tickets = tickets;
+                }
+
                 closeModal();
                 showNotification('Por cobrar actualizado correctamente', 'success');
-                
-                // Actualizar la página actual
+
+                // Solo este ticket en DOM (no re-render de toda la lista ni nueva lectura del día en Firebase)
                 if (currentSection && currentSection.id === 'verTicketsSection') {
-                    renderTickets(currentFilter);
-                    
-                    // Mantener el filtro activo
-                    document.querySelectorAll('.filter-btn').forEach(btn => {
+                    document.querySelectorAll('#verTicketsSection .filter-btn').forEach(btn => {
                         btn.classList.remove('active');
                         if (btn.getAttribute('data-filter') === currentFilter) {
                             btn.classList.add('active');
                         }
                     });
-                    
                     setActiveButton(verTicketsBtn);
+                    if (ticketActualizado && ticketActualizado.randomId) {
+                        updateTicketInDOM(ticketActualizado);
+                    } else {
+                        renderTickets(currentFilter);
+                    }
                 } else if (currentSection && currentSection.id === 'horarioSection') {
                     mostrarHorario();
                 } else {
                     renderTickets();
                 }
-                
+
                 updateStatsGlobal();
+                notifyMainTicketsUpdatedDebounced();
             })
             .catch(error => {
                 if (saveButton) saveButton.disabled = false;
@@ -4331,7 +4595,7 @@ function initEmpresaSelector() {
             const labSection = document.getElementById('verLabSection');
             if (labSection && !labSection.classList.contains('hidden')) {
                 const activeLabFilterBtn = document.querySelector('.lab-filter-btn.active');
-                const currentLabFilter = activeLabFilterBtn ? activeLabFilterBtn.getAttribute('data-filter') : 'todos';
+                const currentLabFilter = activeLabFilterBtn ? activeLabFilterBtn.getAttribute('data-filter') : 'pendiente';
                 const medicoFilter = document.getElementById('labMedicoFilter');
                 const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
                 if (typeof renderLabTickets === 'function') {
@@ -4442,26 +4706,87 @@ function showNotification(message, type = 'info') {
     }, 3000);
 }
 
-// --- Actualizar estadísticas usando el filtro global ---
+// --- Estadísticas: "hoy" usa los tickets en memoria (día de consulta cargado); otros períodos consultan Firebase por rango ---
+function getStatsPeriodDateStrings() {
+    const periodo = document.getElementById('filtroPeriodoGlobal')?.value || 'hoy';
+    const hoy = new Date();
+    switch (periodo) {
+        case 'hoy': {
+            const d = getLocalDateString();
+            return { start: d, end: d };
+        }
+        case 'semana': {
+            const diaSemana = hoy.getDay();
+            const inicio = new Date(hoy);
+            inicio.setDate(hoy.getDate() - diaSemana);
+            inicio.setHours(0, 0, 0, 0);
+            const fin = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate() + (6 - diaSemana));
+            return { start: getLocalDateString(inicio), end: getLocalDateString(fin) };
+        }
+        case 'mes': {
+            const inicioMes = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+            const finMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0);
+            return { start: getLocalDateString(inicioMes), end: getLocalDateString(finMes) };
+        }
+        case 'ano': {
+            const inicioAno = new Date(hoy.getFullYear(), 0, 1);
+            const finAno = new Date(hoy.getFullYear(), 11, 31);
+            return { start: getLocalDateString(inicioAno), end: getLocalDateString(finAno) };
+        }
+        case 'personalizado': {
+            const fechaInicio = document.getElementById('fechaInicioEstadisticasGlobal')?.value;
+            const fechaFin = document.getElementById('fechaFinEstadisticasGlobal')?.value;
+            if (!fechaInicio || !fechaFin) return null;
+            return { start: fechaInicio, end: fechaFin };
+        }
+        default:
+            return null;
+    }
+}
+
+function applyStatsFromTickets(filtered) {
+    const totalEl = document.getElementById('totalPacientes');
+    if (totalEl) totalEl.textContent = filtered.length;
+    const espEl = document.getElementById('pacientesEspera');
+    if (espEl) espEl.textContent = filtered.filter(t => t.estado === 'espera').length;
+    const consEl = document.getElementById('pacientesConsulta');
+    if (consEl) {
+        consEl.textContent = filtered.filter(t =>
+            t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3' ||
+            t.estado === 'consultorio4' || t.estado === 'consultorio5'
+        ).length;
+    }
+    const attEl = document.getElementById('pacientesAtendidos');
+    if (attEl) attEl.textContent = filtered.filter(t => t.estado === 'terminado').length;
+    const cfEl = document.getElementById('clientesSeFueron');
+    if (cfEl) cfEl.textContent = filtered.filter(t => t.estado === 'cliente_se_fue').length;
+
+    renderizarGraficosTiempoEspera(filtered);
+    llenarSelectorPersonal(filtered);
+    renderizarGraficosPersonalServicios(filtered);
+}
+
 function updateStatsGlobal() {
-  const filtered = filtrarTicketsPorPeriodoGlobal(tickets);
-  
-  
-  // Actualizar contadores
-  document.getElementById('totalPacientes').textContent = filtered.length;
-  document.getElementById('pacientesEspera').textContent = filtered.filter(t => t.estado === 'espera').length;
-  document.getElementById('pacientesConsulta').textContent = filtered.filter(t => 
-    t.estado === 'consultorio1' || t.estado === 'consultorio2' || t.estado === 'consultorio3' || t.estado === 'consultorio4' || t.estado === 'consultorio5'
-  ).length;
-  document.getElementById('pacientesAtendidos').textContent = filtered.filter(t => t.estado === 'terminado').length;
-  // Nuevo: clientes que se fueron
-  if (document.getElementById('clientesSeFueron')) {
-    document.getElementById('clientesSeFueron').textContent = filtered.filter(t => t.estado === 'cliente_se_fue').length;
-  }
-  
-  // Generar todos los gráficos
-  renderizarGraficosTiempoEspera(filtered);
-  renderizarGraficosPersonalServicios(filtered);
+    const periodo = document.getElementById('filtroPeriodoGlobal')?.value || 'hoy';
+    if (periodo === 'hoy') {
+        const filtered = filtrarTicketsPorPeriodoGlobal(tickets);
+        applyStatsFromTickets(filtered);
+        return;
+    }
+    const bounds = getStatsPeriodDateStrings();
+    if (!bounds) {
+        applyStatsFromTickets(filtrarTicketsPorPeriodoGlobal(tickets));
+        return;
+    }
+    fetchTicketsByFechaConsultaRange(bounds.start, bounds.end)
+        .then(fetched => {
+            const filtered = filtrarTicketsPorPeriodoGlobal(fetched);
+            applyStatsFromTickets(filtered);
+        })
+        .catch(err => {
+            console.error(err);
+            applyStatsFromTickets(filtrarTicketsPorPeriodoGlobal(tickets));
+        });
 }
 
 // Función para renderizar el gráfico de tiempo de espera y la tabla
@@ -5122,11 +5447,10 @@ function filtrarTicketsPorPeriodoGlobal(tickets) {
   }
 }
 
-function obtenerPersonalUnico() {
+function obtenerPersonalUnico(sourceTickets = tickets) {
     const personal = new Set();
-    tickets.forEach(ticket => {
+    sourceTickets.forEach(ticket => {
         if (ticket.medicoAtiende) {
-            // Dividir en caso de que haya múltiples personas separadas por comas
             const personas = ticket.medicoAtiende.split(',').map(p => p.trim());
             personas.forEach(persona => {
                 if (persona) personal.add(persona);
@@ -5136,8 +5460,8 @@ function obtenerPersonalUnico() {
     return Array.from(personal).sort();
 }
 
-function llenarSelectorPersonal() {
-    const personalUnico = obtenerPersonalUnico();
+function llenarSelectorPersonal(sourceTickets = tickets) {
+    const personalUnico = obtenerPersonalUnico(sourceTickets);
     const select = document.getElementById('filtroPersonal');
     if (!select) return;
     // Limpiar opciones existentes excepto "Todos"
@@ -5381,16 +5705,6 @@ document.addEventListener('DOMContentLoaded', function() {
       `;
     });
   };
-
-  // Actualizar tabla en tiempo real cuando cambian los tickets
-  if (typeof window.ticketsRef !== 'undefined') {
-    window.ticketsRef.on('value', function() {
-      const labResultsContainer = document.getElementById('labResultsContainer');
-      if (labResultsContainer && !labResultsContainer.classList.contains('hidden')) {
-        renderLabResults();
-      }
-    });
-  }
 
   // Navegación con flechas en el formulario de tickets
   (function() {
@@ -5890,6 +6204,44 @@ function navigateToQuirofano(sectionId, buttonId) {
     }
 }
 
+// Función para mostrar el detalle de tickets con exámenes prequirúrgicos pendientes
+function showPrequirurgicoDetails() {
+    // Verificar si tenemos acceso a los tickets de quirófano
+    if (typeof window.quirofanoTickets === 'undefined' || !Array.isArray(window.quirofanoTickets)) {
+        alert('No hay información de quirófano disponible en este momento.');
+        return;
+    }
+
+    // Filtrar solo los tickets con exámenes prequirúrgicos pendientes
+    const pendientes = window.quirofanoTickets.filter(ticket =>
+        ticket.examenesPrequirurgicos === true &&
+        ticket.examenesStatus === 'pendiente'
+    );
+
+    if (pendientes.length === 0) {
+        alert('No hay exámenes prequirúrgicos pendientes.');
+        return;
+    }
+
+    // Construir un resumen legible de los tickets pendientes
+    let message = 'Exámenes prequirúrgicos pendientes:\n\n';
+    pendientes.forEach(ticket => {
+        const mascota = ticket.nombreMascota || ticket.mascota || 'Sin nombre de mascota';
+        const propietario = ticket.nombrePropietario || ticket.nombre || 'Sin nombre de propietario';
+        const procedimiento = ticket.procedimiento || 'Procedimiento no especificado';
+        const fecha = ticket.fechaProgramada || ticket.fechaCreacion || '';
+        const hora = ticket.horaProgramada || '';
+
+        message += `• Mascota: ${mascota}\n  Propietario: ${propietario}\n  Procedimiento: ${procedimiento}`;
+        if (fecha || hora) {
+            message += `\n  Programado: ${fecha}${hora ? ' ' + hora : ''}`;
+        }
+        message += '\n\n';
+    });
+
+    alert(message);
+}
+
 // Función para actualizar el contador de tickets con exámenes prequirúrgicos
 function updatePrequirurgicoCounter() {
     const counterElement = document.getElementById('prequirurgicoCounter');
@@ -5906,9 +6258,6 @@ function updatePrequirurgicoCounter() {
         return;
     }
     
-    // Mostrar el contador para todos los roles permitidos, incluso si está en 0
-    counterElement.style.display = 'flex';
-    
     // Verificar si tenemos acceso a los tickets de quirófano
     if (typeof window.quirofanoTickets === 'undefined' || !Array.isArray(window.quirofanoTickets)) {
         counterElement.style.display = 'none';
@@ -5918,11 +6267,18 @@ function updatePrequirurgicoCounter() {
     // Contar tickets con exámenes prequirúrgicos pendientes
     const ticketsConExamenes = window.quirofanoTickets.filter(ticket => 
         ticket.examenesPrequirurgicos === true && 
-        (ticket.examenesStatus === 'pendiente' || !ticket.examenesStatus)
+        ticket.examenesStatus === 'pendiente'
     ).length;
     
     // Actualizar el contador
     countElement.textContent = ticketsConExamenes;
+
+    // Asegurar que el contador tenga el listener de clic solo una vez
+    if (!counterElement.dataset.prequirClickBound) {
+        counterElement.style.cursor = 'pointer';
+        counterElement.addEventListener('click', showPrequirurgicoDetails);
+        counterElement.dataset.prequirClickBound = 'true';
+    }
     
     // Mostrar u ocultar el contador según si hay tickets
     if (ticketsConExamenes > 0) {
@@ -6750,1259 +7106,6 @@ window.addEventListener('DOMContentLoaded', function() {
     cancelBtn.style.display = 'none';
   };
   
-  // ==================== MÓDULO DE CONTROL DE VACUNAS ====================
-  
-  // Función de navegación a la sección de vacunas
-  window.navigateToVacunas = function(sectionId, buttonId) {
-    console.log('Navegando a Control de Vacunas...');
-    
-    // Ocultar todas las secciones
-    document.querySelectorAll('.content section').forEach(section => {
-      section.classList.remove('active');
-      section.classList.add('hidden');
-    });
-    
-    // Mostrar la sección de vacunas
-    const section = document.getElementById(sectionId);
-    if (section) {
-      section.classList.remove('hidden');
-      section.classList.add('active');
-      console.log('Sección vacunas mostrada');
-    } else {
-      console.error('No se encontró la sección:', sectionId);
-    }
-    
-    // Actualizar botón activo
-    const allButtons = document.querySelectorAll('nav button, .submenu-btn');
-    allButtons.forEach(btn => btn.classList.remove('active'));
-    const button = document.getElementById(buttonId);
-    if (button) {
-      button.classList.add('active');
-      console.log('Botón vacunas activado');
-    } else {
-      console.error('No se encontró el botón:', buttonId);
-    }
-    
-    // Cerrar sidebar en móviles
-    if (window.innerWidth <= 980) {
-      closeSidebar();
-    }
-    
-    // Inicializar el módulo de vacunas
-    initializeVacunasModule();
-  };
-  
-  // Variables globales para el módulo de vacunas
-  let currentVacunasFecha = '';
-  let currentVacunasTurno = '';
-  let inventarioActual = {};
-  
-  // Función para sanitizar claves de Firebase
-  function sanitizeFirebaseKey(key) {
-    return key.replace(/[.#$/[\]]/g, '_');
-  }
-  
-  // Función para habilitar/deshabilitar inputs de inventario
-  function habilitarInputsInventario(habilitar) {
-    // Vacunas anuales
-    vacunasDisponibles.anual.forEach(vacuna => {
-      let inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
-      const input = document.getElementById(inputId);
-      if (input) {
-        input.disabled = !habilitar;
-        input.style.opacity = habilitar ? '1' : '0.6';
-        input.style.cursor = habilitar ? 'text' : 'not-allowed';
-      }
-    });
-    
-    // Vacunas trimestrales
-    vacunasDisponibles.trimestral.forEach(vacuna => {
-      const inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
-      const input = document.getElementById(inputId);
-      if (input) {
-        input.disabled = !habilitar;
-        input.style.opacity = habilitar ? '1' : '0.6';
-        input.style.cursor = habilitar ? 'text' : 'not-allowed';
-      }
-    });
-    
-    // Input de responsable
-    const responsableInput = document.getElementById('responsableApertura');
-    if (responsableInput) {
-      responsableInput.disabled = !habilitar;
-      responsableInput.style.opacity = habilitar ? '1' : '0.6';
-      responsableInput.style.cursor = habilitar ? 'text' : 'not-allowed';
-    }
-  }
-  
-  // Función para agregar botón de guardar inventario
-  function agregarBotonGuardarInventario() {
-    // Verificar si ya existe el botón
-    if (document.getElementById('guardarInventarioBtn')) {
-      return;
-    }
-    
-    // Crear botón de guardar inventario
-    const guardarBtn = document.createElement('button');
-    guardarBtn.id = 'guardarInventarioBtn';
-    guardarBtn.className = 'btn-submit';
-    guardarBtn.innerHTML = '<i class="fas fa-save"></i> Guardar Cambios de Inventario';
-    guardarBtn.style.marginTop = '15px';
-    
-    // Agregar event listener
-    guardarBtn.addEventListener('click', guardarCambiosInventario);
-    
-    // Insertar el botón en el contenedor de inventario actual
-    const inventarioSection = document.getElementById('inventarioActualSection');
-    if (inventarioSection) {
-      inventarioSection.appendChild(guardarBtn);
-    }
-  }
-  
-  // Función para guardar cambios de inventario
-  function guardarCambiosInventario() {
-    if (!hasPermission('canEditTurnos')) {
-      showNotification('Solo los administradores pueden editar el inventario', 'error');
-      return;
-    }
-    
-    // Recopilar inventario actualizado
-    const inventarioActualizado = {};
-    
-    // Vacunas anuales
-    vacunasDisponibles.anual.forEach(vacuna => {
-      let inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
-      const input = document.getElementById(inputId);
-      const valor = input ? parseInt(input.value) || 0 : 0;
-      inventarioActualizado[sanitizeFirebaseKey(vacuna)] = valor;
-    });
-    
-    // Vacunas trimestrales
-    vacunasDisponibles.trimestral.forEach(vacuna => {
-      const inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
-      const input = document.getElementById(inputId);
-      const valor = input ? parseInt(input.value) || 0 : 0;
-      inventarioActualizado[sanitizeFirebaseKey(vacuna)] = valor;
-    });
-    
-    // Actualizar en Firebase
-    const turnoKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
-    const database = firebase.database();
-    const ref = database.ref(`inventarioTurnos/${turnoKey}/inventario`);
-    
-    ref.set(inventarioActualizado)
-      .then(() => {
-        showNotification('Inventario actualizado exitosamente', 'success');
-        inventarioActual = inventarioActualizado;
-        actualizarVistaInventario();
-      })
-      .catch((error) => {
-        console.error('Error al actualizar inventario:', error);
-        showNotification('Error al actualizar el inventario', 'error');
-      });
-  }
-  
-  // Lista de vacunas disponibles
-const vacunasDisponibles = {
-  anual: ['Mult', 'Puppy', 'Rab', 'Tos', 'Giardia', 'C4', 'C6', 'Vacuna Anual'],
-  trimestral: ['Trip/Leu', 'Trip/Rab', 'Leu', 'Triple Felina']
-};
-  
-  // Inicializar módulo de vacunas
-  function initializeVacunasModule() {
-    console.log('Inicializando módulo de vacunas...');
-    
-    // Configurar fecha actual
-    const fechaInput = document.getElementById('vacunasFecha');
-    if (fechaInput && !fechaInput.value) {
-      fechaInput.value = getLocalDateString();
-      console.log('Fecha configurada:', fechaInput.value);
-    }
-    
-    // Ocultar el área de registro inicialmente
-    const registroArea = document.getElementById('vacunasRegistroArea');
-    if (registroArea) {
-      registroArea.style.display = 'none';
-    }
-    
-    // Configurar event listeners
-    setupVacunasEventListeners();
-  }
-  
-  // Configurar event listeners para vacunas
-  function setupVacunasEventListeners() {
-    console.log('Configurando event listeners para vacunas...');
-    
-    // Botón para cargar el turno
-    const cargarTurnoBtn = document.getElementById('cargarVacunasTurno');
-    if (cargarTurnoBtn) {
-      cargarTurnoBtn.replaceWith(cargarTurnoBtn.cloneNode(true));
-      document.getElementById('cargarVacunasTurno').addEventListener('click', cargarVacunasTurno);
-      console.log('Event listener del botón cargar turno configurado');
-    }
-    
-    // Formulario de vacunas
-    const form = document.getElementById('vacunasForm');
-    if (form) {
-      form.removeEventListener('submit', handleVacunasSubmit);
-      form.addEventListener('submit', handleVacunasSubmit);
-      console.log('Event listener del formulario configurado');
-    }
-    
-    // Botón limpiar formulario
-    const limpiarBtn = document.getElementById('limpiarVacunasForm');
-    if (limpiarBtn) {
-      limpiarBtn.replaceWith(limpiarBtn.cloneNode(true));
-      document.getElementById('limpiarVacunasForm').addEventListener('click', limpiarFormularioVacunas);
-      console.log('Event listener del botón limpiar configurado');
-    }
-    
-    // Botón guardar notas
-    const guardarNotasBtn = document.getElementById('guardarVacunasNotas');
-    if (guardarNotasBtn) {
-      guardarNotasBtn.replaceWith(guardarNotasBtn.cloneNode(true));
-      document.getElementById('guardarVacunasNotas').addEventListener('click', guardarVacunasNotas);
-      console.log('Event listener del botón guardar notas configurado');
-    }
-    
-    // Botón abrir turno
-    const abrirTurnoBtn = document.getElementById('abrirTurnoBtn');
-    if (abrirTurnoBtn) {
-      abrirTurnoBtn.replaceWith(abrirTurnoBtn.cloneNode(true));
-      document.getElementById('abrirTurnoBtn').addEventListener('click', abrirTurno);
-      console.log('Event listener del botón abrir turno configurado');
-    }
-    
-    // Event listener para cambio de turno
-    const turnoSelect = document.getElementById('vacunasTurno');
-    if (turnoSelect) {
-      turnoSelect.addEventListener('change', function() {
-        // Actualizar el texto del botón si el formulario de apertura está visible
-        const abrirSection = document.getElementById('abrirTurnoSection');
-        if (abrirSection && abrirSection.style.display !== 'none') {
-          const turno = this.value;
-          const abrirTurnoBtn = document.getElementById('abrirTurnoBtn');
-          if (abrirTurnoBtn) {
-            let textoBoton = '';
-            
-            switch(turno) {
-              case 'Mañana':
-                textoBoton = '<i class="fas fa-play-circle"></i> Abrir Turno';
-                break;
-              case 'Tarde':
-                textoBoton = '<i class="fas fa-handshake"></i> Entregar Turno';
-                break;
-              case 'Noche':
-                textoBoton = '<i class="fas fa-stop-circle"></i> Cerrar Turno';
-                break;
-              default:
-                textoBoton = '<i class="fas fa-play-circle"></i> Abrir Turno';
-            }
-            
-            abrirTurnoBtn.innerHTML = textoBoton;
-          }
-        }
-      });
-      console.log('Event listener del select de turno configurado');
-    }
-  }
-  
-  // Cargar datos del turno seleccionado
-  function cargarVacunasTurno() {
-    const fecha = document.getElementById('vacunasFecha').value;
-    const turno = document.getElementById('vacunasTurno').value;
-    
-    if (!fecha || !turno) {
-      showNotification('Debe seleccionar una fecha y un turno', 'error');
-      return;
-    }
-    
-    console.log('Cargando turno:', fecha, turno);
-    
-    currentVacunasFecha = fecha;
-    currentVacunasTurno = turno;
-    
-    // Mostrar el área de registro
-    const registroArea = document.getElementById('vacunasRegistroArea');
-    if (registroArea) {
-      registroArea.style.display = 'block';
-    }
-    
-    // Cargar datos del turno desde Firebase
-    loadVacunasData(fecha, turno);
-    
-    // Verificar si el turno ya está abierto
-    verificarEstadoTurno(fecha, turno);
-  }
-  
-  // Manejar envío del formulario de vacunas
-  function handleVacunasSubmit(event) {
-    event.preventDefault();
-    console.log('Formulario de vacunas enviado');
-    
-    if (!currentVacunasFecha || !currentVacunasTurno) {
-      showNotification('Debe seleccionar una fecha y turno primero', 'error');
-      return;
-    }
-    
-    // Validar campos requeridos
-    const nombrePaciente = document.getElementById('vacunaNombrePaciente').value.trim();
-    const apellidoCliente = document.getElementById('vacunaApellidoCliente').value.trim();
-    const idPaciente = document.getElementById('vacunaID').value.trim();
-    const medico = document.getElementById('vacunaMedico').value.trim();
-    const hora = document.getElementById('vacunaHora').value;
-    const vacunaColocada = document.getElementById('vacunaColocada').value.trim();
-    
-    if (!nombrePaciente || !apellidoCliente || !idPaciente || !medico || !hora || !vacunaColocada) {
-      showNotification('Debe completar todos los campos obligatorios marcados con *', 'error');
-      return;
-    }
-    
-    const facturaValue = document.getElementById('vacunaFactura').value.trim();
-    const formData = {
-      fecha: currentVacunasFecha,
-      turno: currentVacunasTurno,
-      nombrePaciente: nombrePaciente,
-      apellidoCliente: apellidoCliente,
-      id: idPaciente,
-      medico: medico,
-      hora: hora,
-      vacunaColocada: vacunaColocada,
-      factura: facturaValue || '', // Asegurar que siempre se guarde, incluso si está vacío
-      timestamp: Date.now()
-    };
-    
-    console.log('Valor de factura capturado:', facturaValue);
-    
-    console.log('Datos del formulario:', formData);
-    
-    // Verificar inventario antes de guardar
-    if (verificarInventario(formData.vacunaColocada)) {
-      // Guardar en Firebase
-      saveVacunaToFirebase(formData);
-      // Actualizar inventario
-      actualizarInventario(formData.vacunaColocada, -1);
-    } else {
-      showNotification('No hay suficiente inventario de la vacuna seleccionada', 'error');
-    }
-  }
-  
-  // Guardar vacuna en Firebase
-  function saveVacunaToFirebase(data) {
-    console.log('Intentando guardar vacuna en Firebase...');
-    console.log('Datos a guardar:', data);
-    
-    if (!firebase || !firebase.database) {
-      console.error('Firebase no está disponible');
-      showNotification('Error: Firebase no está disponible', 'error');
-      return;
-    }
-    
-    const database = firebase.database();
-    const ref = database.ref('vacunas');
-    console.log('Referencia de Firebase creada:', ref);
-    
-    ref.push(data)
-      .then(() => {
-        console.log('Vacuna guardada exitosamente');
-        console.log('Datos guardados incluyendo factura:', data);
-        showNotification('Vacuna registrada exitosamente', 'success');
-        limpiarFormularioVacunas();
-        // Recargar datos después de un breve delay para asegurar que Firebase haya procesado el cambio
-        setTimeout(() => {
-          loadVacunasData(currentVacunasFecha, currentVacunasTurno);
-        }, 500);
-      })
-      .catch((error) => {
-        console.error('Error al guardar vacuna:', error);
-        showNotification('Error al guardar la vacuna', 'error');
-      });
-  }
-  
-  // Cargar datos de vacunas desde Firebase
-  function loadVacunasData(fecha, turno) {
-    if (!firebase || !firebase.database) {
-      console.error('Firebase no está disponible');
-      return;
-    }
-    
-    console.log('Cargando vacunas para fecha:', fecha, 'turno:', turno);
-    
-    const database = firebase.database();
-    const ref = database.ref('vacunas');
-    
-    ref.orderByChild('fecha').equalTo(fecha).once('value', (snapshot) => {
-      const data = snapshot.val();
-      console.log('Datos brutos de Firebase:', data);
-      
-      const vacunas = data 
-        ? Object.entries(data)
-            .map(([key, value]) => {
-              const vacuna = { id: key, ...value };
-              console.log(`Vacuna ${key} - factura:`, vacuna.factura, 'tipo:', typeof vacuna.factura);
-              return vacuna;
-            })
-            .filter(v => {
-              console.log('Filtrando vacuna:', v.fecha, '===', fecha, '&&', v.turno, '===', turno, 'factura:', v.factura);
-              return v.fecha === fecha && v.turno === turno;
-            })
-            .sort((a, b) => a.hora.localeCompare(b.hora))
-        : [];
-      
-      console.log('Vacunas filtradas:', vacunas);
-      console.log('Facturas en vacunas filtradas:', vacunas.map(v => ({ id: v.id, factura: v.factura })));
-      displayVacunasTable(vacunas);
-    });
-    
-    // Cargar notas del turno
-    loadVacunasNotas(fecha, turno);
-  }
-  
-  // Mostrar tabla de vacunas
-  function displayVacunasTable(vacunas) {
-    const tbody = document.getElementById('vacunasTableBody');
-    if (!tbody) return;
-    
-    if (vacunas.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="8" class="no-data">No hay vacunas registradas para este turno</td></tr>';
-      return;
-    }
-    
-    // Verificar permisos de edición
-    const canEdit = hasPermission('canEditTurnos');
-    
-    // Verificar permisos para mostrar botón de eliminar (solo admin y consulta externa)
-    const canDelete = userRole === 'admin' || userRole === 'consulta_externa';
-    
-    tbody.innerHTML = vacunas.map(vacuna => {
-      if (canEdit) {
-        // Versión editable para admin
-        return `
-          <tr data-id="${vacuna.id}" data-firebase-key="${vacuna.id}">
-            <td>
-              <span class="field-display">${vacuna.hora || ''}</span>
-              <input type="time" class="field-edit" value="${vacuna.hora || ''}" style="display: none;" data-field="hora">
-            </td>
-            <td>
-              <span class="field-display">${vacuna.nombrePaciente || ''}</span>
-              <input type="text" class="field-edit" value="${vacuna.nombrePaciente || ''}" style="display: none;" data-field="nombrePaciente">
-            </td>
-            <td>
-              <span class="field-display">${vacuna.apellidoCliente || ''}</span>
-              <input type="text" class="field-edit" value="${vacuna.apellidoCliente || ''}" style="display: none;" data-field="apellidoCliente">
-            </td>
-            <td>
-              <span class="field-display">${vacuna.id || ''}</span>
-              <input type="text" class="field-edit" value="${vacuna.id || ''}" style="display: none;" data-field="id">
-            </td>
-            <td>
-              <span class="field-display">${vacuna.medico || ''}</span>
-              <input type="text" class="field-edit" value="${vacuna.medico || ''}" style="display: none;" data-field="medico">
-            </td>
-            <td>
-              <span class="field-display">${vacuna.vacunaColocada || ''}</span>
-              <input type="text" class="field-edit" value="${vacuna.vacunaColocada || ''}" style="display: none;" data-field="vacunaColocada">
-            </td>
-            <td>
-              <span class="field-display">${vacuna.factura !== undefined && vacuna.factura !== null ? vacuna.factura : ''}</span>
-              <input type="text" class="field-edit" value="${vacuna.factura !== undefined && vacuna.factura !== null ? vacuna.factura : ''}" style="display: none;" data-field="factura">
-            </td>
-            <td>
-              <button class="btn-edit-vacuna" onclick="editVacunaRow('${vacuna.id}')" title="Editar registro">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn-save-vacuna" onclick="saveVacunaRow('${vacuna.id}')" style="display: none;" title="Guardar cambios">
-                <i class="fas fa-save"></i>
-              </button>
-              <button class="btn-cancel-vacuna" onclick="cancelEditVacunaRow('${vacuna.id}')" style="display: none;" title="Cancelar edición">
-                <i class="fas fa-times"></i>
-              </button>
-              <button class="btn-delete-vacuna" onclick="deleteVacunaRow('${vacuna.id}')" title="Eliminar registro">
-                <i class="fas fa-trash"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      } else {
-        // Versión solo lectura para consulta externa (solo puede editar factura)
-        return `
-          <tr data-id="${vacuna.id}" data-firebase-key="${vacuna.id}">
-            <td>${vacuna.hora || ''}</td>
-            <td>${vacuna.nombrePaciente || ''}</td>
-            <td>${vacuna.apellidoCliente || ''}</td>
-            <td>${vacuna.id || ''}</td>
-            <td>${vacuna.medico || ''}</td>
-            <td>${vacuna.vacunaColocada || ''}</td>
-            <td>
-              <span class="factura-display">${vacuna.factura !== undefined && vacuna.factura !== null ? vacuna.factura : ''}</span>
-              <input type="text" class="factura-edit" value="${vacuna.factura !== undefined && vacuna.factura !== null ? vacuna.factura : ''}" style="display: none;">
-            </td>
-            <td>
-              <button class="btn-edit-factura-vacuna" onclick="editVacunaFactura('${vacuna.id}')" title="Editar factura">
-                <i class="fas fa-edit"></i>
-              </button>
-              <button class="btn-save-factura-vacuna" onclick="saveVacunaFactura('${vacuna.id}')" style="display: none;" title="Guardar factura">
-                <i class="fas fa-save"></i>
-              </button>
-              <button class="btn-cancel-factura-vacuna" onclick="cancelEditVacunaFactura('${vacuna.id}')" style="display: none;" title="Cancelar edición">
-                <i class="fas fa-times"></i>
-              </button>
-            </td>
-          </tr>
-        `;
-      }
-    }).join('');
-  }
-  
-  // Editar fila de vacuna (solo admin)
-  window.editVacunaRow = function(vacunaId) {
-    // Verificar permisos - solo administradores pueden editar registros de vacunas
-    if (!hasPermission('canEditTurnos')) {
-      showNotification('Solo los administradores pueden editar registros de vacunas', 'error');
-      return;
-    }
-    
-    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
-    if (!row) return;
-    
-    // Mostrar inputs y ocultar displays
-    row.querySelectorAll('.field-display').forEach(display => {
-      display.style.display = 'none';
-    });
-    row.querySelectorAll('.field-edit').forEach(input => {
-      input.style.display = 'inline-block';
-    });
-    
-    // Cambiar botones
-    const editBtn = row.querySelector('.btn-edit-vacuna');
-    const saveBtn = row.querySelector('.btn-save-vacuna');
-    const cancelBtn = row.querySelector('.btn-cancel-vacuna');
-    const deleteBtn = row.querySelector('.btn-delete-vacuna');
-    
-    editBtn.style.display = 'none';
-    saveBtn.style.display = 'inline-block';
-    cancelBtn.style.display = 'inline-block';
-    if (deleteBtn) deleteBtn.style.display = 'none';
-  };
-  
-  // Guardar cambios de fila de vacuna
-  window.saveVacunaRow = function(vacunaId) {
-    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
-    if (!row) return;
-    
-    const updatedData = {};
-    row.querySelectorAll('.field-edit').forEach(input => {
-      const field = input.getAttribute('data-field');
-      // Asegurar que el campo factura siempre se guarde, incluso si está vacío
-      if (field === 'factura') {
-        updatedData[field] = input.value.trim() || '';
-      } else {
-        updatedData[field] = input.value;
-      }
-    });
-    
-    console.log('Actualizando vacuna:', vacunaId, 'datos:', updatedData);
-    console.log('Campo factura en datos:', updatedData.factura);
-    
-    // Actualizar en Firebase
-    if (!firebase || !firebase.database) {
-      showNotification('Error: Firebase no está disponible', 'error');
-      return;
-    }
-    
-    const database = firebase.database();
-    const ref = database.ref(`vacunas/${vacunaId}`);
-    
-    ref.update(updatedData)
-      .then(() => {
-        console.log('Vacuna actualizada exitosamente en Firebase');
-        showNotification('Vacuna actualizada exitosamente', 'success');
-        // Actualizar displays con nuevos valores
-        row.querySelectorAll('.field-edit').forEach(input => {
-          const field = input.getAttribute('data-field');
-          const display = input.parentElement.querySelector('.field-display');
-          if (display) {
-            display.textContent = input.value;
-          }
-        });
-        
-        // Ocultar inputs y mostrar displays
-        row.querySelectorAll('.field-display').forEach(display => {
-          display.style.display = 'inline';
-        });
-        row.querySelectorAll('.field-edit').forEach(input => {
-          input.style.display = 'none';
-        });
-        
-        // Cambiar botones
-        const editBtn = row.querySelector('.btn-edit-vacuna');
-        const saveBtn = row.querySelector('.btn-save-vacuna');
-        const cancelBtn = row.querySelector('.btn-cancel-vacuna');
-        const deleteBtn = row.querySelector('.btn-delete-vacuna');
-        
-        editBtn.style.display = 'inline-block';
-        saveBtn.style.display = 'none';
-        cancelBtn.style.display = 'none';
-        if (deleteBtn) deleteBtn.style.display = 'inline-block';
-        
-        // Recargar datos después de un breve delay para asegurar consistencia
-        if (currentVacunasFecha && currentVacunasTurno) {
-          setTimeout(() => {
-            loadVacunasData(currentVacunasFecha, currentVacunasTurno);
-          }, 300);
-        }
-      })
-      .catch((error) => {
-        console.error('Error al actualizar vacuna:', error);
-        showNotification('Error al actualizar la vacuna', 'error');
-      });
-  };
-  
-  // Cancelar edición de fila de vacuna
-  window.cancelEditVacunaRow = function(vacunaId) {
-    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
-    if (!row) return;
-    
-    // Restaurar valores originales
-    row.querySelectorAll('.field-edit').forEach(input => {
-      const display = input.parentElement.querySelector('.field-display');
-      if (display) {
-        input.value = display.textContent;
-      }
-    });
-    
-    // Ocultar inputs y mostrar displays
-    row.querySelectorAll('.field-display').forEach(display => {
-      display.style.display = 'inline';
-    });
-    row.querySelectorAll('.field-edit').forEach(input => {
-      input.style.display = 'none';
-    });
-    
-    // Cambiar botones
-    const editBtn = row.querySelector('.btn-edit-vacuna');
-    const saveBtn = row.querySelector('.btn-save-vacuna');
-    const cancelBtn = row.querySelector('.btn-cancel-vacuna');
-    const deleteBtn = row.querySelector('.btn-delete-vacuna');
-    
-    editBtn.style.display = 'inline-block';
-    saveBtn.style.display = 'none';
-    cancelBtn.style.display = 'none';
-    if (deleteBtn) deleteBtn.style.display = 'inline-block';
-  };
-  
-  // Eliminar registro de vacuna (solo admin)
-  window.deleteVacunaRow = function(vacunaId) {
-    console.log('Intentando eliminar vacuna con ID:', vacunaId);
-    
-    // Verificar permisos - solo administradores pueden eliminar registros de vacunas
-    if (!hasPermission('canEditTurnos')) {
-      showNotification('Solo los administradores pueden eliminar registros de vacunas', 'error');
-      return;
-    }
-    
-    if (!confirm('¿Está seguro de que desea eliminar este registro de vacuna?')) {
-      return;
-    }
-    
-    if (!firebase || !firebase.database) {
-      showNotification('Error: Firebase no está disponible', 'error');
-      return;
-    }
-    
-    // Obtener la fila para conseguir la clave de Firebase
-    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
-    if (!row) {
-      showNotification('No se encontró la fila a eliminar', 'error');
-      return;
-    }
-    
-    const firebaseKey = row.getAttribute('data-firebase-key');
-    console.log('Clave de Firebase obtenida:', firebaseKey);
-    
-    if (!firebaseKey) {
-      showNotification('No se encontró la clave de Firebase', 'error');
-      return;
-    }
-    
-    // Primero obtener los datos de la vacuna para saber qué tipo era
-    const database = firebase.database();
-    const vacunaRef = database.ref(`vacunas/${firebaseKey}`);
-    
-    console.log('Buscando vacuna en Firebase con referencia:', `vacunas/${firebaseKey}`);
-    
-    vacunaRef.once('value', (snapshot) => {
-      const vacunaData = snapshot.val();
-      console.log('Datos obtenidos de Firebase:', vacunaData);
-      
-      if (!vacunaData) {
-        console.error('No se encontraron datos para la vacuna con clave:', firebaseKey);
-        showNotification('No se encontró la vacuna a eliminar', 'error');
-        return;
-      }
-      
-      const tipoVacuna = vacunaData.vacunaColocada;
-      console.log('Eliminando vacuna:', tipoVacuna);
-      
-      // Eliminar la vacuna de Firebase
-      vacunaRef.remove()
-        .then(() => {
-          console.log('Vacuna eliminada exitosamente de Firebase');
-          showNotification('Vacuna eliminada exitosamente', 'success');
-          
-          // Remover la fila inmediatamente de la tabla
-          if (row) {
-            console.log('Removiendo fila de la tabla');
-            row.remove();
-            
-            // Verificar si quedan más filas
-            const remainingRows = document.querySelectorAll('#vacunasTableBody tr');
-            if (remainingRows.length === 0) {
-              // Si no quedan filas, mostrar mensaje de no datos
-              const tbody = document.getElementById('vacunasTableBody');
-              if (tbody) {
-                tbody.innerHTML = '<tr><td colspan="8" class="no-data">No hay vacunas registradas para este turno</td></tr>';
-              }
-            }
-          }
-          
-          // CRÍTICO: Actualizar el inventario del turno (sumar 1 a la vacuna eliminada)
-          actualizarInventarioTurno(tipoVacuna, 1);
-          
-        })
-        .catch((error) => {
-          console.error('Error al eliminar vacuna:', error);
-          showNotification('Error al eliminar la vacuna', 'error');
-        });
-    })
-    .catch((error) => {
-      console.error('Error al obtener datos de la vacuna:', error);
-      showNotification('Error al obtener datos de la vacuna', 'error');
-    });
-  };
-  
-  // Editar solo factura (para consulta externa)
-  window.editVacunaFactura = function(vacunaId) {
-    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
-    if (!row) return;
-    
-    const facturaDisplay = row.querySelector('.factura-display');
-    const facturaEdit = row.querySelector('.factura-edit');
-    const editBtn = row.querySelector('.btn-edit-factura-vacuna');
-    const saveBtn = row.querySelector('.btn-save-factura-vacuna');
-    const cancelBtn = row.querySelector('.btn-cancel-factura-vacuna');
-    
-    if (facturaDisplay) facturaDisplay.style.display = 'none';
-    if (facturaEdit) facturaEdit.style.display = 'inline-block';
-    if (editBtn) editBtn.style.display = 'none';
-    if (saveBtn) saveBtn.style.display = 'inline-block';
-    if (cancelBtn) cancelBtn.style.display = 'inline-block';
-  };
-  
-  // Guardar factura
-  window.saveVacunaFactura = function(vacunaId) {
-    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
-    if (!row) return;
-    
-    const facturaEdit = row.querySelector('.factura-edit');
-    const newFactura = facturaEdit ? facturaEdit.value.trim() : '';
-    
-    console.log('Guardando factura para vacuna:', vacunaId, 'valor:', newFactura);
-    
-    if (!firebase || !firebase.database) {
-      showNotification('Error: Firebase no está disponible', 'error');
-      return;
-    }
-    
-    const database = firebase.database();
-    const ref = database.ref(`vacunas/${vacunaId}`);
-    
-    // Asegurar que siempre se guarde el campo, incluso si está vacío
-    const updateData = { factura: newFactura || '' };
-    console.log('Datos a actualizar en Firebase:', updateData);
-    
-    ref.update(updateData)
-      .then(() => {
-        console.log('Factura actualizada exitosamente en Firebase');
-        showNotification('Factura actualizada exitosamente', 'success');
-        const facturaDisplay = row.querySelector('.factura-display');
-        if (facturaDisplay) {
-          facturaDisplay.textContent = newFactura;
-          console.log('Display actualizado con valor:', newFactura);
-        }
-        cancelEditVacunaFactura(vacunaId);
-        
-        // Recargar datos después de un breve delay para asegurar consistencia
-        if (currentVacunasFecha && currentVacunasTurno) {
-          setTimeout(() => {
-            loadVacunasData(currentVacunasFecha, currentVacunasTurno);
-          }, 300);
-        }
-      })
-      .catch((error) => {
-        console.error('Error al actualizar factura:', error);
-        showNotification('Error al actualizar la factura', 'error');
-      });
-  };
-  
-  // Cancelar edición de factura
-  window.cancelEditVacunaFactura = function(vacunaId) {
-    const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
-    if (!row) return;
-    
-    const facturaDisplay = row.querySelector('.factura-display');
-    const facturaEdit = row.querySelector('.factura-edit');
-    const editBtn = row.querySelector('.btn-edit-factura-vacuna');
-    const saveBtn = row.querySelector('.btn-save-factura-vacuna');
-    const cancelBtn = row.querySelector('.btn-cancel-factura-vacuna');
-    
-    // Restaurar valor original
-    if (facturaDisplay && facturaEdit) {
-      facturaEdit.value = facturaDisplay.textContent;
-    }
-    
-    if (facturaDisplay) facturaDisplay.style.display = 'inline';
-    if (facturaEdit) facturaEdit.style.display = 'none';
-    if (editBtn) editBtn.style.display = 'inline-block';
-    if (saveBtn) saveBtn.style.display = 'none';
-    if (cancelBtn) cancelBtn.style.display = 'none';
-  };
-  
-  // Limpiar formulario de vacunas
-  function limpiarFormularioVacunas() {
-    const form = document.getElementById('vacunasForm');
-    if (form) {
-      form.reset();
-    }
-  }
-  
-  // Cargar notas del turno
-  function loadVacunasNotas(fecha, turno) {
-    if (!firebase || !firebase.database) {
-      return;
-    }
-    
-    const notasKey = `${fecha}_${turno}`;
-    const database = firebase.database();
-    const ref = database.ref(`vacunasNotas/${notasKey}`);
-    
-    ref.once('value', (snapshot) => {
-      const notas = snapshot.val();
-      const notasTextarea = document.getElementById('vacunasNotasTurno');
-      if (notasTextarea) {
-        notasTextarea.value = notas || '';
-      }
-    });
-  }
-  
-  // Guardar notas del turno
-  function guardarVacunasNotas() {
-    if (!currentVacunasFecha || !currentVacunasTurno) {
-      showNotification('Debe seleccionar una fecha y turno primero', 'error');
-      return;
-    }
-    
-    const notasTextarea = document.getElementById('vacunasNotasTurno');
-    const notas = notasTextarea ? notasTextarea.value : '';
-    
-    if (!firebase || !firebase.database) {
-      showNotification('Error: Firebase no está disponible', 'error');
-      return;
-    }
-    
-    const notasKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
-    const database = firebase.database();
-    const ref = database.ref(`vacunasNotas/${notasKey}`);
-    
-    ref.set(notas)
-      .then(() => {
-        showNotification('Notas guardadas exitosamente', 'success');
-      })
-      .catch((error) => {
-        console.error('Error al guardar notas:', error);
-        showNotification('Error al guardar las notas', 'error');
-      });
-  }
-  
-  // ==================== FUNCIONES DEL SISTEMA DE INVENTARIO ====================
-  
-  // Verificar estado del turno (si ya está abierto)
-  function verificarEstadoTurno(fecha, turno) {
-    const turnoKey = `${fecha}_${turno}`;
-    const database = firebase.database();
-    const ref = database.ref(`inventarioTurnos/${turnoKey}`);
-    
-    ref.once('value', (snapshot) => {
-      const turnoData = snapshot.val();
-      if (turnoData) {
-        // El turno ya está abierto
-        mostrarInventarioActual(turnoData);
-        inventarioActual = turnoData.inventario || {};
-      } else {
-        // El turno no está abierto
-        mostrarFormularioApertura();
-      }
-    });
-  }
-  
-  // Mostrar formulario de apertura de turno
-  function mostrarFormularioApertura() {
-    const abrirSection = document.getElementById('abrirTurnoSection');
-    const inventarioSection = document.getElementById('inventarioActualSection');
-    
-    if (abrirSection) abrirSection.style.display = 'block';
-    if (inventarioSection) inventarioSection.style.display = 'none';
-    
-    // Habilitar todos los inputs de inventario para edición
-    habilitarInputsInventario(true);
-    
-    // Actualizar texto del botón según el turno
-    const abrirTurnoBtn = document.getElementById('abrirTurnoBtn');
-    if (abrirTurnoBtn) {
-      const turno = currentVacunasTurno;
-      let textoBoton = '';
-      
-      switch(turno) {
-        case 'Mañana':
-          textoBoton = '<i class="fas fa-play-circle"></i> Abrir Turno';
-          break;
-        case 'Tarde':
-          textoBoton = '<i class="fas fa-handshake"></i> Entregar Turno';
-          break;
-        case 'Noche':
-          textoBoton = '<i class="fas fa-stop-circle"></i> Cerrar Turno';
-          break;
-        default:
-          textoBoton = '<i class="fas fa-play-circle"></i> Abrir Turno';
-      }
-      
-      abrirTurnoBtn.innerHTML = textoBoton;
-    }
-  }
-  
-  // Mostrar inventario actual
-  function mostrarInventarioActual(turnoData) {
-    const abrirSection = document.getElementById('abrirTurnoSection');
-    const inventarioSection = document.getElementById('inventarioActualSection');
-    
-    if (abrirSection) abrirSection.style.display = 'none';
-    if (inventarioSection) inventarioSection.style.display = 'block';
-    
-    // Verificar permisos para editar inventario
-    const canEditInventario = hasPermission('canEditTurnos');
-    
-    // Deshabilitar/habilitar inputs según permisos
-    habilitarInputsInventario(canEditInventario);
-    
-    // Actualizar información del responsable
-    const responsableActual = document.getElementById('responsableActual');
-    const horaApertura = document.getElementById('horaApertura');
-    
-    if (responsableActual) responsableActual.textContent = turnoData.responsable || 'No especificado';
-    if (horaApertura) horaApertura.textContent = turnoData.horaApertura || 'No especificado';
-    
-    // Actualizar inventario
-    inventarioActual = turnoData.inventario || {};
-    actualizarVistaInventario();
-    
-    // Agregar botón de guardar inventario para administradores
-    if (canEditInventario) {
-      agregarBotonGuardarInventario();
-    }
-  }
-  
-  
-  // Abrir turno con inventario inicial
-  function abrirTurno() {
-    const responsable = document.getElementById('responsableApertura').value.trim();
-    
-    if (!responsable) {
-      showNotification('Debe especificar el responsable de apertura', 'error');
-      return;
-    }
-    
-    // Verificar que tenemos fecha y turno
-    if (!currentVacunasFecha || !currentVacunasTurno) {
-      showNotification('Debe seleccionar fecha y turno primero', 'error');
-      return;
-    }
-    
-    // Configurar modal de confirmación según el tipo de turno
-    let confirmConfig = {
-      title: 'Confirmar acción',
-      message: '¿Está seguro de que desea guardar los cambios?',
-      iconClass: 'fas fa-save',
-      confirmLabel: 'Confirmar'
-    };
-    
-    switch(currentVacunasTurno) {
-      case 'Mañana':
-        confirmConfig = {
-          title: 'Abrir turno',
-          message: '¿Está seguro de que desea abrir el turno con el inventario configurado?',
-          iconClass: 'fas fa-play-circle',
-          confirmLabel: 'Abrir turno'
-        };
-        break;
-      case 'Tarde':
-        confirmConfig = {
-          title: 'Entregar turno',
-          message: '¿Está seguro de que desea entregar el turno con el inventario configurado?',
-          iconClass: 'fas fa-handshake',
-          confirmLabel: 'Entregar turno'
-        };
-        break;
-      case 'Noche':
-        confirmConfig = {
-          title: 'Cerrar turno',
-          message: '¿Está seguro de que desea cerrar el turno con el inventario configurado?',
-          iconClass: 'fas fa-stop-circle',
-          confirmLabel: 'Cerrar turno'
-        };
-        break;
-      default:
-        break;
-    }
-    
-    // Mostrar confirmación custom con estilos
-    showTurnoConfirmModal(confirmConfig, () => {
-      // Recopilar inventario inicial
-      const inventarioInicial = {};
-      
-      // Vacunas anuales
-      vacunasDisponibles.anual.forEach(vacuna => {
-        // Crear ID del input basado en el nombre de la vacuna
-        let inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
-        const input = document.getElementById(inputId);
-        const valor = input ? parseInt(input.value) || 0 : 0;
-        // Usar clave sanitizada para Firebase
-        inventarioInicial[sanitizeFirebaseKey(vacuna)] = valor;
-      });
-      
-      // Vacunas trimestrales
-      vacunasDisponibles.trimestral.forEach(vacuna => {
-        const inputId = `inventario${vacuna.replace(/\s+/g, '').replace(/\//g, '')}`;
-        const input = document.getElementById(inputId);
-        const valor = input ? parseInt(input.value) || 0 : 0;
-        // Usar clave sanitizada para Firebase
-        inventarioInicial[sanitizeFirebaseKey(vacuna)] = valor;
-      });
-      
-      // Crear datos del turno
-      const turnoData = {
-        responsable: responsable,
-        fecha: currentVacunasFecha,
-        turno: currentVacunasTurno,
-        horaApertura: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
-        timestamp: Date.now(),
-        inventario: inventarioInicial
-      };
-      
-      // Guardar en Firebase
-      const turnoKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
-      const database = firebase.database();
-      const ref = database.ref(`inventarioTurnos/${turnoKey}`);
-      
-      ref.set(turnoData)
-        .then(() => {
-          showNotification('Turno abierto exitosamente', 'success');
-          inventarioActual = inventarioInicial;
-          mostrarInventarioActual(turnoData);
-          actualizarVistaInventario();
-        })
-        .catch((error) => {
-          console.error('Error al abrir turno:', error);
-          showNotification('Error al abrir el turno', 'error');
-        });
-    });
-  }
-
-  // Modal de confirmación estilizado para apertura/entrega/cierre de turno
-  function showTurnoConfirmModal(config, onConfirm) {
-    const { title, message, iconClass, confirmLabel } = config;
-    
-    // Evitar duplicados
-    const existing = document.getElementById('turnoConfirmModal');
-    if (existing) existing.remove();
-    
-    const modal = document.createElement('div');
-    modal.id = 'turnoConfirmModal';
-    modal.className = 'turno-confirm-overlay';
-    modal.innerHTML = `
-      <div class="turno-confirm-content animate-scale">
-        <div class="turno-confirm-header">
-          <div class="turno-confirm-icon">
-            <i class="${iconClass}"></i>
-          </div>
-          <div>
-            <h3>${title}</h3>
-            <p>${message}</p>
-          </div>
-        </div>
-        <div class="turno-confirm-actions">
-          <button class="btn-cancel-confirm" type="button" id="turnoConfirmCancel">
-            <i class="fas fa-times"></i> Cancelar
-          </button>
-          <button class="btn-accept-confirm" type="button" id="turnoConfirmAccept">
-            <i class="fas fa-check"></i> ${confirmLabel}
-          </button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    
-    const closeModal = () => modal.remove();
-    
-    // Cerrar al hacer click fuera del contenido
-    modal.addEventListener('click', (e) => {
-      if (e.target.classList.contains('turno-confirm-overlay')) {
-        closeModal();
-      }
-    });
-    
-    // Botones
-    const cancelBtn = document.getElementById('turnoConfirmCancel');
-    const acceptBtn = document.getElementById('turnoConfirmAccept');
-    
-    if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
-    if (acceptBtn) {
-      acceptBtn.addEventListener('click', () => {
-        closeModal();
-        if (typeof onConfirm === 'function') {
-          onConfirm();
-        }
-      });
-    }
-  }
-  
-  // Actualizar vista del inventario
-  function actualizarVistaInventario() {
-    // Actualizar inventario anual
-    const gridAnual = document.querySelector('#inventarioAnual .inventario-grid-actual');
-    if (gridAnual) {
-      gridAnual.innerHTML = vacunasDisponibles.anual.map(vacuna => {
-        const cantidad = inventarioActual[sanitizeFirebaseKey(vacuna)] || 0;
-        const claseStock = cantidad === 0 ? 'sin-stock' : (cantidad <= 2 ? 'bajo-stock' : '');
-        const claseCantidad = cantidad === 0 ? 'sin-stock' : (cantidad <= 2 ? 'bajo-stock' : '');
-        
-        return `
-          <div class="inventario-item-actual ${claseStock}">
-            <span class="vacuna-nombre">${vacuna}</span>
-            <span class="vacuna-cantidad ${claseCantidad}">${cantidad}</span>
-          </div>
-        `;
-      }).join('');
-    }
-    
-    // Actualizar inventario trimestral
-    const gridTrimestral = document.querySelector('#inventarioTrimestral .inventario-grid-actual');
-    if (gridTrimestral) {
-      gridTrimestral.innerHTML = vacunasDisponibles.trimestral.map(vacuna => {
-        const cantidad = inventarioActual[sanitizeFirebaseKey(vacuna)] || 0;
-        const claseStock = cantidad === 0 ? 'sin-stock' : (cantidad <= 2 ? 'bajo-stock' : '');
-        const claseCantidad = cantidad === 0 ? 'sin-stock' : (cantidad <= 2 ? 'bajo-stock' : '');
-        
-        return `
-          <div class="inventario-item-actual ${claseStock}">
-            <span class="vacuna-nombre">${vacuna}</span>
-            <span class="vacuna-cantidad ${claseCantidad}">${cantidad}</span>
-          </div>
-        `;
-      }).join('');
-    }
-  }
-  
-  // Verificar inventario disponible
-  function verificarInventario(vacuna) {
-    const cantidad = inventarioActual[sanitizeFirebaseKey(vacuna)] || 0;
-    return cantidad > 0;
-  }
-  
-  // Actualizar inventario (restar o sumar)
-  function actualizarInventario(vacuna, cantidad) {
-    const key = sanitizeFirebaseKey(vacuna);
-    if (!inventarioActual[key]) {
-      inventarioActual[key] = 0;
-    }
-    
-    inventarioActual[key] += cantidad;
-    
-    // Actualizar en Firebase
-    const turnoKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
-    const database = firebase.database();
-    const ref = database.ref(`inventarioTurnos/${turnoKey}/inventario`);
-    
-    ref.update(inventarioActual)
-      .then(() => {
-        actualizarVistaInventario();
-      })
-      .catch((error) => {
-        console.error('Error al actualizar inventario:', error);
-      });
-  }
-  
-  // Función para actualizar inventario del turno cuando se elimina una vacuna
-  function actualizarInventarioTurno(vacuna, cantidad) {
-    console.log('Actualizando inventario del turno para vacuna:', vacuna, 'cantidad:', cantidad);
-    
-    const key = sanitizeFirebaseKey(vacuna);
-    const turnoKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
-    const database = firebase.database();
-    const ref = database.ref(`inventarioTurnos/${turnoKey}/inventario`);
-    
-    // Obtener el inventario actual del turno
-    ref.once('value', (snapshot) => {
-      const inventarioTurno = snapshot.val() || {};
-      
-      if (!inventarioTurno[key]) {
-        inventarioTurno[key] = 0;
-      }
-      
-      inventarioTurno[key] += cantidad;
-      
-      // Actualizar el inventario en Firebase
-      ref.update({ [key]: inventarioTurno[key] })
-        .then(() => {
-          console.log('Inventario del turno actualizado exitosamente');
-          // Actualizar el inventario local
-          inventarioActual[key] = inventarioTurno[key];
-          actualizarVistaInventario();
-        })
-        .catch((error) => {
-          console.error('Error al actualizar inventario del turno:', error);
-        });
-    });
-  }
-  
-  // Función para cambiar tabs del inventario
-  window.mostrarInventarioTab = function(tipo) {
-    // Ocultar todos los contenidos
-    document.querySelectorAll('.inventario-tab-content').forEach(content => {
-      content.style.display = 'none';
-    });
-    
-    // Remover clase active de todos los botones
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-      btn.classList.remove('active');
-    });
-    
-    // Mostrar contenido seleccionado
-    const content = document.getElementById(`inventario${tipo.charAt(0).toUpperCase() + tipo.slice(1)}`);
-    if (content) {
-      content.style.display = 'block';
-    }
-    
-    // Activar botón seleccionado
-    const btn = document.querySelector(`[onclick="mostrarInventarioTab('${tipo}')"]`);
-    if (btn) {
-      btn.classList.add('active');
-    }
-  };
-  
-  // ==================== FIN FUNCIONES DEL SISTEMA DE INVENTARIO ====================
-
-  // ==================== FIN MÓDULO DE CONTROL DE VACUNAS ====================
 
   // Inicializar el sidebar para móviles
   if (window.innerWidth <= 980) {

@@ -1,5 +1,5 @@
 // ====================================================================
-// MÓDULO DE INTERNAMIENTO
+// MÓDULO DE INTERNAMIENTO - FUNCIONES EXTENDIDAS
 // ====================================================================
 // Extensiones y funcionalidades adicionales del módulo de internamiento
 // ====================================================================
@@ -34,7 +34,7 @@ InternamientoModule.prototype.loadEvolucionView = function() {
         </div>
 
         <div style="background: white; padding: 25px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <h3 style="color: var(--internamiento-primary); margin-bottom: 20px;">📊 Resumen General</h3>
+            <h3 style="color: var(--internamiento-primary); margin-bottom: 20px;"><i class="fas fa-chart-bar"></i> Resumen General</h3>
             <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
                 <div class="stats-card">
                     <div class="stats-icon"><i class="fas fa-calendar"></i></div>
@@ -69,6 +69,9 @@ InternamientoModule.prototype.loadEvolucionView = function() {
             <button class="tab-btn" onclick="window.internamientoModule.showTab('notas')">
                 <i class="fas fa-notes-medical"></i> Notas Médicas
             </button>
+            <button class="tab-btn" onclick="window.internamientoModule.showTab('llamadas')">
+                <i class="fas fa-phone"></i> Llamadas
+            </button>
         </div>
 
         <div id="tab-turnos" class="tab-content active">
@@ -81,6 +84,10 @@ InternamientoModule.prototype.loadEvolucionView = function() {
 
         <div id="tab-notas" class="tab-content">
             ${this.renderNotasMedicas(internamiento)}
+        </div>
+
+        <div id="tab-llamadas" class="tab-content">
+            ${typeof this.renderLlamadasEnEvolucion === 'function' ? this.renderLlamadasEnEvolucion(internamiento) : '<div class="empty-state"><i class="fas fa-phone"></i><p>Módulo de llamadas no disponible</p></div>'}
         </div>
     `;
 };
@@ -144,11 +151,7 @@ InternamientoModule.prototype.renderTurnoDetallado = function(turno) {
                 </div>
                 <div>
                     <button class="btn btn-sm btn-info" onclick="window.internamientoModule.verTurnoDetalle('${turno.turnoId}')">
-                        <i class="fas fa-eye"></i> Ver Detalle
-                    </button>
-                    <button class="btn btn-sm" style="background: #17a2b8; color: white; margin-left: 8px;" 
-                            onclick="window.internamientoModule.editarTurno('${turno.turnoId}')" title="Editar">
-                        <i class="fas fa-edit"></i> Editar
+                        <i class="fas fa-eye"></i> Ver detalle (solo lectura)
                     </button>
                 </div>
             </div>
@@ -172,10 +175,22 @@ InternamientoModule.prototype.renderTurnoDetallado = function(turno) {
                         <span class="parametro-label">Peso</span>
                         <span class="parametro-valor">${turno.parametrosVitales?.peso || '--'}<span class="parametro-unidad">kg</span></span>
                     </div>
+                    ${turno.parametrosVitales?.presionArterial ? `
+                    <div class="parametro-item">
+                        <span class="parametro-label">PA</span>
+                        <span class="parametro-valor">${turno.parametrosVitales.presionArterial}<span class="parametro-unidad">mmHg</span></span>
+                    </div>
+                    ` : ''}
+                    ${turno.parametrosVitales?.po2 ? `
+                    <div class="parametro-item">
+                        <span class="parametro-label">PO2</span>
+                        <span class="parametro-valor">${turno.parametrosVitales.po2}<span class="parametro-unidad">mmHg</span></span>
+                    </div>
+                    ` : ''}
                 </div>
                 ${turno.observaciones ? `
                     <div style="margin-top: 15px; padding: 12px; background: #f8f9fa; border-radius: 6px; border-left: 3px solid var(--internamiento-info);">
-                        <strong style="color: var(--internamiento-primary);">💬 Observaciones:</strong>
+                        <strong style="color: var(--internamiento-primary);"><i class="fas fa-comment"></i> Observaciones:</strong>
                         <p style="margin: 8px 0 0 0; color: #555;">${turno.observaciones}</p>
                     </div>
                 ` : ''}
@@ -216,10 +231,25 @@ InternamientoModule.prototype.traducirAlerta = function(alerta) {
         'fr_elevada': 'FR Elevada',
         'deshidratacion_severa': 'Deshidratación Severa',
         'mucosas_anormales': 'Mucosas Anormales',
+        'presion_arterial_baja': 'Presión Arterial Baja',
+        'presion_arterial_alta': 'Presión Arterial Alta',
+        'hipoxemia': 'Hipoxemia (PO2 Bajo)',
         'sin_ingesta_agua': 'Sin Ingesta de Agua',
         'sin_apetito': 'Sin Apetito',
         'vomitos': 'Vómitos',
-        'diarreas': 'Diarreas'
+        // Defecación - Escala Bristol
+        'estrenimiento_severo': 'Estreñimiento Severo (Bristol Tipo 1)',
+        'diarrea_moderada': 'Diarrea Moderada (Bristol Tipo 6)',
+        'diarrea_severa': 'Diarrea Severa (Bristol Tipo 7)',
+        // Micción
+        'hematuria': 'Hematuria (Sangre en Orina)',
+        'orina_oscura': 'Orina Oscura',
+        'oliguria': 'Oliguria (Orina Disminuida)',
+        'anuria': 'Anuria (Sin Orina)',
+        // Micción
+        'hematuria': 'Sangre en Orina (Hematuria)',
+        'anuria': 'No Orina (Anuria) - EMERGENCIA',
+        'oliguria': 'Orina Disminuida (Oliguria)'
     };
     
     return traducciones[alerta] || alerta;
@@ -354,21 +384,21 @@ InternamientoModule.prototype.cambiarEstado = async function(nuevoEstado) {
     switch(nuevoEstado) {
         case 'critico':
             confirmMessage = '¿Marcar este paciente como CRÍTICO?\n\nEsto activará alertas especiales y monitoreo intensivo.';
-            confirmTitle = '🚨 Cambiar a CRÍTICO';
+            confirmTitle = 'Cambiar a CRÍTICO';
             requiereRazon = true;
             icon = 'fa-exclamation-triangle';
             iconColor = '#e74c3c';
             break;
         case 'activo':
             confirmMessage = '¿Cambiar estado a ACTIVO (estable)?\n\nSe desactivarán las alertas de estado crítico.';
-            confirmTitle = '💚 Cambiar a ACTIVO';
+            confirmTitle = 'Cambiar a ACTIVO';
             requiereRazon = true;
             icon = 'fa-heartbeat';
             iconColor = '#27ae60';
             break;
         case 'alta':
             confirmMessage = '¿Autorizar ALTA MÉDICA para este paciente?\n\nSe bloquearán turnos y medicación.';
-            confirmTitle = '✅ Autorizar Alta';
+            confirmTitle = 'Autorizar Alta';
             requiereRazon = false;
             icon = 'fa-check-circle';
             iconColor = '#f39c12';
@@ -456,59 +486,127 @@ InternamientoModule.prototype.verTurnoDetalle = function(turnoId) {
     }
 
     const modalContent = this.renderTurnoDetalleModal(turno);
-    const modal = this.createModal('Detalle del Turno', modalContent);
+    const modal = this.createModal('Detalle del Turno (solo lectura)', modalContent);
     document.body.appendChild(modal);
 };
 
 InternamientoModule.prototype.renderTurnoDetalleModal = function(turno) {
     const fecha = new Date(turno.fecha).toLocaleString('es-ES');
-    
+    const pv = turno.parametrosVitales || {};
+    const eg = turno.estadoGeneral || {};
+    const flu = turno.fluidoterapia || {};
+    const v = (val) => (val !== undefined && val !== null && val !== '') ? val : '—';
+    const vb = (val) => (val === true || val === 'true') ? 'Sí' : (val === false || val === 'false') ? 'No' : v(val);
+
+    const parametrosVitalesKeys = ['peso', 'fc', 'fr', 'temperatura', 'tllc', 'deshidratacion', 'mucosas', 'via', 'tiempoVia', 'sonda', 'tiempoSonda', 'parametrosPulmonares', 'presionArterial', 'po2'];
+    const estadoGeneralKeys = ['estadoMental', 'nivelDolor', 'glasgowPuntaje', 'ingestaAgua', 'cantidadAgua', 'apetito', 'alimentoCantidad', 'alimentoTipo', 'defecacion', 'defecacionNotas', 'miccion', 'miccionColor', 'miccionFrecuencia', 'miccionVolumen', 'miccionNotas', 'vomitos', 'descripcionVomitos'];
+
+    const parametrosHTML = parametrosVitalesKeys.map(key => {
+        const val = pv[key];
+        const display = key === 'mucosas' ? (this.formatearMucosas(val) || '—') : (key === 'via' ? (this.formatearVia(val) || '—') : (key === 'sonda' ? (this.formatearSonda(val) || '—') : v(val)));
+        return `<div class="parametro-item"><span class="parametro-label">${this.traducirParametro(key)}</span><span class="parametro-valor">${display}</span></div>`;
+    }).join('');
+
+    const estadoGeneralHTML = estadoGeneralKeys.map(key => {
+        const val = eg[key];
+        const display = key === 'defecacion' ? (this.formatearDefecacion(val) || '—') : (key === 'miccionColor' ? (this.formatearMiccionColor(val) || '—') : (key === 'miccionFrecuencia' ? (this.formatearMiccionFrecuencia(val) || '—') : (key === 'nivelDolor' ? (this.formatearNivelDolor(val) || '—') : (key === 'estadoMental' ? (this.formatearEstadoMental(val) || '—') : vb(val)))));
+        return `<div class="turno-detalle-fila"><span class="label">${this.traducirCampo(key)}</span><span class="value">${display}</span></div>`;
+    }).join('');
+
     return `
-        <div style="max-height: 70vh; overflow-y: auto;">
-            <div class="alert-box info" style="margin-bottom: 20px;">
-                <i class="fas fa-info-circle"></i>
-                <div>
-                    <strong>${turno.turno || 'Sin turno'}</strong><br>
-                    ${fecha}<br>
-                    Responsable: ${turno.responsableNombre || 'N/A'}
+        <div class="turno-detalle-modal">
+            <div class="turno-detalle-header">
+                <div class="turno-detalle-header-icon"><i class="fas fa-clipboard-list"></i></div>
+                <div class="turno-detalle-header-info">
+                    <h3>${turno.turno || 'Sin turno'}</h3>
+                    <div class="meta"><i class="fas fa-calendar-alt" style="margin-right:6px;"></i>${fecha}</div>
+                    <div class="meta"><i class="fas fa-user-nurse" style="margin-right:6px;"></i>${turno.responsableNombre || 'N/A'}</div>
+                </div>
+                <span class="turno-detalle-header-badge"><i class="fas fa-eye"></i> Solo lectura</span>
+            </div>
+
+            <div class="turno-detalle-section turno-vitales">
+                <h4 class="turno-detalle-section-title"><i class="fas fa-heartbeat"></i> Parámetros vitales</h4>
+                <div class="parametros-vitales-grid">
+                    ${parametrosHTML}
                 </div>
             </div>
 
-            <h4 style="color: var(--internamiento-primary); margin: 20px 0 15px 0;">Parámetros Vitales</h4>
-            <div class="parametros-vitales-grid">
-                ${Object.entries(turno.parametrosVitales || {}).map(([key, value]) => `
-                    <div class="parametro-item">
-                        <span class="parametro-label">${this.traducirParametro(key)}</span>
-                        <span class="parametro-valor">${value}</span>
-                    </div>
-                `).join('')}
+            <div class="turno-detalle-section">
+                <h4 class="turno-detalle-section-title"><i class="fas fa-stethoscope"></i> Estado general</h4>
+                <div class="turno-detalle-estado-grid">${estadoGeneralHTML}</div>
             </div>
 
-            <h4 style="color: var(--internamiento-primary); margin: 20px 0 15px 0;">Estado General</h4>
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
-                ${Object.entries(turno.estadoGeneral || {}).map(([key, value]) => `
-                    <div style="margin-bottom: 10px;">
-                        <strong>${this.traducirCampo(key)}:</strong> ${this.formatearValor(value)}
-                    </div>
-                `).join('')}
+            <div class="turno-detalle-section turno-detalle-fluidoterapia">
+                <h4 class="turno-detalle-section-title"><i class="fas fa-tint"></i> Fluidoterapia</h4>
+                <div class="turno-detalle-fila"><span class="label">¿Administrada?</span><span class="value">${flu.administrada ? 'Sí' : 'No'}</span></div>
+                ${flu.administrada ? `
+                <div class="turno-detalle-fila"><span class="label">Tipo</span><span class="value">${v(this.formatearFluidoTipo(flu.tipo))}</span></div>
+                <div class="turno-detalle-fila"><span class="label">Frecuencia / Velocidad</span><span class="value">${v(flu.frecuencia)}</span></div>
+                ` : ''}
             </div>
 
-            ${turno.fluidoterapia?.administrada ? `
-                <h4 style="color: var(--internamiento-primary); margin: 20px 0 15px 0;">Fluidoterapia</h4>
-                <div style="background: #d1ecf1; padding: 15px; border-radius: 8px;">
-                    <div><strong>Tipo:</strong> ${turno.fluidoterapia.tipo}</div>
-                    <div><strong>Frecuencia:</strong> ${turno.fluidoterapia.frecuencia}</div>
-                </div>
+            ${turno.alertasAutomaticas && turno.alertasAutomaticas.length > 0 ? `
+            <div class="turno-detalle-section turno-detalle-alertas">
+                <h4 class="turno-detalle-section-title"><i class="fas fa-exclamation-triangle"></i> Alertas automáticas</h4>
+                ${turno.alertasAutomaticas.map(a => `<span class="chip"><i class="fas fa-exclamation-triangle"></i> ${this.traducirAlerta(a)}</span>`).join('')}
+            </div>
             ` : ''}
 
-            ${turno.observaciones ? `
-                <h4 style="color: var(--internamiento-primary); margin: 20px 0 15px 0;">Observaciones</h4>
-                <div style="background: #fff3cd; padding: 15px; border-radius: 8px; white-space: pre-wrap;">
-                    ${turno.observaciones}
+            <div class="turno-detalle-section">
+                <h4 class="turno-detalle-section-title"><i class="fas fa-comment-dots"></i> Observaciones</h4>
+                <div class="turno-detalle-observaciones">
+                    ${turno.observaciones ? turno.observaciones.replace(/</g, '&lt;') : '—'}
                 </div>
-            ` : ''}
+            </div>
         </div>
     `;
+};
+
+InternamientoModule.prototype.formatearMucosas = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = { rosadas: 'Rosadas (Normal)', palidas: 'Pálidas', ictericas: 'Ictéricas', cianoticas: 'Cianóticas', congestivas: 'Congestivas' };
+    return map[val] || val;
+};
+InternamientoModule.prototype.formatearVia = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = { no_tiene_via: 'No tiene vía', ev_periferica: 'EV periférica', ev_yugular: 'EV yugular', ev_cefalica: 'EV cefálica', sin_cambios: 'Sin cambios', nueva: 'Nueva' };
+    return map[val] || val;
+};
+InternamientoModule.prototype.formatearSonda = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = { no_tiene_sonda: 'No tiene sonda', sonda_vesical: 'Sonda vesical', sonda_esofagica: 'Sonda esofágica', sin_cambios: 'Sin cambios', nueva: 'Nueva' };
+    return map[val] || val;
+};
+InternamientoModule.prototype.formatearDefecacion = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = { bristol_1: 'Tipo 1 (Bolas duras)', bristol_2: 'Tipo 2', bristol_3: 'Tipo 3', bristol_4: 'Tipo 4 (Normal)', bristol_5: 'Tipo 5', bristol_6: 'Tipo 6', bristol_7: 'Tipo 7 (Acuosa)', no_defeco: 'No defecó' };
+    return map[val] || val;
+};
+InternamientoModule.prototype.formatearMiccionColor = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = { amarillo_claro: 'Amarillo claro', amarillo: 'Amarillo', amarillo_oscuro: 'Amarillo oscuro', marron: 'Marrón', rojo: 'Rojo (hematuria)' };
+    return map[val] || val;
+};
+InternamientoModule.prototype.formatearMiccionFrecuencia = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = { normal: 'Normal', aumentada: 'Aumentada (poliuria)', disminuida: 'Disminuida' };
+    return map[val] || val;
+};
+InternamientoModule.prototype.formatearNivelDolor = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = { sin_dolor: 'Sin dolor', leve: 'Leve', moderado: 'Moderado', severo: 'Severo' };
+    return map[val] || val;
+};
+InternamientoModule.prototype.formatearEstadoMental = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = { alerta: 'Alerta', tranquilo: 'Tranquilo', deprimido: 'Deprimido', excitado: 'Excitado', agresivo: 'Agresivo' };
+    return map[val] || val;
+};
+InternamientoModule.prototype.formatearFluidoTipo = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = { ringer_lactato: 'Ringer Lactato', solucion_salina: 'Solución Salina', dextrosa_5: 'Dextrosa 5%', otro: 'Otro' };
+    return map[val] || val;
 };
 
 InternamientoModule.prototype.traducirParametro = function(key) {
@@ -519,7 +617,14 @@ InternamientoModule.prototype.traducirParametro = function(key) {
         'temperatura': 'Temperatura (°C)',
         'tllc': 'TLLC (seg)',
         'deshidratacion': 'Deshidratación (%)',
-        'mucosas': 'Mucosas'
+        'mucosas': 'Mucosas',
+        'via': 'Vía',
+        'tiempoVia': 'Tiempo de vía',
+        'sonda': 'Sonda',
+        'tiempoSonda': 'Tiempo de sonda',
+        'parametrosPulmonares': 'Parámetros pulmonares',
+        'presionArterial': 'Presión Arterial (mmHg)',
+        'po2': 'PO2 (mmHg)'
     };
     return traducciones[key] || key;
 };
@@ -528,15 +633,23 @@ InternamientoModule.prototype.traducirCampo = function(key) {
     const traducciones = {
         'estadoMental': 'Estado Mental',
         'nivelDolor': 'Nivel de Dolor',
+        'glasgowPuntaje': 'Glasgow (puntaje)',
         'ingestaAgua': 'Ingesta de Agua',
-        'cantidadAgua': 'Cantidad de Agua',
+        'cantidadAgua': 'Cantidad de Agua (ml)',
         'apetito': 'Apetito',
         'alimentoCantidad': 'Cantidad de Alimento',
         'alimentoTipo': 'Tipo de Alimento',
-        'diarreas': 'Diarreas',
-        'descripcionDiarreas': 'Descripción Diarreas',
+        'defecacion': 'Defecación (Bristol)',
+        'defecacionNotas': 'Notas defecación',
+        'miccion': 'Micción',
+        'miccionColor': 'Color orina',
+        'miccionFrecuencia': 'Frecuencia micción',
+        'miccionVolumen': 'Volumen orina (ml)',
+        'miccionNotas': 'Notas micción',
         'vomitos': 'Vómitos',
-        'descripcionVomitos': 'Descripción Vómitos'
+        'descripcionVomitos': 'Descripción vómitos',
+        'diarreas': 'Diarreas',
+        'descripcionDiarreas': 'Descripción Diarreas'
     };
     return traducciones[key] || key;
 };
@@ -592,6 +705,5 @@ InternamientoModule.prototype.guardarNotaEvolucion = async function(contenido, i
     }
 };
 
-console.log('📦 Funciones extendidas de internamiento cargadas');
-
+console.log('Funciones extendidas de internamiento cargadas');
 

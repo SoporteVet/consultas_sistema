@@ -13,6 +13,13 @@ let labTicketsAllDataLoaded = false; // Flag para saber si ya se cargaron todos 
 let labTicketsLoadDateRange = 60; // Días a cargar por defecto (últimos 60 días)
 let labTicketsUpdateDebounceTimer = null; // Timer para debounce de actualizaciones
 
+// Vista mensual para Reportados por Lab / Reportado al cliente (sin carga completa hasta abrir otros filtros)
+let labReportadosQueryRef = null;
+let labReportadosMonthListener = null;
+let labReportadosMonthYm = '';
+let labReportadosLastSnapshotTickets = [];
+let labReportadosMonthDataReady = false;
+
 // Variables globales para el sistema de servicios
 let selectedServices = [];
 let currentFilterCategory = '';
@@ -64,7 +71,8 @@ function initLaboratorioSystem() {
             console.log('✅ Firebase database disponible');
             labTicketsRef = window.database.ref('lab_tickets');
             console.log('✅ Referencia lab_tickets creada');
-            setupLabFirebaseListeners();
+            // La carga de datos ocurre en la primera renderLabTickets (!labTicketsAllDataLoaded):
+            // una sola lectura completa de lab_tickets (antes estaba ligada al filtro "Todos").
         } else {
             console.error('❌ Firebase database NO disponible');
             return;
@@ -82,6 +90,8 @@ function initLaboratorioSystem() {
         
         // Configurar actualización en tiempo real de clientes
         setupClientesDataListener();
+
+        refreshLabNextTicketIdFromFirebase();
         
         console.log('✅ Sistema de laboratorio inicializado correctamente');
     } catch (error) {
@@ -89,53 +99,39 @@ function initLaboratorioSystem() {
     }
 }
 
-// Cargar datos de clientes desde Firebase tickets y configurar actualización en tiempo real
+// Sincroniza clientes de laboratorio solo desde los tickets del día en memoria (misma fuente que ver consultas)
 function setupClientesDataListener() {
     try {
         if (!window.database) {
             return;
         }
 
-        const ticketsRef = window.database.ref('tickets');
-        
-        // PRIMERA CARGA: Obtener datos iniciales una sola vez
-        ticketsRef.once('value')
-            .then((snapshot) => {
-                updateClientesDataFromSnapshot(snapshot);
-            })
-            .catch((error) => {
-                // Error silencioso
+        const syncFromMainTickets = () => {
+            const arr = window.tickets || [];
+            const ticketsData = {};
+            arr.forEach(t => {
+                const k = t.firebaseKey || t.randomId || `t_${t.id || ''}`;
+                ticketsData[k] = t;
             });
-        
-        // Configurar listener en tiempo real para tickets (para cambios futuros)
-        ticketsRef.on('value', (snapshot) => {
-            updateClientesDataFromSnapshot(snapshot);
-        });
-        
-        // También escuchar cambios específicos para optimizar
-        ticketsRef.on('child_added', (snapshot) => {
-            const ticket = snapshot.val();
-            if (ticket) {
-                addClienteFromTicket(ticket);
-            }
-        });
-        
-        ticketsRef.on('child_changed', (snapshot) => {
-            const ticket = snapshot.val();
-            if (ticket) {
-                updateClienteFromTicket(ticket);
-            }
-        });
-        
+            updateClientesDataFromSnapshot(ticketsData);
+        };
+
+        window.syncLaboratorioClientesFromMainTickets = syncFromMainTickets;
+        syncFromMainTickets();
+
+        document.addEventListener('mainTicketsUpdated', syncFromMainTickets);
     } catch (error) {
         // Error silencioso
     }
 }
 
-// Actualizar datos de clientes desde snapshot completo
+// Actualizar datos de clientes desde snapshot completo o desde objeto { key: ticket }
 function updateClientesDataFromSnapshot(snapshot) {
     try {
-        const ticketsData = snapshot.val() || {};
+        const ticketsData =
+            snapshot && typeof snapshot.val === 'function'
+                ? (snapshot.val() || {})
+                : (snapshot || {});
         
         // Extraer información de clientes con historial de fechas
         const clientesMap = new Map();
@@ -391,15 +387,15 @@ function setupLabFirebaseListeners(loadAllData = false) {
         const labSection = document.getElementById('verLabSection');
         if (labSection && !labSection.classList.contains('hidden')) {
             console.log('🔄 Actualizando vista de laboratorio (sección visible)');
+            teardownLabReportadosMonthListeners();
             // Obtener filtros activos
             const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
+            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
             const medicoFilter = document.getElementById('labMedicoFilter');
             const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
             
             console.log(`Filtro activo: ${currentStateFilter}`);
             renderLabTickets(currentStateFilter, currentMedicoFilter);
-            updateLabStats();
         } else {
             console.log('ℹ️ Sección de laboratorio no visible, no se actualiza la vista');
         }
@@ -453,7 +449,7 @@ function setupLabIncrementalListeners() {
                 const labSection = document.getElementById('verLabSection');
                 if (labSection && !labSection.classList.contains('hidden')) {
                     const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-                    const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
+                    const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
                     const medicoFilter = document.getElementById('labMedicoFilter');
                     const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
                     renderLabTickets(currentStateFilter, currentMedicoFilter);
@@ -480,7 +476,7 @@ function setupLabIncrementalListeners() {
             const labSection = document.getElementById('verLabSection');
             if (labSection && !labSection.classList.contains('hidden')) {
                 const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-                const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
+                const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
                 const medicoFilter = document.getElementById('labMedicoFilter');
                 const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
                 renderLabTickets(currentStateFilter, currentMedicoFilter);
@@ -497,7 +493,7 @@ function setupLabIncrementalListeners() {
             const labSection = document.getElementById('verLabSection');
             if (labSection && !labSection.classList.contains('hidden')) {
                 const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-                const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
+                const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
                 const medicoFilter = document.getElementById('labMedicoFilter');
                 const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
                 renderLabTickets(currentStateFilter, currentMedicoFilter);
@@ -516,6 +512,131 @@ function setupLabIncrementalListeners() {
         handleChildChanged,
         handleChildRemoved
     };
+}
+
+function getLocalYearMonthString() {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+}
+
+function getLabFilterMonthValue() {
+    const el = document.getElementById('labFilterMonth');
+    return (el && el.value) ? el.value : getLocalYearMonthString();
+}
+
+function getMonthRangeStringsFromYm(ym) {
+    const parts = (ym || '').split('-').map(Number);
+    let y = parts[0];
+    let m = parts[1];
+    if (!y || !m || m < 1 || m > 12) {
+        const now = new Date();
+        y = now.getFullYear();
+        m = now.getMonth() + 1;
+    }
+    const lastDay = new Date(y, m, 0).getDate();
+    const pad = (n) => String(n).padStart(2, '0');
+    return {
+        startStr: `${y}-${pad(m)}-01`,
+        endStr: `${y}-${pad(m)}-${pad(lastDay)}`
+    };
+}
+
+/** Coincide si alguna fecha relevante del ticket cae en el mes (YYYY-MM). */
+function filterTicketsByLabMonthInclusive(tickets, ym) {
+    const { startStr, endStr } = getMonthRangeStringsFromYm(ym);
+    return tickets.filter((ticket) => {
+        const candidates = [
+            ticket.fechaCreacion,
+            ticket.fecha,
+            ticket.fechaReportado,
+            ticket.fechaReportadoCliente
+        ];
+        return candidates.some((raw) => {
+            if (!raw) return false;
+            const day = String(raw).slice(0, 10);
+            return day >= startStr && day <= endStr;
+        });
+    });
+}
+
+function teardownLabReportadosMonthListeners() {
+    if (labReportadosQueryRef && labReportadosMonthListener) {
+        labReportadosQueryRef.off('value', labReportadosMonthListener);
+    }
+    labReportadosQueryRef = null;
+    labReportadosMonthListener = null;
+    labReportadosMonthYm = '';
+    labReportadosLastSnapshotTickets = [];
+    labReportadosMonthDataReady = false;
+}
+
+function parseLabTicketsSnapshot(snapshot) {
+    const arr = [];
+    if (snapshot.exists()) {
+        const data = snapshot.val();
+        Object.keys(data).forEach((key) => {
+            arr.push({ ...data[key], firebaseKey: key });
+        });
+    }
+    return arr;
+}
+
+function setupLabReportadosMonthFirebaseListener(initialFilter) {
+    if (!labTicketsRef) return;
+
+    const ym = getLabFilterMonthValue();
+    teardownLabReportadosMonthListeners();
+
+    const container = document.getElementById('labTicketContainer');
+    if (container) {
+        container.innerHTML = `
+            <div class="no-tickets">
+                <i class="fas fa-spinner fa-spin" style="font-size: 2rem; color: #3498db; margin-bottom: 15px;"></i>
+                <p>Cargando tickets del mes seleccionado…</p>
+            </div>`;
+    }
+
+    const { startStr, endStr } = getMonthRangeStringsFromYm(ym);
+    labReportadosMonthYm = ym;
+    labReportadosQueryRef = labTicketsRef
+        .orderByChild('fechaCreacion')
+        .startAt(startStr)
+        .endAt(endStr + '\uf8ff');
+
+    labReportadosMonthListener = (snapshot) => {
+        labReportadosLastSnapshotTickets = parseLabTicketsSnapshot(snapshot);
+        labReportadosMonthDataReady = true;
+        const activeBtn = document.querySelector('.lab-filter-btn.active');
+        const activeFilter = activeBtn ? activeBtn.getAttribute('data-filter') : initialFilter;
+        if (activeFilter !== 'reportado' && activeFilter !== 'reportado_cliente') return;
+
+        const medicoEl = document.getElementById('labMedicoFilter');
+        const mf = medicoEl ? medicoEl.value : '';
+        renderLabTicketsFromSource(labReportadosLastSnapshotTickets, activeFilter, mf);
+    };
+
+    labReportadosQueryRef.on('value', labReportadosMonthListener);
+}
+
+function refreshLabNextTicketIdFromFirebase() {
+    if (!labTicketsRef || typeof labTicketsRef.orderByChild !== 'function') return;
+    labTicketsRef
+        .orderByChild('id')
+        .limitToLast(1)
+        .once('value')
+        .then((snap) => {
+            if (!snap.exists()) return;
+            let maxId = 0;
+            snap.forEach((child) => {
+                const v = child.val();
+                const id = Number(v && v.id);
+                if (!isNaN(id) && id > maxId) maxId = id;
+            });
+            if (maxId >= currentLabTicketId) currentLabTicketId = maxId + 1;
+        })
+        .catch(() => {});
 }
 
 // Verificar si el usuario tiene acceso al módulo de laboratorio
@@ -604,20 +725,15 @@ function setupLabEventListeners() {
     
     // Filtros de laboratorio
     const labFilterBtns = document.querySelectorAll('.lab-filter-btn');
-    // Ocultar filtro "Todos" para usuarios que no sean admin
     const userRole = sessionStorage.getItem('userRole');
-    if (userRole !== 'admin') {
-        const todosLabBtn = document.querySelector('.lab-filter-btn[data-filter="todos"]');
-        if (todosLabBtn) {
-            todosLabBtn.style.display = 'none';
-            // Si el botón "Todos" está activo, cambiar a "Pendiente" por defecto
-            if (todosLabBtn.classList.contains('active')) {
-                todosLabBtn.classList.remove('active');
-                const pendienteBtn = document.querySelector('.lab-filter-btn[data-filter="pendiente"]');
-                if (pendienteBtn) {
-                    pendienteBtn.classList.add('active');
-                }
-            }
+    // Ocultar filtro "Todos" (incluye administrador); vista por defecto Pendiente
+    const todosLabBtn = document.querySelector('.lab-filter-btn[data-filter="todos"]');
+    if (todosLabBtn) {
+        todosLabBtn.style.display = 'none';
+        if (todosLabBtn.classList.contains('active')) {
+            todosLabBtn.classList.remove('active');
+            const pendienteBtn = document.querySelector('.lab-filter-btn[data-filter="pendiente"]');
+            if (pendienteBtn) pendienteBtn.classList.add('active');
         }
     }
     
@@ -670,7 +786,7 @@ function setupLabEventListeners() {
             
             // Obtener el filtro de estado activo
             const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
+            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
             
             // Renderizar con ambos filtros
             renderLabTickets(currentStateFilter, selectedMedico);
@@ -684,19 +800,18 @@ function setupLabEventListeners() {
             const searchTerm = e.target.value.toLowerCase();
             filterLabTicketsBySearch(searchTerm);
         });
-    }    // Filtro de fecha
-    const labFilterDate = document.getElementById('labFilterDate');
-    if (labFilterDate) {
-        labFilterDate.addEventListener('change', (e) => {
-            // Obtener el filtro de estado activo
+    }
+
+    const labFilterMonth = document.getElementById('labFilterMonth');
+    if (labFilterMonth) {
+        labFilterMonth.addEventListener('change', () => {
             const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
-            
-            // Obtener el filtro de médico activo
+            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
             const medicoFilter = document.getElementById('labMedicoFilter');
             const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
-            
-            // Renderizar con todos los filtros
+            if (currentStateFilter === 'reportado' || currentStateFilter === 'reportado_cliente') {
+                teardownLabReportadosMonthListeners();
+            }
             renderLabTickets(currentStateFilter, currentMedicoFilter);
         });
     }
@@ -1355,16 +1470,15 @@ function showLabSection(sectionId) {
                 }
             }
             
-            // Establecer fecha actual por defecto si no hay una fecha seleccionada
-            const labFilterDate = document.getElementById('labFilterDate');
-            if (labFilterDate && !labFilterDate.value) {
-                labFilterDate.value = getLocalDateString();
-                console.log(`📅 Fecha establecida: ${labFilterDate.value}`);
+            const labFilterMonth = document.getElementById('labFilterMonth');
+            if (labFilterMonth && !labFilterMonth.value) {
+                labFilterMonth.value = getLocalYearMonthString();
+                console.log(`📅 Mes establecido: ${labFilterMonth.value}`);
             }
-            
+
             // Determinar el filtro por defecto según el rol del usuario
             const userRole = sessionStorage.getItem('userRole');
-            const defaultFilter = userRole === 'admin' ? 'todos' : 'pendiente';
+            const defaultFilter = 'pendiente';
             console.log(`👤 Rol de usuario: ${userRole}, Filtro por defecto: ${defaultFilter}`);
             
             // Configurar visibilidad de filtros según el filtro por defecto
@@ -1394,6 +1508,17 @@ function showLabSection(sectionId) {
                     }
                 }
             }, 100);
+        } else if (sectionId === 'pendientesReportarSection') {
+            const pendientesBtn = document.getElementById('pendientesReportarLabBtn');
+            if (pendientesBtn) {
+                pendientesBtn.classList.add('active');
+                if (typeof setActiveButton === 'function') {
+                    setActiveButton(pendientesBtn);
+                }
+            }
+            setTimeout(() => {
+                initPendientesReportarSection();
+            }, 100);
         }
         
     } catch (error) {
@@ -1408,11 +1533,11 @@ function setDefaultLabDate() {
         fechaInput.value = getLocalDateString();
     }
     
-    const filterDateInput = document.getElementById('labFilterDate');
-    if (filterDateInput) {
-        filterDateInput.value = getLocalDateString();
+    const filterMonthInput = document.getElementById('labFilterMonth');
+    if (filterMonthInput) {
+        filterMonthInput.value = getLocalYearMonthString();
     }
-    
+
     // Establecer fecha actual en el filtro de búsqueda
     const fechaFiltroInput = document.getElementById('labFechaFiltro');
     if (fechaFiltroInput) {
@@ -1598,80 +1723,59 @@ function filterTicketsByUserRole(tickets) {
     return tickets;
 }
 
-// Renderizar tickets de laboratorio
-function renderLabTickets(filter = 'todos', medicoFilter = '') {
-    // OPTIMIZACIÓN: Si se usa filtro "todos" y no se han cargado todos los datos, cargarlos
-    if (filter === 'todos' && !labTicketsAllDataLoaded) {
-        setupLabFirebaseListeners(true);
-        // La función renderLabTickets se llamará automáticamente cuando se carguen los datos
-        return;
-    }
-    console.log(`🎨 renderLabTickets llamado - Filtro: ${filter}, Médico: ${medicoFilter}`);
-    
+// Renderizado interno (lista) desde un array fuente ya cargado
+function renderLabTicketsFromSource(sourceTickets, filter, medicoFilter = '') {
+    console.log(`🎨 renderLabTicketsFromSource - Filtro: ${filter}, Médico: ${medicoFilter}`);
+
     const container = document.getElementById('labTicketContainer');
     if (!container) {
         console.error('❌ Contenedor labTicketContainer no encontrado');
         return;
     }
-    
-    console.log(`📊 Total de tickets disponibles: ${labTickets.length}`);
-    
+
+    console.log(`📊 Tickets en fuente: ${sourceTickets.length}`);
+
     container.innerHTML = '';
-    
-    // Filtrar por empresa primero
+
+    let pool = sourceTickets;
+    if (filter === 'reportado' || filter === 'reportado_cliente') {
+        const ym = getLabFilterMonthValue();
+        pool = filterTicketsByLabMonthInclusive(pool, ym);
+    }
+
     const currentEmpresa = getCurrentEmpresa();
-    let ticketsByEmpresa = labTickets.filter(t => {
-        // Si el ticket no tiene empresa, asignarlo a veterinaria_smp (migración automática)
+    let ticketsByEmpresa = pool.filter((t) => {
         if (!t.empresa) {
             return currentEmpresa === 'veterinaria_smp';
         }
         return t.empresa === currentEmpresa;
     });
     console.log(`🏢 Tickets después de filtro de empresa (${currentEmpresa}): ${ticketsByEmpresa.length}`);
-    
-    // Filtrar tickets por estado
+
     let filteredTickets = filterLabTickets(ticketsByEmpresa, filter);
     console.log(`🔍 Tickets después de filtro de estado: ${filteredTickets.length}`);
-    
-    // Aplicar filtro por departamento según el rol del usuario
+
     filteredTickets = filterTicketsByUserRole(filteredTickets);
     console.log(`👤 Tickets después de filtro por rol: ${filteredTickets.length}`);
 
-    // Solo aplicar filtro de fecha para reportado_cliente
-    // Para "reportado" y "cliente_no_contesta", NO aplicar filtro de fecha - mostrar todos
-    const fechaFilter = document.getElementById('labFilterDate');
-    if (
-        filter === 'reportado_cliente' &&
-        fechaFilter && fechaFilter.value
-    ) {
-        const selectedDate = fechaFilter.value;
-        filteredTickets = filteredTickets.filter(ticket => {
-            // Verificar múltiples campos de fecha para mayor compatibilidad
-            return ticket.fechaCreacion === selectedDate || 
-                   ticket.fecha === selectedDate ||
-                   (ticket.fechaReportado && ticket.fechaReportado === selectedDate) ||
-                   (ticket.fechaReportadoCliente && ticket.fechaReportadoCliente === selectedDate);
-        });
-    }
-    // Para pendiente, procesando, internos, reportado y cliente_no_contesta, NO filtrar por fecha
-    
-    // Aplicar filtro de médico - para "reportado" no aplicar restricción de fecha
     if (medicoFilter && medicoFilter.trim() !== '') {
         if (filter === 'reportado') {
-            // Para "Reportado Lab", filtrar por médico sin restricción de fecha
-            filteredTickets = filteredTickets.filter(ticket => {
-                return ticket.medicoSolicita && 
-                       ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase());
+            filteredTickets = filteredTickets.filter((ticket) => {
+                return (
+                    ticket.medicoSolicita &&
+                    ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase())
+                );
             });
         } else if (filter === 'reportado_cliente' || filter === 'cliente_no_contesta') {
-            // Para otros estados reportados, aplicar filtro de médico normalmente
-            filteredTickets = filteredTickets.filter(ticket => {
-                return ticket.medicoSolicita && 
-                       ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase());
+            filteredTickets = filteredTickets.filter((ticket) => {
+                return (
+                    ticket.medicoSolicita &&
+                    ticket.medicoSolicita.toLowerCase().includes(medicoFilter.toLowerCase())
+                );
             });
         }
     }
-    
+
     if (filteredTickets.length === 0) {
         console.log('ℹ️ No hay tickets para mostrar con los filtros actuales');
         container.innerHTML = `
@@ -1683,24 +1787,53 @@ function renderLabTickets(filter = 'todos', medicoFilter = '') {
         `;
         return;
     }
-    
+
     console.log(`✅ Renderizando ${filteredTickets.length} tickets...`);
-    
-    // Ordenar tickets por fecha y hora de creación (más recientes primero)
+
     filteredTickets.sort((a, b) => {
-        const dateA = new Date(`${a.fechaCreacion} ${a.horaCreacion}`);
-        const dateB = new Date(`${b.fechaCreacion} ${b.horaCreacion}`);
-        return dateB - dateA;
+        const da = `${a.fechaCreacion || a.fecha || '1970-01-01'} ${a.horaCreacion || '00:00'}`;
+        const db = `${b.fechaCreacion || b.fecha || '1970-01-01'} ${b.horaCreacion || '00:00'}`;
+        return new Date(db) - new Date(da);
     });
-    
-    // Renderizar cada ticket
-    filteredTickets.forEach(ticket => {
+
+    filteredTickets.forEach((ticket) => {
         const ticketElement = createLabTicketElement(ticket);
         container.appendChild(ticketElement);
     });
-    
-    // Actualizar estadísticas después de renderizar
+
     updateLabStats();
+}
+
+// Renderizar tickets de laboratorio
+function renderLabTickets(filter = 'pendiente', medicoFilter = '') {
+    const isReportadosTab = filter === 'reportado' || filter === 'reportado_cliente';
+
+    if (isReportadosTab) {
+        if (labTicketsAllDataLoaded) {
+            teardownLabReportadosMonthListeners();
+            renderLabTicketsFromSource(labTickets, filter, medicoFilter);
+            return;
+        }
+        const ym = getLabFilterMonthValue();
+        if (labReportadosQueryRef && labReportadosMonthYm === ym) {
+            if (labReportadosMonthDataReady) {
+                renderLabTicketsFromSource(labReportadosLastSnapshotTickets, filter, medicoFilter);
+            }
+            return;
+        }
+        setupLabReportadosMonthFirebaseListener(filter);
+        return;
+    }
+
+    teardownLabReportadosMonthListeners();
+
+    // Carga completa de lab_tickets una sola vez en sesión (pendiente, proceso, etc.).
+    if (!labTicketsAllDataLoaded) {
+        setupLabFirebaseListeners(true);
+        return;
+    }
+
+    renderLabTicketsFromSource(labTickets, filter, medicoFilter);
 }
 
 // Filtrar tickets de laboratorio
@@ -1994,7 +2127,7 @@ function toggleServiceStatus(ticketRandomId, serviceIndex) {
                 
                 // Actualizar la vista manteniendo filtros activos
                 const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-                const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
+                const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
                 const medicoFilter = document.getElementById('labMedicoFilter');
                 const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
                 
@@ -2738,7 +2871,7 @@ function saveEditedLabTicket(ticket) {
             
             // Mantener filtros activos al actualizar
             const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
+            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
             const medicoFilter = document.getElementById('labMedicoFilter');
             const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
             
@@ -2799,7 +2932,7 @@ function confirmDeleteLabTicket(firebaseKey) {
             
             // Mantener filtros activos al eliminar
             const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
+            const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
             const medicoFilter = document.getElementById('labMedicoFilter');
             const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
             
@@ -3686,14 +3819,12 @@ function toggleMedicoFilter(filter) {
     }
 }
 
-// Mostrar/ocultar filtro de fecha según el estado
+// Mes calendario solo para reportados por lab y reportado al cliente
 function toggleDateFilter(filter) {
     const dateFilterContainer = document.getElementById('labDateFilterContainer');
     if (!dateFilterContainer) return;
-    
-    // Solo mostrar el filtro de fecha para "Reportado al Cliente" (reportado_cliente)
-    // Ocultar para todos los demás estados ya que no necesitan filtro de fecha
-    if (filter === 'reportado_cliente') {
+
+    if (filter === 'reportado' || filter === 'reportado_cliente') {
         dateFilterContainer.style.display = 'block';
     } else {
         dateFilterContainer.style.display = 'none';
@@ -3708,4 +3839,371 @@ function getUserReportOption(ticket) {
         <option value="reportado_cliente" ${ticket.estado === 'reportado_cliente' ? 'selected' : ''}>Reportado al Cliente</option>
         <option value="cliente_no_contesta" ${ticket.estado === 'cliente_no_contesta' ? 'selected' : ''}>Cliente no contesta</option>
     `;
+}
+
+// ============================================================
+// MÓDULO: PENDIENTES POR REPORTAR
+// ============================================================
+
+function initPendientesReportarSection() {
+    const select = document.getElementById('pendientesReportarDoctorSelect');
+    if (!select) return;
+
+    if (typeof window.loadDoctorsIntoSelects === 'function') {
+        window.loadDoctorsIntoSelects();
+    }
+
+    if (!labTicketsAllDataLoaded && typeof setupLabFirebaseListeners === 'function') {
+        setupLabFirebaseListeners(true);
+    }
+
+    setDefaultPendientesDateRange();
+
+    select.value = '';
+    const alerta = document.getElementById('pendientesReportarAlerta');
+    const resumen = document.getElementById('pendientesReportarResumen');
+    const container = document.getElementById('pendientesReportarContainer');
+    if (alerta) alerta.style.display = 'none';
+    if (resumen) resumen.style.display = 'none';
+    if (container) {
+        container.innerHTML = `
+        <div class="pendientes-placeholder">
+            <i class="fas fa-user-md" style="font-size:2.5rem;color:#bdc3c7;margin-bottom:10px;"></i>
+            <p>Seleccione un médico para ver sus pacientes pendientes por reportar.</p>
+        </div>`;
+    }
+}
+
+function formatLocalDateToYMD(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function setDefaultPendientesDateRange() {
+    const desdeInput = document.getElementById('pendientesReportarDesde');
+    const hastaInput = document.getElementById('pendientesReportarHasta');
+    if (!desdeInput || !hastaInput) return;
+
+    const now = new Date();
+    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
+    desdeInput.value = formatLocalDateToYMD(fortyEightHoursAgo);
+    hastaInput.value = formatLocalDateToYMD(now);
+}
+
+function getPendientesTicketDate(ticket) {
+    const fechaStr = ticket.fechaReportado || ticket.fechaCreacion || ticket.fecha;
+    const horaStr = ticket.horaReportado || ticket.horaCreacion || '00:00';
+    if (!fechaStr) return null;
+
+    const parsed = new Date(`${fechaStr}T${horaStr}`);
+    if (!isNaN(parsed.getTime())) return parsed;
+
+    const fallback = new Date(fechaStr);
+    return isNaN(fallback.getTime()) ? null : fallback;
+}
+
+function applyPendientesDateRangeFilter() {
+    const medico = document.getElementById('pendientesReportarDoctorSelect')?.value;
+    if (!medico) return;
+    renderPendientesReportar(medico);
+}
+
+function onPendientesReportarDoctorChange(medicoNombre) {
+    const alerta = document.getElementById('pendientesReportarAlerta');
+    const resumen = document.getElementById('pendientesReportarResumen');
+    const container = document.getElementById('pendientesReportarContainer');
+
+    if (!medicoNombre) {
+        if (alerta) alerta.style.display = 'none';
+        if (resumen) resumen.style.display = 'none';
+        if (container) {
+            container.innerHTML = `
+            <div class="pendientes-placeholder">
+                <i class="fas fa-user-md" style="font-size:2.5rem;color:#bdc3c7;margin-bottom:10px;"></i>
+                <p>Seleccione un médico para ver sus pacientes pendientes por reportar.</p>
+            </div>`;
+        }
+        return;
+    }
+
+    renderPendientesReportar(medicoNombre);
+}
+
+function ticketSuperaLimite48h(ticket) {
+    const fechaStr = ticket.fechaReportado || ticket.fechaCreacion || ticket.fecha;
+    const horaStr = ticket.horaReportado || ticket.horaCreacion || '00:00';
+
+    if (!fechaStr) return false;
+
+    const fechaHora = new Date(`${fechaStr}T${horaStr}`);
+    if (isNaN(fechaHora.getTime())) return false;
+
+    const ahora = new Date();
+    const diffMs = ahora - fechaHora;
+    const diffHoras = diffMs / (1000 * 60 * 60);
+    return diffHoras > 48;
+}
+
+function formatTiempoTranscurrido(ticket) {
+    const fechaStr = ticket.fechaReportado || ticket.fechaCreacion || ticket.fecha;
+    const horaStr = ticket.horaReportado || ticket.horaCreacion || '00:00';
+
+    if (!fechaStr) return 'Fecha desconocida';
+
+    const fechaHora = new Date(`${fechaStr}T${horaStr}`);
+    if (isNaN(fechaHora.getTime())) return 'Fecha inválida';
+
+    const ahora = new Date();
+    const diffMs = ahora - fechaHora;
+    const diffHoras = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffDias = Math.floor(diffHoras / 24);
+    const horasRestantes = diffHoras % 24;
+
+    if (diffDias > 0) {
+        return `${diffDias} día${diffDias > 1 ? 's' : ''} y ${horasRestantes}h`;
+    }
+    return `${diffHoras}h`;
+}
+
+function getServicesNamesForPendientes(ticket) {
+    if (!ticket.serviciosSeleccionados || ticket.serviciosSeleccionados.length === 0) {
+        return '<em style="color:#aaa;">Sin servicios registrados</em>';
+    }
+    return ticket.serviciosSeleccionados
+        .map((s) => `<span class="pendiente-servicio-tag">${typeof s === 'object' ? s.nombre || '' : s}</span>`)
+        .join(' ');
+}
+
+function syncLocalLabTicketAfterClienteReport(firebaseKey, randomId, updateData) {
+    const idx = labTickets.findIndex(
+        (t) =>
+            (firebaseKey && t.firebaseKey === firebaseKey) ||
+            (randomId && t.randomId === randomId)
+    );
+    if (idx !== -1) {
+        Object.assign(labTickets[idx], updateData);
+    }
+    try {
+        window.labTickets = labTickets;
+    } catch (e) {}
+}
+
+function renderPendientesReportar(medicoNombre) {
+    const container = document.getElementById('pendientesReportarContainer');
+    const alerta = document.getElementById('pendientesReportarAlerta');
+    const resumen = document.getElementById('pendientesReportarResumen');
+
+    if (!container) return;
+
+    container.innerHTML =
+        '<div class="pendientes-loading"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>';
+
+    const allTickets = window.labTickets || labTickets || [];
+
+    const currentEmpresa = typeof getCurrentEmpresa === 'function' ? getCurrentEmpresa() : null;
+    let tickets = allTickets.filter((t) => {
+        if (currentEmpresa) {
+            if (!t.empresa) return currentEmpresa === 'veterinaria_smp';
+            return t.empresa === currentEmpresa;
+        }
+        return true;
+    });
+
+    tickets = tickets.filter((t) => t.estado === 'reportado');
+
+    tickets = tickets.filter(
+        (t) =>
+            t.medicoSolicita && t.medicoSolicita.toLowerCase().includes(medicoNombre.toLowerCase())
+    );
+
+    const desdeInput = document.getElementById('pendientesReportarDesde');
+    const hastaInput = document.getElementById('pendientesReportarHasta');
+    const desdeValue = desdeInput ? desdeInput.value : '';
+    const hastaValue = hastaInput ? hastaInput.value : '';
+
+    if (desdeValue || hastaValue) {
+        const desdeDate = desdeValue ? new Date(`${desdeValue}T00:00:00`) : null;
+        const hastaDate = hastaValue ? new Date(`${hastaValue}T23:59:59`) : null;
+
+        tickets = tickets.filter((ticket) => {
+            const ticketDate = getPendientesTicketDate(ticket);
+            if (!ticketDate) return false;
+            if (desdeDate && ticketDate < desdeDate) return false;
+            if (hastaDate && ticketDate > hastaDate) return false;
+            return true;
+        });
+    }
+
+    const ticketsVencidos = tickets.filter(ticketSuperaLimite48h);
+
+    const totalEl = document.getElementById('pendientesTotalCount');
+    const vencEl = document.getElementById('pendientesVencidosCount');
+    if (totalEl) totalEl.textContent = tickets.length;
+    if (vencEl) vencEl.textContent = ticketsVencidos.length;
+    if (resumen) resumen.style.display = tickets.length > 0 ? 'flex' : 'none';
+
+    if (ticketsVencidos.length > 0) {
+        const nombres = ticketsVencidos.map((t) => `${t.mascota} (${t.nombre})`).join(', ');
+        const msgEl = document.getElementById('pendientesReportarAlertaMsg');
+        if (msgEl) {
+            msgEl.innerHTML = `<strong>¡Atención!</strong> Los siguientes pacientes llevan más de 48 horas sin ser reportados al dueño: <br><strong>${nombres}</strong>`;
+        }
+        if (alerta) alerta.style.display = 'flex';
+    } else if (alerta) {
+        alerta.style.display = 'none';
+    }
+
+    if (tickets.length === 0) {
+        container.innerHTML = `
+            <div class="no-tickets">
+                <i class="fas fa-check-circle" style="font-size:3rem;color:#27ae60;margin-bottom:15px;"></i>
+                <h3>¡Todo al día!</h3>
+                <p>No hay exámenes pendientes por reportar para <strong>${medicoNombre}</strong> en el rango de fechas seleccionado.</p>
+            </div>`;
+        return;
+    }
+
+    tickets.sort((a, b) => {
+        const aVencido = ticketSuperaLimite48h(a) ? 0 : 1;
+        const bVencido = ticketSuperaLimite48h(b) ? 0 : 1;
+        if (aVencido !== bVencido) return aVencido - bVencido;
+        const dateA = new Date(`${a.fechaCreacion || a.fecha}T${a.horaCreacion || '00:00'}`);
+        const dateB = new Date(`${b.fechaCreacion || b.fecha}T${b.horaCreacion || '00:00'}`);
+        return dateA - dateB;
+    });
+
+    container.innerHTML = '';
+
+    tickets.forEach((ticket) => {
+        const esVencido = ticketSuperaLimite48h(ticket);
+        const tiempoTexto = formatTiempoTranscurrido(ticket);
+        const animalIcon =
+            typeof getAnimalIcon === 'function' ? getAnimalIcon(ticket.tipoMascota) : '🐾';
+
+        const card = document.createElement('div');
+        card.className = `pendiente-card${esVencido ? ' pendiente-card--vencido' : ''}`;
+        card.setAttribute('data-ticket-id', ticket.randomId || ticket.firebaseKey);
+
+        card.innerHTML = `
+            <div class="pendiente-card-header">
+                <div class="pendiente-card-titulo">
+                    <span class="pendiente-animal-icon">${animalIcon}</span>
+                    <strong class="pendiente-mascota">${ticket.mascota || 'Sin nombre'}</strong>
+                    <span class="pendiente-cliente">${ticket.nombre || ''}</span>
+                </div>
+                <div class="pendiente-card-badges">
+                    ${esVencido ? `<span class="badge-vencido"><i class="fas fa-exclamation-triangle"></i> +48h sin reportar</span>` : ''}
+                    <span class="badge-tiempo"><i class="fas fa-clock"></i> Hace ${tiempoTexto}</span>
+                </div>
+            </div>
+            <div class="pendiente-card-body">
+                <div class="pendiente-info-row">
+                    <div class="pendiente-info-item">
+                        <i class="fas fa-id-card"></i>
+                        <span><strong>ID Paciente:</strong> ${ticket.idPaciente || 'N/A'}</span>
+                    </div>
+                    <div class="pendiente-info-item">
+                        <i class="fas fa-vials"></i>
+                        <span><strong>Exámenes:</strong></span>
+                        <div class="pendiente-servicios">${getServicesNamesForPendientes(ticket)}</div>
+                    </div>
+                </div>
+                <div class="pendiente-info-row">
+                    <div class="pendiente-info-item pendiente-contacto">
+                        <i class="fas fa-phone"></i>
+                        <span><strong>Teléfono:</strong> ${ticket.telefono ? `<a href="tel:${ticket.telefono}">${ticket.telefono}</a>` : '<em style="color:#aaa;">No registrado</em>'}</span>
+                    </div>
+                    <div class="pendiente-info-item pendiente-contacto">
+                        <i class="fas fa-envelope"></i>
+                        <span><strong>Correo:</strong> ${ticket.correo ? `<a href="mailto:${ticket.correo}">${ticket.correo}</a>` : '<em style="color:#aaa;">No registrado</em>'}</span>
+                    </div>
+                </div>
+                ${ticket.observaciones ? `
+                <div class="pendiente-info-row">
+                    <div class="pendiente-info-item">
+                        <i class="fas fa-sticky-note"></i>
+                        <span><strong>Observaciones:</strong> ${ticket.observaciones}</span>
+                    </div>
+                </div>` : ''}
+            </div>
+            <div class="pendiente-card-footer">
+                <label class="pendiente-check-label">
+                    <input type="checkbox" class="pendiente-reportado-check"
+                        data-ticket-key="${ticket.firebaseKey || ''}"
+                        data-ticket-id="${ticket.randomId || ''}"
+                        onchange="onPendienteCheckChange(this)">
+                    <span class="pendiente-check-text">Marcar como reportado al cliente</span>
+                </label>
+            </div>
+        `;
+
+        container.appendChild(card);
+    });
+}
+
+function onPendienteCheckChange(checkbox) {
+    if (!checkbox.checked) return;
+
+    const firebaseKey = checkbox.getAttribute('data-ticket-key');
+    const ticketId = checkbox.getAttribute('data-ticket-id');
+    const card = checkbox.closest('.pendiente-card');
+
+    if (!confirm('¿Confirma que ya reportó los exámenes al dueño de la mascota? El ticket pasará a estado "Reportado al Cliente".')) {
+        checkbox.checked = false;
+        return;
+    }
+
+    checkbox.disabled = true;
+    if (card) card.style.opacity = '0.6';
+
+    const updateData = {
+        estado: 'reportado_cliente',
+        fechaReportadoCliente:
+            typeof getLocalDateString === 'function' ? getLocalDateString() : formatLocalDateToYMD(new Date()),
+        horaReportadoCliente: new Date().toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })
+    };
+
+    if (!firebaseKey || !window.database) {
+        if (typeof showNotification === 'function') {
+            showNotification('Error: no se pudo actualizar el ticket (falta clave Firebase)', 'error');
+        }
+        checkbox.checked = false;
+        checkbox.disabled = false;
+        if (card) card.style.opacity = '1';
+        return;
+    }
+
+    window.database
+        .ref(`lab_tickets/${firebaseKey}`)
+        .update(updateData)
+        .then(() => {
+            syncLocalLabTicketAfterClienteReport(firebaseKey, ticketId, updateData);
+            if (typeof showNotification === 'function') {
+                showNotification('¡Ticket marcado como reportado al cliente!', 'success');
+            }
+            if (card) card.classList.add('pendiente-card--done');
+            setTimeout(() => {
+                if (!card) return;
+                card.style.transition = 'all 0.4s ease';
+                card.style.opacity = '0';
+                card.style.maxHeight = '0';
+                card.style.overflow = 'hidden';
+                setTimeout(() => {
+                    card.remove();
+                    const currentMedico = document.getElementById('pendientesReportarDoctorSelect')?.value;
+                    if (currentMedico) renderPendientesReportar(currentMedico);
+                }, 400);
+            }, 800);
+        })
+        .catch((err) => {
+            console.error('Error al actualizar ticket:', err);
+            if (typeof showNotification === 'function') {
+                showNotification('Error al actualizar el ticket. Intente de nuevo.', 'error');
+            }
+            checkbox.checked = false;
+            checkbox.disabled = false;
+            if (card) card.style.opacity = '1';
+        });
 }

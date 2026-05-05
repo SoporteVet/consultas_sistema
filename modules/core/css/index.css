@@ -816,9 +816,10 @@ nav button.active {
   margin-top: 2px;
 }
 
+/* Altura suficiente para varios ítems (p. ej. Laboratorio: 5+ botones); 200px recortaba el último */
 .nav-submenu.active {
-  max-height: 200px;
-  padding: 8px 0;
+  max-height: min(520px, 85vh);
+  padding: 8px 0 12px;
 }
 
 .submenu-btn {
@@ -852,6 +853,12 @@ nav button.active {
   margin-right: 10px !important;
   font-size: 1rem !important;
   width: 16px !important;
+}
+
+#vacunasBtn,
+#rxPresupuestosBtn {
+  justify-content: flex-start !important;
+  text-align: left !important;
 }
 
 /* Admin-only categories */
@@ -4263,8 +4270,71 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
 }
 
-/* Títulos del formulario de vacunas */
-#vacunasRegistroArea h3 {
+/* Pestañas internas del módulo vacunas / temperatura */
+.vacunas-module-shell {
+  margin-top: 8px;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.vacunas-module-tabstrip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 4px;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  border-radius: 10px;
+  border: 1px solid #dbeafe;
+}
+
+.vacunas-module-tab {
+  flex: 1;
+  min-width: 160px;
+  padding: 12px 18px;
+  font-size: 15px;
+  font-weight: 600;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  background: white;
+  color: #475569;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+
+.vacunas-module-tab:hover {
+  color: #1e40af;
+  border-color: #bfdbfe;
+}
+
+.vacunas-module-tab.active {
+  background: linear-gradient(135deg, #4285f4 0%, #5a9cf2 100%);
+  color: white;
+  border-color: #2563eb;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.35);
+}
+
+.vacunas-module-panel {
+  display: none;
+}
+
+.vacunas-module-panel.active {
+  display: block;
+}
+
+.vacunas-module-placeholder {
+  margin: 0 0 18px 0;
+  padding: 16px 18px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Títulos del formulario de vacunas (paneles internos) */
+#vacunasRegistroVacunas h3,
+#vacunasPanelTemperatura .form-container > h3 {
   color: #2c3e50;
   font-size: 20px;
   font-weight: 600;
@@ -4278,11 +4348,6 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   align-items: center;
   gap: 10px;
   box-shadow: 0 2px 4px rgba(66, 133, 244, 0.2);
-}
-
-/* Área de registro de vacunas */
-#vacunasRegistroArea {
-  animation: fadeIn 0.3s ease-in-out;
 }
 
 @keyframes fadeIn {
@@ -4844,3 +4909,159 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
 }
 
 /* ==================== FIN ESTILOS PARA MODAL DE CONFIRMACIÓN DE TURNO ==================== */
+
+/* ==================== CONTROL RX Y PRESUPUESTOS ==================== */
+.rx-pres-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.rx-pres-toolbar label {
+  font-weight: 600;
+  color: #2d3e50;
+}
+
+.btn-buscar-rx {
+  border: none;
+  background: #1a73e8;
+  color: #fff;
+  border-radius: 8px;
+  padding: 9px 14px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-buscar-rx:hover {
+  background: #1558b0;
+}
+
+.rx-count-badge {
+  background: #e8f0fe;
+  color: #174ea6;
+  border: 1px solid #c6dafc;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rx-summary-bar {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.rx-summary-card {
+  background: #fff;
+  border: 1px solid #d7e2ef;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+
+.rx-summary-num {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1f2f46;
+}
+
+.rx-summary-label {
+  font-size: 12px;
+  color: #4c6077;
+}
+
+.rx-table-wrap {
+  width: 100%;
+  overflow-x: auto;
+  border: 1px solid #d7e2ef;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.rx-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 940px;
+}
+
+.rx-table th,
+.rx-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #edf2f8;
+  text-align: left;
+  vertical-align: top;
+  font-size: 13px;
+}
+
+.rx-table th {
+  background: #f6f9fd;
+  color: #2d3e50;
+  position: sticky;
+  top: 0;
+}
+
+.rx-empty {
+  text-align: center !important;
+  color: #617184;
+  font-style: italic;
+}
+
+.rx-desc-cell {
+  max-width: 360px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.rx-tipo {
+  display: inline-block;
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rx-rx {
+  background: #e8f0fe;
+  color: #174ea6;
+}
+
+.rx-presupuesto {
+  background: #e6f4ea;
+  color: #137333;
+}
+
+.rx-ambos {
+  background: #f3e8fd;
+  color: #6a1b9a;
+}
+
+.rx-check-wrap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rx-updated-cell {
+  color: #4b5b6d;
+}
+
+.rx-encargado-input {
+  width: 100%;
+  min-width: 150px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+@media (max-width: 780px) {
+  .rx-summary-bar {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ==================== FIN CONTROL RX Y PRESUPUESTOS ==================== */

@@ -9,19 +9,19 @@
 InternamientoModule.prototype.loadProcedimientosView = function(bloqueado = false) {
     const container = document.getElementById('internamiento-procedimientos');
     if (!container) {
-        console.error('❌ No se encontró el contenedor internamiento-procedimientos');
+        console.error('No se encontró el contenedor internamiento-procedimientos');
         return;
     }
 
     if (!this.currentInternamientoId) {
-        console.error('❌ No hay internamiento seleccionado');
+        console.error('No hay internamiento seleccionado');
         container.innerHTML = '<div class="alert-box danger"><i class="fas fa-exclamation-triangle"></i><div>Error: No hay internamiento seleccionado</div></div>';
         return;
     }
 
     const internamiento = this.internamientos.get(this.currentInternamientoId);
     if (!internamiento) {
-        console.error('❌ No se encontró el internamiento');
+        console.error('No se encontró el internamiento');
         container.innerHTML = '<div class="alert-box danger"><i class="fas fa-exclamation-triangle"></i><div>Error: No se encontró el internamiento</div></div>';
         return;
     }
@@ -157,24 +157,28 @@ InternamientoModule.prototype.renderListaProcedimientos = function(procedimiento
 InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado) {
     const completado = proc.estado === 'completado';
     const urgente = proc.prioridad === 'alta';
+    const paraFernanda = !!proc.paraFernanda;
     const fechaCreacion = new Date(proc.fechaCreacion).toLocaleDateString('es-ES', { 
         day: '2-digit', 
         month: 'short',
         hour: '2-digit',
         minute: '2-digit'
     });
+    const bgStyle = paraFernanda ? 'background: #fce4ec; border-left: 4px solid #ec407a;' : '';
 
     return `
-        <li class="procedimiento-item ${completado ? 'completado' : ''}" style="padding: 18px; border-bottom: 1px solid #e0e0e0; transition: all 0.3s ease;">
+        <li class="procedimiento-item ${completado ? 'completado' : ''} ${paraFernanda ? 'procedimiento-para-fernanda' : ''}" style="padding: 18px; border-bottom: 1px solid #e0e0e0; transition: all 0.3s ease; ${bgStyle}">
             <div style="display: flex; align-items: start; gap: 15px;">
-                <!-- Checkbox -->
-                <div style="flex-shrink: 0; padding-top: 2px;">
+                <!-- Checkboxes -->
+                <div style="flex-shrink: 0; display: flex; align-items: center; gap: 6px; padding-top: 2px;">
                     <input type="checkbox" 
                            class="procedimiento-checkbox"
                            ${completado ? 'checked' : ''} 
-                           ${bloqueado ? 'disabled' : ''}
+                           ${bloqueado || completado ? 'disabled' : ''}
                            onchange="window.internamientoModule.toggleProcedimiento('${proc.procedimientoId}')"
-                           style="width: 24px; height: 24px; cursor: ${bloqueado ? 'not-allowed' : 'pointer'};">
+                           title="${completado ? 'Completado (no se puede desmarcar)' : 'Marcar como completado'}"
+                           style="width: 20px; height: 20px; cursor: ${bloqueado || completado ? 'not-allowed' : 'pointer'};">
+                    <label style="font-size: 0.75rem; color: #6c757d; white-space: nowrap;">Completado</label>
                 </div>
 
                 <!-- Contenido -->
@@ -183,25 +187,27 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
                         <span style="font-size: 1.05rem; font-weight: 600; color: ${completado ? '#95a5a6' : 'var(--internamiento-primary)'}; ${completado ? 'text-decoration: line-through;' : ''}">
                             ${proc.descripcion}
                         </span>
+                        ${proc.puestoPorConsultaExterna ? `<span class="chip" style="background: #ecfdf5; color: #0f766e; font-size: 0.8rem;"><i class="fas fa-stethoscope"></i> Consulta externa</span>` : ''}
+                        ${paraFernanda ? `<span class="chip" style="background: #f8bbd0; color: #c2185b; font-size: 0.8rem;"><i class="fas fa-user-check"></i> FERNANDA</span>` : ''}
                         ${urgente && !completado ? `<span class="priority-tag priority-alta"><i class="fas fa-exclamation-circle"></i> Urgente</span>` : ''}
                         ${proc.tipo ? `<span class="chip" style="background: #e3f2fd; color: #1976d2; font-size: 0.8rem;">${this.traducirTipoProcedimiento(proc.tipo)}</span>` : ''}
                     </div>
                     
                     <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 8px;">
                         <i class="fas fa-calendar"></i> Creado: ${fechaCreacion}
-                        ${proc.creadoNombre ? ` por <strong>${proc.creadoNombre}</strong>` : ''}
+                        ${proc.creadoNombre ? ` por <strong>${(proc.creadoNombre || '').replace(/</g, '&lt;')}</strong>` : ''}
                     </div>
 
                     ${completado ? `
                         <div style="font-size: 0.85rem; color: #27ae60; margin-bottom: 8px;">
                             <i class="fas fa-check-circle"></i> Completado: ${new Date(proc.fechaCompletado).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
-                            ${proc.completadoNombre ? ` por <strong>${proc.completadoNombre}</strong>` : ''}
+                            ${proc.completadoNombre ? ` por <strong>${(proc.completadoNombre || '').replace(/</g, '&lt;')}</strong>` : ''}
                         </div>
                     ` : ''}
 
                     ${proc.observaciones ? `
                         <div style="margin-top: 10px; padding: 10px; background: #f8f9fa; border-left: 3px solid var(--internamiento-info); border-radius: 4px; font-size: 0.9rem; color: #555;">
-                            💬 ${proc.observaciones}
+                            <i class="fas fa-comment"></i> ${proc.observaciones}
                         </div>
                     ` : ''}
 
@@ -215,21 +221,85 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
                 </div>
 
                 <!-- Acciones -->
-                ${!bloqueado && !completado ? `
-                    <div style="flex-shrink: 0; display: flex; gap: 8px;">
+                <div style="flex-shrink: 0; display: flex; gap: 8px; align-items: center;">
+                    <button class="btn btn-sm" style="background: #6c757d; color: white;" 
+                            onclick="window.internamientoModule.mostrarHistorialCambiosProcedimiento('${proc.procedimientoId}')" title="Historial de cambios">
+                        <i class="fas fa-history"></i>
+                    </button>
+                    ${!bloqueado && !completado ? `
                         <button class="btn btn-sm" style="background: #17a2b8; color: white;" 
                                 onclick="window.internamientoModule.editarProcedimiento('${proc.procedimientoId}')" title="Editar">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button class="btn btn-sm" style="background: #e74c3c; color: white;" 
-                                onclick="window.internamientoModule.eliminarProcedimiento('${proc.procedimientoId}')" title="Eliminar">
-                            <i class="fas fa-trash"></i>
-                        </button>
-                    </div>
-                ` : ''}
+                    ` : ''}
+                </div>
             </div>
         </li>
     `;
+};
+
+InternamientoModule.prototype.mostrarHistorialCambiosProcedimiento = function(procedimientoId) {
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    if (!internamiento) return;
+    const proc = internamiento.procedimientos?.[procedimientoId];
+    if (!proc) return;
+    const historial = proc.historialCambios || [];
+    const descEsc = (proc.descripcion || '').replace(/</g, '&lt;');
+    let filas = '';
+    if (historial.length > 0) {
+        historial.forEach((entry) => {
+            const fechaStr = entry.fecha ? new Date(entry.fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+            const nombre = (entry.editadoNombre || '—').replace(/</g, '&lt;');
+            const motivo = (entry.motivo || '—').replace(/</g, '&lt;');
+            let datosAnt = '—';
+            if (entry.datosAnteriores) {
+                const d = entry.datosAnteriores;
+                const parts = [];
+                if (d.descripcion) parts.push('Descripción: ' + String(d.descripcion).replace(/</g, '&lt;'));
+                if (d.prioridad) parts.push('Prioridad: ' + d.prioridad);
+                if (d.observaciones) parts.push('Obs: ' + String(d.observaciones).replace(/</g, '&lt;'));
+                if (d.paraFernanda) parts.push('Para Fernanda: sí');
+                datosAnt = parts.length ? parts.join(' · ') : '—';
+            }
+            filas += `
+                <tr>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${nombre}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${motivo}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85rem; color: #555;">${datosAnt}</td>
+                </tr>`;
+        });
+    }
+    const html = `
+        <div style="padding: 20px;">
+            <div style="margin-bottom: 16px;">
+                <h3 style="margin: 0 0 8px 0; color: #333;"><i class="fas fa-history" style="color: #5c6bc0;"></i> Historial de cambios</h3>
+                <p style="margin: 0; color: #666; font-size: 0.95rem;"><strong>${descEsc}</strong></p>
+            </div>
+            ${filas ? `
+            <div style="overflow-x: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.9rem;">
+                    <thead>
+                        <tr style="background: #f5f5f5;">
+                            <th style="padding: 10px; text-align: left;">Fecha / Hora</th>
+                            <th style="padding: 10px; text-align: left;">Editado por</th>
+                            <th style="padding: 10px; text-align: left;">Motivo</th>
+                            <th style="padding: 10px; text-align: left;">Lo que estaba en ese momento</th>
+                        </tr>
+                    </thead>
+                    <tbody>${filas}</tbody>
+                </table>
+            </div>
+            ` : `
+            <p style="color: #888;"><i class="fas fa-info-circle"></i> No hay cambios registrados para este procedimiento.</p>
+            `}
+            <div style="margin-top: 20px; text-align: right;">
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i> Cerrar</button>
+            </div>
+        </div>
+    `;
+    const modal = this.createModal('Historial de cambios', html, 'fa-history');
+    document.body.appendChild(modal);
 };
 
 InternamientoModule.prototype.traducirTipoProcedimiento = function(tipo) {
@@ -249,18 +319,21 @@ InternamientoModule.prototype.traducirTipoProcedimiento = function(tipo) {
 // ================================================================
 
 InternamientoModule.prototype.agregarProcedimiento = function() {
+    // Solo mostrar "Es para FERNANDA" cuando se agrega desde un internamiento ya creado (Procedimientos y tareas), no en Nuevo internamiento
+    const mostrarOpcionFernanda = !!this.currentInternamientoId;
+
     const modalContent = `
         <form id="formAgregarProcedimiento">
             <div class="form-group">
                 <label>Tipo de Procedimiento *</label>
                 <select id="procTipo" required>
                     <option value="">Seleccionar...</option>
-                    <option value="examen">🔬 Examen de Laboratorio</option>
-                    <option value="imagen">📷 Estudio de Imagen (Rx, Eco, etc.)</option>
-                    <option value="curacion">🩹 Curación / Tratamiento de Heridas</option>
-                    <option value="terapia">💧 Terapia / Tratamiento Especial</option>
-                    <option value="cirugia">🔪 Procedimiento Quirúrgico</option>
-                    <option value="otro">📋 Otro</option>
+                    <option value="examen"><i class="fas fa-microscope"></i> Examen de Laboratorio</option>
+                    <option value="imagen"><i class="fas fa-x-ray"></i> Estudio de Imagen (Rx, Eco, etc.)</option>
+                    <option value="curacion"><i class="fas fa-band-aid"></i> Curación / Tratamiento de Heridas</option>
+                    <option value="terapia"><i class="fas fa-tint"></i> Terapia / Tratamiento Especial</option>
+                    <option value="cirugia"><i class="fas fa-cut"></i> Procedimiento Quirúrgico</option>
+                    <option value="otro"><i class="fas fa-clipboard-list"></i> Otro</option>
                 </select>
             </div>
 
@@ -282,12 +355,29 @@ InternamientoModule.prototype.agregarProcedimiento = function() {
                 <textarea id="procObservaciones" rows="2" placeholder="Detalles adicionales, indicaciones especiales..."></textarea>
             </div>
 
+            ${!this.currentInternamientoId || this.edicionIngresoConsultaId ? `
+            <div class="form-group" style="padding: 10px 12px; background: #ecfdf5; border-radius: 8px; border: 1px solid #0d9488;">
+                <span style="color: #0f766e; font-weight: 500;"><i class="fas fa-stethoscope" style="margin-right: 6px;"></i>Puesto por consulta externa</span>
+                <small style="display: block; color: #0f766e; font-size: 0.8rem; margin-top: 4px;">Siempre indicado por consulta externa. No editable.</small>
+            </div>
+            ` : ''}
+
             <div class="form-group">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="procMarcarCompletado">
                     Marcar como completado inmediatamente
                 </label>
             </div>
+
+            ${mostrarOpcionFernanda ? `
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="procParaFernanda" style="width: 18px; height: 18px;">
+                    <i class="fas fa-user-check" style="color: #ec407a;"></i>
+                    Es para FERNANDA
+                </label>
+            </div>
+            ` : ''}
 
             <div style="text-align: right; margin-top: 20px;">
                 <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">
@@ -313,17 +403,44 @@ InternamientoModule.prototype.agregarProcedimiento = function() {
 InternamientoModule.prototype.handleAgregarProcedimiento = async function(e) {
     e.preventDefault();
 
+    // Evitar doble envío (ej. doble clic en Agregar)
+    if (this._agregandoProcedimientoAdmision) return;
+    const esNuevoInternamiento = !this.currentInternamientoId;
+    if (esNuevoInternamiento) this._agregandoProcedimientoAdmision = true;
+
     const procData = {
         tipo: document.getElementById('procTipo')?.value || '',
         descripcion: document.getElementById('procDescripcion')?.value.trim() || '',
         prioridad: document.getElementById('procPrioridad')?.value || 'normal',
         observaciones: document.getElementById('procObservaciones')?.value.trim() || '',
-        marcarCompletado: document.getElementById('procMarcarCompletado')?.checked || false
+        marcarCompletado: document.getElementById('procMarcarCompletado')?.checked || false,
+        paraFernanda: document.getElementById('procParaFernanda')?.checked || false,
+        // Solo consulta externa cuando se agrega desde el formulario de Nuevo internamiento (sin panel abierto). Desde Medicación/Procedimientos del panel → false.
+        puestoPorConsultaExterna: esNuevoInternamiento
     };
 
+    // Nuevo internamiento: no pedir código de verificación. El responsable se guarda al crear el internamiento
+    // con el nombre de quien verificó su código en la sección Autenticación (persona que registra el internamiento).
+    if (esNuevoInternamiento) {
+        this.pendientesAdmision = this.pendientesAdmision || [];
+        this.pendientesAdmision.push(procData);
+        this._agregandoProcedimientoAdmision = false;
+        this.showNotification('Tarea agregada. Se guardará al crear el internamiento.', 'success');
+        document.querySelector('.modal-overlay')?.remove();
+        this.renderListaPendientesAdmision();
+        return;
+    }
+
+    // Solo en internamiento ya creado: pedir código para registrar quién agrega la tarea
+    const resultadoCodigo = await this.verificarCodigoAsistente('agregar_tarea');
+    if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
+        this.showNotification('No se agregó la tarea', 'info');
+        return;
+    }
+
     try {
-        await this.guardarProcedimiento(procData);
-        this.showNotification('Procedimiento agregado exitosamente', 'success');
+        await this.guardarProcedimiento(procData, resultadoCodigo);
+        this.showNotification('Tarea agregada por ' + resultadoCodigo.nombre, 'success');
         document.querySelector('.modal-overlay')?.remove();
         this.loadProcedimientosView();
     } catch (error) {
@@ -332,9 +449,9 @@ InternamientoModule.prototype.handleAgregarProcedimiento = async function(e) {
     }
 };
 
-InternamientoModule.prototype.guardarProcedimiento = async function(data) {
-    const userId = sessionStorage.getItem('userId');
-    const userName = sessionStorage.getItem('userName');
+InternamientoModule.prototype.guardarProcedimiento = async function(data, codigoResult) {
+    const userId = codigoResult?.assistantId || sessionStorage.getItem('userId');
+    const userName = codigoResult?.nombre || sessionStorage.getItem('userName');
 
     const procedimientoId = 'proc_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
 
@@ -344,13 +461,24 @@ InternamientoModule.prototype.guardarProcedimiento = async function(data) {
         descripcion: data.descripcion,
         prioridad: data.prioridad,
         observaciones: data.observaciones,
+        paraFernanda: !!data.paraFernanda,
+        // Procedimientos agregados desde este flujo (panel de internamiento) nunca son de consulta externa
+        puestoPorConsultaExterna: false,
         estado: data.marcarCompletado ? 'completado' : 'pendiente',
         fechaCreacion: Date.now(),
         creadoPor: userId,
         creadoNombre: userName,
+        creadoCodigoVerificado: !!codigoResult,
         fechaCompletado: data.marcarCompletado ? Date.now() : null,
         completadoPor: data.marcarCompletado ? userId : null,
         completadoNombre: data.marcarCompletado ? userName : null,
+        // REPORTADO
+        reportado: false,
+        reportadoA: null,
+        fechaReportado: null,
+        reportadoPor: null,
+        reportadoNombre: null,
+        observacionesReporte: '',
         resultadoId: null,
         documentosAdjuntos: []
     };
@@ -366,12 +494,13 @@ InternamientoModule.prototype.guardarProcedimiento = async function(data) {
     const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
     await internamientoRef.update(updates);
 
-    // Auditoría
+    // Auditoría (quien creó la tarea = quien ingresó el código)
     await internamientoRef.child('auditoria/historialCambios').push({
         timestamp: Date.now(),
         userId: userId,
         usuarioNombre: userName,
         accion: 'agregar_procedimiento',
+        codigoVerificado: !!codigoResult,
         detalles: {
             procedimientoId: procedimientoId,
             tipo: data.tipo,
@@ -392,7 +521,34 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
     const procedimiento = internamiento.procedimientos?.[procedimientoId];
     if (!procedimiento) return;
 
-    const nuevoEstado = procedimiento.estado === 'completado' ? 'pendiente' : 'completado';
+    if (procedimiento.estado === 'completado') {
+        return;
+    }
+
+    const nuevoEstado = 'completado';
+    const confirmar = await this.showConfirm(
+        '¿Estás seguro de marcar esta acción como completado? Una vez marcado ya no se podrá cambiar su estado.',
+        'Confirmar completado',
+        { confirmText: 'Sí, marcar completado', cancelText: 'Cancelar', icon: 'fa-check-circle', iconColor: '#27ae60' }
+    );
+    if (!confirmar) {
+        this.loadProcedimientosView(internamiento.estado?.actual === 'egresado');
+        return;
+    }
+
+    let completadoPorId = null;
+    let completadoPorNombre = null;
+
+    {
+        const resultadoCodigo = await this.verificarCodigoAsistente('completar_procedimiento');
+        if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
+            this.loadProcedimientosView(internamiento.estado?.actual === 'egresado');
+            return;
+        }
+        completadoPorId = resultadoCodigo.assistantId;
+        completadoPorNombre = resultadoCodigo.nombre;
+    }
+
     const userId = sessionStorage.getItem('userId');
     const userName = sessionStorage.getItem('userName');
 
@@ -402,8 +558,8 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
         
         if (nuevoEstado === 'completado') {
             updates[`procedimientos/${procedimientoId}/fechaCompletado`] = Date.now();
-            updates[`procedimientos/${procedimientoId}/completadoPor`] = userId;
-            updates[`procedimientos/${procedimientoId}/completadoNombre`] = userName;
+            updates[`procedimientos/${procedimientoId}/completadoPor`] = completadoPorId;
+            updates[`procedimientos/${procedimientoId}/completadoNombre`] = completadoPorNombre;
             updates['estadisticas/totalProcedimientos'] = (internamiento.estadisticas?.totalProcedimientos || 0) + 1;
         } else {
             updates[`procedimientos/${procedimientoId}/fechaCompletado`] = null;
@@ -417,23 +573,25 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
         const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
         await internamientoRef.update(updates);
 
-        // Auditoría
+        const nombreAuditoria = nuevoEstado === 'completado' ? completadoPorNombre : userName;
+        const idAuditoria = nuevoEstado === 'completado' ? completadoPorId : userId;
         await internamientoRef.child('auditoria/historialCambios').push({
             timestamp: Date.now(),
-            userId: userId,
-            usuarioNombre: userName,
+            userId: idAuditoria,
+            usuarioNombre: nombreAuditoria,
             accion: nuevoEstado === 'completado' ? 'completar_procedimiento' : 'desmarcar_procedimiento',
+            codigoVerificado: nuevoEstado === 'completado',
             detalles: {
                 procedimientoId: procedimientoId,
                 descripcion: procedimiento.descripcion
             }
         });
 
-        // Recargar vista
         this.loadProcedimientosView(internamiento.estado?.actual === 'egresado');
+        if (nuevoEstado === 'completado') this.showNotification('Completado por ' + completadoPorNombre, 'success');
     } catch (error) {
         console.error('Error actualizando procedimiento:', error);
-        alert('❌ Error: ' + error.message);
+        alert('Error: ' + error.message);
     }
 };
 
@@ -471,6 +629,21 @@ InternamientoModule.prototype.editarProcedimiento = function(procedimientoId) {
                 <textarea id="editProcObservaciones" rows="2">${proc.observaciones || ''}</textarea>
             </div>
 
+            <div class="form-group">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="editProcParaFernanda" ${proc.paraFernanda ? 'checked' : ''} style="width: 18px; height: 18px;">
+                    <i class="fas fa-user-check" style="color: #ec407a;"></i>
+                    Es para FERNANDA
+                </label>
+            </div>
+
+            ${proc.puestoPorConsultaExterna ? `
+            <div class="form-group">
+                <label>Motivo del cambio *</label>
+                <textarea id="editProcMotivoCambio" rows="2" required placeholder="Indique por qué se modifica esta tarea"></textarea>
+            </div>
+            ` : ''}
+
             <div style="text-align: right; margin-top: 20px;">
                 <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                     Cancelar
@@ -493,11 +666,48 @@ InternamientoModule.prototype.guardarEdicionProcedimiento = async function(proce
         return;
     }
 
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    const proc = internamiento?.procedimientos?.[procedimientoId];
+    const esConsultaExterna = !!proc?.puestoPorConsultaExterna;
+    let motivoCambio = '';
+    if (esConsultaExterna) {
+        motivoCambio = document.getElementById('editProcMotivoCambio')?.value?.trim() || '';
+        if (!motivoCambio) {
+            this.showAlert('El motivo del cambio es obligatorio para tareas de consulta externa.', 'Campo Requerido', 'warning');
+            return;
+        }
+    }
+
+    const resultadoCodigo = esConsultaExterna ? await this.verificarCodigoAsistente('editar_procedimiento_consulta_externa') : null;
+    if (esConsultaExterna && (!resultadoCodigo?.valido || resultadoCodigo?.cancelado)) {
+        this.showNotification('Edición cancelada', 'info');
+        return;
+    }
+
     const updates = {};
     updates[`procedimientos/${procedimientoId}/descripcion`] = descripcion;
     updates[`procedimientos/${procedimientoId}/prioridad`] = document.getElementById('editProcPrioridad')?.value || 'normal';
     updates[`procedimientos/${procedimientoId}/observaciones`] = document.getElementById('editProcObservaciones')?.value.trim() || '';
+    updates[`procedimientos/${procedimientoId}/paraFernanda`] = document.getElementById('editProcParaFernanda')?.checked || false;
     updates['metadata/fechaUltimaActualizacion'] = Date.now();
+
+    if (esConsultaExterna && proc) {
+        const datosAnteriores = {
+            descripcion: proc.descripcion || '',
+            prioridad: proc.prioridad || 'normal',
+            observaciones: proc.observaciones || '',
+            paraFernanda: !!proc.paraFernanda
+        };
+        const historialEntry = {
+            fecha: Date.now(),
+            editadoPor: resultadoCodigo?.assistantId || null,
+            editadoNombre: resultadoCodigo?.nombre || '',
+            motivo: motivoCambio,
+            datosAnteriores
+        };
+        const historialPrev = proc.historialCambios || [];
+        updates[`procedimientos/${procedimientoId}/historialCambios`] = [...historialPrev, historialEntry];
+    }
 
     try {
         const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
@@ -541,5 +751,5 @@ InternamientoModule.prototype.eliminarProcedimiento = async function(procedimien
     }
 };
 
-console.log('📦 Módulo de procedimientos cargado');
+console.log('Módulo de procedimientos cargado');
 

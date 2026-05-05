@@ -1,299 +1,320 @@
-// Control de RX y Presupuestos - Módulo administrativo
+/* Control RX y Presupuestos (carga bajo demanda por fecha) */
 (function () {
-    'use strict';
+  const RX_KEYWORDS = [
+    "rx",
+    "r.x",
+    "rayos x",
+    "rayos-x",
+    "radiografia",
+    "radiografía",
+    "rx control",
+    "rx de control",
+    "control rx",
+    "rx torax",
+    "rx tórax"
+  ];
 
-    // Palabras clave para detectar RX / Rayos X
-    const RX_KEYWORDS = [
-        'rx', 'r.x', 'rayos x', 'rayos-x', 'radiografia', 'radiografía',
-        'rx control', 'rx de control', 'control rx', 'rx torax', 'rx tórax',
-        'rx columna', 'rx abdomen', 'rx pelvis', 'rx miembro', 'rx craneo',
-        'rx cráneo', 'placa radiografica', 'placa radiográfica', 'placa rx',
-        'toma de rx', 'toma de placa', 'placas rx', 'estudio rx',
-        'radiologia', 'radiología'
-    ];
+  const PRESUPUESTO_KEYWORDS = [
+    "presupuesto",
+    "cotizacion",
+    "cotización",
+    "proforma",
+    "estimado"
+  ];
 
-    // Palabras clave para detectar Presupuestos
-    const PRESUPUESTO_KEYWORDS = [
-        'presupuesto', 'cotizacion', 'cotización', 'proforma', 'estimado',
-        'propuesta economica', 'propuesta económica'
-    ];
+  function detectarTipo(texto) {
+    const lower = (texto || "").toLowerCase();
+    const esRX = RX_KEYWORDS.some(function (k) { return lower.includes(k); });
+    const esPresupuesto = PRESUPUESTO_KEYWORDS.some(function (k) { return lower.includes(k); });
+    if (esRX && esPresupuesto) return "ambos";
+    if (esRX) return "rx";
+    if (esPresupuesto) return "presupuesto";
+    return null;
+  }
 
-    // Detecta qué tipo de item es una línea de texto
-    function detectarTipo(texto) {
-        const lower = (texto || '').toLowerCase();
-        const esRX = RX_KEYWORDS.some(k => lower.includes(k));
-        const esPresupuesto = PRESUPUESTO_KEYWORDS.some(k => lower.includes(k));
-        if (esRX && esPresupuesto) return 'ambos';
-        if (esRX) return 'rx';
-        if (esPresupuesto) return 'presupuesto';
-        return null;
-    }
+  function extraerItems(ticket) {
+    if (!ticket || !ticket.porCobrar) return [];
+    const lines = String(ticket.porCobrar).split("\n");
+    const items = [];
 
-    // Extrae líneas relevantes del campo porCobrar de un ticket
-    function extraerItems(ticket) {
-        if (!ticket || !ticket.porCobrar) return [];
+    lines.forEach(function (line, idx) {
+      const trimmed = line.trim();
+      if (!trimmed) return;
+      const tipo = detectarTipo(trimmed);
+      if (!tipo) return;
 
-        const lines = ticket.porCobrar.split('\n');
-        const items = [];
+      items.push({
+        lineIndex: idx,
+        texto: trimmed,
+        tipo: tipo,
+        firebaseKey: ticket.firebaseKey || "",
+        ticketId: ticket.id || "",
+        paciente: ticket.mascota || "N/A",
+        cliente: ticket.nombre || "N/A",
+        cedula: ticket.cedula || "",
+        fechaConsulta: ticket.fechaConsulta || ""
+      });
+    });
 
-        lines.forEach(function (line, idx) {
-            const trimmed = line.trim();
-            if (!trimmed) return;
-            const tipo = detectarTipo(trimmed);
-            if (tipo) {
-                items.push({
-                    lineIndex: idx,
-                    texto: trimmed,
-                    tipo: tipo,
-                    firebaseKey: ticket.firebaseKey,
-                    ticketId: ticket.id,
-                    paciente: ticket.mascota || 'N/A',
-                    cliente: ticket.nombre || 'N/A',
-                    fechaConsulta: ticket.fechaConsulta || ''
-                });
-            }
+    if (items.length === 0) {
+      const tipoFallback = detectarTipo(ticket.porCobrar);
+      if (tipoFallback) {
+        items.push({
+          lineIndex: 0,
+          texto: String(ticket.porCobrar).trim().substring(0, 300),
+          tipo: tipoFallback,
+          firebaseKey: ticket.firebaseKey || "",
+          ticketId: ticket.id || "",
+          paciente: ticket.mascota || "N/A",
+          cliente: ticket.nombre || "N/A",
+          cedula: ticket.cedula || "",
+          fechaConsulta: ticket.fechaConsulta || ""
         });
-
-        // Si no se encontró ninguna línea específica pero el bloque completo coincide
-        if (items.length === 0) {
-            const tipo = detectarTipo(ticket.porCobrar);
-            if (tipo) {
-                items.push({
-                    lineIndex: 0,
-                    texto: ticket.porCobrar.trim().substring(0, 300),
-                    tipo: tipo,
-                    firebaseKey: ticket.firebaseKey,
-                    ticketId: ticket.id,
-                    paciente: ticket.mascota || 'N/A',
-                    cliente: ticket.nombre || 'N/A',
-                    fechaConsulta: ticket.fechaConsulta || ''
-                });
-            }
-        }
-
-        return items;
+      }
     }
 
-    // Escapa HTML para evitar XSS
-    function esc(text) {
-        const d = document.createElement('div');
-        d.appendChild(document.createTextNode(text || ''));
-        return d.innerHTML;
+    return items;
+  }
+
+  async function cargarTicketsPorFecha(fecha) {
+    const db = window.database || (window.firebase && firebase.database ? firebase.database() : null);
+    if (!db || !fecha) return [];
+
+    const snap = await db.ref("tickets")
+      .orderByChild("fechaConsulta")
+      .equalTo(fecha)
+      .once("value");
+
+    const raw = snap.val() || {};
+    const tickets = [];
+    Object.keys(raw).forEach(function (key) {
+      tickets.push(Object.assign({}, raw[key] || {}, { firebaseKey: key }));
+    });
+    return tickets;
+  }
+
+  function getTipoLabel(tipo) {
+    if (tipo === "ambos") return "RX + Presupuesto";
+    if (tipo === "rx") return "RX";
+    if (tipo === "presupuesto") return "Presupuesto";
+    return "N/A";
+  }
+
+  function formatTimestamp(iso) {
+    if (!iso) return "-";
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return "-";
+    return d.toLocaleString("es-CR");
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  function updateResumen(items, savedChecks) {
+    const total = items.length;
+    let checked = 0;
+
+    items.forEach(function (item) {
+      const checkKey = (item.firebaseKey || "nokey") + "_" + item.lineIndex;
+      if (savedChecks[checkKey] && savedChecks[checkKey].enSistema) {
+        checked += 1;
+      }
+    });
+
+    const pending = total - checked;
+
+    const totalEl = document.getElementById("rxTotalCount");
+    const checkedEl = document.getElementById("rxCheckedCount");
+    const pendingEl = document.getElementById("rxPendingCount");
+    const badgeEl = document.getElementById("rxPresupuestosCount");
+    const summaryBar = document.getElementById("rxSummaryBar");
+
+    if (totalEl) totalEl.textContent = String(total);
+    if (checkedEl) checkedEl.textContent = String(checked);
+    if (pendingEl) pendingEl.textContent = String(pending);
+
+    if (badgeEl) {
+      badgeEl.style.display = "inline-flex";
+      badgeEl.textContent = total + " item(s)";
     }
 
-    // Genera el badge visual según el tipo
-    function tipoBadge(tipo) {
-        if (tipo === 'rx') {
-            return '<span class="rx-tipo-badge rx-tipo-rx"><i class="fas fa-radiation"></i> Rayos X</span>';
-        }
-        if (tipo === 'presupuesto') {
-            return '<span class="rx-tipo-badge rx-tipo-presupuesto"><i class="fas fa-file-invoice-dollar"></i> Presupuesto</span>';
-        }
-        return '<span class="rx-tipo-badge rx-tipo-ambos"><i class="fas fa-layer-group"></i> RX + Presupuesto</span>';
+    if (summaryBar) {
+      summaryBar.style.display = "grid";
+    }
+  }
+
+  function setEmptyStateRow(tbody, message) {
+    tbody.innerHTML = '<tr><td colspan="9" class="rx-empty">' + message + "</td></tr>";
+  }
+
+  async function cargarControl() {
+    const fechaInput = document.getElementById("fechaRxPresupuestos");
+    const tbody = document.getElementById("rxPresupuestosBody");
+    const summaryBar = document.getElementById("rxSummaryBar");
+    const badgeEl = document.getElementById("rxPresupuestosCount");
+    if (!tbody) return;
+
+    const fecha = (fechaInput && fechaInput.value) ? fechaInput.value : "";
+    if (!fecha) {
+      setEmptyStateRow(tbody, "Seleccione una fecha para realizar la busqueda.");
+      if (summaryBar) summaryBar.style.display = "none";
+      if (badgeEl) badgeEl.style.display = "none";
+      return;
     }
 
-    // Actualiza los contadores del resumen
-    function actualizarResumen() {
-        const rows = document.querySelectorAll('#rxPresupuestosBody tr[data-check-key]');
-        let checkedCount = 0;
-        rows.forEach(function (row) {
-            const cb = row.querySelector('input[type="checkbox"]');
-            if (cb && cb.checked) checkedCount++;
+    setEmptyStateRow(tbody, "Cargando resultados...");
+
+    try {
+      const ticketsDia = await cargarTicketsPorFecha(fecha);
+      const items = [];
+
+      ticketsDia.forEach(function (ticket) {
+        extraerItems(ticket).forEach(function (item) {
+          items.push(item);
         });
-        const total = rows.length;
-        const pending = total - checkedCount;
+      });
 
-        const elTotal = document.getElementById('rxTotalCount');
-        const elChecked = document.getElementById('rxCheckedCount');
-        const elPending = document.getElementById('rxPendingCount');
-        const summaryBar = document.getElementById('rxSummaryBar');
+      const checksSnap = await firebase.database()
+        .ref("rx_presupuestos_checks/" + fecha)
+        .once("value");
+      const savedChecks = checksSnap.val() || {};
 
-        if (elTotal) elTotal.textContent = total;
-        if (elChecked) elChecked.textContent = checkedCount;
-        if (elPending) elPending.textContent = pending;
-        if (summaryBar) summaryBar.style.display = total > 0 ? 'flex' : 'none';
+      tbody.innerHTML = "";
+      if (items.length === 0) {
+        setEmptyStateRow(tbody, "No se encontraron items RX o Presupuestos para la fecha seleccionada.");
+        if (summaryBar) summaryBar.style.display = "none";
+        if (badgeEl) badgeEl.style.display = "none";
+        return;
+      }
+
+      items.forEach(function (item) {
+        const checkKey = (item.firebaseKey || "nokey") + "_" + item.lineIndex;
+        const saved = savedChecks[checkKey] || {};
+        const enSistema = !!saved.enSistema;
+        const tr = document.createElement("tr");
+        const textoEscapado = escapeHtml(item.texto);
+
+        tr.innerHTML =
+          "<td>" + escapeHtml(item.ticketId || "-") + "</td>" +
+          "<td>" + escapeHtml(item.cedula || "-") + "</td>" +
+          "<td>" + escapeHtml(item.cliente || "N/A") + "</td>" +
+          "<td>" + escapeHtml(item.paciente || "N/A") + "</td>" +
+          '<td><span class="rx-tipo rx-' + item.tipo + '">' + getTipoLabel(item.tipo) + "</span></td>" +
+          '<td class="rx-desc-cell" title="' + textoEscapado + '">' + textoEscapado + "</td>" +
+          '<td><label class="rx-check-wrap"><input type="checkbox" data-check-key="' + checkKey + '" data-fecha="' + fecha + '"' + (enSistema ? " checked" : "") + ' onchange="rxPresupuestosToggleCheck(this)"><span>' + (enSistema ? "En sistema" : "Pendiente") + "</span></label></td>" +
+          '<td><input type="text" class="rx-encargado-input" data-check-key="' + checkKey + '" data-fecha="' + fecha + '" value="' + escapeHtml(saved.encargado || saved.actualizadoPor || "") + '" placeholder="Nombre encargado" onchange="rxPresupuestosGuardarEncargado(this)" onblur="rxPresupuestosGuardarEncargado(this)"></td>' +
+          '<td class="rx-updated-cell">' + formatTimestamp(saved.timestamp) + "</td>";
+
+        tbody.appendChild(tr);
+      });
+
+      updateResumen(items, savedChecks);
+    } catch (error) {
+      console.error("Error cargando control RX/Presupuestos:", error);
+      setEmptyStateRow(tbody, "Error al cargar datos. Intente nuevamente.");
+      if (summaryBar) summaryBar.style.display = "none";
+      if (badgeEl) badgeEl.style.display = "none";
+    }
+  }
+
+  window.rxPresupuestosToggleCheck = function (checkbox) {
+    const checkKey = checkbox.getAttribute("data-check-key");
+    const fecha = checkbox.getAttribute("data-fecha");
+    const enSistema = checkbox.checked;
+    const ahora = new Date();
+    const encargadoInput = document.querySelector(
+      '.rx-encargado-input[data-check-key="' + checkKey + '"][data-fecha="' + fecha + '"]'
+    );
+    const encargado = encargadoInput ? encargadoInput.value.trim() : "";
+
+    const label = checkbox.parentElement ? checkbox.parentElement.querySelector("span") : null;
+    if (label) label.textContent = enSistema ? "En sistema" : "Pendiente";
+
+    firebase.database()
+      .ref("rx_presupuestos_checks/" + fecha + "/" + checkKey)
+      .set({
+        enSistema: enSistema,
+        encargado: encargado,
+        timestamp: ahora.toISOString(),
+        actualizadoPor: sessionStorage.getItem("userName") || "Admin"
+      })
+      .then(function () {
+        cargarControl();
+      })
+      .catch(function (error) {
+        console.error("No se pudo guardar el check RX/Presupuesto:", error);
+      });
+  };
+
+  window.rxPresupuestosGuardarEncargado = function (input) {
+    const checkKey = input.getAttribute("data-check-key");
+    const fecha = input.getAttribute("data-fecha");
+    const encargado = (input.value || "").trim();
+    const ahora = new Date();
+
+    if (!checkKey || !fecha) return;
+
+    firebase.database()
+      .ref("rx_presupuestos_checks/" + fecha + "/" + checkKey)
+      .update({
+        encargado: encargado,
+        timestamp: ahora.toISOString(),
+        actualizadoPor: sessionStorage.getItem("userName") || "Admin"
+      })
+      .then(function () {
+        const row = input.closest("tr");
+        const updatedCell = row ? row.querySelector(".rx-updated-cell") : null;
+        if (updatedCell) {
+          updatedCell.textContent = formatTimestamp(ahora.toISOString());
+        }
+      })
+      .catch(function (error) {
+        console.error("No se pudo guardar el encargado RX/Presupuesto:", error);
+      });
+  };
+
+  function getTodayLocalISO() {
+    const now = new Date();
+    const local = new Date(now.getTime() - (now.getTimezoneOffset() * 60000));
+    return local.toISOString().split("T")[0];
+  }
+
+  function init() {
+    const buscarBtn = document.getElementById("buscarRxPresupuestosBtn");
+    const fechaInput = document.getElementById("fechaRxPresupuestos");
+
+    if (fechaInput && !fechaInput.value) {
+      fechaInput.value = getTodayLocalISO();
     }
 
-    // Carga y renderiza la lista de RX/Presupuestos para la fecha seleccionada
-    async function cargarControl() {
-        const fechaInput = document.getElementById('fechaRxPresupuestos');
-        const fecha = fechaInput ? fechaInput.value : '';
-        const tbody = document.getElementById('rxPresupuestosBody');
-        const countBadge = document.getElementById('rxPresupuestosCount');
-
-        if (!tbody) return;
-
-        if (!fecha) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#e74c3c; font-weight:600;"><i class="fas fa-exclamation-circle"></i> Por favor seleccione una fecha</td></tr>';
-            return;
-        }
-
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:30px; color:#666;"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem; margin-bottom:8px; display:block;"></i> Cargando datos...</td></tr>';
-        if (countBadge) countBadge.style.display = 'none';
-        const summaryBar = document.getElementById('rxSummaryBar');
-        if (summaryBar) summaryBar.style.display = 'none';
-
-        // Obtener tickets del día de window.tickets (ya cargados)
-        const allTickets = window.tickets || [];
-        const ticketsDia = allTickets.filter(function (t) {
-            return t.fechaConsulta === fecha;
-        });
-
-        // Extraer todos los items relevantes
-        const items = [];
-        ticketsDia.forEach(function (ticket) {
-            extraerItems(ticket).forEach(function (item) {
-                items.push(item);
-            });
-        });
-
-        // Actualizar badge de conteo
-        if (countBadge) {
-            countBadge.textContent = items.length + ' ' + (items.length === 1 ? 'item encontrado' : 'items encontrados');
-            countBadge.style.display = items.length >= 0 ? 'inline-block' : 'none';
-        }
-
-        if (items.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding:40px; color:#666;">' +
-                '<i class="fas fa-check-circle" style="color:#27ae60; font-size:2.5rem; display:block; margin-bottom:12px;"></i>' +
-                '<strong>Sin resultados</strong><br><span style="font-size:13px; color:#999;">No se encontraron RX ni Presupuestos en el campo "Por Cobrar" para el ' + formatFecha(fecha) + '</span>' +
-                '</td></tr>';
-            if (summaryBar) summaryBar.style.display = 'none';
-            return;
-        }
-
-        // Cargar estados guardados en Firebase
-        let savedChecks = {};
-        try {
-            const snap = await firebase.database().ref('rx_presupuestos_checks/' + fecha).once('value');
-            savedChecks = snap.val() || {};
-        } catch (e) {
-            console.warn('[RxPresupuestos] No se pudieron cargar checks guardados:', e);
-        }
-
-        // Renderizar filas
-        tbody.innerHTML = '';
-        items.forEach(function (item) {
-            const checkKey = (item.firebaseKey || 'nokey') + '_' + item.lineIndex;
-            const checkData = savedChecks[checkKey] || {};
-            const enSistema = !!checkData.enSistema;
-
-            const tr = document.createElement('tr');
-            tr.setAttribute('data-check-key', checkKey);
-            if (enSistema) tr.classList.add('rx-row-checked');
-
-            const horaStr = checkData.timestamp
-                ? new Date(checkData.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
-                : '—';
-
-            const statusIcon = enSistema
-                ? '<i class="fas fa-check-circle" style="color:#27ae60;"></i> En sistema'
-                : '<i class="fas fa-times-circle" style="color:#e74c3c;"></i> Pendiente';
-
-            tr.innerHTML =
-                '<td style="text-align:center; font-weight:700; color:#555;">' + esc(String(item.ticketId)) + '</td>' +
-                '<td>' + esc(item.cliente) + '</td>' +
-                '<td>' + esc(item.paciente) + '</td>' +
-                '<td>' + tipoBadge(item.tipo) + '</td>' +
-                '<td class="rx-desc-cell">' + esc(item.texto) + '</td>' +
-                '<td style="text-align:center;">' +
-                  '<label class="rx-check-container">' +
-                    '<input type="checkbox" ' +
-                      'data-check-key="' + esc(checkKey) + '" ' +
-                      'data-fecha="' + esc(fecha) + '" ' +
-                      (enSistema ? 'checked' : '') + ' ' +
-                      'onchange="window.rxPresupuestosToggleCheck(this)">' +
-                    '<span class="rx-check-status">' + statusIcon + '</span>' +
-                  '</label>' +
-                '</td>' +
-                '<td style="text-align:center; font-size:12px; color:#888;">' + horaStr + '</td>';
-
-            tbody.appendChild(tr);
-        });
-
-        actualizarResumen();
+    if (buscarBtn && !buscarBtn._rxInitialized) {
+      buscarBtn.addEventListener("click", cargarControl);
+      buscarBtn._rxInitialized = true;
     }
 
-    // Maneja el cambio de estado de un checkbox
-    window.rxPresupuestosToggleCheck = function (checkbox) {
-        const checkKey = checkbox.getAttribute('data-check-key');
-        const fecha = checkbox.getAttribute('data-fecha');
-        const enSistema = checkbox.checked;
-        const tr = checkbox.closest('tr');
-        const statusSpan = checkbox.parentElement.querySelector('.rx-check-status');
-
-        if (enSistema) {
-            if (tr) tr.classList.add('rx-row-checked');
-            if (statusSpan) statusSpan.innerHTML = '<i class="fas fa-check-circle" style="color:#27ae60;"></i> En sistema';
-        } else {
-            if (tr) tr.classList.remove('rx-row-checked');
-            if (statusSpan) statusSpan.innerHTML = '<i class="fas fa-times-circle" style="color:#e74c3c;"></i> Pendiente';
+    if (fechaInput && !fechaInput._rxEnterInitialized) {
+      fechaInput.addEventListener("keydown", function (event) {
+        if (event.key === "Enter") {
+          event.preventDefault();
+          cargarControl();
         }
-
-        // Actualizar hora en la última columna
-        const tds = tr ? tr.querySelectorAll('td') : [];
-        const ahora = new Date();
-        const horaStr = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-        if (tds.length >= 7) tds[6].textContent = horaStr;
-
-        // Persistir en Firebase
-        firebase.database()
-            .ref('rx_presupuestos_checks/' + fecha + '/' + checkKey)
-            .set({
-                enSistema: enSistema,
-                timestamp: ahora.toISOString(),
-                actualizadoPor: sessionStorage.getItem('userName') || 'Admin'
-            })
-            .catch(function (err) {
-                console.error('[RxPresupuestos] Error guardando check:', err);
-            });
-
-        actualizarResumen();
-    };
-
-    // Formatea fecha YYYY-MM-DD a texto legible
-    function formatFecha(fechaStr) {
-        if (!fechaStr) return '—';
-        const parts = fechaStr.split('-');
-        if (parts.length !== 3) return fechaStr;
-        return parts[2] + '/' + parts[1] + '/' + parts[0];
+      });
+      fechaInput._rxEnterInitialized = true;
     }
+  }
 
-    // Inicializa el módulo cuando la sección es mostrada
-    function init() {
-        const fechaInput = document.getElementById('fechaRxPresupuestos');
-        if (fechaInput && !fechaInput.value) {
-            // Fecha de hoy por defecto
-            const hoy = (typeof getLocalDateString === 'function')
-                ? getLocalDateString()
-                : new Date().toISOString().split('T')[0];
-            fechaInput.value = hoy;
-        }
+  window.initRxPresupuestosModule = init;
+  window.cargarControlRxPresupuestos = cargarControl;
 
-        const buscarBtn = document.getElementById('buscarRxPresupuestosBtn');
-        if (buscarBtn && !buscarBtn._rxInitialized) {
-            buscarBtn.addEventListener('click', cargarControl);
-            buscarBtn._rxInitialized = true;
-        }
-
-        const fechaInputEl = document.getElementById('fechaRxPresupuestos');
-        if (fechaInputEl && !fechaInputEl._rxInitialized) {
-            fechaInputEl.addEventListener('keydown', function (e) {
-                if (e.key === 'Enter') cargarControl();
-            });
-            fechaInputEl._rxInitialized = true;
-        }
-    }
-
-    // Exponer funciones globalmente
-    window.initRxPresupuestosModule = init;
-    window.cargarControlRxPresupuestos = cargarControl;
-
-    // Auto-init cuando el DOM esté listo
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', init);
-    } else {
-        init();
-    }
-
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", init);
+  } else {
+    init();
+  }
 })();

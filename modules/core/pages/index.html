@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -10,6 +10,7 @@
   <link rel="stylesheet" href="css/consentimientos.css">
   <link rel="stylesheet" href="css/quirofano.css">
   <link rel="stylesheet" href="css/internamiento.css">
+  <link rel="stylesheet" href="css/vaccine-autocomplete.css">
   
   <link rel="icon" href="img/empresa.jpg" type="image/x-icon">
 </head>
@@ -64,7 +65,7 @@
               <i class="fas fa-list-alt"></i> Ver Consultas
             </button>
             <button id="vacunasBtn" class="submenu-btn" onclick="navigateToVacunas('vacunasSection', 'vacunasBtn');">
-              <i class="fas fa-syringe"></i> Control de Vacunas
+              <i class="fas fa-syringe"></i> Control de vacuna y temperatura
             </button>
           </div>
         </div>
@@ -98,6 +99,9 @@
             <button id="reportesLabBtn" class="submenu-btn" onclick="navigateToLab('reportesLabSection', 'reportesLabBtn');">
               <i class="fas fa-file-medical"></i> Reportes Lab
             </button>
+            <button id="pendientesReportarLabBtn" class="submenu-btn" onclick="navigateToLab('pendientesReportarSection', 'pendientesReportarLabBtn');">
+              <i class="fas fa-bell"></i> Pendientes por Reportar
+            </button>
             <button id="inyectablesBtn" class="submenu-btn" onclick="navigateToInyectables('inyectablesSection', 'inyectablesBtn');">
               <i class="fas fa-syringe"></i> Control de Inyectables
             </button>
@@ -117,6 +121,25 @@
             </button>
             <button id="verQuirofanoBtn" class="submenu-btn" onclick="navigateToQuirofano('verQuirofanoSection', 'verQuirofanoBtn');">
               <i class="fas fa-list-alt"></i> Ver Tickets
+            </button>
+          </div>
+        </div>
+
+        <!-- Internamientos (siempre visible en el menú) -->
+        <div id="internamientosCategory" class="nav-category">
+          <button id="internamientosBtn" class="nav-category-btn" onclick="toggleSubmenuHTML('internamientosBtn', 'internamientosSubmenu');">
+            <i class="fas fa-bed"></i> Internamientos
+            <i class="fas fa-chevron-down category-arrow"></i>
+          </button>
+          <div id="internamientosSubmenu" class="nav-submenu">
+            <button id="verInternamientosBtn" class="submenu-btn" onclick="typeof verInternamientos === 'function' ? verInternamientos() : (window.internamientoModule && window.internamientoModule.showInternamientosSection && window.internamientoModule.showInternamientosSection());">
+              <i class="fas fa-list-alt"></i> Ver Internamientos
+            </button>
+            <button id="crearInternamientoBtn" class="submenu-btn" onclick="typeof nuevoInternamiento === 'function' ? nuevoInternamiento() : (window.internamientoModule && window.internamientoModule.showAdmisionForm && window.internamientoModule.showAdmisionForm());">
+              <i class="fas fa-plus-circle"></i> Nuevo Internamiento
+            </button>
+            <button id="visitasBtn" class="submenu-btn" onclick="window.internamientoModule && window.internamientoModule.showVisitasView && window.internamientoModule.showVisitasView();">
+              <i class="fas fa-user-friends"></i> Agregar visitas
             </button>
           </div>
         </div>
@@ -721,9 +744,9 @@
         
         
         <!-- Filtro de fecha para laboratorio -->
-        <div class="date-filter" style="margin-bottom: 15px;" id="labDateFilterContainer">
-          <label for="labFilterDate"><i class="fas fa-calendar-alt"></i> Seleccionar fecha:</label>
-          <input type="date" id="labFilterDate">
+        <div class="date-filter" style="margin-bottom: 15px; display: none;" id="labDateFilterContainer">
+          <label for="labFilterMonth"><i class="fas fa-calendar-alt"></i> Mes (reportados):</label>
+          <input type="month" id="labFilterMonth">
         </div>
 
         <!-- Filtro por médico para laboratorio -->
@@ -748,8 +771,8 @@
 
         <!-- Filtros para laboratorio -->
         <div class="filter-container">
-          <button class="lab-filter-btn active" data-filter="todos">Todos</button>
-          <button class="lab-filter-btn" data-filter="pendiente">Pendiente</button>
+          <button class="lab-filter-btn" data-filter="todos" style="display:none" aria-hidden="true">Todos</button>
+          <button class="lab-filter-btn active" data-filter="pendiente">Pendiente</button>
           <button class="lab-filter-btn" data-filter="procesando">En Proceso</button>
           <button class="lab-filter-btn" data-filter="reportado">Reportados por Lab</button>
           <button class="lab-filter-btn" data-filter="reportado_cliente">Reportado al cliente</button>
@@ -816,6 +839,52 @@
             </div>
           </div>
           <iframe id="labReportIframe" src="" frameborder="0"></iframe>
+        </div>
+      </section>
+
+      <!-- Sección Pendientes por Reportar (Lab) -->
+      <section id="pendientesReportarSection" class="hidden">
+        <h2><i class="fas fa-bell"></i> Pendientes por Reportar</h2>
+        <p class="section-subtitle">Seleccione un médico para ver todos los exámenes que fueron reportados por el laboratorio y aún están pendientes de ser comunicados al dueño de la mascota.</p>
+
+        <div class="pendientes-doctor-selector">
+          <label for="pendientesReportarDoctorSelect"><i class="fas fa-user-md"></i> Seleccionar Médico</label>
+          <select id="pendientesReportarDoctorSelect" onchange="onPendientesReportarDoctorChange(this.value)">
+            <option value="">-- Seleccione un médico --</option>
+            <option value="Medico Externo">Médico Externo</option>
+            <option value="N.A">N.A</option>
+          </select>
+        </div>
+
+        <div class="date-filter pendientes-date-filter" style="margin-bottom: 15px;">
+          <label for="pendientesReportarDesde"><i class="fas fa-calendar-alt"></i> Rango:</label>
+          <input type="date" id="pendientesReportarDesde" onchange="applyPendientesDateRangeFilter()">
+          <span style="font-weight:600;color:#5f6368;">hasta</span>
+          <input type="date" id="pendientesReportarHasta" onchange="applyPendientesDateRangeFilter()">
+          <button type="button" class="filter-btn active" onclick="applyPendientesDateRangeFilter()">Aplicar rango</button>
+        </div>
+
+        <div id="pendientesReportarAlerta" class="pendientes-alerta" style="display:none;">
+          <i class="fas fa-exclamation-triangle"></i>
+          <span id="pendientesReportarAlertaMsg"></span>
+        </div>
+
+        <div id="pendientesReportarResumen" class="pendientes-resumen" style="display:none;">
+          <div class="resumen-item">
+            <span class="resumen-numero" id="pendientesTotalCount">0</span>
+            <span class="resumen-label">Total pendientes</span>
+          </div>
+          <div class="resumen-item resumen-vencidos">
+            <span class="resumen-numero" id="pendientesVencidosCount">0</span>
+            <span class="resumen-label">Más de 48 horas</span>
+          </div>
+        </div>
+
+        <div id="pendientesReportarContainer" class="pendientes-container">
+          <div class="pendientes-placeholder">
+            <i class="fas fa-user-md" style="font-size:2.5rem;color:#bdc3c7;margin-bottom:10px;"></i>
+            <p>Seleccione un médico para ver sus pacientes pendientes por reportar.</p>
+          </div>
         </div>
       </section>
 
@@ -1006,8 +1075,8 @@
 
       <!-- Sección para Control de Vacunas -->
       <section id="vacunasSection" class="hidden">
-        <h2><i class="fas fa-syringe"></i> Control de Vacunas</h2>
-        
+        <h2><i class="fas fa-syringe"></i> Control de vacuna y temperatura</h2>
+
         <!-- Selección de Fecha y Turno -->
         <div class="form-container">
           <div class="form-row">
@@ -1025,7 +1094,7 @@
               </select>
             </div>
           </div>
-          
+
           <div class="form-actions">
             <button type="button" id="cargarVacunasTurno" class="btn-submit">
               <i class="fas fa-eye"></i> Ver Registro del Turno
@@ -1033,8 +1102,19 @@
           </div>
         </div>
 
-        <!-- Área para mostrar el registro del turno seleccionado -->
-        <div id="vacunasRegistroArea" style="display: none;">
+        <div class="vacunas-module-shell">
+          <div class="vacunas-module-tabstrip" role="tablist">
+            <button type="button" class="vacunas-module-tab active" id="vacunasTabBtnVacunas" role="tab" aria-selected="true">
+              <i class="fas fa-syringe"></i> Control de vacunas
+            </button>
+            <button type="button" class="vacunas-module-tab" id="vacunasTabBtnTemperatura" role="tab" aria-selected="false">
+              <i class="fas fa-thermometer-half"></i> Control de temperatura
+            </button>
+          </div>
+
+          <div id="vacunasPanelVacunas" class="vacunas-module-panel active" role="tabpanel">
+            <p id="vacunasPlaceholderVacunas" class="vacunas-module-placeholder">Seleccione fecha y turno arriba y pulse «Ver Registro del Turno» para ver inventario, registros y notas.</p>
+            <div id="vacunasRegistroVacunas" style="display: none;">
           
           <!-- Apertura de Turno e Inventario -->
           <div class="apertura-turno-container" style="margin-bottom: 30px;">
@@ -1265,6 +1345,90 @@
               <button type="button" id="guardarVacunasNotas" class="btn-submit">
                 <i class="fas fa-save"></i> Guardar Notas
               </button>
+            </div>
+          </div>
+            </div>
+          </div>
+
+          <div id="vacunasPanelTemperatura" class="vacunas-module-panel" role="tabpanel">
+            <p id="vacunasPlaceholderTemperatura" class="vacunas-module-placeholder">Para registrar lecturas del turno actual, seleccione fecha y turno arriba y pulse «Ver Registro del Turno».</p>
+            <div id="vacunasRegistroTemperatura" style="display: none;">
+              <div class="form-container" style="margin-top: 0;">
+                <h3><i class="fas fa-snowflake"></i> Registrar temperatura — turno actual</h3>
+                <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                  <i class="fas fa-info-circle"></i> Lecturas del <strong>turno cargado</strong>. La <strong>fecha y hora</strong> se guardan automáticamente al registrar.
+                </p>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label for="vacunaTempCelsius"><i class="fas fa-thermometer-half"></i> Temperatura (°C): *</label>
+                    <input type="number" id="vacunaTempCelsius" step="any" inputmode="decimal" placeholder="Ej. 4,2" autocomplete="off">
+                  </div>
+                  <div class="form-group">
+                    <label for="vacunaTempResponsable"><i class="fas fa-user"></i> Responsable: *</label>
+                    <input type="text" id="vacunaTempResponsable" placeholder="Nombre de quien registra la lectura" autocomplete="off">
+                  </div>
+                </div>
+                <div class="form-actions">
+                  <button type="button" id="guardarVacunasTemperatura" class="btn-submit">
+                    <i class="fas fa-save"></i> Registrar lectura
+                  </button>
+                  <button type="button" id="limpiarVacunasTemperatura" class="btn-cancel">
+                    <i class="fas fa-eraser"></i> Limpiar
+                  </button>
+                </div>
+                <div class="table-responsive" style="margin-top: 15px;">
+                  <table class="vacunas-table">
+                    <thead>
+                      <tr>
+                        <th>Fecha y hora del registro</th>
+                        <th>Temperatura (°C)</th>
+                        <th>Responsable</th>
+                      </tr>
+                    </thead>
+                    <tbody id="vacunasTemperaturaTableBody">
+                      <tr><td colspan="3" class="no-data">No hay lecturas de temperatura para este turno</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-container vacunas-historico-temp-wrap" style="margin-top: 28px;">
+              <h3><i class="fas fa-chart-line"></i> Histórico general — temperatura de refrigeración</h3>
+              <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                Consulte todas las lecturas registradas en un intervalo de fechas (todos los turnos).
+              </p>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="vacunasTempHistDesde"><i class="fas fa-calendar"></i> Desde:</label>
+                  <input type="date" id="vacunasTempHistDesde">
+                </div>
+                <div class="form-group">
+                  <label for="vacunasTempHistHasta"><i class="fas fa-calendar"></i> Hasta:</label>
+                  <input type="date" id="vacunasTempHistHasta">
+                </div>
+              </div>
+              <div class="form-actions">
+                <button type="button" id="cargarVacunasTemperaturaHistorial" class="btn-submit">
+                  <i class="fas fa-search"></i> Ver histórico
+                </button>
+              </div>
+              <div class="table-responsive" style="margin-top: 15px;">
+                <table class="vacunas-table">
+                  <thead>
+                    <tr>
+                      <th>Fecha (turno)</th>
+                      <th>Turno</th>
+                      <th>Fecha y hora del registro</th>
+                      <th>Temperatura (°C)</th>
+                      <th>Responsable</th>
+                    </tr>
+                  </thead>
+                  <tbody id="vacunasTemperaturaHistorialBody">
+                    <tr><td colspan="5" class="no-data">Seleccione fechas y pulse «Ver histórico»</td></tr>
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -2014,6 +2178,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   
   <!-- Scripts críticos para inicio -->
+  <script src="js/vaccine-autocomplete-manager.js"></script>
   <script src="js/firebase-config.js"></script>
   <script src="js/auth.js" defer></script>
   
@@ -2023,6 +2188,7 @@
   <script src="js/billing-performance-optimizer.js" defer></script>
   <script src="js/realtime-performance-manager.js" defer></script>
   <script src="js/index.js" defer></script>
+  <script src="../../vacunas-temp/js/vacunas-temperatura-modulo-CODIGO.js" defer></script>
   
   <!-- Módulos específicos con defer (carga diferida) -->
   <script src="js/laboratorio.js" defer></script>
@@ -2244,8 +2410,11 @@ document.addEventListener('DOMContentLoaded', function() {
             <button class="filter-btn" data-filter="criticos">
               <i class="fas fa-exclamation-triangle"></i> Críticos
             </button>
-            <button class="filter-btn" data-filter="alta">
-              <i class="fas fa-check-circle"></i> Alta Médica
+            <button class="filter-btn" data-filter="dados_alta">
+              <i class="fas fa-home"></i> Dados de alta
+            </button>
+            <button class="filter-btn" data-filter="defuncion">
+              <i class="fas fa-cross"></i> Defunción
             </button>
             <button class="filter-btn" data-filter="todos">
               <i class="fas fa-list"></i> Todos
@@ -2284,6 +2453,10 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="form-group">
             <label for="internamientoTelefonoAdmision">Teléfono *</label>
             <input type="tel" id="internamientoTelefonoAdmision" required>
+          </div>
+          <div class="form-group">
+            <label for="internamientoCorreoAdmision">Correo *</label>
+            <input type="email" id="internamientoCorreoAdmision" required placeholder="ejemplo@correo.com">
           </div>
         </div>
       </div>
@@ -2391,19 +2564,47 @@ document.addEventListener('DOMContentLoaded', function() {
             <input type="checkbox" id="internamientoVacunas">
             ¿Vacunas y desparasitación al día?
           </label>
+          <label style="display: flex; align-items: center; gap: 8px;">
+            <input type="checkbox" id="internamientoReticulocitosChecklist">
+            Reticulocitos
+          </label>
+        </div>
+        <div id="internamientoReticulocitosSection" class="form-section reticulocitos-section" style="margin-top: 16px; display: none;">
+          <h3><i class="fas fa-microscope"></i> Reticulocitos</h3>
+          <div class="form-row reticulocitos-row">
+            <div class="form-group reticulocitos-check-wrap">
+              <input type="checkbox" id="internamientoReticulocitosTieneExamen" style="display: none;" aria-hidden="true">
+              <div id="internamientoReticulocitosClasificacionWrap" class="reticulocitos-clasificacion-wrap" style="display: none;">
+                <div id="internamientoReticulocitosClasificacion" class="reticulocitos-radios">
+                  <label class="reticulocitos-radio-label">
+                    <input type="radio" name="internamientoReticulocitosTipo" value="regenerativa" id="internamientoReticulocitosRegenerativa">
+                    <span>Regenerativa</span>
+                  </label>
+                  <label class="reticulocitos-radio-label">
+                    <input type="radio" name="internamientoReticulocitosTipo" value="no_regenerativa" id="internamientoReticulocitosNoRegenerativa">
+                    <span>No regenerativa</span>
+                  </label>
+                  <label class="reticulocitos-radio-label" style="margin-top: 8px;">
+                    <input type="radio" name="internamientoReticulocitosTipo" value="resultados_pendientes" id="internamientoReticulocitosResultadosPendientes">
+                    <span>Resultados pendientes</span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Persona Responsable -->
+      <!-- Persona de respaldo en comunicación -->
       <div class="form-section">
-        <h3><i class="fas fa-phone"></i> Persona Responsable de Comunicación</h3>
+        <h3><i class="fas fa-phone"></i> Persona de respaldo en caso de comunicación además del propietario</h3>
         <div class="form-row">
           <div class="form-group">
-            <label for="internamientoPersonaResponsable">Nombre del Contacto</label>
-            <input type="text" id="internamientoPersonaResponsable" placeholder="Generalmente el propietario">
+            <label for="internamientoPersonaResponsable">Nombre del contacto</label>
+            <input type="text" id="internamientoPersonaResponsable" placeholder="Ej. familiar o amigo para notificaciones">
           </div>
           <div class="form-group">
-            <label for="internamientoTelefonoResponsable">Teléfono de Contacto</label>
+            <label for="internamientoTelefonoResponsable">Teléfono del contacto</label>
             <input type="tel" id="internamientoTelefonoResponsable" placeholder="Para notificaciones">
           </div>
         </div>
@@ -2413,9 +2614,29 @@ document.addEventListener('DOMContentLoaded', function() {
         <button type="button" class="btn btn-secondary" onclick="window.internamientoModule.showInternamientosSection()">
           Cancelar
         </button>
-        <button type="submit" class="btn btn-success" style="margin-left: 10px;">
+        <button type="submit" class="btn btn-success" id="btnIniciarInternamiento" style="margin-left: 10px;">
           <i class="fas fa-save"></i> Iniciar Internamiento
         </button>
+        <div id="admisionEdicionGuardarContainer" style="display: none; margin-left: 10px;">
+          <button type="button" class="btn btn-primary" id="btnGuardarEdicionIngreso">
+            <i class="fas fa-save"></i> Guardar cambios
+          </button>
+        </div>
+      </div>
+
+      <!-- Edición de ingreso (pacientes de últimas 24h - consulta externa) -->
+      <div class="form-section" style="margin-top: 28px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+        <h3><i class="fas fa-edit"></i> Editar información de ingreso</h3>
+        <p style="font-size: 0.9rem; color: #6c757d; margin-bottom: 12px;">Si necesita corregir datos de un paciente ingresado en las últimas 24 horas, selecciónelo abajo. El botón «Iniciar Internamiento» se deshabilitará y podrá guardar los cambios (se registrará como cambios por consulta externa).</p>
+        <div class="form-row">
+          <div class="form-group" style="grid-column: span 2;">
+            <label for="admisionEditarPacienteSelect">Paciente a editar (últimas 24 h)</label>
+            <select id="admisionEditarPacienteSelect" style="width: 100%; padding: 10px 12px; border: 1px solid #ced4da; border-radius: 6px; background: white;">
+              <option value="">— Seleccione un paciente para editar datos de ingreso —</option>
+              <!-- Opciones se llenan por JS según internamientos últimas 24h -->
+            </select>
+          </div>
+        </div>
       </div>
     </form>
   </div>
@@ -2426,6 +2647,9 @@ document.addEventListener('DOMContentLoaded', function() {
   <div id="internamiento-panel" class="hidden">
     <!-- Header dinámico -->
     <div id="panelHeaderContainer"></div>
+
+    <!-- Información extracurricular importante -->
+    <div id="panelInformacionExtracurricular" class="panel-informacion-extracurricular"></div>
 
           <!-- Contenido en 3 columnas -->
           <div class="panel-grid">
@@ -2447,14 +2671,26 @@ document.addEventListener('DOMContentLoaded', function() {
   </div>
 
   <!-- ============================================================ -->
-  <!-- VISTA 4: REGISTRO DE TURNO -->
+  <!-- VISTA: LISTA DE TURNOS -->
+  <!-- ============================================================ -->
+  <div id="internamiento-turnos" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- VISTA: FORMULARIO REGISTRO DE TURNO -->
   <!-- ============================================================ -->
   <div id="internamiento-turno" class="hidden">
     <div class="section-header">
       <h2><i class="fas fa-clipboard-check"></i> Registro de Turno</h2>
-      <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal(window.internamientoModule.currentInternamientoId)">
-        <i class="fas fa-arrow-left"></i> Volver al Panel
-      </button>
+      <div>
+        <button class="btn btn-secondary" onclick="window.internamientoModule.showTurnosView()" style="margin-right: 10px;">
+          <i class="fas fa-list"></i> Volver a lista de turnos
+        </button>
+        <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal(window.internamientoModule.currentInternamientoId)">
+          <i class="fas fa-arrow-left"></i> Volver al Panel
+        </button>
+      </div>
     </div>
 
     <form id="formRegistroTurno">
@@ -2464,26 +2700,32 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="form-row">
           <div class="form-group">
             <label for="turnoFecha">Fecha *</label>
-            <input type="date" id="turnoFecha" required>
+            <input type="date" id="turnoFecha" required readonly style="background: #f1f5f9; cursor: not-allowed;">
+            <small style="color: #6c757d; font-size: 0.8rem;">Asignada por el sistema</small>
           </div>
           <div class="form-group">
             <label for="turnoHora">Hora *</label>
-            <input type="time" id="turnoHora" required>
+            <input type="time" id="turnoHora" required readonly style="background: #f1f5f9; cursor: not-allowed;">
+            <small style="color: #6c757d; font-size: 0.8rem;">Asignada por el sistema</small>
           </div>
           <div class="form-group">
-            <label for="turnoFranja">Turno *</label>
+            <label for="turnoFranja">Turno (8 horas) *</label>
             <select id="turnoFranja" required>
-              <option value="12am-6am">12am - 6am (Nocturno)</option>
-              <option value="6am-12pm">6am - 12pm (Mañana)</option>
-              <option value="12pm-6pm">12pm - 6pm (Tarde)</option>
-              <option value="6pm-12am">6pm - 12am (Noche)</option>
+              <option value="manana">🌅 Mañana: 6:00 AM - 2:00 PM</option>
+              <option value="tarde-noche">🌆 Tarde-Noche: 2:00 PM - 10:00 PM</option>
+              <option value="noche">🌙 Noche: 10:00 PM - 6:00 AM</option>
             </select>
           </div>
           <div class="form-group">
             <label for="turnoResponsable">Responsable / Quien Registra *</label>
-            <input type="text" id="turnoResponsable" required>
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+              <input type="text" id="turnoResponsable" required readonly placeholder="Se asigna al ingresar el código" style="flex: 1; min-width: 180px; background: #f8f9fa;">
+              <button type="button" class="btn btn-primary btn-sm" onclick="window.internamientoModule.asignarResponsableConCodigo()" title="Ingresar código de personal médico">
+                <i class="fas fa-lock"></i> Ingresar código
+              </button>
+            </div>
             <small style="color: #6c757d; font-size: 0.85rem; display: block; margin-top: 5px;">
-              <i class="fas fa-info-circle"></i> Nombre de la persona que registra este turno
+              <i class="fas fa-info-circle"></i> El nombre se muestra automáticamente al ingresar tu código de personal médico
             </small>
           </div>
         </div>
@@ -2537,6 +2779,16 @@ document.addEventListener('DOMContentLoaded', function() {
               <option value="congestivas">Congestivas</option>
             </select>
           </div>
+          <div class="form-group">
+            <label for="turnoPresionArterial">Presión Arterial (mmHg)</label>
+            <input type="text" id="turnoPresionArterial" placeholder="Ej: 120/80">
+            <small style="color: #6c757d; font-size: 0.85rem;">Normal: 110-140 / 60-90</small>
+          </div>
+          <div class="form-group">
+            <label for="turnoPO2">PO2 - Presión de Oxígeno (mmHg)</label>
+            <input type="number" id="turnoPO2" step="1" min="0" max="200" placeholder="Ej: 95">
+            <small style="color: #6c757d; font-size: 0.85rem;">Normal: 80-100 mmHg</small>
+          </div>
         </div>
       </div>
 
@@ -2554,14 +2806,73 @@ document.addEventListener('DOMContentLoaded', function() {
               <option value="agresivo">Agresivo</option>
             </select>
           </div>
-          <div class="form-group">
-            <label for="turnoNivelDolor">Nivel de Dolor</label>
-            <select id="turnoNivelDolor">
-              <option value="sin_dolor">Sin dolor</option>
-              <option value="leve">Leve</option>
-              <option value="moderado">Moderado</option>
-              <option value="fuerte">Fuerte</option>
-            </select>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label style="font-size: 1.05rem; font-weight: 600; color: var(--internamiento-primary); margin-bottom: 10px; display: block;">
+              🐕🐈 Evaluación de Dolor - Escala de Glasgow Modificada
+            </label>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid var(--internamiento-secondary);">
+              
+              <!-- Estado Mental -->
+              <div style="margin-bottom: 15px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Estado Mental:</label>
+                <select id="glasgowEstadoMental" onchange="calcularGlasgow()" style="width: 100%;">
+                  <option value="0">Normal - Alerta y Responsive (0 pts)</option>
+                  <option value="1">Deprimido - Menos activo (1 pt)</option>
+                  <option value="2">Estuporoso - Respuesta lenta (2 pts)</option>
+                  <option value="3">Comatoso - No responde (3 pts)</option>
+                </select>
+              </div>
+
+              <!-- Actividad Motora -->
+              <div style="margin-bottom: 15px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Actividad Motora:</label>
+                <select id="glasgowActividadMotora" onchange="calcularGlasgow()" style="width: 100%;">
+                  <option value="0">Normal - Movimiento libre (0 pts)</option>
+                  <option value="2">Reducida - Se mueve menos (2 pts)</option>
+                  <option value="4">Inmóvil - No se mueve (4 pts)</option>
+                </select>
+              </div>
+
+              <!-- Vocalización -->
+              <div style="margin-bottom: 15px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Vocalización:</label>
+                <select id="glasgowVocalizacion" onchange="calcularGlasgow()" style="width: 100%;">
+                  <option value="0">Ninguna - Silencioso (0 pts)</option>
+                  <option value="2">Ocasional - Quejidos esporádicos (2 pts)</option>
+                  <option value="3">Frecuente - Llanto constante (3 pts)</option>
+                  <option value="4">Continua - Vocalización persistente (4 pts)</option>
+                </select>
+              </div>
+
+              <!-- Postura -->
+              <div style="margin-bottom: 15px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Postura:</label>
+                <select id="glasgowPostura" onchange="calcularGlasgow()" style="width: 100%;">
+                  <option value="0">Normal - Cómodo (0 pts)</option>
+                  <option value="2">Alterada - Posición incómoda (2 pts)</option>
+                  <option value="4">Rígida - Tensión muscular (4 pts)</option>
+                </select>
+              </div>
+
+              <!-- Respuesta a Palpación -->
+              <div style="margin-bottom: 15px;">
+                <label style="font-weight: 600; display: block; margin-bottom: 8px;">Respuesta a Palpación:</label>
+                <select id="glasgowRespuestaPalpacion" onchange="calcularGlasgow()" style="width: 100%;">
+                  <option value="0">Normal - Tolera bien (0 pts)</option>
+                  <option value="1">Sensible - Ligera molestia (1 pt)</option>
+                  <option value="3">Protectora - Retira extremidad (3 pts)</option>
+                  <option value="4">Agresiva - Intenta morder (4 pts)</option>
+                </select>
+              </div>
+
+              <!-- Resultado -->
+              <div id="glasgowResultado" style="margin-top: 15px; padding: 12px; background: white; border-radius: 6px; text-align: center; font-weight: 600; font-size: 1.1rem;">
+                <span style="color: #27ae60;">Puntaje Glasgow: 0/20 - Sin Dolor</span>
+              </div>
+
+              <input type="hidden" id="turnoNivelDolor" value="sin_dolor">
+              <input type="hidden" id="glasgowPuntaje" value="0">
+            </div>
           </div>
         </div>
         <div class="form-row">
@@ -2581,15 +2892,84 @@ document.addEventListener('DOMContentLoaded', function() {
             <input type="text" id="turnoAlimentoTipo" placeholder="Tipo de alimento" style="margin-top: 8px;">
           </div>
         </div>
-        <div class="form-row">
-          <div class="form-group">
-            <label style="display: flex; align-items: center; gap: 8px;">
-              <input type="checkbox" id="turnoDiarreas">
-              ¿Diarreas?
+        <!-- ✅ DEFECACIÓN - Escala de Bristol -->
+        <div class="form-row" style="grid-column: 1 / -1;">
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label style="font-weight: 600; display: block; margin-bottom: 10px;">
+              💩 Defecación - Escala de Bristol
             </label>
-            <textarea id="turnoDescripcionDiarreas" rows="2" placeholder="Descripción de características" style="margin-top: 8px;"></textarea>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+              <div style="margin-bottom: 10px;">
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <input type="checkbox" id="turnoDefeco">
+                  ¿Defecó durante el turno?
+                </label>
+              </div>
+              <div id="bristolScaleContainer" style="display: none;">
+                <select id="bristolEscala" style="width: 100%; padding: 10px; font-size: 0.95rem;">
+                  <option value="1">Tipo 1: Heces muy duras, secas (Estreñimiento severo) 🔴</option>
+                  <option value="2">Tipo 2: Heces duras pero formadas</option>
+                  <option value="3" selected>Tipo 3: Heces normales, bien formadas ✅ (Óptimo)</option>
+                  <option value="4">Tipo 4: Heces blandas pero con forma</option>
+                  <option value="5">Tipo 5: Heces pastosas, sin forma definida</option>
+                  <option value="6">Tipo 6: Heces líquidas con fragmentos (Diarrea moderada)</option>
+                  <option value="7">Tipo 7: Heces completamente líquidas (Diarrea severa) 🚨</option>
+                </select>
+                <textarea id="turnoDescripcionDefecacion" rows="2" placeholder="Observaciones adicionales sobre defecación (color, olor, sangre, moco, etc.)" style="margin-top: 10px; width: 100%;"></textarea>
+              </div>
+            </div>
           </div>
-          <div class="form-group">
+        </div>
+
+        <!-- ✅ MICCIÓN -->
+        <div class="form-row" style="grid-column: 1 / -1;">
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label style="font-weight: 600; display: block; margin-bottom: 10px;">
+              💧 Micción
+            </label>
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
+              <div style="margin-bottom: 10px;">
+                <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                  <input type="checkbox" id="turnoOrino">
+                  ¿Orinó durante el turno?
+                </label>
+              </div>
+              <div id="miccionContainer" style="display: none;">
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-bottom: 10px;">
+                  <div>
+                    <label style="font-size: 0.9rem; font-weight: 500;">Color de orina:</label>
+                    <select id="turnoColorOrina" style="width: 100%; padding: 8px;">
+                      <option value="amarillo_claro">Amarillo claro (Normal)</option>
+                      <option value="amarillo">Amarillo</option>
+                      <option value="ambar">Ámbar (Oscuro)</option>
+                      <option value="oscuro">Muy oscuro</option>
+                      <option value="con_sangre">Con sangre (Hematuria) 🚨</option>
+                      <option value="turbio">Turbio</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size: 0.9rem; font-weight: 500;">Frecuencia:</label>
+                    <select id="turnoFrecuenciaOrina" style="width: 100%; padding: 8px;">
+                      <option value="normal">Normal</option>
+                      <option value="aumentada">Aumentada (Poliuria)</option>
+                      <option value="disminuida">Disminuida (Oliguria)</option>
+                      <option value="ausente">Ausente (Anuria) 🚨</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style="font-size: 0.9rem; font-weight: 500;">Volumen aprox. (ml):</label>
+                    <input type="number" id="turnoVolumenOrina" min="0" placeholder="Ej: 150" style="width: 100%; padding: 8px;">
+                  </div>
+                </div>
+                <textarea id="turnoObservacionesMiccion" rows="2" placeholder="Observaciones adicionales sobre micción" style="width: 100%;"></textarea>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- VÓMITOS -->
+        <div class="form-row">
+          <div class="form-group" style="grid-column: 1 / -1;">
             <label style="display: flex; align-items: center; gap: 8px;">
               <input type="checkbox" id="turnoVomitos">
               ¿Vómitos?
@@ -2648,6 +3028,99 @@ document.addEventListener('DOMContentLoaded', function() {
     </form>
   </div>
 
+  <!-- Script para Escala de Glasgow -->
+  <script>
+  function calcularGlasgow() {
+    const estadoMental = parseInt(document.getElementById('glasgowEstadoMental')?.value || 0);
+    const actividadMotora = parseInt(document.getElementById('glasgowActividadMotora')?.value || 0);
+    const vocalizacion = parseInt(document.getElementById('glasgowVocalizacion')?.value || 0);
+    const postura = parseInt(document.getElementById('glasgowPostura')?.value || 0);
+    const respuestaPalpacion = parseInt(document.getElementById('glasgowRespuestaPalpacion')?.value || 0);
+    
+    const puntaje = estadoMental + actividadMotora + vocalizacion + postura + respuestaPalpacion;
+    
+    // Actualizar hidden inputs
+    document.getElementById('glasgowPuntaje').value = puntaje;
+    
+    // Determinar nivel de dolor y color
+    let nivel = '';
+    let nivelCode = '';
+    let color = '';
+    
+    if (puntaje >= 0 && puntaje <= 4) {
+      nivel = 'Sin Dolor';
+      nivelCode = 'sin_dolor';
+      color = '#27ae60'; // Verde
+    } else if (puntaje >= 5 && puntaje <= 8) {
+      nivel = 'Dolor Leve';
+      nivelCode = 'leve';
+      color = '#f39c12'; // Amarillo/Naranja
+    } else if (puntaje >= 9 && puntaje <= 14) {
+      nivel = 'Dolor Moderado';
+      nivelCode = 'moderado';
+      color = '#e67e22'; // Naranja
+    } else if (puntaje >= 15 && puntaje <= 20) {
+      nivel = 'Dolor Severo';
+      nivelCode = 'severo';
+      color = '#e74c3c'; // Rojo
+    }
+    
+    document.getElementById('turnoNivelDolor').value = nivelCode;
+    
+    // Actualizar display del resultado
+    const resultado = document.getElementById('glasgowResultado');
+    if (resultado) {
+      resultado.innerHTML = `<span style="color: ${color};">Puntaje Glasgow: ${puntaje}/20 - ${nivel}</span>`;
+      
+      // Agregar icono según severidad
+      if (puntaje === 0) {
+        resultado.innerHTML = `<span style="color: ${color};"><i class="fas fa-smile"></i> Puntaje Glasgow: ${puntaje}/20 - ${nivel}</span>`;
+      } else if (puntaje <= 8) {
+        resultado.innerHTML = `<span style="color: ${color};"><i class="fas fa-meh"></i> Puntaje Glasgow: ${puntaje}/20 - ${nivel}</span>`;
+      } else if (puntaje <= 14) {
+        resultado.innerHTML = `<span style="color: ${color};"><i class="fas fa-frown"></i> Puntaje Glasgow: ${puntaje}/20 - ${nivel}</span>`;
+      } else {
+        resultado.innerHTML = `<span style="color: ${color};"><i class="fas fa-exclamation-triangle"></i> Puntaje Glasgow: ${puntaje}/20 - ${nivel}</span>`;
+      }
+    }
+  }
+  
+  // Calcular al cargar la página
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', calcularGlasgow);
+  } else {
+    calcularGlasgow();
+  }
+
+  // ✅ Toggle de Defecación (Escala de Bristol)
+  const turnoDefecoCheckbox = document.getElementById('turnoDefeco');
+  const bristolScaleContainer = document.getElementById('bristolScaleContainer');
+  
+  if (turnoDefecoCheckbox) {
+    turnoDefecoCheckbox.addEventListener('change', function() {
+      if (this.checked) {
+        bristolScaleContainer.style.display = 'block';
+      } else {
+        bristolScaleContainer.style.display = 'none';
+      }
+    });
+  }
+
+  // ✅ Toggle de Micción
+  const turnoOrinoCheckbox = document.getElementById('turnoOrino');
+  const miccionContainer = document.getElementById('miccionContainer');
+  
+  if (turnoOrinoCheckbox) {
+    turnoOrinoCheckbox.addEventListener('change', function() {
+      if (this.checked) {
+        miccionContainer.style.display = 'block';
+      } else {
+        miccionContainer.style.display = 'none';
+      }
+    });
+  }
+  </script>
+
   <!-- ============================================================ -->
   <!-- VISTA 5: PLAN DE MEDICACIÓN -->
   <!-- ============================================================ -->
@@ -2678,18 +3151,96 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- Se llena dinámicamente por JS -->
   </div>
 
+  <div id="internamiento-cirugias" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-llamadas" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-defunciones" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-transfusiones" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-controles_adicionales" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-rer" class="hidden">
+    <!-- Vista RER - se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-alimentacion_asistida" class="hidden">
+    <!-- Vista Alimentación asistida - se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-hidratacion" class="hidden">
+    <!-- Vista Hidratación - se llena dinámicamente por JS -->
+  </div>
+
+  <div id="internamiento-curva_glucosa" class="hidden">
+    <!-- Vista Curva de glucosa - se llena dinámicamente por JS -->
+  </div>
+
   <div id="internamiento-egreso" class="hidden">
     <!-- Se llena dinámicamente por JS -->
   </div>
 
+  <div id="internamiento-visitas" class="hidden">
+    <!-- Vista Visitas - se llena dinámicamente por JS -->
+  </div>
+
 </section>
 
+<!-- Fallback para que Ver/Nuevo Internamiento funcionen aunque el módulo cargue tarde o falle -->
+<script>
+(function() {
+  function showInternamientosSectionFallback(activeButtonId) {
+    activeButtonId = activeButtonId || 'verInternamientosBtn';
+    var sec = document.getElementById('internamientosSection');
+    if (!sec) { alert('No se pudo abrir Internamientos. Recargue la página (F5).'); return; }
+    var content = document.querySelector('.content');
+    if (content) {
+      var sections = content.querySelectorAll('.section');
+      for (var i = 0; i < sections.length; i++) {
+        sections[i].classList.add('hidden');
+        sections[i].classList.remove('active');
+      }
+    }
+    sec.classList.remove('hidden');
+    sec.classList.add('active');
+    if (typeof closeSidebar === 'function' && window.innerWidth <= 980) closeSidebar();
+    if (typeof setActiveSubmenuButtonHTML === 'function') setActiveSubmenuButtonHTML(activeButtonId);
+  }
+  window.verInternamientos = function() {
+    if (window.internamientoModule && typeof window.internamientoModule.showInternamientosSection === 'function') {
+      window.internamientoModule.showInternamientosSection();
+    } else {
+      showInternamientosSectionFallback('verInternamientosBtn');
+    }
+  };
+  window.nuevoInternamiento = function() {
+    if (window.internamientoModule && typeof window.internamientoModule.showAdmisionForm === 'function') {
+      window.internamientoModule.showAdmisionForm();
+    } else {
+      showInternamientosSectionFallback('crearInternamientoBtn');
+      alert('El módulo de internamiento no está listo. Recargue la página (F5) para crear uno nuevo.');
+    }
+  };
+})();
+</script>
 <!-- Cargar módulo de internamiento -->
-<script src="js/internamiento-module.js"></script>
-<script src="js/internamiento-notificaciones.js"></script>
-<script src="js/internamiento-extended.js"></script>
-<script src="js/internamiento-egreso.js"></script>
-<script src="js/internamiento-procedimientos.js"></script>
+<!-- Rutas relativas correctas desde modules/core/pages/ hacia modules/internamiento/js/ -->
+<script src="../../internamiento/js/internamiento-module.js"></script>
+<script src="../../internamiento/js/internamiento-notificaciones.js"></script>
+<script src="../../internamiento/js/internamiento-extended.js"></script>
+<script src="../../internamiento/js/internamiento-egreso.js"></script>
+<script src="../../internamiento/js/internamiento-procedimientos.js"></script>
 
 </body>
 </html>

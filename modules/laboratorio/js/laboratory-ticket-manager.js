@@ -103,7 +103,7 @@ function setupLabFirebaseListenersFixed() {
             if (labSection && !labSection.classList.contains('hidden')) {
                 // Obtener filtros activos
                 const activeFilterBtn = document.querySelector('.lab-filter-btn.active');
-                const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'todos';
+                const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
                 const medicoFilter = document.getElementById('labMedicoFilter');
                 const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
                 

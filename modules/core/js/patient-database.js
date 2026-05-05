@@ -225,6 +225,11 @@ class PatientDatabase {
                 nombre: 'quirofanoNombre',
                 telefono: 'quirofanoTelefono',
                 correo: 'quirofanoCorreo'
+            },
+            internamiento: {
+                nombre: 'internamientoNombreAdmision',
+                telefono: 'internamientoTelefonoAdmision',
+                correo: 'internamientoCorreoAdmision'
             }
         };
 
@@ -319,6 +324,15 @@ class PatientDatabase {
             edadFieldId = 'quirofanoEdad';
             pesoFieldId = 'quirofanoPeso';
             sexoFieldId = 'quirofanoSexo';
+        } else if (formType === 'internamiento') {
+            containerSelector = '#internamientoCedulaAdmision';
+            mascotaFieldId = 'internamientoMascotaAdmision';
+            tipoMascotaFieldId = 'internamientoTipoMascotaAdmision';
+            idPacienteFieldId = 'internamientoIdPacienteAdmision';
+            razaFieldId = null; // No hay campo de raza en internamiento
+            edadFieldId = null; // No hay campo de edad en internamiento
+            pesoFieldId = null; // No hay campo de peso en internamiento (solo peso de ingreso)
+            sexoFieldId = null; // No hay campo de sexo en internamiento
         } else {
             containerSelector = '#cedula';
             mascotaFieldId = 'mascota';
@@ -391,6 +405,17 @@ class PatientDatabase {
                 dropdown.remove();
             });
             
+            // Agregar iconos de calendario y reloj si es internamiento
+            if (formType === 'internamiento') {
+                const actionIcons = document.createElement('div');
+                actionIcons.style.cssText = 'display: flex; gap: 10px; margin-left: auto;';
+                actionIcons.innerHTML = `
+                    <i class="fas fa-calendar" style="color: #666; cursor: pointer;" title="Ver historial"></i>
+                    <i class="fas fa-clock" style="color: #666; cursor: pointer;" title="Ver consultas"></i>
+                `;
+                petOption.appendChild(actionIcons);
+            }
+            
             dropdown.appendChild(petOption);
         });
 
@@ -442,17 +467,26 @@ class PatientDatabase {
         const idPacienteInput = document.getElementById(fieldIds.idPaciente);
         if (idPacienteInput) idPacienteInput.value = mascota.idPaciente || '';
 
-        const razaInput = document.getElementById(fieldIds.raza);
-        if (razaInput) razaInput.value = mascota.raza || '';
+        // Solo rellenar campos que existen en el formulario (pueden ser null para internamiento)
+        if (fieldIds.raza) {
+            const razaInput = document.getElementById(fieldIds.raza);
+            if (razaInput) razaInput.value = mascota.raza || '';
+        }
 
-        const edadInput = document.getElementById(fieldIds.edad);
-        if (edadInput) edadInput.value = mascota.edad || '';
+        if (fieldIds.edad) {
+            const edadInput = document.getElementById(fieldIds.edad);
+            if (edadInput) edadInput.value = mascota.edad || '';
+        }
 
-        const pesoInput = document.getElementById(fieldIds.peso);
-        if (pesoInput) pesoInput.value = mascota.peso || '';
+        if (fieldIds.peso) {
+            const pesoInput = document.getElementById(fieldIds.peso);
+            if (pesoInput) pesoInput.value = mascota.peso || '';
+        }
 
-        const sexoInput = document.getElementById(fieldIds.sexo);
-        if (sexoInput) sexoInput.value = mascota.sexo || '';
+        if (fieldIds.sexo) {
+            const sexoInput = document.getElementById(fieldIds.sexo);
+            if (sexoInput) sexoInput.value = mascota.sexo || '';
+        }
 
         // Mostrar notificación de éxito
         if (typeof showNotification === 'function') {
@@ -521,6 +555,11 @@ function initPatientDatabase() {
             // Formulario de quirófano
             if (document.getElementById('quirofanoCedula')) {
                 patientDatabase.setupCedulaListener('quirofanoCedula', 'quirofano');
+            }
+            
+            // Formulario de internamiento
+            if (document.getElementById('internamientoCedulaAdmision')) {
+                patientDatabase.setupCedulaListener('internamientoCedulaAdmision', 'internamiento');
             }
         }, 1500);
     }

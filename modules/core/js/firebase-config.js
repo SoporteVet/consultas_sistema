@@ -77,6 +77,12 @@ try {
   window.ticketsRef = ticketsRef;
   window.settingsRef = settingsRef;
   
+  // Inicializar el módulo de autocompletado de vacunas
+  if (window.vaccineAutocompleteManager) {
+    window.vaccineAutocompleteManager.initialize(database);
+    console.log('✅ Módulo de autocompletado de vacunas inicializado');
+  }
+  
 } catch (error) {
   // Error initializing Firebase
   

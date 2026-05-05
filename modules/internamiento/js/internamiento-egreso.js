@@ -46,15 +46,15 @@ InternamientoModule.prototype.loadEgresoForm = function(internamiento) {
                 <div style="background: #f8f9fa; padding: 20px; border-radius: 8px;">
                     <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
                         <input type="checkbox" id="check1" required>
-                        <span>✅ Alta médica autorizada</span>
+                        <span><i class="fas fa-check-circle"></i> Alta médica autorizada</span>
                     </label>
                     <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
                         <input type="checkbox" id="check2" required>
-                        <span>✅ Consentimiento de egreso explicado al propietario</span>
+                        <span><i class="fas fa-check-circle"></i> Consentimiento de egreso explicado al propietario</span>
                     </label>
                     <label style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; cursor: pointer;">
                         <input type="checkbox" id="check3" required>
-                        <span>✅ Pendientes clínicos resueltos</span>
+                        <span><i class="fas fa-check-circle"></i> Pendientes clínicos resueltos</span>
                     </label>
                     <label style="display: flex; align-items: center; gap: 10px; cursor: pointer;">
                         <input type="checkbox" id="check4">
@@ -77,25 +77,25 @@ InternamientoModule.prototype.loadEgresoForm = function(internamiento) {
                 <div class="form-row">
                     <div class="form-group" style="grid-column: span 2;">
                         <label for="diagnosticoFinal">Diagnóstico Final *</label>
-                        <input type="text" id="diagnosticoFinal" required placeholder="Diagnóstico definitivo al egreso">
+                        <input type="text" id="diagnosticoFinal" required placeholder="Diagnóstico definitivo al egreso" style="color: #1e293b; background: #f8fafc;">
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group" style="grid-column: span 2;">
                         <label for="tratamientoAmbulatorio">Tratamiento Ambulatorio *</label>
-                        <textarea id="tratamientoAmbulatorio" rows="3" required placeholder="Indicaciones para continuar en casa..."></textarea>
+                        <textarea id="tratamientoAmbulatorio" rows="3" required placeholder="Indicaciones para continuar en casa..." style="color: #1e293b; background: #f8fafc;"></textarea>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group" style="grid-column: span 2;">
                         <label for="recomendacionesCuidado">Recomendaciones de Cuidado *</label>
-                        <textarea id="recomendacionesCuidado" rows="3" required placeholder="Cuidados especiales, alimentación, ejercicio..."></textarea>
+                        <textarea id="recomendacionesCuidado" rows="3" required placeholder="Cuidados especiales, alimentación, ejercicio..." style="color: #1e293b; background: #f8fafc;"></textarea>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group" style="grid-column: span 2;">
                         <label for="senalesAlerta">Señales de Alerta *</label>
-                        <textarea id="senalesAlerta" rows="2" required placeholder="Síntomas que requieren atención inmediata..."></textarea>
+                        <textarea id="senalesAlerta" rows="2" required placeholder="Síntomas que requieren atención inmediata..." style="color: #1e293b; background: #f8fafc;"></textarea>
                     </div>
                 </div>
             </div>
@@ -106,15 +106,15 @@ InternamientoModule.prototype.loadEgresoForm = function(internamiento) {
                 <div class="form-row">
                     <div class="form-group">
                         <label for="proximaCitaFecha">Fecha</label>
-                        <input type="date" id="proximaCitaFecha">
+                        <input type="date" id="proximaCitaFecha" style="color: #1e293b; background: #f8fafc;">
                     </div>
                     <div class="form-group">
                         <label for="proximaCitaHora">Hora</label>
-                        <input type="time" id="proximaCitaHora">
+                        <input type="time" id="proximaCitaHora" style="color: #1e293b; background: #f8fafc;">
                     </div>
                     <div class="form-group">
                         <label for="proximaCitaMotivo">Motivo</label>
-                        <input type="text" id="proximaCitaMotivo" placeholder="Ej: Control post-internamiento">
+                        <input type="text" id="proximaCitaMotivo" placeholder="Ej: Control post-internamiento" style="color: #1e293b; background: #f8fafc;">
                     </div>
                 </div>
             </div>
@@ -125,15 +125,15 @@ InternamientoModule.prototype.loadEgresoForm = function(internamiento) {
                 <div class="form-row">
                     <div class="form-group">
                         <label for="nombreQuienRecoge">Nombre Completo *</label>
-                        <input type="text" id="nombreQuienRecoge" required>
+                        <input type="text" id="nombreQuienRecoge" required style="color: #1e293b; background: #f8fafc;">
                     </div>
                     <div class="form-group">
                         <label for="cedulaQuienRecoge">Cédula *</label>
-                        <input type="text" id="cedulaQuienRecoge" required>
+                        <input type="text" id="cedulaQuienRecoge" required style="color: #1e293b; background: #f8fafc;">
                     </div>
                     <div class="form-group">
                         <label for="relacionQuienRecoge">Relación con Propietario</label>
-                        <input type="text" id="relacionQuienRecoge" placeholder="Ej: Propietario, Familiar, etc.">
+                        <input type="text" id="relacionQuienRecoge" placeholder="Ej: Propietario, Familiar, etc." style="color: #1e293b; background: #f8fafc;">
                     </div>
                 </div>
             </div>
@@ -208,7 +208,7 @@ InternamientoModule.prototype.handleEgresoSubmit = async function(e) {
 
     const confirmar = await this.showConfirm(
         '¿Confirmar egreso del paciente?\n\nEsto marcará el internamiento como FINALIZADO y no podrá modificarse.',
-        '🏠 Confirmar Egreso',
+        'Confirmar Egreso',
         { danger: true, confirmText: 'Completar Egreso', cancelText: 'Cancelar', icon: 'fa-home', iconColor: '#27ae60' }
     );
     
@@ -300,7 +300,7 @@ InternamientoModule.prototype.editarTurno = function(turnoId) {
 
     const turno = internamiento.turnos?.[turnoId];
     if (!turno) {
-        alert('❌ Turno no encontrado');
+        alert('Turno no encontrado');
         return;
     }
 
@@ -443,5 +443,5 @@ InternamientoModule.prototype.addEditarButtonToTurno = function(turnoId) {
     `;
 };
 
-console.log('📦 Módulo de egreso y edición cargado');
+console.log('Módulo de egreso y edición cargado');
 

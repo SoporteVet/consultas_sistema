@@ -539,7 +539,10 @@ async function loadDoctorsIntoSelects() {
       'quirofanoDoctorAtiende',
       'editQuirofanoDoctorAtiende',
       'labMedicoFilter',
-      'editLabMedico'
+      'editLabMedico',
+      'internamientoDoctorAdmision',
+      'internamientoDoctorUltrasonido',
+      'pendientesReportarDoctorSelect'
     ];
     
     selectIds.forEach(selectId => {
@@ -551,6 +554,8 @@ async function loadDoctorsIntoSelects() {
         // Para labMedicoFilter, mantener también las opciones especiales
         if (selectId === 'labMedicoFilter') {
           select.innerHTML = '<option value="">Todos los médicos</option><option value="Medico Externo">Médico Externo</option><option value="N.A">N.A</option>';
+        } else if (selectId === 'pendientesReportarDoctorSelect') {
+          select.innerHTML = '<option value="">-- Seleccione un médico --</option><option value="Medico Externo">Médico Externo</option><option value="N.A">N.A</option>';
         } else if (selectId === 'editLabMedico') {
           // Para editLabMedico, mantener opciones especiales
           select.innerHTML = '<option value="">Seleccione un médico</option><option value="Medico Externo">Médico Externo</option><option value="Medico Internista">Médico Internista</option><option value="N.A">N.A</option>';
@@ -572,8 +577,41 @@ async function loadDoctorsIntoSelects() {
     
     // Cargar doctores en datalists (para páginas HTML de laboratorio)
     loadDoctorsIntoDatalists(doctorsArray);
+
+    // Desplegable Rayos X: doctores + técnicos
+    loadDoctorsAndAssistantsIntoRayosXSelect();
   } catch (error) {
     console.error('Error cargando doctores en selects:', error);
+  }
+}
+
+// Cargar doctores y técnicos en el desplegable "¿Qué doctor realizó los Rayos X?"
+async function loadDoctorsAndAssistantsIntoRayosXSelect() {
+  try {
+    const doctorsRef = firebase.database().ref('doctors');
+    const assistantsRef = firebase.database().ref('assistants');
+    const [doctorsSnap, assistantsSnap] = await Promise.all([
+      doctorsRef.once('value'),
+      assistantsRef.once('value')
+    ]);
+    const doctors = doctorsSnap.val() || {};
+    const assistants = assistantsSnap.val() || {};
+    const doctorsArray = Object.values(doctors);
+    const assistantsArray = Object.values(assistants);
+    const combined = [...new Set([...doctorsArray, ...assistantsArray])].sort();
+    const select = document.getElementById('internamientoDoctorRayosX');
+    if (!select) return;
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">Seleccione un doctor o técnico</option>';
+    combined.forEach(function(name) {
+      const option = document.createElement('option');
+      option.value = name;
+      option.textContent = name;
+      if (name === currentValue) option.selected = true;
+      select.appendChild(option);
+    });
+  } catch (error) {
+    console.error('Error cargando doctores y técnicos en select Rayos X:', error);
   }
 }
 
@@ -614,10 +652,7 @@ async function loadAssistantsIntoSelects() {
     const assistantsRef = firebase.database().ref('assistants');
     const snapshot = await assistantsRef.once('value');
     const assistants = snapshot.val();
-    
-    if (!assistants) return;
-    
-    const assistantsArray = Object.values(assistants).sort();
+    const assistantsArray = assistants ? Object.values(assistants).sort() : [];
     
     // IDs de todos los selects de asistentes
     const selectIds = [
@@ -643,9 +678,12 @@ async function loadAssistantsIntoSelects() {
             option.selected = true;
           }
           select.appendChild(option);
-        });
-      }
-    });
+      });
+    }
+  });
+
+    // Actualizar desplegable Rayos X (doctores + técnicos)
+    loadDoctorsAndAssistantsIntoRayosXSelect();
   } catch (error) {
     console.error('Error cargando asistentes en selects:', error);
   }
