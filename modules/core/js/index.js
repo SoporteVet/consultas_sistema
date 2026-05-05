@@ -180,6 +180,62 @@ function fetchTicketsByFechaConsultaRange(startStr, endStr) {
     });
 }
 
+function buildTicketDateTime(fecha, hora = '') {
+    if (!fecha) return null;
+    const timePart = hora && typeof hora === 'string' && hora.trim() ? hora.trim() : '00:00';
+    const dateTime = new Date(`${fecha}T${timePart}`);
+    return Number.isNaN(dateTime.getTime()) ? null : dateTime;
+}
+
+function getUltimaCitaCliente(ticketActual, ticketsPool) {
+    if (!ticketActual || !Array.isArray(ticketsPool) || ticketsPool.length === 0) return null;
+
+    const currentDateTime = buildTicketDateTime(
+        ticketActual.fechaConsulta,
+        ticketActual.horaConsulta || ticketActual.horaLlegada || ''
+    );
+    if (!currentDateTime) return null;
+
+    const clienteCedula = (ticketActual.cedula || '').toString().trim().toLowerCase();
+    const clienteNombre = (ticketActual.nombre || '').toString().trim().toLowerCase();
+
+    const sameClient = (candidate) => {
+        if (!candidate) return false;
+        const candidateCedula = (candidate.cedula || '').toString().trim().toLowerCase();
+        const candidateNombre = (candidate.nombre || '').toString().trim().toLowerCase();
+        if (clienteCedula && candidateCedula) return clienteCedula === candidateCedula;
+        return !!clienteNombre && clienteNombre === candidateNombre;
+    };
+
+    let ultimaCita = null;
+    let ultimaCitaDate = null;
+
+    for (const candidate of ticketsPool) {
+        if (!sameClient(candidate)) continue;
+        if (candidate.randomId && ticketActual.randomId && candidate.randomId === ticketActual.randomId) continue;
+        if (candidate.firebaseKey && ticketActual.firebaseKey && candidate.firebaseKey === ticketActual.firebaseKey) continue;
+
+        const candidateDate = buildTicketDateTime(
+            candidate.fechaConsulta,
+            candidate.horaConsulta || candidate.horaLlegada || ''
+        );
+        if (!candidateDate || candidateDate >= currentDateTime) continue;
+
+        if (!ultimaCitaDate || candidateDate > ultimaCitaDate) {
+            ultimaCita = candidate;
+            ultimaCitaDate = candidateDate;
+        }
+    }
+
+    if (!ultimaCita || !ultimaCitaDate) return null;
+
+    return {
+        fecha: formatDate(ultimaCita.fechaConsulta),
+        hora: ultimaCita.horaConsulta || ultimaCita.horaLlegada || '',
+        mascota: ultimaCita.mascota || ''
+    };
+}
+
 function refreshLabResultsIfVisible() {
     const labResultsContainer = document.getElementById('labResultsContainer');
     if (!labResultsContainer || labResultsContainer.classList.contains('hidden')) return;
@@ -2364,6 +2420,13 @@ function renderTickets(filter = 'todos', date = null) {
     
     filteredTickets.forEach((ticket, index) => {
         const ticketElement = document.createElement('div');
+        const ultimaCitaCliente = getUltimaCitaCliente(ticket, tickets);
+        const ultimaCitaBadge = ultimaCitaCliente
+            ? `<div style="display:inline-flex;align-items:center;gap:6px;background:#ececec;color:#607080;border:1px solid #d9d9d9;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:500;margin-top:8px;">
+                    <i class="fas fa-history" style="font-size:12px;"></i>
+                    <span>Últ. visita: ${ultimaCitaCliente.fecha}</span>
+               </div>`
+            : '';
         
         // Set base class
         ticketElement.className = `ticket ticket-${ticket.estado}`;
@@ -2484,6 +2547,7 @@ function renderTickets(filter = 'todos', date = null) {
                                      typeof ticket.estado === 'string' && ticket.estado.includes('consultorio') ? 'user-md' : 'check-circle'}"></i>
                         ${estadoText}
                     </div>
+                    ${ultimaCitaBadge}
                 </div>
             `;
         } else {
@@ -2611,6 +2675,7 @@ function renderTickets(filter = 'todos', date = null) {
                         return `<div class="listo-para-facturar-badge">${badgeContent}</div>`;
                     })() : ''}
                     ${ticket.porCobrar ? `<div class="por-cobrar-info"><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(ticket.porCobrar)}</div></div>` : ''}
+                    ${ultimaCitaBadge}
                 </div>
             `;
         }
