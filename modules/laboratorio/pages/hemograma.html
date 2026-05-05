@@ -458,7 +458,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </tr>
                 <tr>
                     <td>MONOCITOS #</td>
-                    <td><input type="text" id="monocitos" list="rangoMonocitos" oninput="calcularTodos()" onblur="formatearDecimal('monocitos')" onkeydown="moverFoco(event, 'eosinofilos')"></td>
+                    <td><input type="text" id="monocitos" autocomplete="off" oninput="calcularTodos()" onblur="formatearDecimal('monocitos')"></td>
                     <td id="refMonocitos">0,0 - 1,8</td>
                     <td>x 10³/µl</td>
                 </tr>
@@ -1009,11 +1009,13 @@ function actualizarColor(inputId, refId) {
     const refElement = document.getElementById(refId);
     
     if (!inputElement || !refElement) return;
+
+    // Si el campo está activo (usuario escribiendo), no tocar el DOM ni el color
+    if (document.activeElement === inputElement) return;
     
     // Asegurarse de que el input esté dentro de un contenedor
     let container = inputElement.parentElement;
     if (!container.classList.contains('input-container')) {
-        // Si el input no está en un contenedor, envolverlo en uno
         const wrapper = document.createElement('div');
         wrapper.className = 'input-container';
         inputElement.parentNode.insertBefore(wrapper, inputElement);
@@ -1538,6 +1540,32 @@ document.addEventListener('DOMContentLoaded', function() {
        if (input.value === '') return;
        var valor = parseFloat(input.value.replace(',', '.')) || 0;
        input.value = valor.toFixed(1).replace('.', ',');
+
+       const colorRefs = {
+           leucocitos: 'refLeucocitos',
+           linfocitos: 'reflinfocitos',
+           monocitos: 'refMonocitos',
+           neutrofilos: 'refneutrofilos',
+           eosinofilos: 'refeosinofilos',
+           basofilos: 'refbasofilos',
+           linfocitos_porcentaje: 'reflinfocitos2',
+           monocitos_porcentaje: 'refmonocitos',
+           neutrofilos_porcentaje: 'refNeutrofilosPorcentaje',
+           eosinofilos_porcentaje: 'refEosinofilosPorcentaje',
+           basofilos_porcentaje: 'refBasofilosPorcentaje',
+           hemoglobina: 'refhemoglobina',
+           hematocrito: 'refhematocrito',
+           vcm: 'refvcm',
+           hcm: 'refhcm',
+           chcm: 'refchcm',
+           rdw: 'refrdw',
+           mpv: 'refmpv'
+       };
+
+       const refId = colorRefs[id];
+       if (refId && typeof actualizarColor === 'function') {
+           actualizarColor(id, refId);
+       }
    }
    
    function moverFoco(event, siguienteId) {
@@ -1590,47 +1618,23 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
   <script>
 function moverFoco(event, siguienteId) {
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        
-        // Lista completa de campos en orden de navegación
-        const camposParametros = [
-            'leucocitos', 'linfocitos', 'monocitos', 'neutrofilos', 'eosinofilos', 'basofilos',
-            'linfocitos_porcentaje', 'monocitos_porcentaje', 'neutrofilos_porcentaje', 'eosinofilos_porcentaje', 'basofilos_porcentaje',
-            'eritrocitos', 'hemoglobina', 'hematocrito', 'vcm', 'hcm', 'chcm', 'rdw',
-            'plaquetas', 'mpv', 'pdw', 'pct'
-];
-        
-        // Encontrar el índice del campo actual
-        const indiceActual = camposParametros.indexOf(event.target.id);
-        
-        if (indiceActual !== -1 && indiceActual < camposParametros.length - 1) {
-            // Mover al siguiente campo en la secuencia
-            const siguienteId = camposParametros[indiceActual + 1];
-            document.getElementById(siguienteId).focus();
-        } else {
-            // Si no está en la lista o es el último, usar el siguienteId proporcionado
-            document.getElementById(siguienteId).focus();
-}
-    } else if (event.key === 'ArrowUp') {
-        event.preventDefault();
-        
-        // Los mismos campos para navegación hacia arriba
-        const camposParametros = [
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    
+    const camposParametros = [
         'leucocitos', 'linfocitos', 'monocitos', 'neutrofilos', 'eosinofilos', 'basofilos',
         'linfocitos_porcentaje', 'monocitos_porcentaje', 'neutrofilos_porcentaje', 'eosinofilos_porcentaje', 'basofilos_porcentaje',
         'eritrocitos', 'hemoglobina', 'hematocrito', 'vcm', 'hcm', 'chcm', 'rdw',
         'plaquetas', 'mpv', 'pdw', 'pct'
-];
-        
-        // Encontrar el índice del campo actual
-        const indiceActual = camposParametros.indexOf(event.target.id);
-        
-        if (indiceActual > 0) {
-            // Mover al campo anterior
-            const anteriorId = camposParametros[indiceActual - 1];
-            document.getElementById(anteriorId).focus();
-        }
+    ];
+    
+    const indiceActual = camposParametros.indexOf(event.target.id);
+    
+    if (indiceActual !== -1 && indiceActual < camposParametros.length - 1) {
+        const siguienteCampoId = camposParametros[indiceActual + 1];
+        document.getElementById(siguienteCampoId).focus();
+    } else {
+        document.getElementById(siguienteId).focus();
     }
 }
     document.addEventListener('DOMContentLoaded', () => {

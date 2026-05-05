@@ -74,6 +74,7 @@ document.addEventListener('DOMContentLoaded', function(){
             <option value="template_ehrlichia_canis">Ehrlichia Canis</option>
             <option value="template_fpl">FPL Vcheck</option>
             <option value="template_giardia_crypto">Giardia - Crypto</option>
+            <option value="template_giardia_solo">Giardia</option>
             <option value="template_parvo_giardia">Parvo - Giardia</option>
             <option value="template_parvo_corona_giardia">Parvo - Corona - Giardia</option>
             <option value="template_sdma">SDMA Vcheck</option>
@@ -910,6 +911,64 @@ document.addEventListener('DOMContentLoaded', function(){
         </div>
     </div>
 
+    <div class="container plantilla" id="template_giardia_solo">
+        <h3 class="subheader">Test Giardia</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Parámetro</th>
+                    <th>Resultado</th>
+                    <th>Valor</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Muestra</td>
+                    <td colspan="2">Hisopo de Heces</td>
+                </tr>
+                <tr>
+                    <td>Control</td>
+                    <td colspan="2">Válido</td>
+                </tr>
+                <tr>
+                    <td>Giardia</td>
+                    <td>
+                        <select style="width: 90%;" id="giardiaSoloResultado" onchange="actualizarGiardiaSoloSigno(this)">
+                            <option value="Negativo">Negativo</option>
+                            <option value="Positivo" selected>Positivo</option>
+                        </select>
+                    </td>
+                    <td id="giardiaSoloSigno">(+)</td>
+                </tr>
+            </tbody>
+        </table>
+        
+        <p style="margin-top: 20px; font-style: italic; font-size: 12px">
+            Detección de antígeno de giardia,<br>
+            leido e interpretado a los 10 minutos exactos según especificaciones del fabricante.
+        </p>
+        
+        <div class="image-upload-container" style="margin-top: 20px; text-align: center;">
+            <div style="display: flex; flex-direction: column; align-items: center; gap: 20px;">
+                <div>
+                    <input type="file" id="imageUploadGiardiaSolo" accept="image/*" onchange="previewImageGiardiaSolo(event)" style="margin-bottom: 10px;">
+                    <button type="button" onclick="document.getElementById('imageUploadGiardiaSolo').click()">Seleccionar imagen</button>
+                </div>
+                <div id="imagePreviewContainerGiardiaSolo" style="width: 400px; height: 300px; border: 1px dashed #ccc; display: flex; justify-content: center; align-items: center; margin: 0 auto;">
+                    <img id="imagePreviewGiardiaSolo" src="#" alt="Vista previa" style="max-width: 100%; max-height: 100%; display: none;">
+                    <span id="noImageTextGiardiaSolo">Sin imagen</span>
+                </div>
+            </div>
+        </div>
+        <br><br>
+        <div class="footer">
+            <p id="mensajeMedico" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
+            <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
+            <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
+            <p>Correo: laboratorio@vetsanmartin.com</p>
+        </div>
+    </div>
+
     <div class="container plantilla" id="template_parvo_giardia">
         <h3 class="subheader">Test CPV / Giardia</h3>
         <table>
@@ -1715,6 +1774,25 @@ document.addEventListener('DOMContentLoaded', function(){
             output.src = reader.result;
             output.style.display = 'block';
             document.getElementById('noImageTextTripleTest').style.display = 'none';
+        }
+        reader.readAsDataURL(event.target.files[0]);
+    }
+    function actualizarGiardiaSoloSigno(selectElement) {
+        const signoCell = document.getElementById('giardiaSoloSigno');
+        if (selectElement.value === 'Positivo') {
+            signoCell.textContent = '(+)';
+        } else {
+            signoCell.textContent = '(-)';
+        }
+    }
+
+    function previewImageGiardiaSolo(event) {
+        const reader = new FileReader();
+        reader.onload = function() {
+            const output = document.getElementById('imagePreviewGiardiaSolo');
+            output.src = reader.result;
+            output.style.display = 'block';
+            document.getElementById('noImageTextGiardiaSolo').style.display = 'none';
         }
         reader.readAsDataURL(event.target.files[0]);
     }

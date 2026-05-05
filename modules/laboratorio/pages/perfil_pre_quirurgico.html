@@ -43,13 +43,13 @@ document.addEventListener('DOMContentLoaded', function(){
     <body>
         <div class="controls">
             <label for="sexoSelector">Selecciona el sexo:</label>
-            <select id="sexoSelector" onchange="actualizarSexoEnPlantilla(),actualizarValoresReferencia2()">
+            <select id="sexoSelector" onchange="actualizarSexoEnPlantilla(),actualizarValoresReferenciaPQ()">
                 <option value="Seleccionar" selected>-- Seleccionar --</option>
                 <option value="Macho">Macho</option>
                 <option value="Hembra">Hembra</option>
             </select>
             <label for="especieSelector">Selecciona la especie:</label>
-            <select id="especieSelector" onchange="actualizarEspecieEnPlantilla(),actualizarValoresReferencia2()">
+            <select id="especieSelector" onchange="actualizarEspecieEnPlantilla(),actualizarValoresReferenciaPQ()">
                 <option value="Seleccionar" selected>-- Seleccionar --</option>
                 <option value="Canino">Canino</option>
                 <option value="Felino">Felino</option>
@@ -57,7 +57,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 <option value="Cuilo">Cuilo</option>
             </select>
             <label for="edadSelector">Selecciona el rango de edad:</label>
-            <select id="edadSelector" onchange="actualizarValoresReferencia2()">
+            <select id="edadSelector" onchange="actualizarValoresReferenciaPQ()">
                 <option value="Seleccionar" selected>-- Seleccionar --</option>
                 <option value="De 1 año a 12 años">De 1 año a 12 años</option>
                 <option value="De 6 meses a 1 año">De 6 meses a 1 año</option>
@@ -258,64 +258,14 @@ const razasFelinas = [
     "Oriental", "Persa", "Sagrado de Birmania", "Siamés", "Siberiano", 
     "Silvestre", "SRD"
 ];
-// Reemplazar la función de reemplazo de punto por coma
-function reemplazarPuntoPorComa() {
-    // Obtener todos los campos numéricos
-    const camposNumericos = [
-        'Glucosa', 'Colesterol_total', 'amilasa', 'CK', 
-        'nitrogeno_ureico', 'creatinina', 'bun_crea', 'fosforo', 'calcio',
-        'ALT', 'Fosfatasa_Alcalina', 'billirrubina_total', 'Albumina',
-        'proteinas_totales', 'Globulinas', 'alb/glo'
-    ];
-    
-    // Aplicar la funcionalidad a cada campo
-    camposNumericos.forEach(id => {
-        const campo = document.getElementById(id);
-        if (campo) {
-            // Usar keydown en lugar de input
-            campo.addEventListener('keydown', function(event) {
-                // Solo actuar cuando se presiona la tecla punto
-                if (event.key === '.') {
-                    event.preventDefault(); // Prevenir la acción por defecto
-                    
-                    // Obtener la posición actual del cursor
-                    const cursorPos = this.selectionStart;
-                    
-                    // Obtener el valor actual e insertar una coma en lugar del punto
-                    const valorActual = this.value;
-                    const nuevoValor = valorActual.slice(0, cursorPos) + ',' + valorActual.slice(cursorPos);
-                    
-                    // Establecer el nuevo valor
-                    this.value = nuevoValor;
-                    
-                    // Restaurar la posición del cursor justo después de la coma
-                    setTimeout(() => {
-                        this.setSelectionRange(cursorPos + 1, cursorPos + 1);
-                    }, 0);
-                }
-            });
-            
-            // Mover las actualizaciones de color y cálculos al evento blur
-            campo.addEventListener('blur', function() {
-                actualizarColor(id, 'ref' + id.toLowerCase());
-                if (id === 'Albumina' || id === 'proteinas_totales') {
-                    calculateValues();
-                }
-            });
-            
-            // Eliminar cualquier evento input que pueda interferir
-            const oldInputListeners = campo._inputListeners || [];
-            oldInputListeners.forEach(listener => {
-                campo.removeEventListener('input', listener);
-            });
-        }
-    });
+// Formatea el valor numérico al salir del campo (punto → coma, 1 decimal)
+function formatearDecimalPQ(input) {
+    if (!input || input.value === '') return;
+    let val = input.value.replace(/\s*[↑↓]$/, '').trim().replace(',', '.');
+    const num = parseFloat(val);
+    if (isNaN(num)) return;
+    input.value = num.toFixed(1).replace('.', ',');
 }
-
-// Ejecutar cuando el DOM esté listo
-document.addEventListener('DOMContentLoaded', function() {
-    reemplazarPuntoPorComa();
-});
 // Función para actualizar el datalist de razas según la especie seleccionada
 function actualizarRazasPorEspecie() {
     const especie = document.getElementById('especieSelector').value;
@@ -573,10 +523,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const input = document.getElementById(param.campo);
         if (input) {
             input.addEventListener('blur', function(event) {
+                formatearDecimalPQ(this);
                 actualizarColor(param.campo, param.ref, event);
             });
             input.addEventListener('keydown', function(event) {
                 if (event.key === 'Enter') {
+                    formatearDecimalPQ(this);
                     actualizarColor(param.campo, param.ref, event);
                 }
             });

@@ -45,6 +45,7 @@ document.addEventListener('DOMContentLoaded', function(){
       if (especieSelector) {
         especieSelector.value = capitalize(especie);
         const evt = new Event('change'); especieSelector.dispatchEvent(evt);
+        actualizarTablaReticulocitos(capitalize(especie));
       }
     }
     if (sexo) {
@@ -244,6 +245,62 @@ document.addEventListener('DOMContentLoaded', function(){
             </tbody>
         </table>
 
+    <!-- Tabla de clasificación: Felino -->
+    <table id="tablaReticulocitosFelino" style="display:none; margin-bottom: 30px; width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background-color: #343a40; color: white;">
+                <th style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Recuento Absoluto de agregados (células/ µL)</th>
+                <th style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Grado de Regeneración</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="background-color: #f8f9fa;">
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">&lt;60,000/µL</td>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">No regenerativa</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">60,000-150,000/µL</td>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Regeneración Leve</td>
+            </tr>
+            <tr style="background-color: #f8f9fa;">
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">150,000-300,000/ µL</td>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Regeneración Moderada</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">&gt;500,000/µL</td>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Regeneración Marcada</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <!-- Tabla de clasificación: Canino -->
+    <table id="tablaReticulocitoCanino" style="display:none; margin-bottom: 30px; width: 100%; border-collapse: collapse;">
+        <thead>
+            <tr style="background-color: #343a40; color: white;">
+                <th style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Recuento Absoluto de agregados (células/ µL)</th>
+                <th style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Grado de Regeneración</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr style="background-color: #f8f9fa;">
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">&lt;50,000/µL</td>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">No regenerativa</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">50,000-100,000/µL</td>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Regeneración Leve</td>
+            </tr>
+            <tr style="background-color: #f8f9fa;">
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">100,000-200,000/ µL</td>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Regeneración Moderada</td>
+            </tr>
+            <tr>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">&gt;200,000/µL</td>
+                <td style="padding: 8px 12px; text-align: center; border: 1px solid #ccc;">Regeneración Marcada</td>
+            </tr>
+        </tbody>
+    </table>
+
     <div class="footer">
         <p id="mensajeMedico2" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados</p>
         <p>Facebook: Veterinaria San Martin de Porres Teléfono: 4000 – 1365 Ext: 106</p>
@@ -303,9 +360,16 @@ function actualizarSexoEnPlantilla() {
 function actualizarEspecieEnPlantilla() {
     const especie = document.getElementById('especieSelector').value;
     document.getElementById('especieEnPlantilla').value = especie;
-    
-    // Actualizar las razas disponibles según la especie
     actualizarRazasPorEspecie();
+    actualizarTablaReticulocitos(especie);
+}
+
+function actualizarTablaReticulocitos(especie) {
+    const tablaFelino  = document.getElementById('tablaReticulocitosFelino');
+    const tablaCanino  = document.getElementById('tablaReticulocitoCanino');
+    if (!tablaFelino || !tablaCanino) return;
+    tablaFelino.style.display  = especie === 'Felino'  ? '' : 'none';
+    tablaCanino.style.display  = especie === 'Canino'  ? '' : 'none';
 }
 
 function verificarMedico() {
