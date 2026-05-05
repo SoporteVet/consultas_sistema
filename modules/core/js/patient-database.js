@@ -95,6 +95,12 @@ class PatientDatabase {
             const snapshot = await patientRef.once('value');
             const existingPatient = snapshot.exists() ? snapshot.val() : null;
 
+            const ticketDateTime = this.buildTicketDateTime(
+                ticketData.fechaConsulta,
+                ticketData.horaConsulta || ticketData.horaLlegada || ''
+            );
+            const ticketTimestamp = ticketDateTime ? ticketDateTime.getTime() : Date.now();
+
             // Preparar datos del cliente
             const clienteData = {
                 nombre: ticketData.nombre || existingPatient?.nombre || '',
@@ -155,6 +161,14 @@ class PatientDatabase {
                 fechaCreacion: existingMascotaData?.fechaCreacion || Date.now()
             };
 
+            const ultimaVisitaData = {
+                fechaConsulta: ticketData.fechaConsulta || null,
+                horaConsulta: ticketData.horaConsulta || ticketData.horaLlegada || '',
+                mascota: mascotaNombre || '',
+                idPaciente: idPaciente || '',
+                timestamp: ticketTimestamp
+            };
+
             // Actualizar estructura relacional
             const updates = {};
             updates[`${cedula}/nombre`] = clienteData.nombre;
@@ -165,6 +179,10 @@ class PatientDatabase {
             updates[`${cedula}/ultimaActualizacion`] = clienteData.ultimaActualizacion;
             updates[`${cedula}/fechaCreacion`] = clienteData.fechaCreacion;
             updates[`${cedula}/mascotas/${mascotaKey}`] = mascotaData;
+            const existingUltimaVisitaTimestamp = Number(existingPatient?.ultimaVisita?.timestamp || 0);
+            if (!existingUltimaVisitaTimestamp || ticketTimestamp >= existingUltimaVisitaTimestamp) {
+                updates[`${cedula}/ultimaVisita`] = ultimaVisitaData;
+            }
 
             // Si la clave cambió (de nombre a idPaciente), eliminar la entrada antigua por nombre
             if (idPaciente && mascotaKey === idPaciente && mascotaNombre !== idPaciente && existingPatient?.mascotas?.[mascotaNombre]) {
@@ -197,11 +215,22 @@ class PatientDatabase {
             patient.correo = clienteData.correo;
             patient.direccion = clienteData.direccion;
             patient.ultimaActualizacion = clienteData.ultimaActualizacion;
+            const cacheUltimaVisitaTimestamp = Number(patient.ultimaVisita?.timestamp || 0);
+            if (!cacheUltimaVisitaTimestamp || ticketTimestamp >= cacheUltimaVisitaTimestamp) {
+                patient.ultimaVisita = ultimaVisitaData;
+            }
 
             console.log(`💾 Paciente ${cedula} actualizado con mascota ${mascotaNombre} (clave: ${mascotaKey})`);
         } catch (error) {
             console.error('Error guardando paciente:', error);
         }
+    }
+
+    buildTicketDateTime(fecha, hora = '') {
+        if (!fecha) return null;
+        const timePart = hora && typeof hora === 'string' && hora.trim() ? hora.trim() : '00:00';
+        const dateTime = new Date(`${fecha}T${timePart}`);
+        return Number.isNaN(dateTime.getTime()) ? null : dateTime;
     }
 
     // Buscar paciente y rellenar formulario automáticamente
