@@ -187,53 +187,50 @@ function buildTicketDateTime(fecha, hora = '') {
     return Number.isNaN(dateTime.getTime()) ? null : dateTime;
 }
 
-function getUltimaCitaCliente(ticketActual, ticketsPool) {
-    if (!ticketActual || !Array.isArray(ticketsPool) || ticketsPool.length === 0) return null;
+function getUltimaVisitaDesdeRegistro(ticketActual) {
+    if (!ticketActual || !window.patientDatabase) return null;
+    const cedula = (ticketActual.cedula || '').toString().trim();
+    if (!cedula) return null;
+
+    const patient = window.patientDatabase.findPatientByCedula(cedula);
+    const ultimaVisita = patient?.ultimaVisita;
+    if (!ultimaVisita || !ultimaVisita.fechaConsulta) return null;
 
     const currentDateTime = buildTicketDateTime(
         ticketActual.fechaConsulta,
         ticketActual.horaConsulta || ticketActual.horaLlegada || ''
     );
-    if (!currentDateTime) return null;
-
-    const clienteCedula = (ticketActual.cedula || '').toString().trim().toLowerCase();
-    const clienteNombre = (ticketActual.nombre || '').toString().trim().toLowerCase();
-
-    const sameClient = (candidate) => {
-        if (!candidate) return false;
-        const candidateCedula = (candidate.cedula || '').toString().trim().toLowerCase();
-        const candidateNombre = (candidate.nombre || '').toString().trim().toLowerCase();
-        if (clienteCedula && candidateCedula) return clienteCedula === candidateCedula;
-        return !!clienteNombre && clienteNombre === candidateNombre;
-    };
-
-    let ultimaCita = null;
-    let ultimaCitaDate = null;
-
-    for (const candidate of ticketsPool) {
-        if (!sameClient(candidate)) continue;
-        if (candidate.randomId && ticketActual.randomId && candidate.randomId === ticketActual.randomId) continue;
-        if (candidate.firebaseKey && ticketActual.firebaseKey && candidate.firebaseKey === ticketActual.firebaseKey) continue;
-
-        const candidateDate = buildTicketDateTime(
-            candidate.fechaConsulta,
-            candidate.horaConsulta || candidate.horaLlegada || ''
-        );
-        if (!candidateDate || candidateDate >= currentDateTime) continue;
-
-        if (!ultimaCitaDate || candidateDate > ultimaCitaDate) {
-            ultimaCita = candidate;
-            ultimaCitaDate = candidateDate;
-        }
+    const lastVisitDateTime = buildTicketDateTime(
+        ultimaVisita.fechaConsulta,
+        ultimaVisita.horaConsulta || ''
+    );
+    if (currentDateTime && lastVisitDateTime && lastVisitDateTime >= currentDateTime) {
+        return null;
     }
 
-    if (!ultimaCita || !ultimaCitaDate) return null;
-
     return {
-        fecha: formatDate(ultimaCita.fechaConsulta),
-        hora: ultimaCita.horaConsulta || ultimaCita.horaLlegada || '',
-        mascota: ultimaCita.mascota || ''
+        fecha: formatDate(ultimaVisita.fechaConsulta),
+        hora: ultimaVisita.horaConsulta || '',
+        mascota: ultimaVisita.mascota || ''
     };
+}
+
+async function actualizarUltimasCitasAsync(ticketsAMostrar) {
+    if (!Array.isArray(ticketsAMostrar) || ticketsAMostrar.length === 0) return;
+
+    ticketsAMostrar.forEach(ticket => {
+        if (!ticket.randomId) return;
+        const placeholder = document.querySelector(`.ultima-cita-async-badge[data-ticket-randomid="${ticket.randomId}"]`);
+        if (!placeholder) return;
+
+        const ultimaVisitaRegistro = getUltimaVisitaDesdeRegistro(ticket);
+        if (ultimaVisitaRegistro) {
+            placeholder.innerHTML = `<div style="display:inline-flex;align-items:center;gap:6px;background:#ececec;color:#607080;border:1px solid #d9d9d9;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:500;margin-top:8px;">
+                <i class="fas fa-history" style="font-size:12px;"></i>
+                <span>Últ. visita: ${ultimaVisitaRegistro.fecha}</span>
+            </div>`;
+        }
+    });
 }
 
 function refreshLabResultsIfVisible() {
@@ -2165,7 +2162,10 @@ function addTicket() {
                         raza,
                         edad,
                         peso,
-                        sexo
+                        sexo,
+                        fechaConsulta: nuevoTicket.fechaConsulta,
+                        horaConsulta: nuevoTicket.horaConsulta || '',
+                        horaLlegada: nuevoTicket.horaLlegada || ''
                     }).catch(err => console.error('Error guardando en BD de pacientes:', err));
                 }
                 
@@ -2420,13 +2420,7 @@ function renderTickets(filter = 'todos', date = null) {
     
     filteredTickets.forEach((ticket, index) => {
         const ticketElement = document.createElement('div');
-        const ultimaCitaCliente = getUltimaCitaCliente(ticket, tickets);
-        const ultimaCitaBadge = ultimaCitaCliente
-            ? `<div style="display:inline-flex;align-items:center;gap:6px;background:#ececec;color:#607080;border:1px solid #d9d9d9;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:500;margin-top:8px;">
-                    <i class="fas fa-history" style="font-size:12px;"></i>
-                    <span>Últ. visita: ${ultimaCitaCliente.fecha}</span>
-               </div>`
-            : '';
+        const ultimaCitaBadge = `<div class="ultima-cita-async-badge" data-ticket-randomid="${ticket.randomId || ''}"></div>`;
         
         // Set base class
         ticketElement.className = `ticket ticket-${ticket.estado}`;
@@ -2731,6 +2725,9 @@ function renderTickets(filter = 'todos', date = null) {
         
         ticketContainer.appendChild(ticketElement);
     });
+
+    // Actualizar badges "Última visita" con historial de Firebase (asíncrono)
+    actualizarUltimasCitasAsync(filteredTickets);
     
     // Agregar estilos para los niveles de urgencia si no existen
     if (!document.getElementById('urgencia-styles')) {
