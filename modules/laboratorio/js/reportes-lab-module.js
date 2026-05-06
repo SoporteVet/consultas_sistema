@@ -133,7 +133,36 @@ function renderLabReportTemplates() {
   console.log(`${Object.keys(LAB_REPORT_TEMPLATES).length} plantillas renderizadas`);
 }
 
-function searchLabReportClients() {
+async function ensureLabTicketsLoadedForReports() {
+  const existingTickets = Array.isArray(window.labTickets) ? window.labTickets : [];
+  if (existingTickets.length > 0) {
+    return existingTickets;
+  }
+
+  if (!window.database || typeof window.database.ref !== 'function') {
+    return existingTickets;
+  }
+
+  try {
+    const snapshot = await window.database.ref('lab_tickets').once('value');
+    const loadedTickets = [];
+
+    if (snapshot && typeof snapshot.exists === 'function' && snapshot.exists()) {
+      const data = snapshot.val() || {};
+      Object.keys(data).forEach((key) => {
+        loadedTickets.push({ ...data[key], firebaseKey: key });
+      });
+    }
+
+    window.labTickets = loadedTickets;
+    return loadedTickets;
+  } catch (error) {
+    console.error('❌ Error cargando tickets para Reportes Lab:', error);
+    return existingTickets;
+  }
+}
+
+async function searchLabReportClients() {
   const input = document.getElementById('labReportClientSearch');
   const resultsContainer = document.getElementById('labReportClientResults');
   const termRaw = (input?.value || '').trim();
@@ -146,7 +175,12 @@ function searchLabReportClients() {
   }
 
   const term = termRaw.toLowerCase();
-  const source = Array.isArray(window.labTickets) ? window.labTickets : [];
+  if (resultsContainer) {
+    resultsContainer.innerHTML = '<div class="no-clients-found"><i class="fas fa-spinner fa-spin"></i> Cargando tickets...</div>';
+    resultsContainer.classList.add('active');
+  }
+
+  const source = await ensureLabTicketsLoadedForReports();
 
   if (source.length === 0) {
     resultsContainer.innerHTML = '<div class="no-clients-found"><i class="fas fa-database"></i> No hay tickets de laboratorio cargados</div>';
