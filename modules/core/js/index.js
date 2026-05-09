@@ -714,18 +714,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     ? Math.max(...todaysTickets.map(t => t.id)) + 1
                     : 1;
 
-                // Mostrar solo tickets EN ESPERA al cargar para todos menos admin
-                // userRole ya está declarado arriba
+                // Mostrar solo tickets EN ESPERA al cargar (incl. admin; sin filtro "Todos")
                 document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-                if (userRole === 'admin') {
-                    renderTickets('todos');
-                    const todosBtn = document.querySelector('.filter-btn[data-filter="todos"]');
-                    if (todosBtn) todosBtn.classList.add('active');
-                } else {
-                    renderTickets('espera');
-                    const esperaBtn = document.querySelector('.filter-btn[data-filter="espera"]');
-                    if (esperaBtn) esperaBtn.classList.add('active');
-                }
+                renderTickets('espera');
+                const esperaBtn = document.querySelector('.filter-btn[data-filter="espera"]');
+                if (esperaBtn) esperaBtn.classList.add('active');
                 updateStatsGlobal();
                 
                 // Inicializar sistema de laboratorio
@@ -789,12 +782,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filterDateInput) {
             const today = getLocalDateString();
             filterDateInput.value = today;
-            const scheduleRole = sessionStorage.getItem('userRole');
-            if (scheduleRole === 'admin') {
-                renderTickets('todos');
-            } else {
-                renderTickets('espera');
-            }
+            renderTickets('espera');
         }
     }
 
@@ -815,12 +803,12 @@ document.addEventListener('DOMContentLoaded', () => {
         renderTickets(currentFilter);
     });
 
-    // Ocultar filtro "Todos" en ver consultas para todos menos admin
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole !== 'admin') {
-        const todosBtn = document.querySelector('.filter-btn[data-filter="todos"]');
-        if (todosBtn) todosBtn.style.display = 'none';
+    // Ocultar filtro "Todos" en ver consultas (también administradores)
+    const todosBtnConsultas = document.querySelector('#verTicketsSection .filter-btn[data-filter="todos"]');
+    if (todosBtnConsultas) {
+        todosBtnConsultas.style.display = 'none';
     }
+    const userRole = sessionStorage.getItem('userRole');
 
     // Mostrar barra de búsqueda solo para roles distintos a visitas
     const searchBar = document.getElementById('searchBarContainer');
@@ -1080,13 +1068,7 @@ function setupVisitasSidebarToggle() {
   if (userRole !== 'recepcion') {
     btn.style.display = 'block';
     btn.addEventListener('click', toggleSidebar);
-    
-    // Agregar event listener para el botón de menú móvil
-    const mobileMenuBtn = document.getElementById('menuToggle');
-    if (mobileMenuBtn) {
-      mobileMenuBtn.addEventListener('click', toggleSidebar);
-    }
-    
+
     // Agregar event listener para cambios de tamaño de ventana
     window.addEventListener('resize', handleResize);
     
@@ -1127,18 +1109,10 @@ safeAddEventListener('verTicketsBtn', 'click', () => {
     if (filterDateInput && !filterDateInput.value) {
         filterDateInput.value = getLocalDateString();
     }
-    // Forzar el filtro visualmente al botón de espera para todos menos admin
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
-    const userRole = sessionStorage.getItem('userRole');
-    if (userRole === 'admin') {
-        renderTickets('todos');
-        const todosBtn = document.querySelector('.filter-btn[data-filter="todos"]');
-        if (todosBtn) todosBtn.classList.add('active');
-    } else {
-        renderTickets('espera');
-        const esperaBtn = document.querySelector('.filter-btn[data-filter="espera"]');
-        if (esperaBtn) esperaBtn.classList.add('active');
-    }
+    renderTickets('espera');
+    const esperaBtnNav = document.querySelector('.filter-btn[data-filter="espera"]');
+    if (esperaBtnNav) esperaBtnNav.classList.add('active');
     const section = document.getElementById('verTicketsSection');
     if (section) {
         showSection(section);
@@ -2233,7 +2207,7 @@ const filterDateInput = document.getElementById('filterDate');
 if (filterDateInput && !filterDateInput.value) {
     filterDateInput.value = getLocalDateString();
 }
-function renderTickets(filter = 'todos', date = null) {
+function renderTickets(filter = 'espera', date = null) {
     const filterDateInput = document.getElementById('filterDate');
     const selectedDate = (filterDateInput && filterDateInput.value) ? filterDateInput.value : getLocalDateString();
 
@@ -3938,16 +3912,16 @@ function editTicket(randomId) {
     const historialContainer = modal.querySelector('#ticketEdicionesHistorial');
     if (userRoleHistorial === 'admin' && historialBody && typeof firebase !== 'undefined' && firebase.database) {
         // Limpiar listener previo si existe
-        if (window._ticketEdicionesListener) {
-            firebase.database().ref('ticket_edits').off('value', window._ticketEdicionesListener);
+        if (window._ticketEdicionesQuery && window._ticketEdicionesListener) {
+            window._ticketEdicionesQuery.off('value', window._ticketEdicionesListener);
         }
+        // Consultar únicamente las ediciones del ticket actual.
+        window._ticketEdicionesQuery = firebase.database().ref('ticket_edits').orderByChild('randomId').equalTo(ticket.randomId);
         window._ticketEdicionesListener = function(snapshot) {
             const edits = [];
             snapshot.forEach(child => {
                 const edit = child.val();
-                if (edit.randomId === ticket.randomId) {
-                    edits.push(edit);
-                }
+                edits.push(edit);
             });
             edits.sort((a, b) => (b.fecha + ' ' + b.hora).localeCompare(a.fecha + ' ' + a.hora));
             if (edits.length === 0) {
@@ -3965,12 +3939,14 @@ function editTicket(randomId) {
             html += '</tbody></table>';
             historialBody.innerHTML = html;
         };
-        firebase.database().ref('ticket_edits').on('value', window._ticketEdicionesListener);
+        window._ticketEdicionesQuery.on('value', window._ticketEdicionesListener);
         // Limpiar el listener al cerrar el modal
         const closeBtn = modal.querySelector('.close-modal');
         if (closeBtn) {
             closeBtn.addEventListener('click', () => {
-                firebase.database().ref('ticket_edits').off('value', window._ticketEdicionesListener);
+                if (window._ticketEdicionesQuery && window._ticketEdicionesListener) {
+                    window._ticketEdicionesQuery.off('value', window._ticketEdicionesListener);
+                }
             });
         }
     } else if (historialContainer) {
@@ -4015,7 +3991,7 @@ function saveEditedTicket(ticket) {
     // Guardar la sección y filtro activos antes de actualizar
     const currentSection = document.querySelector('.content section.active');
     const currentFilterBtn = document.querySelector('.filter-btn.active');
-    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
     
     // Mostrar indicador de carga
     const saveButton = document.querySelector('.btn-save');
@@ -4552,7 +4528,7 @@ function confirmDeleteByFirebaseKey(firebaseKey) {
     }
     const currentSection = document.querySelector('.content section.active');
     const currentFilterBtn = document.querySelector('.filter-btn.active');
-    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
     const deleteButton = document.querySelector('.btn-delete');
     if (deleteButton) {
         showLoadingButton(deleteButton);
@@ -4647,7 +4623,7 @@ function initEmpresaSelector() {
             
             // Refrescar vista actual sin recargar datos de Firebase
             const currentFilterBtn = document.querySelector('.filter-btn.active');
-            const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+            const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
             
             // Re-renderizar tickets con el nuevo filtro de empresa
             renderTickets(currentFilter);
@@ -5987,7 +5963,7 @@ function confirmEndConsultationByFirebaseKey(firebaseKey) {
 
     const currentSection = document.querySelector('.content section.active');
     const currentFilterBtn = document.querySelector('.filter-btn.active');
-    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'todos';
+    const currentFilter = currentFilterBtn ? currentFilterBtn.getAttribute('data-filter') : 'espera';
     const endButton = document.querySelector('.btn-save');
     
     if (endButton) {
@@ -6128,23 +6104,13 @@ function navigateToConsultas() {
         filterDateInput.value = getLocalDateString();
     }
     
-    // Configurar filtro por defecto según rol
-    const userRole = sessionStorage.getItem('userRole');
     document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
     
-    if (userRole === 'admin') {
-        if (typeof renderTickets === 'function') {
-            renderTickets('todos');
-        }
-        const todosBtn = document.querySelector('.filter-btn[data-filter="todos"]');
-        if (todosBtn) todosBtn.classList.add('active');
-    } else {
-        if (typeof renderTickets === 'function') {
-            renderTickets('espera');
-        }
-        const esperaBtn = document.querySelector('.filter-btn[data-filter="espera"]');
-        if (esperaBtn) esperaBtn.classList.add('active');
+    if (typeof renderTickets === 'function') {
+        renderTickets('espera');
     }
+    const esperaBtnNav2 = document.querySelector('.filter-btn[data-filter="espera"]');
+    if (esperaBtnNav2) esperaBtnNav2.classList.add('active');
     
     // Cerrar sidebar en móviles después de navegar
     if (window.innerWidth <= 980) {
@@ -6506,6 +6472,22 @@ window.addEventListener('DOMContentLoaded', function() {
   // ========== MÓDULO DE INYECTABLES ==========
   // Referencia activa del listener para evitar cargar datos de días previos
   let currentInyectablesRef = null;
+  let currentInyectablesListeners = null;
+  let currentInyectablesDataMap = new Map();
+
+  function detachInyectablesListeners() {
+    if (currentInyectablesRef && currentInyectablesListeners) {
+      currentInyectablesRef.off('child_added', currentInyectablesListeners.handleChildAdded);
+      currentInyectablesRef.off('child_changed', currentInyectablesListeners.handleChildChanged);
+      currentInyectablesRef.off('child_removed', currentInyectablesListeners.handleChildRemoved);
+    }
+    currentInyectablesListeners = null;
+  }
+
+  function renderInyectablesFromMap() {
+    const inyectables = Array.from(currentInyectablesDataMap.entries()).map(([key, value]) => ({ id: key, ...value }));
+    displayInyectablesTable(inyectables);
+  }
   
   // Función de navegación para inyectables
   window.navigateToInyectables = function(sectionId, buttonId) {
@@ -6739,9 +6721,7 @@ window.addEventListener('DOMContentLoaded', function() {
     let ref = database.ref('inyectables');
 
     // Desenganchar listener anterior para evitar cargas acumuladas
-    if (currentInyectablesRef) {
-      currentInyectablesRef.off('value');
-    }
+    detachInyectablesListeners();
 
     // Consulta filtrada por fecha para no cargar el histórico completo
     if (targetDate) {
@@ -6749,12 +6729,35 @@ window.addEventListener('DOMContentLoaded', function() {
     }
 
     currentInyectablesRef = ref;
+    currentInyectablesDataMap.clear();
 
-    ref.on('value', (snapshot) => {
+    // Carga inicial única + sincronización incremental para evitar recargas completas.
+    ref.once('value', (snapshot) => {
       const data = snapshot.val();
-      const inyectables = data ? Object.entries(data).map(([key, value]) => ({ id: key, ...value })) : [];
-      displayInyectablesTable(inyectables);
+      currentInyectablesDataMap.clear();
+      if (data) {
+        Object.entries(data).forEach(([key, value]) => currentInyectablesDataMap.set(key, value));
+      }
+      renderInyectablesFromMap();
     });
+
+    const handleChildAdded = (snapshot) => {
+      currentInyectablesDataMap.set(snapshot.key, snapshot.val());
+      renderInyectablesFromMap();
+    };
+    const handleChildChanged = (snapshot) => {
+      currentInyectablesDataMap.set(snapshot.key, snapshot.val());
+      renderInyectablesFromMap();
+    };
+    const handleChildRemoved = (snapshot) => {
+      currentInyectablesDataMap.delete(snapshot.key);
+      renderInyectablesFromMap();
+    };
+
+    currentInyectablesListeners = { handleChildAdded, handleChildChanged, handleChildRemoved };
+    ref.on('child_added', handleChildAdded);
+    ref.on('child_changed', handleChildChanged);
+    ref.on('child_removed', handleChildRemoved);
   }
   
   // Mostrar tabla de inyectables

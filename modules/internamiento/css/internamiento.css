@@ -8,42 +8,35 @@
    VARIABLES CSS - PALETA DE COLORES (Consistente con el sistema)
    ============================================================ */
 :root {
-    /* Colores principales - Consistentes con index.css y quirofano.css */
-    --internamiento-primary: #3f51b5;
-    --internamiento-secondary: #5c6bc0;
-    --internamiento-accent: #7986cb;
-    --internamiento-light: #e8eaf6;
-    --internamiento-dark: #303f9f;
-    --internamiento-hover: #3949ab;
-    
-    /* Estados de internamiento */
-    --internamiento-activo: #4caf50;
-    --internamiento-critico: #f44336;
-    --internamiento-alta: #ff9800;
+    --internamiento-primary: var(--primary-color, #4285f4);
+    --internamiento-secondary: var(--primary-gradient-end, #5a9cf2);
+    --internamiento-accent: var(--consultorio-color, #42a5f5);
+    --internamiento-light: var(--surface-muted, #eceff1);
+    --internamiento-dark: var(--primary-hover, #3367d6);
+    --internamiento-hover: var(--primary-hover, #3367d6);
+
+    --internamiento-activo: var(--terminado-color, #66bb6a);
+    --internamiento-critico: var(--urgencia-alta, #f44336);
+    --internamiento-alta: var(--espera-color, #ff9800);
     --internamiento-egresado: #9e9e9e;
-    
-    /* Colores de acción */
-    --internamiento-success: #4caf50;
-    --internamiento-warning: #ff9800;
-    --internamiento-danger: #f44336;
-    --internamiento-info: #2196f3;
-    
-    /* Fondos y superficies */
-    --internamiento-bg: #f8f9fa;
-    --internamiento-card-bg: #ffffff;
-    --internamiento-border: #e0e0e0;
-    
-    /* Textos */
-    --internamiento-text: #333333;
-    --internamiento-text-secondary: #666666;
+
+    --internamiento-success: var(--secondary-color, #34a853);
+    --internamiento-warning: var(--espera-color, #ff9800);
+    --internamiento-danger: var(--accent-color, #ea4335);
+    --internamiento-info: var(--primary-color, #4285f4);
+
+    --internamiento-bg: var(--surface-page, #f9f9f9);
+    --internamiento-card-bg: var(--surface-card, #ffffff);
+    --internamiento-border: var(--border-subtle, #e0e0e0);
+
+    --internamiento-text: var(--dark-color, #202124);
+    --internamiento-text-secondary: var(--dark-gray, #5f6368);
     --internamiento-text-muted: #999999;
-    
-    /* Sombras */
-    --internamiento-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-    --internamiento-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.12);
-    
-    /* Transiciones */
-    --internamiento-transition: all 0.3s ease;
+
+    --internamiento-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.08));
+    --internamiento-shadow-hover: var(--shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+
+    --internamiento-transition: var(--transition, all 0.3s ease);
 }
 
 /* ============================================================
@@ -54,7 +47,7 @@
     padding: 20px;
     background: var(--internamiento-bg);
     min-height: 100vh;
-    font-family: 'Poppins', 'Segoe UI', Arial, sans-serif;
+    font-family: var(--font-body, 'Lexend', 'Segoe UI', system-ui, sans-serif);
 }
 
 #internamientosSection .int-container {
@@ -76,6 +69,7 @@
 }
 
 #internamientosSection .section-header h2 {
+    font-family: var(--font-display, var(--font-body));
     font-size: 1.8rem;
     color: var(--internamiento-primary);
     margin: 0;
@@ -146,7 +140,7 @@
 #internamientosSection #buscarInternamiento:focus {
     outline: none;
     border-color: var(--internamiento-primary);
-    box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.15);
+    box-shadow: var(--primary-focus-shadow, 0 0 0 3px rgba(66, 133, 244, 0.2));
 }
 
 /* ============================================================
@@ -403,7 +397,7 @@
 #internamientosSection .form-group textarea:focus {
     outline: none;
     border-color: var(--internamiento-primary);
-    box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.1);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
 }
 
 #internamientosSection .form-group textarea {
@@ -500,12 +494,12 @@
 #internamientosSection .btn-primary {
     background: var(--internamiento-primary);
     color: white;
-    box-shadow: 0 2px 8px rgba(63, 81, 181, 0.3);
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
 }
 
 #internamientosSection .btn-primary:hover {
     background: var(--internamiento-hover);
-    box-shadow: 0 4px 12px rgba(63, 81, 181, 0.4);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
 }
 
 #internamientosSection .btn-secondary {
@@ -562,13 +556,13 @@
 
 /* Botones de acción especiales */
 .btn-turno {
-    background: #5c6bc0 !important;
+    background: var(--internamiento-secondary) !important;
     color: white !important;
-    box-shadow: 0 2px 8px rgba(92, 107, 192, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(90, 156, 242, 0.3) !important;
 }
 
 .btn-turno:hover {
-    background: #3f51b5 !important;
+    background: var(--internamiento-primary) !important;
 }
 
 .btn-medicacion {
@@ -724,7 +718,7 @@
 
 #panelHeaderContainer .peso-hoy-tab:hover {
     background: #e8eaf6 !important;
-    border-color: #3949ab !important;
+    border-color: var(--internamiento-hover) !important;
 }
 
 /* Grid de acciones */
@@ -982,7 +976,7 @@
 .modal-overlay .modal-content textarea:focus {
     outline: none;
     border-color: var(--internamiento-primary);
-    box-shadow: 0 0 0 3px rgba(63, 81, 181, 0.1);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
 }
 
 .modal-overlay .modal-content label {
@@ -1029,12 +1023,12 @@
 .modal-overlay .btn-primary {
     background: var(--internamiento-primary) !important;
     color: white !important;
-    box-shadow: 0 2px 8px rgba(63, 81, 181, 0.3) !important;
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3) !important;
 }
 
 .modal-overlay .btn-primary:hover {
     background: var(--internamiento-hover) !important;
-    box-shadow: 0 4px 12px rgba(63, 81, 181, 0.4) !important;
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4) !important;
 }
 
 .modal-overlay .btn-secondary {
@@ -1305,7 +1299,7 @@
     padding: 20px 24px;
     border-radius: 12px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 14px rgba(63, 81, 181, 0.25);
+    box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25);
     display: flex;
     align-items: center;
     gap: 16px;
@@ -1472,7 +1466,7 @@
     padding: 20px 24px;
     border-radius: 12px;
     margin-bottom: 20px;
-    box-shadow: 0 4px 14px rgba(63, 81, 181, 0.25);
+    box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25);
     display: flex;
     align-items: center;
     gap: 16px;
@@ -1955,7 +1949,7 @@
     padding: 15px 20px;
     border-radius: 10px;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-    border-left: 4px solid #5c6bc0;
+    border-left: 4px solid var(--internamiento-secondary);
     margin-bottom: 20px;
 }
 
@@ -1970,7 +1964,7 @@
 }
 
 .visitas-date-filter label i {
-    color: #5c6bc0;
+    color: var(--internamiento-secondary);
     font-size: 1.1rem;
 }
 
@@ -1988,13 +1982,13 @@
 }
 
 .visitas-date-filter input[type="date"]:hover {
-    border-color: #5c6bc0;
+    border-color: var(--internamiento-secondary);
 }
 
 .visitas-date-filter input[type="date"]:focus {
     outline: none;
-    border-color: #5c6bc0;
-    box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.15);
+    border-color: var(--internamiento-secondary);
+    box-shadow: 0 0 0 3px rgba(90, 156, 242, 0.15);
 }
 
 /* Filtros de visitas */
@@ -2027,9 +2021,9 @@
 }
 
 .visita-filter-btn.active {
-    background: linear-gradient(135deg, #5c6bc0, #3f51b5);
+    background: linear-gradient(135deg, var(--internamiento-secondary), var(--internamiento-primary));
     color: white;
-    box-shadow: 0 4px 12px rgba(92, 107, 192, 0.3);
+    box-shadow: 0 4px 12px rgba(90, 156, 242, 0.3);
 }
 
 .visita-filter-btn i {
@@ -2043,23 +2037,23 @@
 
 .visitas-day-header {
     background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
-    border-left: 4px solid #5c6bc0;
+    border-left: 4px solid var(--internamiento-secondary);
     padding: 12px 20px;
     border-radius: 10px;
     margin-bottom: 15px;
     display: flex;
     align-items: center;
     gap: 12px;
-    box-shadow: 0 2px 6px rgba(92, 107, 192, 0.15);
+    box-shadow: 0 2px 6px rgba(90, 156, 242, 0.15);
 }
 
 .visitas-day-header i {
-    color: #3f51b5;
+    color: var(--internamiento-primary);
     font-size: 1.2rem;
 }
 
 .visitas-day-header h3 {
-    color: #3949ab;
+    color: var(--internamiento-hover);
     font-size: 1.1rem;
     font-weight: 600;
     margin: 0;
@@ -2068,7 +2062,7 @@
 .visitas-day-header .visitas-count {
     margin-left: auto;
     background: white;
-    color: #5c6bc0;
+    color: var(--internamiento-secondary);
     padding: 4px 12px;
     border-radius: 15px;
     font-size: 0.85rem;
@@ -2083,7 +2077,7 @@
     margin-bottom: 12px;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
-    border-left: 5px solid #5c6bc0;
+    border-left: 5px solid var(--internamiento-secondary);
     position: relative;
     overflow: hidden;
 }
@@ -2095,7 +2089,7 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background: linear-gradient(135deg, rgba(92, 107, 192, 0.03) 0%, rgba(63, 81, 181, 0.03) 100%);
+    background: linear-gradient(135deg, rgba(90, 156, 242, 0.03) 0%, rgba(66, 133, 244, 0.03) 100%);
     opacity: 0;
     transition: opacity 0.3s ease;
     pointer-events: none;
@@ -2103,7 +2097,7 @@
 
 .visita-card:hover {
     transform: translateY(-3px);
-    box-shadow: 0 6px 20px rgba(92, 107, 192, 0.2);
+    box-shadow: 0 6px 20px rgba(90, 156, 242, 0.2);
 }
 
 .visita-card:hover::before {
@@ -2136,7 +2130,7 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    color: #5c6bc0;
+    color: var(--internamiento-secondary);
     font-weight: 600;
     font-size: 0.95rem;
 }
@@ -2207,7 +2201,7 @@
 }
 
 .visita-card-info-label i {
-    color: #5c6bc0;
+    color: var(--internamiento-secondary);
     font-size: 0.85rem;
 }
 
@@ -2220,7 +2214,7 @@
 /* Motivo de visita */
 .visita-card-motivo {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-left: 3px solid #5c6bc0;
+    border-left: 3px solid var(--internamiento-secondary);
     padding: 12px 15px;
     border-radius: 8px;
     margin-top: 12px;
@@ -2239,7 +2233,7 @@
 }
 
 .visita-card-motivo-label i {
-    color: #5c6bc0;
+    color: var(--internamiento-secondary);
 }
 
 .visita-card-motivo-text {
@@ -2267,7 +2261,7 @@
 }
 
 .visita-card-patient i {
-    color: #5c6bc0;
+    color: var(--internamiento-secondary);
     font-size: 1rem;
 }
 
@@ -2291,13 +2285,13 @@
 }
 
 .visita-estado-select-card:hover {
-    border-color: #5c6bc0;
+    border-color: var(--internamiento-secondary);
 }
 
 .visita-estado-select-card:focus {
     outline: none;
-    border-color: #5c6bc0;
-    box-shadow: 0 0 0 3px rgba(92, 107, 192, 0.15);
+    border-color: var(--internamiento-secondary);
+    box-shadow: 0 0 0 3px rgba(90, 156, 242, 0.15);
 }
 
 /* Empty state para visitas */
@@ -2332,7 +2326,7 @@
 /* Contador de resultados */
 .visitas-results-count {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-    border-left: 4px solid #5c6bc0;
+    border-left: 4px solid var(--internamiento-secondary);
     padding: 12px 18px;
     border-radius: 10px;
     margin-bottom: 20px;
@@ -2344,7 +2338,7 @@
 }
 
 .visitas-results-count i {
-    color: #5c6bc0;
+    color: var(--internamiento-secondary);
     font-size: 1.1rem;
 }
 

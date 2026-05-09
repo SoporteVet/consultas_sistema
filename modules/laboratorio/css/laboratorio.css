@@ -2,24 +2,23 @@
 
 /* ===== ESTILOS PARA SISTEMA DE LABORATORIO ===== */
 
-/* Variables CSS específicas para laboratorio */
+/* Variables laboratorio — alineadas a modules/core/css/theme.css (celeste #4285f4) */
 :root {
-  --lab-primary: #42a5f5;
-  --lab-secondary: #1976d2;
-  --lab-accent: #42a5f5;
-  --lab-warning: #ffa726;
-  --lab-danger: #e53935;
-  --lab-info: #42a5f5;
-  --lab-light: #f8f9fa;
-  --lab-dark: #202124;
-  --lab-shadow: 0 4px 12px rgba(66, 165, 245, 0.1);
-  --lab-transition: all 0.3s ease;
-  
-  /* Colores para estadísticas del laboratorio */
-  --lab-stat-blue: #007bff;
-  --lab-stat-bg: #ffffff;
-  --lab-stat-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  --lab-stat-border: #e9ecef;
+  --lab-primary: var(--primary-color, #4285f4);
+  --lab-secondary: var(--primary-hover, #3367d6);
+  --lab-accent: var(--consultorio-color, #42a5f5);
+  --lab-warning: var(--espera-color, #ffa726);
+  --lab-danger: var(--urgencia-alta, #e53935);
+  --lab-info: var(--primary-color, #4285f4);
+  --lab-light: var(--surface-page, #f9f9f9);
+  --lab-dark: var(--dark-color, #202124);
+  --lab-shadow: var(--shadow, 0 4px 12px rgba(66, 133, 244, 0.12));
+  --lab-transition: var(--transition, all 0.3s ease);
+
+  --lab-stat-blue: var(--primary-color, #4285f4);
+  --lab-stat-bg: var(--surface-card, #ffffff);
+  --lab-stat-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.1));
+  --lab-stat-border: var(--border-subtle, #e9ecef);
 }
 
 /* Botones de navegación de laboratorio */
@@ -193,9 +192,9 @@ nav button#verLabBtn:hover::before {
 }
 
 .lab-ticket-priority.rutina {
-  background: #42a5f5;
+  background: var(--lab-primary);
   color: white;
-  border: 2px solid #42a5f5;
+  border: 2px solid var(--lab-primary);
 }
 
 .lab-ticket-priority.urgente {
@@ -281,8 +280,8 @@ nav button#verLabBtn:hover::before {
 
 .paquete-badge.paquete-limpieza {
   background: #e3f2fd;
-  color: #1976d2;
-  border: 1px solid #2196f3;
+  color: var(--lab-secondary);
+  border: 1px solid var(--lab-accent);
 }
 
 /* Estilos para servicios con checkboxes */
@@ -444,9 +443,9 @@ nav button#verLabBtn:hover::before {
 }
 
 .lab-ticket-status.procesando {
-  background: #007bff;
+  background: var(--lab-primary);
   color: white;
-  border: 2px solid #007bff;
+  border: 2px solid var(--lab-primary);
   animation: processing 3s infinite;
 }
 
@@ -895,7 +894,7 @@ nav button#verLabBtn:hover::before {
 }
 
 .cliente-search-item.selected {
-  background: #4285f4;
+  background: var(--lab-primary);
   color: white;
 }
 
@@ -1055,7 +1054,7 @@ nav button#verLabBtn:hover::before {
 
 .cliente-mascota {
     font-weight: 500;
-    color: #1a73e8;
+    color: var(--lab-primary);
 }
 
 /* Indicador de actualización reciente */
@@ -1210,7 +1209,7 @@ nav button#verLabBtn:hover::before {
 }
 
 .category-header {
-  background: linear-gradient(135deg, #42a5f5 0%, #1976d2 100%);
+  background: linear-gradient(135deg, var(--lab-primary) 0%, var(--lab-secondary) 100%);
   color: white;
   padding: 12px 15px;
   font-weight: 600;
@@ -1247,7 +1246,7 @@ nav button#verLabBtn:hover::before {
 
 .service-item.selected {
   background: #e3f2fd;
-  border-left: 4px solid #42a5f5;
+  border-left: 4px solid var(--lab-primary);
 }
 
 .service-item.selected:hover {
@@ -1261,7 +1260,7 @@ nav button#verLabBtn:hover::before {
   width: 18px;
   height: 18px;
   cursor: pointer;
-  accent-color: #42a5f5;
+  accent-color: var(--lab-primary);
 }
 
 /* Información del servicio */
@@ -1287,7 +1286,7 @@ nav button#verLabBtn:hover::before {
 
 .service-location {
   font-size: 0.8rem;
-  color: #007bff;
+  color: var(--lab-primary);
   font-weight: 500;
   font-style: italic;
 }
@@ -1295,7 +1294,7 @@ nav button#verLabBtn:hover::before {
 /* Precio del servicio */
 .service-price {
   font-weight: 700;
-  color: #42a5f5;
+  color: var(--lab-primary);
   font-size: 1rem;
   white-space: nowrap;
   margin-left: 10px;
@@ -1341,7 +1340,7 @@ nav button#verLabBtn:hover::before {
 }
 
 .selected-service-price {
-  color: #42a5f5;
+  color: var(--lab-primary);
   font-size: 0.85rem;
   font-weight: 600;
 }
@@ -1369,7 +1368,7 @@ nav button#verLabBtn:hover::before {
 
 /* Total de precio */
 .total-price {
-  background: #42a5f5;
+  background: var(--lab-primary);
   color: white;
   padding: 12px 15px;
   border-radius: 6px;
@@ -1394,7 +1393,7 @@ nav button#verLabBtn:hover::before {
 /* Campo de búsqueda */
 .services-search input:focus {
   outline: none;
-  border-color: #42a5f5;
+  border-color: var(--lab-primary);
   box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.1);
 }
 
@@ -1411,7 +1410,7 @@ nav button#verLabBtn:hover::before {
 
 .services-filter select:focus {
   outline: none;
-  border-color: #42a5f5;
+  border-color: var(--lab-primary);
   box-shadow: 0 0 0 3px rgba(66, 165, 245, 0.1);
 }
 
@@ -1658,7 +1657,7 @@ nav button#verLabBtn:hover::before {
   background: #e3f2fd;
   border-radius: 4px;
   font-weight: 500;
-  color: #1976d2;
+  color: var(--lab-secondary);
 }
 
 .ticket-service-none {
@@ -2200,7 +2199,7 @@ nav button#verLabBtn:hover::before {
 
 .pendientes-doctor-selector label {
   font-weight: 600;
-  color: #1976d2;
+  color: var(--lab-secondary);
   font-size: 0.97rem;
   white-space: nowrap;
 }
@@ -2219,7 +2218,7 @@ nav button#verLabBtn:hover::before {
 
 .pendientes-doctor-selector select:focus {
   outline: none;
-  border-color: #1976d2;
+  border-color: var(--lab-secondary);
   box-shadow: 0 0 0 2px rgba(25, 118, 210, 0.15);
 }
 
@@ -2276,7 +2275,7 @@ nav button#verLabBtn:hover::before {
 .resumen-numero {
   font-size: 2rem;
   font-weight: 700;
-  color: #1976d2;
+  color: var(--lab-secondary);
   line-height: 1;
 }
 
@@ -2318,7 +2317,7 @@ nav button#verLabBtn:hover::before {
 .pendiente-card {
   background: #fff;
   border: 1px solid #e0e0e0;
-  border-left: 5px solid #1976d2;
+  border-left: 5px solid var(--lab-secondary);
   border-radius: 10px;
   padding: 0;
   overflow: hidden;
@@ -2431,7 +2430,7 @@ nav button#verLabBtn:hover::before {
 }
 
 .pendiente-info-item i {
-  color: #1976d2;
+  color: var(--lab-secondary);
   flex-shrink: 0;
   margin-top: 2px;
   width: 16px;
@@ -2439,7 +2438,7 @@ nav button#verLabBtn:hover::before {
 }
 
 .pendiente-contacto a {
-  color: #1976d2;
+  color: var(--lab-secondary);
   text-decoration: none;
   font-weight: 500;
 }

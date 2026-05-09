@@ -16,11 +16,7 @@
 </head>
 <body>
   <!-- Botón menú hamburguesa para dispositivos móviles -->
-<button id="menuToggle" class="menu-toggle" title="Mostrar/Ocultar menú" style="display:none;">
-  <i class="fas fa-bars"></i>
-</button>
-  <!-- Botón para ocultar sidebar (todos los usuarios excepto recepción) -->
-  <button id="menuToggleBtn" class="menu-toggle" style="display:none;">
+  <button id="menuToggleBtn" class="menu-toggle" style="display:none;" title="Menú o cerrar panel">
     <i class="fas fa-angle-double-left"></i> 
   </button>
   <div class="main-container">
@@ -78,7 +74,7 @@
           </button>
           <div id="consentimientosSubmenu" class="nav-submenu">
             <button id="crearConsentimientoBtn" class="submenu-btn" onclick="navigateToSection('consentimientosSection', 'crearConsentimientoBtn');">
-              <i class="fas fa-file-plus"></i> Crear Consentimiento
+              <i class="fas fa-plus-circle" aria-hidden="true"></i> Crear Consentimiento
             </button>
           </div>
         </div>

@@ -134,10 +134,6 @@ class FirebaseRealtimeOptimizer {
         const ticketsListener = {
             ref: window.ticketsRef,
             handlers: {
-                value: this.debounce((snapshot) => {
-                    this.handleTicketsSnapshot(snapshot);
-                }, 300),
-                
                 child_added: this.debounce((snapshot) => {
                     this.handleTicketAdded(snapshot);
                 }, 100),
@@ -151,6 +147,11 @@ class FirebaseRealtimeOptimizer {
                 }
             }
         };
+
+        // Carga inicial única para evitar lecturas completas repetidas.
+        ticketsListener.ref.once('value', (snapshot) => {
+            this.handleTicketsSnapshot(snapshot);
+        });
         
         // Configurar listeners
         Object.entries(ticketsListener.handlers).forEach(([event, handler]) => {
@@ -173,10 +174,6 @@ class FirebaseRealtimeOptimizer {
         const labListener = {
             ref: window.labTicketsRef,
             handlers: {
-                value: this.debounce((snapshot) => {
-                    this.handleLabTicketsSnapshot(snapshot);
-                }, 300),
-                
                 child_added: this.debounce((snapshot) => {
                     this.handleLabTicketAdded(snapshot);
                 }, 100),
@@ -186,6 +183,11 @@ class FirebaseRealtimeOptimizer {
                 }, 200)
             }
         };
+
+        // Carga inicial única para evitar lecturas completas repetidas.
+        labListener.ref.once('value', (snapshot) => {
+            this.handleLabTicketsSnapshot(snapshot);
+        });
         
         // Configurar listeners
         Object.entries(labListener.handlers).forEach(([event, handler]) => {
@@ -208,11 +210,22 @@ class FirebaseRealtimeOptimizer {
         const quirofanoListener = {
             ref: window.quirofanoFirebaseRef,
             handlers: {
-                value: this.debounce((snapshot) => {
-                    this.handleQuirofanoSnapshot(snapshot);
-                }, 300)
+                child_added: this.debounce((snapshot) => {
+                    this.handleQuirofanoTicketAdded(snapshot);
+                }, 100),
+                child_changed: this.debounce((snapshot) => {
+                    this.handleQuirofanoTicketChanged(snapshot);
+                }, 200),
+                child_removed: (snapshot) => {
+                    this.handleQuirofanoTicketRemoved(snapshot);
+                }
             }
         };
+
+        // Carga inicial única para evitar lecturas completas repetidas.
+        quirofanoListener.ref.once('value', (snapshot) => {
+            this.handleQuirofanoSnapshot(snapshot);
+        });
         
         // Configurar listeners
         Object.entries(quirofanoListener.handlers).forEach(([event, handler]) => {
@@ -398,6 +411,37 @@ class FirebaseRealtimeOptimizer {
             // Error silencioso
         }
     }
+
+    handleQuirofanoTicketAdded(snapshot) {
+        const ticket = { firebaseKey: snapshot.key, ...snapshot.val() };
+        if (!window.quirofanoTickets) {
+            window.quirofanoTickets = [];
+        }
+        if (!window.quirofanoTickets.some((t) => t.firebaseKey === ticket.firebaseKey)) {
+            window.quirofanoTickets.push(ticket);
+            this.updateUI('quirofano', 'add', ticket);
+        }
+    }
+
+    handleQuirofanoTicketChanged(snapshot) {
+        if (!window.quirofanoTickets) return;
+        const updatedTicket = { firebaseKey: snapshot.key, ...snapshot.val() };
+        const index = window.quirofanoTickets.findIndex((t) => t.firebaseKey === updatedTicket.firebaseKey);
+        if (index !== -1) {
+            window.quirofanoTickets[index] = updatedTicket;
+            this.updateUI('quirofano', 'change', updatedTicket);
+        }
+    }
+
+    handleQuirofanoTicketRemoved(snapshot) {
+        if (!window.quirofanoTickets) return;
+        const index = window.quirofanoTickets.findIndex((t) => t.firebaseKey === snapshot.key);
+        if (index !== -1) {
+            const removedTicket = window.quirofanoTickets[index];
+            window.quirofanoTickets.splice(index, 1);
+            this.updateUI('quirofano', 'remove', removedTicket);
+        }
+    }
     
     // Actualización de UI optimizada
     updateUI(type, action = 'refresh', data = null) {
@@ -435,7 +479,7 @@ class FirebaseRealtimeOptimizer {
     updateTicketsUI(action, data) {
         // Actualizar vista principal de tickets
         if (typeof window.renderTickets === 'function') {
-            const currentFilter = document.querySelector('.filter-btn.active')?.getAttribute('data-filter') || 'todos';
+            const currentFilter = document.querySelector('.filter-btn.active')?.getAttribute('data-filter') || 'espera';
             window.renderTickets(currentFilter);
         }
         

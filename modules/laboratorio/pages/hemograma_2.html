@@ -1426,24 +1426,33 @@ function actualizarColor(inputId, refId) {
                     document.getElementById('neutrofilos_porcentaje').classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
                 }
                 
-                // Lista de parámetros que pueden necesitar actualización de color
-                const parametros = [
-                    'leucocitos', 'linfocitos', 'monocitos', 'neutrofilos', 'eosinofilos', 'basofilos',
-                    'linfocitos_porcentaje', 'monocitos_porcentaje', 'neutrofilos_porcentaje', 
-                    'eosinofilos_porcentaje', 'basofilos_porcentaje'
-                ];
-                
-                // Actualizar colores solo para elementos que existen
-                parametros.forEach(param => {
+                // Mapa explícito de cada parámetro a su celda de referencia.
+                // OJO: usar un mapa, no construir el ID con concatenación, porque
+                // varios IDs reales mezclan mayúsculas/minúsculas (refLeucocitos,
+                // refMonocitos, refNeutrofilosPorcentaje, etc.) y la versión en
+                // minúscula podría apuntar accidentalmente a otra celda
+                // (ej. `refmonocitos` es el rango del porcentaje, no del #).
+                const parametrosRefMap = {
+                    leucocitos: 'refLeucocitos',
+                    linfocitos: 'reflinfocitos',
+                    monocitos: 'refMonocitos',
+                    neutrofilos: 'refneutrofilos',
+                    eosinofilos: 'refeosinofilos',
+                    basofilos: 'refbasofilos',
+                    linfocitos_porcentaje: 'reflinfocitos2',
+                    monocitos_porcentaje: 'refmonocitos',
+                    neutrofilos_porcentaje: 'refNeutrofilosPorcentaje',
+                    eosinofilos_porcentaje: 'refEosinofilosPorcentaje',
+                    basofilos_porcentaje: 'refBasofilosPorcentaje'
+                };
+
+                Object.entries(parametrosRefMap).forEach(([param, refId]) => {
                     const elemento = document.getElementById(param);
-                    if (elemento) {
-                        // Intentar actualizar el color si la función existe
-                        const refId = 'ref' + param.replace('_', '');
-                        try {
-                            actualizarColor(param, refId);
-                        } catch (e) {
-                            // Silenciar errores de funciones no encontradas
-                        }
+                    if (!elemento) return;
+                    try {
+                        actualizarColor(param, refId);
+                    } catch (e) {
+                        // Silenciar errores de funciones no encontradas
                     }
                 });
                 
@@ -1634,22 +1643,26 @@ function calcularMPV() {
     var plaquetas = parseFloat(document.getElementById('plaquetas').value.replace(',', '.')) || 0;
 }
    function calcularMPV() {
-       var mpv = parseFloat(document.getElementById('mpv').value.replace(',', '.')) || 0;
-       cambiarColor(mpv, 'mpv', 7.0, 12.9);
+       const mpvElement = document.getElementById('mpv');
+       if (!mpvElement) return;
+       actualizarColor('mpv', 'refmpv');
    }
-   
+
    function calcularPDW() {
-       var pdw = parseFloat(document.getElementById('pdw').value.replace(',', '.')) || 0;
-       pdw.style.color = 'black';
-    }
-   
-    function calcularPCT() {
-    var pctElement = document.getElementById('pct');
-    var pct = parseFloat(pctElement.value.replace(',', '.')) || 0;
-    
-    // Aplicar el color al elemento, no al valor numérico
-    pctElement.style.color = 'black';
-}
+       const pdwElement = document.getElementById('pdw');
+       if (!pdwElement) return;
+       pdwElement.style.color = 'black';
+       pdwElement.style.fontWeight = pdwElement.value.trim() ? 'bold' : 'normal';
+       pdwElement.classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
+   }
+
+   function calcularPCT() {
+       const pctElement = document.getElementById('pct');
+       if (!pctElement) return;
+       pctElement.style.color = 'black';
+       pctElement.style.fontWeight = pctElement.value.trim() ? 'bold' : 'normal';
+       pctElement.classList.remove('valor-bajo', 'valor-alto', 'valor-normal');
+   }
 
 // Agregar esta función para el reemplazo automático punto → coma
 document.addEventListener('DOMContentLoaded', function() {

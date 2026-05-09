@@ -5,6 +5,7 @@ class PatientDatabase {
     constructor() {
         this.patientsRef = null;
         this.patients = new Map(); // Cache local de pacientes
+        this.pendingPatientFetches = new Map();
         this.initialized = false;
         this.currentFormType = 'consulta'; // Tipo de formulario activo
         this.init();
@@ -25,20 +26,8 @@ class PatientDatabase {
 
     setupListeners() {
         if (!this.patientsRef) return;
-        // Listener para cargar todos los pacientes
-        this.patientsRef.on('value', (snapshot) => {
-
-            if (snapshot.exists()) {
-                const data = snapshot.val();
-                this.patients.clear();
-                
-                Object.entries(data).forEach(([cedula, patientData]) => {
-                    this.patients.set(cedula, patientData);
-                });
-                
-                console.log(`📊 Cargados ${this.patients.size} pacientes en cache`);
-            }
-        });
+        // Evitar listener global de "pacientes" para no descargar toda la base en cada cambio.
+        // La carga se hace por cédula bajo demanda en ensurePatientInCache.
     }
 
     // Buscar paciente por cédula
@@ -47,6 +36,35 @@ class PatientDatabase {
         
         const normalizedCedula = cedula.trim();
         return this.patients.get(normalizedCedula) || null;
+    }
+
+    async ensurePatientInCache(cedula) {
+        if (!cedula || !this.initialized || !this.patientsRef) return null;
+        const normalizedCedula = cedula.trim();
+        if (!normalizedCedula) return null;
+
+        if (this.patients.has(normalizedCedula)) {
+            return this.patients.get(normalizedCedula);
+        }
+
+        if (this.pendingPatientFetches.has(normalizedCedula)) {
+            return this.pendingPatientFetches.get(normalizedCedula);
+        }
+
+        const fetchPromise = this.patientsRef.child(normalizedCedula).once('value')
+            .then((snapshot) => {
+                if (!snapshot.exists()) return null;
+                const patientData = snapshot.val();
+                this.patients.set(normalizedCedula, patientData);
+                return patientData;
+            })
+            .catch(() => null)
+            .finally(() => {
+                this.pendingPatientFetches.delete(normalizedCedula);
+            });
+
+        this.pendingPatientFetches.set(normalizedCedula, fetchPromise);
+        return fetchPromise;
     }
 
     // Buscar todas las mascotas de un paciente (sin duplicados)
@@ -533,10 +551,13 @@ class PatientDatabase {
         
         cedulaField.addEventListener('input', (e) => {
             clearTimeout(searchTimeout);
-            searchTimeout = setTimeout(() => {
+            searchTimeout = setTimeout(async () => {
                 const cedula = e.target.value.trim();
                 if (cedula.length >= 5) { // Buscar cuando tenga al menos 5 caracteres
-                    const patient = this.findPatientByCedula(cedula);
+                    let patient = this.findPatientByCedula(cedula);
+                    if (!patient) {
+                        patient = await this.ensurePatientInCache(cedula);
+                    }
                     if (patient) {
                         this.showPetSelector(cedula, formType);
                     } else {
@@ -549,10 +570,13 @@ class PatientDatabase {
             }, 500); // Esperar 500ms después de que el usuario deje de escribir
         });
 
-        cedulaField.addEventListener('blur', (e) => {
+        cedulaField.addEventListener('blur', async (e) => {
             const cedula = e.target.value.trim();
             if (cedula && cedula.length >= 5) {
-                const patient = this.findPatientByCedula(cedula);
+                let patient = this.findPatientByCedula(cedula);
+                if (!patient) {
+                    patient = await this.ensurePatientInCache(cedula);
+                }
                 if (patient) {
                     this.fillFormFromPatient(cedula, formType);
                 } else {
