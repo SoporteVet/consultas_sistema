@@ -718,9 +718,21 @@ async function captureLabReportPdfFromIframe() {
     throw new Error('El iframe no tiene URL.createObjectURL disponible.');
   }
 
-  const templateName =
+  const baseName =
     (labReportSelectedTemplate && LAB_REPORT_TEMPLATES[labReportSelectedTemplate]?.name) ||
     'Reporte';
+
+  // Para plantillas con selector interno (ej. Pruebas Rápidas) usar el texto
+  // de la opción seleccionada como nombre del examen en el archivo.
+  let templateName = baseName;
+  try {
+    const testSelector = cw.document.getElementById('templateSelector');
+    if (testSelector && testSelector.selectedIndex >= 0) {
+      const optionText = testSelector.options[testSelector.selectedIndex]?.text?.trim();
+      if (optionText) templateName = optionText;
+    }
+  } catch (_) {}
+
   const petName = (labReportSelectedClient?.mascota || 'Sin_nombre').toString();
   const apellido = primerApellidoDesdeNombre(
     labReportSelectedClient?.nombre || 'Sin_apellido'
@@ -846,7 +858,9 @@ function primerApellidoDesdeNombre(nombre) {
   if (partes.length === 0) return '';
   if (partes.length === 1) return partes[0];
   if (partes.length === 2) return partes[1];
-  return partes[2];
+  // 3+ partes (ej. "Aaron Torrez Moraga" o "Ana Maria Torrez Moraga"):
+  // el primer apellido es la penúltima palabra (antes del apellido materno).
+  return partes[partes.length - 2];
 }
 
 async function addCurrentReportToEmailQueue() {
