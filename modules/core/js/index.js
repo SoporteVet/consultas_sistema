@@ -1519,6 +1519,10 @@ document.addEventListener('DOMContentLoaded', function() {
 if (ticketForm) {
     ticketForm.addEventListener('submit', (e) => {
         e.preventDefault();
+        if (!ticketForm.checkValidity()) {
+            ticketForm.reportValidity();
+            return;
+        }
         addTicket();
     });
 }
@@ -2017,10 +2021,20 @@ function addTicket() {
         const nombre = document.getElementById('nombre').value;
         const mascota = document.getElementById('mascota').value;
         const cedula = document.getElementById('cedula').value;
+        const correo = (document.getElementById('correo')?.value || '').trim();
+        const telefono = (document.getElementById('telefono')?.value || '').trim();
+        if (!correo || !telefono) {
+            showNotification('Debe ingresar el correo electrónico y el teléfono del cliente.', 'error');
+            return;
+        }
         const motivo = document.getElementById('motivo').value;
         const motivoLlegada = document.getElementById('motivoLlegada')?.value || '';
         const estado = document.getElementById('estado').value;
         const tipoMascota = document.getElementById('tipoMascota').value;
+        if (tipoMascota === 'por_definir') {
+            showNotification('Debe seleccionar el tipo de mascota (especie). «Por definir» no es válido para crear el ticket.', 'error');
+            return;
+        }
         let urgencia = document.getElementById('urgencia')?.value || 'consulta';
         urgencia = urgencia.toLowerCase();
         const porCobrar = document.getElementById('porCobrar')?.value || '';
@@ -2058,6 +2072,8 @@ function addTicket() {
             nombre,
             mascota,
             cedula,
+            correo,
+            telefono,
             motivo,
             motivoLlegada,
             estado,
@@ -2118,8 +2134,6 @@ function addTicket() {
                 
                 // Guardar paciente en la base de datos relacional
                 if (window.patientDatabase && cedula) {
-                    const telefono = document.getElementById('telefono')?.value || '';
-                    const correo = document.getElementById('correo')?.value || '';
                     const raza = document.getElementById('raza')?.value || '';
                     const edad = document.getElementById('edad')?.value || '';
                     const peso = document.getElementById('peso')?.value || '';
@@ -2603,6 +2617,8 @@ function renderTickets(filter = 'espera', date = null) {
                 <div class="ticket-info">
                     <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
                     <p><i class="fas fa-id-card"></i> ${ticket.cedula}</p>
+                    ${ticket.correo ? `<p><i class="fas fa-envelope"></i> ${ticket.correo}</p>` : ''}
+                    ${ticket.telefono ? `<p><i class="fas fa-phone"></i> ${ticket.telefono}</p>` : ''}
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
@@ -3048,7 +3064,8 @@ function getTipoMascotaLabel(tipo) {
         'perro': 'Perro',
         'gato': 'Gato',
         'conejo': 'Conejo',
-        'otro': 'Otro'
+        'otro': 'Otro',
+        'por_definir': 'Por definir'
     };
     return tipos[tipo] || tipo || '';
 }
@@ -3300,6 +3317,8 @@ function editTicket(randomId) {
         nombre: ticket.nombre || '',
         mascota: ticket.mascota || '',
         cedula: ticket.cedula || '',
+        correo: ticket.correo || '',
+        telefono: ticket.telefono || '',
         idPaciente: ticket.idPaciente || '',
         fechaConsulta: ticket.fechaConsulta || '',
         horaConsulta: ticket.horaConsulta || '',
@@ -3468,6 +3487,17 @@ function editTicket(randomId) {
                         <input type="text" id="editCedula" value="${safeTicket.cedula}" required>
                     </div>
                 </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="editCorreo">Correo electrónico</label>
+                        <input type="email" id="editCorreo" value="${safeTicket.correo}">
+                    </div>
+                    <div class="form-group">
+                        <label for="editTelefono">Teléfono</label>
+                        <input type="tel" id="editTelefono" value="${safeTicket.telefono}" minlength="6">
+                    </div>
+                </div>
                 
                 <div class="form-row">
                     <div class="form-group">
@@ -3538,6 +3568,7 @@ function editTicket(randomId) {
                     <div class="form-group">
                         <label for="editTipoMascota">Tipo de Mascota</label>
                         <select id="editTipoMascota" required>
+                            <option value="por_definir" ${safeTicket.tipoMascota === 'por_definir' ? 'selected' : ''}>Por definir</option>
                             <option value="perro" ${safeTicket.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
                             <option value="gato" ${safeTicket.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
                             <option value="conejo" ${safeTicket.tipoMascota === 'conejo' ? 'selected' : ''}>Conejo</option>
@@ -3676,6 +3707,12 @@ function editTicket(randomId) {
     // Añadir event listener al formulario para guardar los cambios
     document.getElementById('editTicketForm').addEventListener('submit', async function(e) {
         e.preventDefault();
+
+        const editTipoMascotaVal = document.getElementById('editTipoMascota').value;
+        if (editTipoMascotaVal === 'por_definir') {
+            showNotification('Debe seleccionar el tipo de mascota (especie). «Por definir» no es válido.', 'error');
+            return;
+        }
         
         // Combinar doctor y asistente
         const editDoctorAtiende = document.getElementById('editDoctorAtiende').value;
@@ -3770,6 +3807,8 @@ function editTicket(randomId) {
             nombre: document.getElementById('editNombre').value,
             mascota: document.getElementById('editMascota').value,
             cedula: document.getElementById('editCedula').value,
+            correo: document.getElementById('editCorreo').value.trim(),
+            telefono: document.getElementById('editTelefono').value.trim(),
             idPaciente: document.getElementById('editIdPaciente').value,
             fechaConsulta: document.getElementById('editFecha').value,
             horaAtencion: ticket.horaAtencion || '',
@@ -3963,6 +4002,28 @@ function getTicketDiff(oldTicket, newTicket) {
         }
     });
     return diff;
+}
+
+function syncPatientFromConsultaTicket(ticket) {
+    if (!window.patientDatabase || !ticket || !String(ticket.cedula || '').trim() || !String(ticket.mascota || '').trim()) {
+        return;
+    }
+    window.patientDatabase.savePatientFromTicket({
+        cedula: String(ticket.cedula).trim(),
+        nombre: ticket.nombre || '',
+        telefono: String(ticket.telefono || '').trim(),
+        correo: String(ticket.correo || '').trim(),
+        mascota: String(ticket.mascota).trim(),
+        tipoMascota: ticket.tipoMascota || 'otro',
+        idPaciente: ticket.idPaciente || '',
+        raza: ticket.raza || '',
+        edad: ticket.edad || '',
+        peso: ticket.peso || '',
+        sexo: ticket.sexo || '',
+        fechaConsulta: ticket.fechaConsulta || '',
+        horaConsulta: ticket.horaConsulta || '',
+        horaLlegada: ticket.horaLlegada || ''
+    }).catch((err) => console.error('Error sincronizando datos del cliente:', err));
 }
 
 function saveEditedTicket(ticket) {
@@ -4206,6 +4267,7 @@ function saveEditedTicket(ticket) {
                             ...ticketToSave,
                             firebaseKey: ticket.firebaseKey
                         };
+                        syncPatientFromConsultaTicket(tickets[localTicketIndex]);
                     }
                     
                     closeModal();
@@ -4266,6 +4328,7 @@ function saveEditedTicket(ticket) {
                             ...ticketToSave,
                             firebaseKey: ticket.firebaseKey
                         };
+                        syncPatientFromConsultaTicket(tickets[localTicketIndex]);
                     }
                     
                     closeModal();
@@ -4313,6 +4376,7 @@ function saveEditedTicket(ticket) {
                     ...ticketToSave,
                     firebaseKey: ticket.firebaseKey
                 };
+                syncPatientFromConsultaTicket(tickets[localTicketIndex]);
             }
             
             closeModal();
