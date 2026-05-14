@@ -200,12 +200,24 @@
 
             <div class="form-row">
               <div class="form-group">
+                <label for="correo">Correo electrónico</label>
+                <input type="email" id="correo" name="correo" required autocomplete="email" placeholder="cliente@ejemplo.com">
+              </div>
+              <div class="form-group">
+                <label for="telefono">Teléfono</label>
+                <input type="tel" id="telefono" name="telefono" required autocomplete="tel" inputmode="tel" placeholder="Ej: 8888-8888" minlength="6" title="Ingrese un número de teléfono válido">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
                 <label for="mascota">Nombre de la Mascota</label>
                 <input type="text" id="mascota" required>
               </div>
               <div class="form-group">
                 <label for="tipoMascota">Tipo de Mascota</label>
                 <select id="tipoMascota" required>
+                  <option value="por_definir" selected>Por definir</option>
                   <option value="perro">Perro</option>
                   <option value="gato">Gato</option>
                   <option value="conejo">Conejo</option>
