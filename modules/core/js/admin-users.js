@@ -333,6 +333,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ========== GESTIÓN DE DOCTORES ==========
 
+function normalizePersonName(value) {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'object' && value.name != null) return String(value.name);
+  return String(value);
+}
+
 // Cargar lista de doctores desde Firebase
 async function loadDoctorsList() {
   const container = document.getElementById('doctorsListContainer');
@@ -353,8 +360,8 @@ async function loadDoctorsList() {
     // Convertir objeto a array y ordenar por nombre
     const doctorsArray = Object.keys(doctors).map(id => ({
       id,
-      name: doctors[id]
-    })).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      name: normalizePersonName(doctors[id])
+    })).sort((a, b) => a.name.localeCompare(b.name, 'es'));
     
     renderDoctorsList(doctorsArray);
   } catch (error) {
@@ -447,8 +454,8 @@ async function loadAssistantsList() {
     // Convertir objeto a array y ordenar por nombre
     const assistantsArray = Object.keys(assistants).map(id => ({
       id,
-      name: assistants[id]
-    })).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+      name: normalizePersonName(assistants[id])
+    })).sort((a, b) => a.name.localeCompare(b.name, 'es'));
     
     renderAssistantsList(assistantsArray);
   } catch (error) {
@@ -530,7 +537,7 @@ async function loadDoctorsIntoSelects() {
     
     if (!doctors) return;
     
-    const doctorsArray = Object.values(doctors).sort();
+    const doctorsArray = Object.values(doctors).map(normalizePersonName).sort((a, b) => a.localeCompare(b, 'es'));
     
     // IDs de todos los selects de doctores
     const selectIds = [
@@ -596,9 +603,9 @@ async function loadDoctorsAndAssistantsIntoRayosXSelect() {
     ]);
     const doctors = doctorsSnap.val() || {};
     const assistants = assistantsSnap.val() || {};
-    const doctorsArray = Object.values(doctors);
-    const assistantsArray = Object.values(assistants);
-    const combined = [...new Set([...doctorsArray, ...assistantsArray])].sort();
+    const doctorsArray = Object.values(doctors).map(normalizePersonName);
+    const assistantsArray = Object.values(assistants).map(normalizePersonName);
+    const combined = [...new Set([...doctorsArray, ...assistantsArray])].sort((a, b) => a.localeCompare(b, 'es'));
     const select = document.getElementById('internamientoDoctorRayosX');
     if (!select) return;
     const currentValue = select.value;
@@ -652,7 +659,7 @@ async function loadAssistantsIntoSelects() {
     const assistantsRef = firebase.database().ref('assistants');
     const snapshot = await assistantsRef.once('value');
     const assistants = snapshot.val();
-    const assistantsArray = assistants ? Object.values(assistants).sort() : [];
+    const assistantsArray = assistants ? Object.values(assistants).map(normalizePersonName).sort((a, b) => a.localeCompare(b, 'es')) : [];
     
     // IDs de todos los selects de asistentes
     const selectIds = [
