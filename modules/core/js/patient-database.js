@@ -51,13 +51,16 @@ class PatientDatabase {
             return this.pendingPatientFetches.get(normalizedCedula);
         }
 
-        const fetchPromise = this.patientsRef.child(normalizedCedula).once('value')
-            .then((snapshot) => {
+        const FETCH_TIMEOUT_MS = 6000;
+        const fetchPromise = Promise.race([
+            this.patientsRef.child(normalizedCedula).once('value').then((snapshot) => {
                 if (!snapshot.exists()) return null;
                 const patientData = snapshot.val();
                 this.patients.set(normalizedCedula, patientData);
                 return patientData;
-            })
+            }),
+            new Promise((resolve) => setTimeout(() => resolve(null), FETCH_TIMEOUT_MS))
+        ])
             .catch(() => null)
             .finally(() => {
                 this.pendingPatientFetches.delete(normalizedCedula);

@@ -1,14 +1,108 @@
-/* Por Cobrar field styles */
+/* Por Cobrar field styles — destacado en tarjetas y modal */
 .por-cobrar-info {
-  margin-top: 8px;
-  padding: 8px;
-  background: #fff8e1;
-  border-left: 4px solid #ffc107;
-  border-radius: 4px;
+  margin-top: 11px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #fff8e1 0%, #fff3cd 100%);
+  border: 2px solid #ffb300;
+  border-left: 5px solid #ff9800;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(255, 152, 0, 0.18);
+}
+
+.por-cobrar-info-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 15px;
+  font-weight: 800;
+  color: #e65100;
+  letter-spacing: 0.4px;
+  margin-bottom: 9px;
+  text-transform: uppercase;
+}
+
+.por-cobrar-info-header i {
+  font-size: 16px;
+  color: #ff9800;
+}
+
+.por-cobrar-body {
+  font-size: 14.5px;
+  line-height: 1.6;
+  color: #1a1a1a;
 }
 
 .por-cobrar-info i {
   color: #ff9800;
+}
+
+.form-group.por-cobrar-form-group {
+  background: #fffdf5;
+  border: 2px solid #ffe082;
+  border-radius: 10px;
+  padding: 14px;
+  margin-top: 8px;
+}
+
+.por-cobrar-form-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.por-cobrar-form-header label {
+  font-size: 16px !important;
+  font-weight: 800 !important;
+  color: #e65100 !important;
+  margin: 0 !important;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.por-cobrar-form-header label i {
+  color: #ff9800;
+  font-size: 17px;
+}
+
+.btn-por-cobrar-receta {
+  background: #3f51b5;
+  color: #fff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(63, 81, 181, 0.35);
+  transition: background 0.15s;
+}
+
+.btn-por-cobrar-receta:hover {
+  background: #303f9f;
+}
+
+.btn-por-cobrar-receta:disabled {
+  background: #9fa8da;
+  cursor: not-allowed;
+}
+
+.por-cobrar-historial-panel {
+  background: #fff;
+  border: 2px solid #ffe082;
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 11px;
+  font-size: 14.5px;
+  line-height: 1.6;
+  max-height: 280px;
+  overflow-y: auto;
 }
 
 .form-group .por-cobrar-notice {
@@ -29,23 +123,117 @@
 
 /* Por Cobrar accumulative entries styling */
 textarea#editPorCobrar {
-  font-family: 'Consolas', 'Monaco', 'Courier New', monospace !important;
+  font-family: 'Segoe UI', Arial, sans-serif !important;
+  font-size: 14.5px !important;
   line-height: 1.6 !important;
+  border: 2px solid #ffc107 !important;
+  border-radius: 8px !important;
+  background: #fff !important;
 }
 
-/* Highlight original content differently */
-.por-cobrar-original {
-  background: #f0f8ff;
-  border-left: 3px solid #2196f3;
+.por-cobrar-section-header {
+  font-weight: 700;
+  color: #5d4037;
+  font-size: 12px;
+  margin: 12px 0 6px 0;
   padding: 4px 8px;
-  margin: 2px 0;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 4px;
+}
+
+.por-cobrar-section-header--receta {
+  color: #1a237e;
+  background: #e8eaf6;
+  border-left: 3px solid #3f51b5;
+}
+
+.por-cobrar-section-text {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* Contenido original */
+.por-cobrar-original {
+  background: #e3f2fd;
+  border-left: 4px solid #2196f3;
+  padding: 9px 13px;
+  margin: 5px 0;
+  border-radius: 0 6px 6px 0;
+  font-size: 14.5px;
+  font-weight: 500;
 }
 
 .por-cobrar-addition {
-  background: #f0fff0;
-  border-left: 3px solid #4caf50;
-  padding: 4px 8px;
-  margin: 2px 0;
+  background: #e8f5e9;
+  border-left: 4px solid #4caf50;
+  padding: 9px 13px;
+  margin: 5px 0;
+  border-radius: 0 6px 6px 0;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+/* Entrada desde receta digital */
+.por-cobrar-receta {
+  background: #ede7f6;
+  border: 2px solid #7e57c2;
+  border-left: 5px solid #3f51b5;
+  padding: 9px 13px;
+  margin: 6px 0;
+  border-radius: 0 8px 8px 0;
+  font-size: 14.5px;
+  font-weight: 500;
+}
+
+.por-cobrar-receta-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #3f51b5;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 3px 10px;
+  border-radius: 12px;
+  margin-bottom: 8px;
+}
+
+.por-cobrar-receta-tag i {
+  color: #fff !important;
+  font-size: 11px;
+}
+
+/* Historial de receta digital (modal) */
+.receta-historial-panel {
+  background: #fafbff;
+  border: 1px solid #e3e8f7;
+  border-radius: 8px;
+  padding: 10px 12px;
+  max-height: 240px;
+  overflow-y: auto;
+}
+.receta-hist-entry {
+  padding: 8px 0;
+}
+.receta-hist-entry--sep {
+  border-top: 1px solid #e8eaf6;
+  margin-top: 8px;
+  padding-top: 10px;
+}
+.receta-hist-meta {
+  font-size: 10px;
+  color: #7986cb;
+  margin-bottom: 4px;
+  letter-spacing: 0.2px;
+}
+.receta-hist-text {
+  font-size: 13px;
+  line-height: 1.55;
+  color: #1a237e;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 
 /* Tokens: modules/core/css/theme.css (loaded before this file in index.html) */
@@ -1042,6 +1230,17 @@ section h2 i {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
   gap: 20px;
+}
+
+.ticket-container--table {
+  display: block;
+}
+
+.ticket-table-wrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .ticket {
@@ -3445,6 +3644,7 @@ body:not(.recepcion-role) .sidebar.show ~ .sidebar-overlay {
 /* Tabla de tickets tipo Excel */
 .excel-tickets-table {
   width: 100%;
+  min-width: 1200px;
   border-collapse: collapse;
   margin: 18px 0 24px 0;
   background: #fff;
@@ -4870,7 +5070,7 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
 
 /* ==================== FIN ESTILOS PARA MODAL DE CONFIRMACIÓN DE TURNO ==================== */
 
-/* ==================== CONTROL RX Y PRESUPUESTOS ==================== */
+/* ==================== CONTROL RX Y RECETAS ==================== */
 .rx-pres-toolbar {
   display: flex;
   flex-wrap: wrap;
@@ -4989,14 +5189,9 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   color: #174ea6;
 }
 
-.rx-presupuesto {
-  background: #e6f4ea;
-  color: #137333;
-}
-
-.rx-ambos {
-  background: #f3e8fd;
-  color: #6a1b9a;
+.rx-receta {
+  background: #fff3e0;
+  color: #e65100;
 }
 
 .rx-check-wrap {
@@ -5024,4 +5219,4 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   }
 }
 
-/* ==================== FIN CONTROL RX Y PRESUPUESTOS ==================== */
+/* ==================== FIN CONTROL RX Y RECETAS ==================== */

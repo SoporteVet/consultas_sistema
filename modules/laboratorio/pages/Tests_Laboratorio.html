@@ -1384,51 +1384,18 @@ document.addEventListener('DOMContentLoaded', function(){
             <div class="container plantilla" id="template_test_rivalta">
                 <h3 class="subheader">Microbiología Clínica</h3>
                 <table>
-                    <thead>
-                        <tr>
-                            <th>Parámetro</th>
-                            <th colspan="2">Resultado</th>
-                        </tr>
-                    </thead>
                     <tbody>
                         <tr>
                             <td>Matriz de muestra</td>
-                            <td colspan="2">
-                                <input type="text" style="width: 90%;"></td>
-                            </td>
+                            <td><input type="text" style="width: 90%;"></td>
                         </tr>
                         <tr>
                             <td>Color</td>
-                            <td colspan="2"><input type="text" style="width: 90%;"></td>
+                            <td><input type="text" style="width: 90%;"></td>
                         </tr>
                         <tr>
-                            <td>Turbidez</td>
-                            <td colspan="2"><input type="text" style="width: 90%;"></td>
-                        </tr>
-                        <tr>
-                            <td>Clasificación</td>
-                            <td colspan="2"><input type="text" style="width: 90%;"></td>
-                        </tr>
-                        <tr>
-                            <td>Test de Rivalta</td>
-                            <td colspan="2">                                <input type="text" style="width: 90%;" id="rivaltaResultado" list="rivaltaResultadoOptions">
-                                <datalist id="rivaltaResultadoOptions">
-                                    <option value="Negativo">
-                                    <option value="Positivo">
-                                </datalist>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>Directo</td>
-                            <td colspan="2"><input type="text" style="width: 90%;"></td>
-                        </tr>
-                        <tr>
-                            <td>Diff Quick</td>
-                            <td colspan="2"><input type="text" style="width: 90%;"></td>
-                        </tr>
-                        <tr>
-                            <td>Gram</td>
-                            <td colspan="2"><input type="text" style="width: 90%;"></td>
+                            <td>Aspecto</td>
+                            <td><input type="text" style="width: 90%;"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -1436,7 +1403,7 @@ document.addEventListener('DOMContentLoaded', function(){
                 <table style="margin-top: 15px;">
                     <thead>
                         <tr>
-                            <th colspan="3">Tira reactiva</th>
+                            <th colspan="2">Tira reactiva</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1482,21 +1449,16 @@ document.addEventListener('DOMContentLoaded', function(){
                         </tr>
                     </tbody>
                 </table>
-                
-                <table style="margin-top: 15px;">
-                    <thead>
-                        <tr>
-                            <th>Interpretación Microbiológica</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>
-                                <textarea id="interpretacionMicrobiologica" style="width: 100%; height: 80px; resize: none;">La prueba de Rivalta se determina negativo.</textarea>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+
+                <p style="margin-top: 20px; font-size: 14px;">
+                    <strong>Interpretación Microbiológica:</strong>
+                    La prueba de Rivalta se determina
+                    <select id="rivaltaResultado" style="font-weight: bold; font-size: 14px; border: 1px solid #ccc; padding: 2px 6px;">
+                        <option value="negativo" selected>negativo</option>
+                        <option value="positivo">positivo</option>
+                    </select>.
+                </p>
+
                 <br><br>
                 <div class="footer">
                     <p id="mensajeMedico" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
@@ -2079,8 +2041,17 @@ function actualizarInterpretacionCPL() {
             }
         }
         
+        const TITULOS_PLANTILLA = {
+            template_test_rivalta: 'TEST DE RIVALTA'
+        };
+
         function mostrarPlantillaSeleccionada() {
     const valor = document.getElementById('templateSelector').value;
+
+    const subheader = document.querySelector('#datosBasicos .subheader');
+    if (subheader) {
+        subheader.textContent = TITULOS_PLANTILLA[valor] || 'PRUEBAS RÁPIDAS';
+    }
 
     // Ocultar todas las plantillas
     const plantillas = document.querySelectorAll('.plantilla');

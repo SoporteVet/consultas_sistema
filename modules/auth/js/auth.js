@@ -237,10 +237,25 @@ function checkAuth() {
   });
 }
 
+// Normaliza rol para comparaciones (espacios, mayúsculas, acentos)
+function normalizeRole(role) {
+  return String(role || '')
+    .toLowerCase()
+    .trim()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+}
+
+function isAdminRole(role) {
+  const r = normalizeRole(role || sessionStorage.getItem('userRole'));
+  return r === 'admin' || r === 'administrador';
+}
+
 // Check if current user has a specific permission
 function hasPermission(permission) {
   const userRole = sessionStorage.getItem('userRole') || 'visitas';
-  const rolePermissions = PERMISSIONS[userRole] || PERMISSIONS.visitas;
+  const roleKey = isAdminRole(userRole) ? 'admin' : userRole;
+  const rolePermissions = PERMISSIONS[roleKey] || PERMISSIONS.visitas;
   
   return rolePermissions[permission] === true;
 }
@@ -296,6 +311,8 @@ function signOut() {
 // Add to global scope
 window.checkAuth = checkAuth;
 window.hasPermission = hasPermission;
+window.isAdminRole = isAdminRole;
+window.normalizeRole = normalizeRole;
 window.signOut = signOut;
 window.getUserEmpresa = getUserEmpresa;
 window.getEmpresaDisplayName = getEmpresaDisplayName;

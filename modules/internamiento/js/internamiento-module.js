@@ -5960,7 +5960,10 @@ class InternamientoModule {
             if (!db) { select.innerHTML = '<option value="">Error: base de datos no disponible</option>'; return; }
             const doctorsSnap = await db.ref('doctors').once('value');
             const doctors = doctorsSnap.val() || {};
-            const doctorsArray = Object.values(doctors);
+            // Soporta legacy (string) y nuevo formato ({ name, cmv, firma }).
+            const doctorsArray = Object.values(doctors)
+                .map(v => (typeof v === 'string' ? v : (v && v.name) || ''))
+                .filter(Boolean);
             let combined = [...doctorsArray];
             if (tipo === 'rayosx') {
                 const assistantsSnap = await db.ref('assistants').once('value');

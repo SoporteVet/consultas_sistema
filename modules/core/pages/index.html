@@ -154,6 +154,9 @@
             <button id="estadisticasBtn" class="submenu-btn" onclick="navigateToEstadisticas();">
               <i class="fas fa-chart-pie"></i> Estadísticas
             </button>
+            <button id="adminUsersSubmenuBtn" class="submenu-btn admin-only" style="display:none;" onclick="if(typeof openAdminUsersModal === 'function') openAdminUsersModal();">
+              <i class="fas fa-users-cog"></i> Administrar usuarios
+            </button>
           </div>
         </div>
       </nav>
@@ -598,21 +601,9 @@
                 <label for="labMedicoSolicita"><i class="fas fa-user-md"></i> Médico que Solicita</label>
                 <select id="labMedicoSolicita" name="labMedicoSolicita" required>
                   <option value="">Seleccione un médico</option>
-                  <option value="Dr. Luis Coto">Dr. Luis Coto</option>
-                  <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
-                  <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
-                  <option value="Dra. Francinny Nuñez">Dra. Francinny Nuñez</option>
-                  <option value="Dra. Kharen Moreno">Dra. Kharen Moreno</option>
-                  <option value="Dra. Karina Madrigal">Dra. Karina Madrigal</option>
-                  <option value="Dra. Lourdes Chacón">Dra. Lourdes Chacón</option>
-                  <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
-                  <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
-                  <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-                  <option value="Dra. Adriana Rojas">Dra. Adriana Rojas</option>
-                  <option value="Dra. Christiane Buchheim">Dra. Christiane Buchheim</option>
                   <option value="Medico Externo">Médico Externo</option>
-
                   <option value="N.A">N.A</option>
+                  <!-- Los doctores se cargarán dinámicamente desde Firebase -->
                 </select>
               </div>
               <div class="form-group">

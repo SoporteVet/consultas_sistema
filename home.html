@@ -185,8 +185,9 @@
                   const userData = snapshot.val();
                   
                   if (userData && userData.role) {
-                    // Store user role in session storage
-                    sessionStorage.setItem('userRole', userData.role);
+                    const storedRole = String(userData.role).toLowerCase().trim();
+                    const sessionRole = (storedRole === 'administrador') ? 'admin' : userData.role;
+                    sessionStorage.setItem('userRole', sessionRole);
                     sessionStorage.setItem('userName', userData.name || email.split('@')[0]);
                     sessionStorage.setItem('userEmail', email);
                     sessionStorage.setItem('userId', user.uid);

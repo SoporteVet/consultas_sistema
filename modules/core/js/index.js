@@ -875,8 +875,12 @@ function applyRoleBasedUI(role) {
     // Add role-specific class to body element for CSS targeting
     document.body.classList.add(`${role}-role`);
     
-    // Check explicitly for admin role with string comparison
-    if (role === 'admin') {
+    const userIsAdmin = typeof isAdminRole === 'function' ? isAdminRole(role) : role === 'admin';
+
+    if (userIsAdmin) {
+        if (typeof showAdminUsersBtnIfAdmin === 'function') {
+            showAdminUsersBtnIfAdmin();
+        }
         // Show all admin-specific buttons
         const adminElements = document.querySelectorAll('.admin-only');
         adminElements.forEach(el => {
@@ -983,7 +987,7 @@ function applyRoleBasedUI(role) {
     console.log('Roles permitidos:', allowedVacunasRoles);
     
     if (vacunasBtn) {
-        if (allowedVacunasRoles.includes(normalizedRole)) {
+        if (userIsAdmin || allowedVacunasRoles.includes(normalizedRole)) {
             console.log('Mostrando botón de vacunas para rol:', role);
             vacunasBtn.style.display = 'block';
         } else {
@@ -999,7 +1003,7 @@ function applyRoleBasedUI(role) {
         console.error('No se encontró el botón de vacunas');
     }
 
-    // Control de visibilidad del botón de RX y Presupuestos basado en roles
+    // Control de visibilidad del botón de RX y Recetas basado en roles
     const rxPresupuestosBtn = document.getElementById('rxPresupuestosBtn');
     const hiddenRxRoles = ['recepcion', 'visitas'];
 
@@ -1617,53 +1621,184 @@ function setActiveButton(button) {
 }
 
 // Función auxiliar para formatear el contenido de Por Cobrar
+const RECETA_POR_COBRAR_TAG = '[RECETA]';
+
+function escapePorCobrarText(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function formatPorCobrarTextBlock(text) {
+    return escapePorCobrarText(text).replace(/\n/g, '<br>');
+}
+
+function buildPorCobrarTicketHTML(porCobrarText) {
+    if (!porCobrarText) return '';
+    return `<div class="por-cobrar-info">
+        <div class="por-cobrar-info-header">
+            <i class="fas fa-money-bill-wave"></i>
+            <strong>Por Cobrar</strong>
+        </div>
+        <div class="por-cobrar-body">${formatPorCobrarDisplay(porCobrarText)}</div>
+    </div>`;
+}
+
+function extractLatestRecetaBlock(recetaText) {
+    if (!recetaText) return '';
+    const lines = String(recetaText).split('\n');
+    let buffer = '';
+    let lastBlock = '';
+    for (const line of lines) {
+        if (/^---\s.*\s---$/.test(line)) {
+            if (buffer.trim()) lastBlock = buffer.trim();
+            buffer = '';
+        } else {
+            buffer += (buffer ? '\n' : '') + line;
+        }
+    }
+    const tail = buffer.trim();
+    if (tail) return tail;
+    if (lastBlock) return lastBlock;
+    return String(recetaText).trim();
+}
+
+function porCobrarAlreadyHasRecetaContent(porCobrarText, recetaContent) {
+    if (!porCobrarText || !recetaContent) return false;
+    const needle = recetaContent.trim();
+    if (!needle) return false;
+    return porCobrarText.includes(RECETA_POR_COBRAR_TAG) && porCobrarText.includes(needle);
+}
+
+function refreshPorCobrarHistorialInEditModal(porCobrarText) {
+    const wrap = document.getElementById('editPorCobrarHistorial');
+    if (!wrap) return;
+    if (porCobrarText) {
+        wrap.style.display = 'block';
+        wrap.innerHTML = formatPorCobrarDisplay(porCobrarText);
+    } else {
+        wrap.style.display = 'none';
+        wrap.innerHTML = '';
+    }
+}
+
+async function pushRecetaToPorCobrar(randomId) {
+    const ticket = (window.tickets || []).find((t) => String(t.randomId) === String(randomId));
+    if (!ticket || !ticket.firebaseKey) {
+        alert('No se encontró el ticket.');
+        return;
+    }
+
+    const live = (window.tickets || []).find((t) => t.firebaseKey === ticket.firebaseKey) || ticket;
+    const recetaText = live.receta || ticket.receta || '';
+    if (!String(recetaText).trim()) {
+        alert('No hay receta guardada en esta consulta. Guarde la receta primero.');
+        return;
+    }
+
+    const recetaContent = extractLatestRecetaBlock(recetaText);
+    if (!recetaContent) {
+        alert('La receta está vacía.');
+        return;
+    }
+
+    let porCobrar = live.porCobrar || ticket.porCobrar || '';
+    if (porCobrarAlreadyHasRecetaContent(porCobrar, recetaContent)) {
+        alert('Esta indicación de receta ya fue enviada a Por Cobrar.');
+        return;
+    }
+
+    const btn = document.getElementById('btnPushRecetaPorCobrar');
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando…';
+    }
+
+    const timestamp = new Date().toLocaleString('es-ES', {
+        year: 'numeric', month: '2-digit', day: '2-digit',
+        hour: '2-digit', minute: '2-digit'
+    });
+    const userName = sessionStorage.getItem('userName') || 'Usuario';
+    const separator = porCobrar ? '\n\n' : '';
+    const entry = `${separator}--- ${timestamp} (${userName}) ${RECETA_POR_COBRAR_TAG} ---\n${recetaContent}`;
+    const updatedPorCobrar = porCobrar + entry;
+
+    try {
+        await firebase.database().ref(`tickets/${ticket.firebaseKey}`).update({ porCobrar: updatedPorCobrar });
+        ticket.porCobrar = updatedPorCobrar;
+        if (live !== ticket) live.porCobrar = updatedPorCobrar;
+
+        refreshPorCobrarHistorialInEditModal(updatedPorCobrar);
+        updateTicketInDOM({ ...live, porCobrar: updatedPorCobrar, randomId: ticket.randomId });
+
+        if (typeof window.showNotification === 'function') {
+            window.showNotification('Receta agregada a Por Cobrar', 'success');
+        } else {
+            alert('Receta agregada a Por Cobrar.');
+        }
+    } catch (err) {
+        console.error('Error enviando receta a Por Cobrar:', err);
+        alert('Error al agregar la receta a Por Cobrar: ' + (err.message || err));
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-prescription"></i> Mostrar receta en Por Cobrar';
+        }
+    }
+}
+
+window.pushRecetaToPorCobrar = pushRecetaToPorCobrar;
+
 function formatPorCobrarDisplay(porCobrarText) {
     if (!porCobrarText) return '';
     
-    // Dividir por las líneas de separación con timestamp
     const lines = porCobrarText.split('\n');
     let formattedContent = '';
     let currentSection = '';
+    let currentIsReceta = false;
+    let isFirstSection = true;
+
+    function flushSection() {
+        const text = currentSection.trim();
+        if (!text) return;
+        if (currentIsReceta) {
+            formattedContent += `<div class="por-cobrar-receta">
+                <div class="por-cobrar-receta-tag"><i class="fas fa-prescription"></i> Receta / Medicación</div>
+                <div class="por-cobrar-section-text">${formatPorCobrarTextBlock(text)}</div>
+            </div>`;
+        } else if (isFirstSection) {
+            formattedContent += `<div class="por-cobrar-original"><div class="por-cobrar-section-text">${formatPorCobrarTextBlock(text)}</div></div>`;
+        } else {
+            formattedContent += `<div class="por-cobrar-addition"><div class="por-cobrar-section-text">${formatPorCobrarTextBlock(text)}</div></div>`;
+        }
+        isFirstSection = false;
+        currentSection = '';
+    }
     
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         
-        // Detectar líneas de separación con timestamp (mejorado para incluir el nuevo formato)
         if (line.match(/^--- \d{2}\/\d{2}\/\d{4}.*---$/) || line.match(/^--- \d{2}\/\d{2}\/\d{4}.*\[Ticket.*\] ---$/)) {
-            // Si hay contenido previo, agregarlo como sección
-            if (currentSection.trim()) {
-                if (formattedContent === '') {
-                    // Primera sección (contenido original)
-                    formattedContent += `<div class="por-cobrar-original">${currentSection.trim()}</div>`;
-                } else {
-                    // Secciones adicionales
-                    formattedContent += `<div class="por-cobrar-addition">${currentSection.trim()}</div>`;
-                }
-                currentSection = '';
-            }
-            
-            // Agregar el header de la sección con validación de integridad
+            flushSection();
+            currentIsReceta = line.includes(RECETA_POR_COBRAR_TAG);
             const headerText = line.replace(/^---\s*/, '').replace(/\s*---$/, '');
             const isValidated = line.includes('[Ticket') ? ' ✓' : '';
-            formattedContent += `<div style="font-weight: bold; color: #666; font-size: 11px; margin: 8px 0 4px 0;">${headerText}${isValidated}</div>`;
+            const headerClass = currentIsReceta
+                ? 'por-cobrar-section-header por-cobrar-section-header--receta'
+                : 'por-cobrar-section-header';
+            formattedContent += `<div class="${headerClass}">${escapePorCobrarText(headerText)}${isValidated}</div>`;
         } else {
-            // Agregar línea normal al contenido de la sección actual
             currentSection += (currentSection ? '\n' : '') + line;
         }
     }
     
-    // Agregar la última sección si existe
-    if (currentSection.trim()) {
-        if (formattedContent === '') {
-            // Solo hay contenido original
-            formattedContent += currentSection.trim();
-        } else {
-            // Última sección adicional
-            formattedContent += `<div class="por-cobrar-addition">${currentSection.trim()}</div>`;
-        }
-    }
+    flushSection();
     
-    return formattedContent || porCobrarText;
+    return formattedContent || formatPorCobrarTextBlock(porCobrarText);
 }
 
 // NUEVA FUNCIÓN: Validar integridad del por cobrar
@@ -1728,15 +1863,12 @@ function updateTicketInDOM(updatedTicket) {
     if (updatedTicket.porCobrar) {
         if (porCobrarElement) {
             // Actualizar contenido existente
-            porCobrarElement.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedTicket.porCobrar)}</div>`;
+            porCobrarElement.outerHTML = buildPorCobrarTicketHTML(updatedTicket.porCobrar);
         } else {
             // Agregar por cobrar si no existía
             const ticketInfo = ticketElement.querySelector('.ticket-info');
             if (ticketInfo) {
-                const porCobrarDiv = document.createElement('div');
-                porCobrarDiv.className = 'por-cobrar-info';
-                porCobrarDiv.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedTicket.porCobrar)}</div>`;
-                ticketInfo.appendChild(porCobrarDiv);
+                ticketInfo.insertAdjacentHTML('beforeend', buildPorCobrarTicketHTML(updatedTicket.porCobrar));
             }
         }
     } else if (porCobrarElement) {
@@ -2236,6 +2368,7 @@ function renderTickets(filter = 'espera', date = null) {
     window.tickets = tickets;
 
     ticketContainer.innerHTML = '';
+    ticketContainer.classList.remove('ticket-container--table');
     let filteredTickets;
     // --- Búsqueda por texto ---
     const searchInput = document.getElementById('ticketSearchInput');
@@ -2308,7 +2441,8 @@ function renderTickets(filter = 'espera', date = null) {
     // No agregamos tickets de vía a la sala de espera; solo se muestra el contador (updateViaCounter)
 
     if (filter === 'lista' && sessionStorage.getItem('userRole') !== 'visitas') {
-        let table = `<table class="excel-tickets-table">
+        ticketContainer.classList.add('ticket-container--table');
+        let table = `<div class="ticket-table-wrap"><table class="excel-tickets-table">
             <thead>
                 <tr>
                     <th>#</th>
@@ -2366,7 +2500,7 @@ function renderTickets(filter = 'espera', date = null) {
                 <td>${ticket.motivoLlegada || ''}</td>
             </tr>`;
         });
-        table += '</tbody></table>';
+        table += '</tbody></table></div>';
         ticketContainer.innerHTML = table;
         return;
     }
@@ -2617,8 +2751,6 @@ function renderTickets(filter = 'espera', date = null) {
                 <div class="ticket-info">
                     <p><i class="fas fa-user"></i> ${ticket.nombre}</p>
                     <p><i class="fas fa-id-card"></i> ${ticket.cedula}</p>
-                    ${ticket.correo ? `<p><i class="fas fa-envelope"></i> ${ticket.correo}</p>` : ''}
-                    ${ticket.telefono ? `<p><i class="fas fa-phone"></i> ${ticket.telefono}</p>` : ''}
                     ${ticket.idPaciente ? `<p><i class="fas fa-fingerprint"></i> ID: ${ticket.idPaciente}</p>` : ''}
                     ${ticket.medicoAtiende ? `<p><i class="fas fa-user-md"></i> Médico: ${ticket.medicoAtiende}</p>` : ''}
                     ${ticket.numFactura ? `<p><i class="fas fa-file-invoice"></i> Factura: ${ticket.numFactura}</p>` : ''}
@@ -2658,7 +2790,8 @@ function renderTickets(filter = 'espera', date = null) {
                         }
                         return `<div class="listo-para-facturar-badge">${badgeContent}</div>`;
                     })() : ''}
-                    ${ticket.porCobrar ? `<div class="por-cobrar-info"><i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(ticket.porCobrar)}</div></div>` : ''}
+                    ${ticket.porCobrar ? buildPorCobrarTicketHTML(ticket.porCobrar) : ''}
+                    ${ticket.receta ? `<div class="receta-badge" style="margin-top:6px;font-size:12px;color:#3f51b5;font-weight:600;"><i class="fas fa-prescription"></i> Receta registrada</div>` : ''}
                     ${ultimaCitaBadge}
                 </div>
             `;
@@ -3334,7 +3467,9 @@ function editTicket(randomId) {
         horaAtencion: ticket.horaAtencion || '',
         tipoServicio: ticket.tipoServicio || 'consulta',
         expediente: ticket.expediente || false,
-        listoParaFacturar: ticket.listoParaFacturar || false
+        listoParaFacturar: ticket.listoParaFacturar || false,
+        receta: ticket.receta || '',
+        recetaPeso: ticket.recetaPeso || ''
     };
     
     // Separar el médico y asistente si existe
@@ -3361,10 +3496,16 @@ function editTicket(randomId) {
     const canEditPorCobrar = hasPermission('canEditTickets');
     
     // Mostrar historial de Por Cobrar arriba (solo lectura)
-    let porCobrarHistorial = '';
-    if (ticket.porCobrar) {
-        porCobrarHistorial = `<div class='por-cobrar-historial' style='background:#fffbe6;border:1px solid #ffe082;border-radius:4px;padding:8px 12px;margin-bottom:10px;'>${formatPorCobrarDisplay(ticket.porCobrar)}</div>`;
-    }
+    const recetaPorCobrarBtn = (canEditPorCobrar && (safeTicket.receta || ticket.receta))
+      ? `<button type="button" id="btnPushRecetaPorCobrar" class="btn-por-cobrar-receta"
+                onclick="pushRecetaToPorCobrar('${ticket.randomId}')">
+            <i class="fas fa-prescription"></i> Mostrar receta en Por Cobrar
+         </button>`
+      : '';
+    const porCobrarHistorialHtml = (ticket.porCobrar || safeTicket.porCobrar)
+      ? formatPorCobrarDisplay(ticket.porCobrar || safeTicket.porCobrar)
+      : '';
+    let porCobrarHistorial = `<div id="editPorCobrarHistorial" class="por-cobrar-historial-panel"${porCobrarHistorialHtml ? '' : ' style="display:none;"'}>${porCobrarHistorialHtml}</div>`;
     // Textarea para nueva entrada con información específica para recepción
     let porCobrarPlaceholder = "Agregue nueva información que hay que cobrar al cliente...";
     let porCobrarInfo = "";
@@ -3372,33 +3513,37 @@ function editTicket(randomId) {
 
     
     const porCobrarField = canEditPorCobrar
-      ? `<div class="form-group">
-            <label for="editPorCobrar">Por Cobrar</label>
+      ? `<div class="form-group por-cobrar-form-group">
+            <div class="por-cobrar-form-header">
+                <label for="editPorCobrar"><i class="fas fa-money-bill-wave"></i> Por Cobrar</label>
+                ${recetaPorCobrarBtn}
+            </div>
             ${porCobrarInfo}
             ${porCobrarHistorial}
             <textarea id="editPorCobrar" 
                    placeholder="${porCobrarPlaceholder}"
                    style="width: 100%; 
-                          min-height: 80px; 
+                          min-height: 92px; 
                           resize: vertical; 
-                          font-size: 14px; 
-                          line-height: 1.5;
-                          padding: 12px;
+                          padding: 14px;
                           white-space: pre-wrap;
-                          word-wrap: break-word;
-                          border: 1px solid #ddd;"></textarea>
+                          word-wrap: break-word;"></textarea>
+            <small style="display:block;margin-top:8px;color:#888;font-size:12px;">
+                Las entradas normales aparecen en <span style="color:#4caf50;font-weight:600;">verde</span>.
+                La receta enviada con el botón aparece en <span style="color:#3f51b5;font-weight:600;">morado</span>.
+            </small>
         </div>`
-      : `<div class="form-group">
-            <label for="editPorCobrar">Por Cobrar</label>
+      : `<div class="form-group por-cobrar-form-group">
+            <div class="por-cobrar-form-header">
+                <label for="editPorCobrar"><i class="fas fa-money-bill-wave"></i> Por Cobrar</label>
+            </div>
             ${porCobrarInfo}
             ${porCobrarHistorial}
             <textarea id="editPorCobrar" readonly 
                    style="width: 100%; 
-                          min-height: 80px; 
+                          min-height: 92px; 
                           resize: vertical; 
-                          font-size: 14px; 
-                          line-height: 1.5;
-                          padding: 12px;
+                          padding: 14px;
                           white-space: pre-wrap;
                           word-wrap: break-word;
                           background:#f5f5f5; 
@@ -3657,14 +3802,25 @@ function editTicket(randomId) {
                 
                 ${listoParaFacturarButton}
                 
-                <div class="modal-actions">
-                    <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
-                    <button type="submit" class="btn-save">Guardar Cambios</button>
+                <div class="modal-actions" style="justify-content:space-between;flex-wrap:wrap;gap:10px;">
+                    <button type="button" class="btn-save" id="openRecetaBtn"
+                            onclick="openRecetaForTicket('${ticket.randomId}')"
+                            style="background:#3f51b5;">
+                        <i class="fas fa-prescription"></i> Receta
+                        ${safeTicket.receta ? '<span style="background:#ffc107;color:#1a237e;padding:2px 6px;border-radius:10px;font-size:11px;margin-left:6px;">Registrada</span>' : ''}
+                    </button>
+                    <div style="display:flex;gap:10px;">
+                        <button type="button" class="btn-cancel" onclick="closeModal()">Cancelar</button>
+                        <button type="submit" class="btn-save">Guardar Cambios</button>
+                    </div>
                 </div>
             </form>
             <div id="ticketEdicionesHistorial" style="margin-top:30px;">
                 <h4 style="margin-bottom:10px;">Historial de Ediciones</h4>
-                <div id="ticketEdicionesHistorialBody"><div style='color:#888;'>Cargando historial...</div></div>
+                <button type="button" id="cargarTicketEdicionesHistorialBtn" class="btn-submit" style="background:#607d8b;font-size:0.95em;">
+                    <i class="fas fa-history"></i> Ver historial de ediciones
+                </button>
+                <div id="ticketEdicionesHistorialBody" style="display:none;margin-top:12px;"></div>
             </div>
         </div>
     `;
@@ -3786,14 +3942,11 @@ function editTicket(randomId) {
                 if (ticketElement) {
                     const porCobrarElement = ticketElement.querySelector('.por-cobrar-info');
                     if (porCobrarElement) {
-                        porCobrarElement.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedPorCobrar)}</div>`;
+                        porCobrarElement.outerHTML = buildPorCobrarTicketHTML(updatedPorCobrar);
                     } else {
                         const ticketInfo = ticketElement.querySelector('.ticket-info');
                         if (ticketInfo) {
-                            const porCobrarDiv = document.createElement('div');
-                            porCobrarDiv.className = 'por-cobrar-info';
-                            porCobrarDiv.innerHTML = `<i class='fas fa-money-bill-wave'></i> <strong>Por Cobrar:</strong><br><div style="white-space: pre-wrap; font-size: 13px; background: #f8f9fa; padding: 8px; border-radius: 4px; margin-top: 4px;">${formatPorCobrarDisplay(updatedPorCobrar)}</div>`;
-                            ticketInfo.appendChild(porCobrarDiv);
+                            ticketInfo.insertAdjacentHTML('beforeend', buildPorCobrarTicketHTML(updatedPorCobrar));
                         }
                     }
                 }
@@ -3826,7 +3979,12 @@ function editTicket(randomId) {
             listoParaFacturar: listoParaFacturarValue,
             fechaListoParaFacturar: fechaListoParaFacturar,
             horaListoParaFacturar: horaListoParaFacturar,
-            usuarioListoParaFacturar: usuarioListoParaFacturar
+            usuarioListoParaFacturar: usuarioListoParaFacturar,
+            // Preservar receta / recetaPeso: el modal de "Receta" los guarda
+            // por su cuenta. Tomamos el valor más reciente en memoria para no
+            // sobrescribir lo recién guardado.
+            receta: (currentTicket && currentTicket.receta) || ticket.receta || '',
+            recetaPeso: (currentTicket && currentTicket.recetaPeso) || ticket.recetaPeso || ''
         };
         
         // Si el estado cambia a terminado o cliente_se_fue, registrar hora de finalización si no existe
@@ -3945,52 +4103,67 @@ function editTicket(randomId) {
       }
     }, 0);
 
-    // --- HISTORIAL DE EDICIONES SOLO DE ESTE TICKET (TIEMPO REAL) ---
+    // --- HISTORIAL DE EDICIONES: carga bajo demanda (solo admin) ---
     const userRoleHistorial = sessionStorage.getItem('userRole');
     const historialBody = modal.querySelector('#ticketEdicionesHistorialBody');
     const historialContainer = modal.querySelector('#ticketEdicionesHistorial');
-    if (userRoleHistorial === 'admin' && historialBody && typeof firebase !== 'undefined' && firebase.database) {
-        // Limpiar listener previo si existe
-        if (window._ticketEdicionesQuery && window._ticketEdicionesListener) {
-            window._ticketEdicionesQuery.off('value', window._ticketEdicionesListener);
-        }
-        // Consultar únicamente las ediciones del ticket actual.
-        window._ticketEdicionesQuery = firebase.database().ref('ticket_edits').orderByChild('randomId').equalTo(ticket.randomId);
-        window._ticketEdicionesListener = function(snapshot) {
-            const edits = [];
-            snapshot.forEach(child => {
-                const edit = child.val();
-                edits.push(edit);
-            });
-            edits.sort((a, b) => (b.fecha + ' ' + b.hora).localeCompare(a.fecha + ' ' + a.hora));
-            if (edits.length === 0) {
-                historialBody.innerHTML = `<div style='color:#888;'>No hay ediciones para este ticket</div>`;
-                return;
-            }
-            let html = `<table style='width:100%;font-size:0.97em;border-collapse:collapse;'>
-                <thead><tr style='background:#f5f5f5;'><th>Fecha</th><th>Hora</th><th>Usuario</th><th>Email</th><th>Factura</th><th>Cambios</th></tr></thead><tbody>`;
-            edits.forEach(edit => {
-                const cambios = Object.entries(edit.cambios || {}).map(([campo, val]) =>
-                    `<div><strong>${campo}:</strong> <span style='color:#b00'>${val.antes}</span> → <span style='color:#080'>${val.despues}</span></div>`
-                ).join('');
-                html += `<tr style='border-bottom:1px solid #eee;'><td>${edit.fecha}</td><td>${edit.hora}</td><td>${edit.usuario}</td><td>${edit.email}</td><td>${ticket.numFactura || ''}</td><td>${cambios}</td></tr>`;
-            });
-            html += '</tbody></table>';
-            historialBody.innerHTML = html;
-        };
-        window._ticketEdicionesQuery.on('value', window._ticketEdicionesListener);
-        // Limpiar el listener al cerrar el modal
-        const closeBtn = modal.querySelector('.close-modal');
-        if (closeBtn) {
-            closeBtn.addEventListener('click', () => {
-                if (window._ticketEdicionesQuery && window._ticketEdicionesListener) {
-                    window._ticketEdicionesQuery.off('value', window._ticketEdicionesListener);
-                }
-            });
-        }
+    const cargarHistorialBtn = modal.querySelector('#cargarTicketEdicionesHistorialBtn');
+    if (userRoleHistorial === 'admin' && historialBody && cargarHistorialBtn && typeof firebase !== 'undefined' && firebase.database) {
+        cargarHistorialBtn.addEventListener('click', function() {
+            loadTicketEdicionesHistorial(ticket, historialBody, cargarHistorialBtn);
+        });
     } else if (historialContainer) {
         historialContainer.style.display = 'none';
     }
+}
+
+function renderTicketEdicionesHistorial(edits, ticket, historialBody) {
+    if (!historialBody) return;
+    historialBody.style.display = 'block';
+    if (edits.length === 0) {
+        historialBody.innerHTML = `<div style='color:#888;'>No hay ediciones para este ticket</div>`;
+        return;
+    }
+    let html = `<table style='width:100%;font-size:0.97em;border-collapse:collapse;'>
+        <thead><tr style='background:#f5f5f5;'><th>Fecha</th><th>Hora</th><th>Usuario</th><th>Email</th><th>Factura</th><th>Cambios</th></tr></thead><tbody>`;
+    edits.forEach(edit => {
+        const cambios = Object.entries(edit.cambios || {}).map(([campo, val]) =>
+            `<div><strong>${campo}:</strong> <span style='color:#b00'>${val.antes}</span> → <span style='color:#080'>${val.despues}</span></div>`
+        ).join('');
+        html += `<tr style='border-bottom:1px solid #eee;'><td>${edit.fecha}</td><td>${edit.hora}</td><td>${edit.usuario}</td><td>${edit.email}</td><td>${ticket.numFactura || ''}</td><td>${cambios}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    historialBody.innerHTML = html;
+}
+
+function loadTicketEdicionesHistorial(ticket, historialBody, btn) {
+    if (!historialBody || typeof firebase === 'undefined' || !firebase.database) return;
+
+    historialBody.style.display = 'block';
+    historialBody.innerHTML = `<div style='color:#888;'>Cargando historial...</div>`;
+    if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cargando...';
+    }
+
+    firebase.database().ref('ticket_edits').orderByChild('randomId').equalTo(ticket.randomId).once('value', function(snapshot) {
+        const edits = [];
+        snapshot.forEach(child => {
+            edits.push(child.val());
+        });
+        edits.sort((a, b) => (b.fecha + ' ' + b.hora).localeCompare(a.fecha + ' ' + a.hora));
+        renderTicketEdicionesHistorial(edits, ticket, historialBody);
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-sync-alt"></i> Actualizar historial';
+        }
+    }, function() {
+        historialBody.innerHTML = `<div style='color:#b00;'>No se pudo cargar el historial</div>`;
+        if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = '<i class="fas fa-history"></i> Ver historial de ediciones';
+        }
+    });
 }
 
 function getTicketDiff(oldTicket, newTicket) {
@@ -4626,14 +4799,27 @@ function confirmDeleteByFirebaseKey(firebaseKey) {
         });
 }
 
+// Modales fijos en el HTML que no deben eliminarse del DOM (solo ocultar).
+const PERSISTENT_MODAL_IDS = new Set(['adminUsersModal']);
+
 function closeModal() {
-    const modal = document.querySelector('.edit-modal');
-    if (modal) {
-        modal.classList.add('modal-closing');
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
+    // Cerrar solo modales dinámicos (edición de consulta, etc.). El modal de
+    // administración de usuarios también usa .edit-modal pero vive en el HTML;
+    // si se elimina con .remove(), el botón "Administrar usuarios" deja de funcionar.
+    const dynamicModals = Array.from(document.querySelectorAll('.edit-modal'))
+        .filter((m) => !PERSISTENT_MODAL_IDS.has(m.id));
+
+    if (dynamicModals.length === 0) {
+        return;
     }
+
+    const modal = dynamicModals[dynamicModals.length - 1];
+    modal.classList.add('modal-closing');
+    setTimeout(() => {
+        if (modal.parentNode) {
+            modal.remove();
+        }
+    }, 300);
 }
 
 // Sistema de autenticación básico

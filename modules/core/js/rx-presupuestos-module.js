@@ -1,4 +1,4 @@
-/* Control RX y Presupuestos (carga bajo demanda por fecha) */
+/* Control RX y Recetas (carga bajo demanda por fecha) */
 (function () {
   const RX_KEYWORDS = [
     "rx",
@@ -14,21 +14,10 @@
     "rx tórax"
   ];
 
-  const PRESUPUESTO_KEYWORDS = [
-    "presupuesto",
-    "cotizacion",
-    "cotización",
-    "proforma",
-    "estimado"
-  ];
-
   function detectarTipo(texto) {
     const lower = (texto || "").toLowerCase();
     const esRX = RX_KEYWORDS.some(function (k) { return lower.includes(k); });
-    const esPresupuesto = PRESUPUESTO_KEYWORDS.some(function (k) { return lower.includes(k); });
-    if (esRX && esPresupuesto) return "ambos";
     if (esRX) return "rx";
-    if (esPresupuesto) return "presupuesto";
     return null;
   }
 
@@ -76,6 +65,29 @@
     return items;
   }
 
+  function extraerReceta(ticket) {
+    const receta = String(ticket.receta || "").trim();
+    if (!receta) return null;
+
+    const preview = receta
+      .split("\n")
+      .filter(function (line) { return !/^---\s.*\s---$/.test(line.trim()); })
+      .join("\n")
+      .trim();
+
+    return {
+      lineIndex: "receta",
+      texto: (preview || receta).substring(0, 300),
+      tipo: "receta",
+      firebaseKey: ticket.firebaseKey || "",
+      ticketId: ticket.id || "",
+      paciente: ticket.mascota || "N/A",
+      cliente: ticket.nombre || "N/A",
+      cedula: ticket.cedula || "",
+      fechaConsulta: ticket.fechaConsulta || ""
+    };
+  }
+
   async function cargarTicketsPorFecha(fecha) {
     const db = window.database || (window.firebase && firebase.database ? firebase.database() : null);
     if (!db || !fecha) return [];
@@ -94,9 +106,8 @@
   }
 
   function getTipoLabel(tipo) {
-    if (tipo === "ambos") return "RX + Presupuesto";
     if (tipo === "rx") return "RX";
-    if (tipo === "presupuesto") return "Presupuesto";
+    if (tipo === "receta") return "Receta";
     return "N/A";
   }
 
@@ -178,6 +189,10 @@
         extraerItems(ticket).forEach(function (item) {
           items.push(item);
         });
+        const recetaItem = extraerReceta(ticket);
+        if (recetaItem) {
+          items.push(recetaItem);
+        }
       });
 
       const checksSnap = await firebase.database()
@@ -187,7 +202,7 @@
 
       tbody.innerHTML = "";
       if (items.length === 0) {
-        setEmptyStateRow(tbody, "No se encontraron items RX o Presupuestos para la fecha seleccionada.");
+        setEmptyStateRow(tbody, "No se encontraron items RX o Recetas para la fecha seleccionada.");
         if (summaryBar) summaryBar.style.display = "none";
         if (badgeEl) badgeEl.style.display = "none";
         return;
@@ -216,7 +231,7 @@
 
       updateResumen(items, savedChecks);
     } catch (error) {
-      console.error("Error cargando control RX/Presupuestos:", error);
+      console.error("Error cargando control RX/Recetas:", error);
       setEmptyStateRow(tbody, "Error al cargar datos. Intente nuevamente.");
       if (summaryBar) summaryBar.style.display = "none";
       if (badgeEl) badgeEl.style.display = "none";
@@ -248,7 +263,7 @@
         cargarControl();
       })
       .catch(function (error) {
-        console.error("No se pudo guardar el check RX/Presupuesto:", error);
+        console.error("No se pudo guardar el check RX/Receta:", error);
       });
   };
 
@@ -275,7 +290,7 @@
         }
       })
       .catch(function (error) {
-        console.error("No se pudo guardar el encargado RX/Presupuesto:", error);
+        console.error("No se pudo guardar el encargado RX/Receta:", error);
       });
   };
 

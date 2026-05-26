@@ -1,4 +1,7 @@
 ﻿(function() {
+  const DOCTORS_API = 'https://consulta-7ece8-default-rtdb.firebaseio.com/doctors.json';
+  const MEDICO_DATALIST_IDS = ['medicos', 'medicos2', 'medicos3'];
+
   function ready(fn) {
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', fn, { once: true });
@@ -7,10 +10,51 @@
     }
   }
 
+  function getDoctorNameFromRaw(value) {
+    if (value == null) return '';
+    if (typeof value === 'string') return value;
+    if (typeof value === 'object' && value.name) return value.name;
+    return '';
+  }
+
+  async function loadDoctorsIntoLabDatalists() {
+    const hasDatalist = MEDICO_DATALIST_IDS.some((id) => document.getElementById(id));
+    if (!hasDatalist) return;
+
+    try {
+      const response = await fetch(DOCTORS_API);
+      if (!response.ok) return;
+      const doctors = await response.json();
+      if (!doctors) return;
+
+      const names = Object.values(doctors)
+        .map(getDoctorNameFromRaw)
+        .filter(Boolean)
+        .sort((a, b) => a.localeCompare(b));
+
+      MEDICO_DATALIST_IDS.forEach((datalistId) => {
+        const datalist = document.getElementById(datalistId);
+        if (!datalist) return;
+
+        datalist.innerHTML = '';
+        const naOption = document.createElement('option');
+        naOption.value = 'N.A';
+        datalist.appendChild(naOption);
+
+        names.forEach((name) => {
+          const option = document.createElement('option');
+          option.value = name;
+          datalist.appendChild(option);
+        });
+      });
+    } catch (error) {
+      console.warn('No se pudieron cargar médicos desde Firebase en plantilla de lab:', error);
+    }
+  }
+
   function injectPatientId() {
     const params = new URLSearchParams(window.location.search);
     const patientId = (params.get('idPaciente') || '').trim();
-    // Buscar headers en .container o en #datosBasicos
     const headers = document.querySelectorAll('.container .header, #datosBasicos .header');
 
     headers.forEach((header, index) => {
@@ -52,5 +96,8 @@
     });
   }
 
-  ready(injectPatientId);
+  ready(function() {
+    injectPatientId();
+    loadDoctorsIntoLabDatalists();
+  });
 })();

@@ -70,7 +70,7 @@
               <i class="fas fa-syringe"></i> Control de vacuna y temperatura
             </button>
             <button id="rxPresupuestosBtn" class="submenu-btn" onclick="navigateToSection('rxPresupuestosSection', 'rxPresupuestosBtn');">
-              <i class="fas fa-x-ray"></i> Control RX y Presupuestos
+              <i class="fas fa-x-ray"></i> Control RX y Recetas
             </button>
           </div>
         </div>
@@ -166,6 +166,9 @@
             <button id="codigosAsistentesBtn" class="submenu-btn" onclick="if(window.internamientoModule) { window.internamientoModule.mostrarGestionCodigos(); }">
               <i class="fas fa-key"></i> Códigos de Personal Médico
             </button>
+            <button id="adminUsersSubmenuBtn" class="submenu-btn admin-only" style="display:none;" onclick="if(typeof openAdminUsersModal === 'function') openAdminUsersModal();">
+              <i class="fas fa-users-cog"></i> Administrar usuarios
+            </button>
           </div>
         </div>
       </nav>
@@ -173,10 +176,8 @@
       <!-- Añadir botón de cerrar sesión -->
       <button id="logoutBtn" class="btn-logout"><i class="fas fa-sign-out-alt"></i> Cerrar sesión</button>
 
-      <!-- Botón solo para admin -->
-      <button id="adminUsersBtn" class="admin-btn" style="display:none; margin-top:10px;"><i class="fas fa-users-cog"></i> Administrar usuarios</button>
       <div class="sidebar-footer">
-        <p>© 2025 Veterinaria SMP</p>
+        <p>© 2026 Veterinaria SMP</p>
       </div>
     </aside>
 
@@ -582,20 +583,9 @@
                 <label for="labMedicoSolicita"><i class="fas fa-user-md"></i> Médico que Solicita</label>
                 <select id="labMedicoSolicita" name="labMedicoSolicita" required>
                   <option value="">Seleccione un médico</option>
-                  <option value="Dr. Luis Coto">Dr. Luis Coto</option>
-                  <option value="Dr. Randall Azofeifa">Dr. Randall Azofeifa</option>
-                  <option value="Dra. Daniela Sancho">Dra. Daniela Sancho</option>
-                  <option value="Dra. Francinny Nuñez">Dra. Francinny Nuñez</option>
-                  <option value="Dra. Kharen Moreno">Dra. Kharen Moreno</option>
-                  <option value="Dra. Karina Madrigal">Dra. Karina Madrigal</option>
-                  <option value="Dra. Karla Quesada">Dra. Karla Quesada</option>
-                  <option value="Dra. Natalia Alvarado">Dra. Natalia Alvarado</option>
-                  <option value="Dra. Nicole Sibaja">Dra. Nicole Sibaja</option>
-                  <option value="Dra. Amanda Arroyo">Dra. Amanda Arroyo</option>
-                  <option value="Dra. Christiane Buchheim">Dra. Christiane Buchheim</option>
                   <option value="Medico Externo">Médico Externo</option>
-
                   <option value="N.A">N.A</option>
+                  <!-- Los doctores se cargarán dinámicamente desde Firebase -->
                 </select>
               </div>
               <div class="form-group">
@@ -2110,7 +2100,7 @@
       </section>
 
       <section id="rxPresupuestosSection" class="hidden">
-        <h2><i class="fas fa-x-ray"></i> Control de RX y Presupuestos</h2>
+        <h2><i class="fas fa-x-ray"></i> Control de RX y Recetas</h2>
 
         <div class="rx-pres-toolbar">
           <label for="fechaRxPresupuestos">
@@ -2147,7 +2137,7 @@
                 <th>Cliente</th>
                 <th>Mascota</th>
                 <th>Tipo</th>
-                <th>Descripcion (Por Cobrar)</th>
+                <th>Descripcion</th>
                 <th>En Sistema?</th>
                 <th>Encargado</th>
                 <th>Actualizado</th>
@@ -2346,6 +2336,7 @@
   <script src="modules/core/js/cedula-search-integration.js" defer></script>
   <script src="modules/core/js/wait-time-chart-fix.js" defer></script>
   <script src="modules/core/js/admin-users.js" defer></script>
+  <script src="modules/core/js/recetas-loader.js" defer></script>
   <!-- Scripts de migración (descomentar solo para migración inicial) -->
   <!-- <script src="modules/core/js/migrate-users-empresa.js" defer></script> -->
   <!-- <script src="modules/core/js/migrate-tickets-empresa.js" defer></script> -->
