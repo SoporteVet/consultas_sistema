@@ -716,6 +716,8 @@ function setupLabEventListeners() {
         labTicketForm.addEventListener('submit', handleLabTicketSubmit);
     }
     
+    setupLabCedulaContactSync();
+
     // Configurar listener para cambio de tipo de mascota
     const labTipoMascota = document.getElementById('labTipoMascota');
     if (labTipoMascota) {
@@ -1315,6 +1317,86 @@ function displaySearchResults(results, queryLower = '') {
     }
 }
 
+// Completar correo/teléfono en lab desde tickets de consulta si aún no están en el formulario
+function enrichLabContactFromConsultaTickets(cedula, idPaciente) {
+    const correoInput = document.getElementById('labCorreo');
+    const telefonoInput = document.getElementById('labTelefono');
+    if (!correoInput || !telefonoInput) return;
+    if (correoInput.value.trim() && telefonoInput.value.trim()) return;
+
+    const normalizedCedula = (cedula || '').trim();
+    const normalizedId = (idPaciente || '').trim();
+    if (!normalizedCedula && !normalizedId) return;
+
+    const ticketsList = Array.isArray(window.tickets) ? window.tickets : [];
+    const matches = ticketsList.filter((t) => {
+        if (!t) return false;
+        if (normalizedCedula && String(t.cedula || '').trim() === normalizedCedula) return true;
+        if (normalizedId && String(t.idPaciente || '').trim() === normalizedId) return true;
+        return false;
+    });
+    if (!matches.length) return;
+
+    matches.sort((a, b) => {
+        const dateA = new Date(`${a.fechaConsulta || ''}T${a.horaConsulta || a.horaLlegada || '00:00'}`);
+        const dateB = new Date(`${b.fechaConsulta || ''}T${b.horaConsulta || b.horaLlegada || '00:00'}`);
+        return dateB.getTime() - dateA.getTime();
+    });
+
+    const latest = matches[0];
+    if (!correoInput.value.trim() && latest.correo) correoInput.value = latest.correo;
+    if (!telefonoInput.value.trim() && latest.telefono) telefonoInput.value = latest.telefono;
+}
+
+function fillLabExtraFieldsFromSource(source) {
+    if (!source) return;
+
+    const getVal = (...keys) => {
+        for (const key of keys) {
+            const value = source[key];
+            if (value !== undefined && value !== null && String(value).trim() !== '') {
+                return value;
+            }
+        }
+        return '';
+    };
+
+    const edadInput = document.getElementById('labEdad');
+    const pesoInput = document.getElementById('labPeso');
+    const razaInput = document.getElementById('labRaza');
+    const sexoInput = document.getElementById('labSexo');
+    const correoInput = document.getElementById('labCorreo');
+    const telefonoInput = document.getElementById('labTelefono');
+    const tipoMascotaSelect = document.getElementById('labTipoMascota');
+
+    if (edadInput) edadInput.value = getVal('edad', 'Edad');
+    if (pesoInput) pesoInput.value = getVal('peso', 'Peso');
+    if (razaInput) razaInput.value = getVal('raza', 'Raza');
+    if (sexoInput) sexoInput.value = getVal('sexo', 'Sexo');
+    if (correoInput) correoInput.value = getVal('correo', 'Correo');
+    if (telefonoInput) telefonoInput.value = getVal('telefono', 'Telefono');
+
+    if (razaInput && getVal('raza', 'Raza') && tipoMascotaSelect) {
+        setTimeout(() => updateRazasSelect(), 100);
+    }
+}
+
+function setupLabCedulaContactSync() {
+    const cedulaField = document.getElementById('labCedula');
+    if (!cedulaField || cedulaField.dataset.contactSyncBound === '1') return;
+    cedulaField.dataset.contactSyncBound = '1';
+
+    const syncContact = () => {
+        const cedula = cedulaField.value.trim();
+        const idPaciente = document.getElementById('labIdPaciente')?.value.trim() || '';
+        if (cedula.length >= 5 || idPaciente) {
+            setTimeout(() => enrichLabContactFromConsultaTickets(cedula, idPaciente), 700);
+        }
+    };
+
+    cedulaField.addEventListener('blur', syncContact);
+}
+
 // Seleccionar cliente y llenar formulario
 function selectCliente(itemElement) {
     try {
@@ -1352,32 +1434,14 @@ function selectCliente(itemElement) {
             updateRazasSelect();
         }
         
-        // Si es un cliente de quirófano, llenar campos adicionales con datos del ticket
-        if (clienteData.esQuirofano && clienteData.ticketQuirofano) {
-            const ticket = clienteData.ticketQuirofano;
-            
-            // Llenar campos adicionales disponibles en el formulario de laboratorio
-            const edadInput = document.getElementById('labEdad');
-            const pesoInput = document.getElementById('labPeso');
-            const razaInput = document.getElementById('labRaza');
-            const sexoInput = document.getElementById('labSexo');
-            const correoInput = document.getElementById('labCorreo');
-            const telefonoInput = document.getElementById('labTelefono');
-            
-            if (edadInput) edadInput.value = ticket.edad || '';
-            if (pesoInput) pesoInput.value = ticket.peso || '';
-            if (razaInput) razaInput.value = ticket.raza || '';
-            if (sexoInput) sexoInput.value = ticket.sexo || '';
-            if (correoInput) correoInput.value = ticket.correo || '';
-            if (telefonoInput) telefonoInput.value = ticket.telefono || '';
-            
-            // Si hay raza, actualizar el select de razas después de llenar el campo
-            if (razaInput && ticket.raza && tipoMascotaSelect) {
-                setTimeout(() => {
-                    updateRazasSelect();
-                }, 100);
-            }
-        }
+        const contactSource = clienteData.esQuirofano && clienteData.ticketQuirofano
+            ? clienteData.ticketQuirofano
+            : clienteData;
+        fillLabExtraFieldsFromSource(contactSource);
+        enrichLabContactFromConsultaTickets(
+            clienteData.Identificacion || '',
+            clienteData.Id || ''
+        );
         
         // Ocultar resultados
         const resultsContainer = document.getElementById('labClienteResults');
@@ -1391,9 +1455,9 @@ function selectCliente(itemElement) {
             searchInput.value = `${clienteData.Nombre} - ${clienteData['nombre mascota']}`;
         }
         
-        const message = clienteData.esQuirofano ? 
-            'Cliente de quirófano seleccionado. Todos los datos disponibles cargados en formulario de laboratorio.' : 
-            'Cliente seleccionado correctamente';
+        const message = clienteData.esQuirofano
+            ? 'Cliente de quirófano seleccionado. Datos cargados en el formulario de laboratorio.'
+            : 'Cliente seleccionado. Datos de contacto y mascota cargados en el formulario.';
         
         showNotification(message, 'success');
         
@@ -1671,9 +1735,25 @@ function saveLabTicket(ticketData) {
     labTicketsRef.push(ticketData)
         .then(() => {
             showNotification('Ticket de laboratorio creado exitosamente', 'success');
-            
 
-            
+            if (window.patientDatabase && ticketData.cedula) {
+                window.patientDatabase.savePatientFromTicket({
+                    cedula: ticketData.cedula,
+                    nombre: ticketData.nombre,
+                    telefono: ticketData.telefono,
+                    correo: ticketData.correo,
+                    mascota: ticketData.mascota,
+                    tipoMascota: ticketData.tipoMascota,
+                    idPaciente: ticketData.idPaciente,
+                    raza: ticketData.raza,
+                    edad: ticketData.edad,
+                    peso: ticketData.peso,
+                    sexo: ticketData.sexo,
+                    fechaConsulta: ticketData.fecha || getLocalDateString(),
+                    horaConsulta: ticketData.horaCreacion || ''
+                }).catch((err) => console.error('Error guardando contacto del cliente en BD de pacientes:', err));
+            }
+
             resetLabForm();
             currentLabTicketId++;
             

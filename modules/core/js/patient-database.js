@@ -617,6 +617,11 @@ function initPatientDatabase() {
             if (document.getElementById('internamientoCedulaAdmision')) {
                 patientDatabase.setupCedulaListener('internamientoCedulaAdmision', 'internamiento');
             }
+
+            // Formulario de laboratorio
+            if (document.getElementById('labCedula')) {
+                patientDatabase.setupCedulaListener('labCedula', 'laboratorio');
+            }
         }, 1500);
     }
 }

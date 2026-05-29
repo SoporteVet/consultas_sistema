@@ -4492,6 +4492,31 @@ body.consulta_externa-role .btn-terminar-consulta-grande:hover {
   line-height: 1.5;
 }
 
+.bitacora-tests-grid {
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+}
+
+.bitacora-tests-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.bitacora-tests-table {
+  min-width: 960px;
+}
+
+.bitacora-tests-table th,
+.bitacora-tests-table td {
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.bitacora-tests-table td:nth-last-child(2) {
+  white-space: normal;
+  min-width: 160px;
+  max-width: 280px;
+}
+
 /* Títulos del formulario de vacunas (paneles internos) */
 #vacunasRegistroVacunas h3,
 #vacunasPanelTemperatura .form-container > h3 {

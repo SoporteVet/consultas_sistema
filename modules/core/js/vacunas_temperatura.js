@@ -46,6 +46,176 @@ let currentVacunasTurno = '';
 let inventarioActual = {};
 /** Lecturas planas de temperatura (consulta por rango de fechas). Las lecturas antiguas pueden estar en vacunasTemperatura/{fecha_turno}. */
 const VACUNAS_TEMP_LECTURAS_REF = 'vacunasTemperaturaLecturas';
+const VACUNAS_BITACORA_TESTS_REF = 'vacunasBitacoraTests';
+
+const BITACORA_TESTS_COLUMNAS = [
+  { key: 'cdv', label: 'CDV', id: 'bitacoraTestCdv' },
+  { key: 'cpv', label: 'CPV', id: 'bitacoraTestCpv' },
+  { key: 'giardia', label: 'GIARDIA', id: 'bitacoraTestGiardia' },
+  { key: 'cpvCcvG', label: 'CPV/CCV/G', id: 'bitacoraTestCpvCcvG' },
+  { key: 'caniv4', label: 'CANIV4', id: 'bitacoraTestCaniv4' },
+  { key: 'felvFiv', label: 'FELV-FIV', id: 'bitacoraTestFelvFiv' },
+  { key: 'eCanis', label: 'E.CANIS', id: 'bitacoraTestECanis' },
+  { key: 'giardiaCrypto', label: 'GIARDIA/CRYPTO', id: 'bitacoraTestGiardiaCrypto' },
+  { key: 'sdma', label: 'SDMA', id: 'bitacoraTestSdma' },
+  { key: 'cpl', label: 'CPL', id: 'bitacoraTestCpl' },
+  { key: 'fpl', label: 'FPL', id: 'bitacoraTestFpl' }
+];
+
+function userCanAccessBitacoraTests() {
+  const role = String(sessionStorage.getItem('userRole') || (typeof userRole !== 'undefined' ? userRole : '') || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '');
+  return role === 'admin' || role === 'laboratorio';
+}
+
+function applyBitacoraTestsTabVisibility() {
+  const btn = document.getElementById('vacunasTabBtnTests');
+  if (!btn) return;
+  const canAccess = userCanAccessBitacoraTests();
+  btn.style.display = canAccess ? '' : 'none';
+  if (!canAccess && btn.classList.contains('active')) {
+    setVacunasModuleTab('vacunas');
+  }
+}
+
+function bitacoraTestsColspan() {
+  return 2 + BITACORA_TESTS_COLUMNAS.length + 2;
+}
+
+function formatBitacoraTestDisplay(val) {
+  if (val === null || val === undefined || val === '') return '-';
+  return String(val);
+}
+
+function parseBitacoraTestInputValue(input) {
+  const raw = input ? String(input.value ?? '').trim() : '';
+  if (raw === '' || raw === '-') return null;
+  const n = parseInt(raw, 10);
+  return Number.isNaN(n) ? null : n;
+}
+
+function renderBitacoraTestsGrid() {
+  const container = document.getElementById('bitacoraTestsGridContainer');
+  if (!container || container.dataset.rendered === '1') return;
+  container.innerHTML = BITACORA_TESTS_COLUMNAS.map((col) => `
+    <div class="inventario-item">
+      <label for="${col.id}">${col.label}:</label>
+      <input type="number" id="${col.id}" min="0" step="1" class="inventario-input bitacora-test-input" placeholder="-">
+    </div>
+  `).join('');
+  container.dataset.rendered = '1';
+}
+
+function renderBitacoraTestsTableHeaders() {
+  const colsHtml = BITACORA_TESTS_COLUMNAS.map((c) => `<th>${escapeVacunasHtml(c.label)}</th>`).join('');
+  const headRow = `<tr><th>Fecha</th><th>Turno</th>${colsHtml}<th>Notas</th><th>Responsable</th></tr>`;
+  const turnoHead = document.getElementById('bitacoraTestsTurnoTableHead');
+  if (turnoHead) turnoHead.innerHTML = headRow;
+}
+
+function populateBitacoraTestsForm(data) {
+  BITACORA_TESTS_COLUMNAS.forEach((col) => {
+    const input = document.getElementById(col.id);
+    if (!input) return;
+    const val = data ? data[col.key] : null;
+    input.value = val === null || val === undefined ? '' : String(val);
+  });
+  const resp = document.getElementById('bitacoraTestsResponsable');
+  const notas = document.getElementById('bitacoraTestsNotas');
+  if (resp) resp.value = data?.responsable || '';
+  if (notas) notas.value = data?.notas || '';
+}
+
+function limpiarFormularioBitacoraTests() {
+  populateBitacoraTestsForm(null);
+}
+
+function buildBitacoraTestsRowCells(data) {
+  return BITACORA_TESTS_COLUMNAS.map((col) =>
+    `<td>${escapeVacunasHtml(formatBitacoraTestDisplay(data[col.key]))}</td>`
+  ).join('');
+}
+
+function displayBitacoraTestsTurnoTable(data) {
+  const tbody = document.getElementById('bitacoraTestsTurnoTableBody');
+  if (!tbody) return;
+  const colspan = bitacoraTestsColspan();
+  if (!data) {
+    tbody.innerHTML = `<tr><td colspan="${colspan}" class="no-data">No hay bitácora guardada para este turno</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = `<tr>
+    <td>${escapeVacunasHtml(data.fecha || '')}</td>
+    <td>${escapeVacunasHtml(vacunasTurnoEtiqueta(data.turno))}</td>
+    ${buildBitacoraTestsRowCells(data)}
+    <td>${escapeVacunasHtml(data.notas || '-')}</td>
+    <td>${escapeVacunasHtml(data.responsable || '')}</td>
+  </tr>`;
+}
+
+function loadVacunasBitacoraTests(fecha, turno) {
+  if (!userCanAccessBitacoraTests()) return;
+  if (!firebase || !firebase.database) return;
+  const turnoKey = `${fecha}_${turno}`;
+  firebase.database().ref(`${VACUNAS_BITACORA_TESTS_REF}/${turnoKey}`).once('value')
+    .then((snapshot) => {
+      const data = snapshot.val();
+      if (data) {
+        populateBitacoraTestsForm(data);
+        displayBitacoraTestsTurnoTable(data);
+      } else {
+        limpiarFormularioBitacoraTests();
+        displayBitacoraTestsTurnoTable(null);
+      }
+    })
+    .catch((err) => {
+      console.error('loadVacunasBitacoraTests:', err);
+      displayBitacoraTestsTurnoTable(null);
+    });
+}
+
+function guardarVacunasBitacoraTests() {
+  if (!userCanAccessBitacoraTests()) {
+    showNotification('No tiene permiso para registrar la bitácora de tests', 'error');
+    return;
+  }
+  if (!currentVacunasFecha || !currentVacunasTurno) {
+    showNotification('Debe seleccionar una fecha y turno primero', 'error');
+    return;
+  }
+  const responsable = document.getElementById('bitacoraTestsResponsable')?.value.trim() || '';
+  if (!responsable) {
+    showNotification('Indique el responsable de la bitácora', 'error');
+    return;
+  }
+  if (!firebase || !firebase.database) {
+    showNotification('Error: Firebase no está disponible', 'error');
+    return;
+  }
+  const payload = {
+    fecha: currentVacunasFecha,
+    turno: currentVacunasTurno,
+    responsable,
+    notas: document.getElementById('bitacoraTestsNotas')?.value.trim() || '',
+    updatedAt: new Date().toISOString()
+  };
+  BITACORA_TESTS_COLUMNAS.forEach((col) => {
+    const input = document.getElementById(col.id);
+    payload[col.key] = parseBitacoraTestInputValue(input);
+  });
+  const turnoKey = `${currentVacunasFecha}_${currentVacunasTurno}`;
+  firebase.database().ref(`${VACUNAS_BITACORA_TESTS_REF}/${turnoKey}`).set(payload)
+    .then(() => {
+      showNotification('Bitácora de tests guardada', 'success');
+      displayBitacoraTestsTurnoTable(payload);
+    })
+    .catch((err) => {
+      console.error('Error al guardar bitácora tests:', err);
+      showNotification('Error al guardar la bitácora de tests', 'error');
+    });
+}
 
 // Función para sanitizar claves de Firebase
 function sanitizeFirebaseKey(key) {
@@ -161,29 +331,40 @@ const vacunasDisponibles = {
 function setVacunasModuleTab(which) {
   const panVac = document.getElementById('vacunasPanelVacunas');
   const panTemp = document.getElementById('vacunasPanelTemperatura');
+  const panTests = document.getElementById('vacunasPanelTests');
   const btnVac = document.getElementById('vacunasTabBtnVacunas');
   const btnTemp = document.getElementById('vacunasTabBtnTemperatura');
+  const btnTests = document.getElementById('vacunasTabBtnTests');
   if (!panVac || !panTemp || !btnVac || !btnTemp) return;
   const isVac = which === 'vacunas';
+  const isTemp = which === 'temperatura';
+  const isTests = which === 'tests';
   panVac.classList.toggle('active', isVac);
-  panTemp.classList.toggle('active', !isVac);
+  panTemp.classList.toggle('active', isTemp);
+  if (panTests) panTests.classList.toggle('active', isTests);
   btnVac.classList.toggle('active', isVac);
-  btnTemp.classList.toggle('active', !isVac);
+  btnTemp.classList.toggle('active', isTemp);
+  if (btnTests) btnTests.classList.toggle('active', isTests);
   btnVac.setAttribute('aria-selected', isVac ? 'true' : 'false');
-  btnTemp.setAttribute('aria-selected', !isVac ? 'true' : 'false');
+  btnTemp.setAttribute('aria-selected', isTemp ? 'true' : 'false');
+  if (btnTests) btnTests.setAttribute('aria-selected', isTests ? 'true' : 'false');
 }
 
 function setVacunasTurnoRegistroVisible(show) {
   const rv = document.getElementById('vacunasRegistroVacunas');
   const rt = document.getElementById('vacunasRegistroTemperatura');
+  const rtests = document.getElementById('vacunasRegistroTests');
   const pv = document.getElementById('vacunasPlaceholderVacunas');
   const pt = document.getElementById('vacunasPlaceholderTemperatura');
+  const ptests = document.getElementById('vacunasPlaceholderTests');
   const regDisplay = show ? 'block' : 'none';
   const phDisplay = show ? 'none' : 'block';
   if (rv) rv.style.display = regDisplay;
   if (rt) rt.style.display = regDisplay;
+  if (rtests) rtests.style.display = regDisplay;
   if (pv) pv.style.display = phDisplay;
   if (pt) pt.style.display = phDisplay;
+  if (ptests) ptests.style.display = phDisplay;
 }
 
 // Inicializar módulo de vacunas
@@ -199,6 +380,9 @@ function initializeVacunasModule() {
 
   setVacunasTurnoRegistroVisible(false);
   setVacunasModuleTab('vacunas');
+  applyBitacoraTestsTabVisibility();
+  renderBitacoraTestsGrid();
+  renderBitacoraTestsTableHeaders();
 
   const histDesde = document.getElementById('vacunasTempHistDesde');
   const histHasta = document.getElementById('vacunasTempHistHasta');
@@ -277,6 +461,25 @@ function setupVacunasEventListeners() {
     tabBtnTemp.replaceWith(tabBtnTemp.cloneNode(true));
     document.getElementById('vacunasTabBtnTemperatura').addEventListener('click', () => setVacunasModuleTab('temperatura'));
   }
+
+  const tabBtnTests = document.getElementById('vacunasTabBtnTests');
+  if (tabBtnTests) {
+    tabBtnTests.replaceWith(tabBtnTests.cloneNode(true));
+    document.getElementById('vacunasTabBtnTests').addEventListener('click', () => setVacunasModuleTab('tests'));
+  }
+
+  const guardarTestsBtn = document.getElementById('guardarVacunasBitacoraTests');
+  if (guardarTestsBtn) {
+    guardarTestsBtn.replaceWith(guardarTestsBtn.cloneNode(true));
+    document.getElementById('guardarVacunasBitacoraTests').addEventListener('click', guardarVacunasBitacoraTests);
+  }
+  const limpiarTestsBtn = document.getElementById('limpiarVacunasBitacoraTests');
+  if (limpiarTestsBtn) {
+    limpiarTestsBtn.replaceWith(limpiarTestsBtn.cloneNode(true));
+    document.getElementById('limpiarVacunasBitacoraTests').addEventListener('click', limpiarFormularioBitacoraTests);
+  }
+
+  applyBitacoraTestsTabVisibility();
 
   // Botón abrir turno
   const abrirTurnoBtn = document.getElementById('abrirTurnoBtn');
@@ -468,6 +671,7 @@ function loadVacunasData(fecha, turno) {
   // Cargar notas del turno
   loadVacunasNotas(fecha, turno);
   loadVacunasTemperatura(fecha, turno);
+  loadVacunasBitacoraTests(fecha, turno);
 }
 
 function formatVacunasFechaHoraDisplay(isoString) {

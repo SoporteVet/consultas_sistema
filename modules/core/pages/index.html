@@ -1109,6 +1109,9 @@
             <button type="button" class="vacunas-module-tab" id="vacunasTabBtnTemperatura" role="tab" aria-selected="false">
               <i class="fas fa-thermometer-half"></i> Control de temperatura
             </button>
+            <button type="button" class="vacunas-module-tab" id="vacunasTabBtnTests" role="tab" aria-selected="false" style="display: none;">
+              <i class="fas fa-vial"></i> Bitácora de tests
+            </button>
           </div>
 
           <div id="vacunasPanelVacunas" class="vacunas-module-panel active" role="tabpanel">
@@ -1261,8 +1264,8 @@
                   <input type="text" id="vacunaID" placeholder="ID del paciente" required>
                 </div>
                 <div class="form-group">
-                  <label for="vacunaMedico"><i class="fas fa-user-md"></i> Médico/Asistente: *</label>
-                  <input type="text" id="vacunaMedico" placeholder="Médico encargado o asistente" required>
+                  <label for="vacunaMedico"><i class="fas fa-user"></i> Quien entrega: *</label>
+                  <input type="text" id="vacunaMedico" placeholder="Nombre de quien entrega" required>
                 </div>
               </div>
               
@@ -1329,7 +1332,7 @@
                     <th>Nombre Paciente</th>
                     <th>Apellido Cliente</th>
                     <th>ID</th>
-                    <th>Médico/Asistente</th>
+                    <th>Quien entrega</th>
                     <th>Vacuna Colocada</th>
                     <th>Entregada a</th>
                     <th>Factura</th>
@@ -1437,6 +1440,45 @@
                     <tr><td colspan="5" class="no-data">Seleccione fechas y pulse «Ver histórico»</td></tr>
                   </tbody>
                 </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="vacunasPanelTests" class="vacunas-module-panel" role="tabpanel">
+            <p id="vacunasPlaceholderTests" class="vacunas-module-placeholder">Seleccione fecha y turno arriba y pulse «Ver Registro del Turno» para registrar la bitácora de tests del turno.</p>
+            <div id="vacunasRegistroTests" style="display: none;">
+              <div class="form-container" style="margin-top: 0;">
+                <h3><i class="fas fa-vial"></i> Bitácora de tests — turno actual</h3>
+                <p style="margin-bottom: 15px; color: #666; font-size: 14px;">
+                  <i class="fas fa-info-circle"></i> Registre la cantidad de tests realizados por tipo en el <strong>turno cargado</strong>. Deje vacío o use «-» si no aplica.
+                </p>
+                <div id="bitacoraTestsGridContainer" class="inventario-grid bitacora-tests-grid"></div>
+                <div class="form-row" style="margin-top: 16px;">
+                  <div class="form-group">
+                    <label for="bitacoraTestsResponsable"><i class="fas fa-user"></i> Responsable: *</label>
+                    <input type="text" id="bitacoraTestsResponsable" placeholder="Nombre de quien registra la bitácora" autocomplete="off">
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label for="bitacoraTestsNotas"><i class="fas fa-sticky-note"></i> Notas del turno:</label>
+                  <textarea id="bitacoraTestsNotas" rows="3" placeholder="Observaciones, tests defectuosos, casos especiales..."></textarea>
+                </div>
+                <div class="form-actions">
+                  <button type="button" id="guardarVacunasBitacoraTests" class="btn-submit">
+                    <i class="fas fa-save"></i> Guardar bitácora
+                  </button>
+                  <button type="button" id="limpiarVacunasBitacoraTests" class="btn-cancel">
+                    <i class="fas fa-eraser"></i> Limpiar
+                  </button>
+                </div>
+                <div class="table-responsive bitacora-tests-table-wrap" style="margin-top: 15px;">
+                  <table class="vacunas-table bitacora-tests-table">
+                    <thead id="bitacoraTestsTurnoTableHead"></thead>
+                    <tbody id="bitacoraTestsTurnoTableBody">
+                      <tr><td colspan="14" class="no-data">No hay bitácora guardada para este turno</td></tr>
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>
