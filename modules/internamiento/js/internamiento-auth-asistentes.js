@@ -371,13 +371,16 @@ InternamientoModule.prototype.mostrarModalVerificarCodigoYMostrarNombre = functi
 // PANEL DE ADMINISTRACIÓN DE CÓDIGOS (SOLO ADMIN)
 // ================================================================
 
-InternamientoModule.prototype.mostrarGestionCodigos = function() {
+InternamientoModule.prototype.mostrarGestionCodigos = async function() {
     const userRole = sessionStorage.getItem('userRole');
     
     if (userRole !== 'admin') {
         this.showAlert('Solo administradores pueden gestionar códigos de personal médico', 'Acceso Denegado', 'error');
         return;
     }
+
+    const listo = await this.onModuleEnter();
+    if (!listo) return;
 
     const modalContent = this.getGestionCodigosHTML();
     const modal = this.createModal('Gestión de Códigos de Personal Médico', modalContent, 'fa-cog');

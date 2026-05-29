@@ -6708,10 +6708,7 @@ window.addEventListener('DOMContentLoaded', function() {
     });
   }
   
-  // Inicializar módulo de internamiento
-  if (typeof initInternamientoModule === 'function') {
-    initInternamientoModule();
-  }
+  // Internamiento: initInternamientoModule() solo registra menú; Firebase al entrar al módulo
   
   // Cargar el módulo de quirófano
   // Comentado porque quirofano-module.js ya se carga en index.html

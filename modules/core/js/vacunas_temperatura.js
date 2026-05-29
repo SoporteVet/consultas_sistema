@@ -367,6 +367,7 @@ function handleVacunasSubmit(event) {
     return;
   }
   
+  const entregaAValue = document.getElementById('vacunaEntregaA')?.value.trim() || '';
   const facturaValue = document.getElementById('vacunaFactura').value.trim();
   const formData = {
     fecha: currentVacunasFecha,
@@ -377,6 +378,7 @@ function handleVacunasSubmit(event) {
     medico: medico,
     hora: hora,
     vacunaColocada: vacunaColocada,
+    entregaA: entregaAValue,
     factura: facturaValue || '', // Asegurar que siempre se guarde, incluso si está vacío
     timestamp: Date.now()
   };
@@ -447,7 +449,7 @@ function loadVacunasData(fecha, turno) {
     const vacunas = data 
       ? Object.entries(data)
           .map(([key, value]) => {
-            const vacuna = { id: key, ...value };
+            const vacuna = { firebaseKey: key, ...value };
             console.log(`Vacuna ${key} - factura:`, vacuna.factura, 'tipo:', typeof vacuna.factura);
             return vacuna;
           })
@@ -687,7 +689,7 @@ function displayVacunasTable(vacunas) {
   if (!tbody) return;
   
   if (vacunas.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="no-data">No hay vacunas registradas para este turno</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="9" class="no-data">No hay vacunas registradas para este turno</td></tr>';
     return;
   }
   
@@ -698,10 +700,12 @@ function displayVacunasTable(vacunas) {
   const canDelete = userRole === 'admin' || userRole === 'consulta_externa';
   
   tbody.innerHTML = vacunas.map(vacuna => {
+    const fbKey = vacuna.firebaseKey || '';
+    const idPaciente = vacuna.id != null ? String(vacuna.id) : '';
     if (canEdit) {
       // Versión editable para admin
       return `
-        <tr data-id="${vacuna.id}" data-firebase-key="${vacuna.id}">
+        <tr data-id="${fbKey}" data-firebase-key="${fbKey}">
           <td>
             <span class="field-display">${vacuna.hora || ''}</span>
             <input type="time" class="field-edit" value="${vacuna.hora || ''}" style="display: none;" data-field="hora">
@@ -715,8 +719,8 @@ function displayVacunasTable(vacunas) {
             <input type="text" class="field-edit" value="${vacuna.apellidoCliente || ''}" style="display: none;" data-field="apellidoCliente">
           </td>
           <td>
-            <span class="field-display">${vacuna.id || ''}</span>
-            <input type="text" class="field-edit" value="${vacuna.id || ''}" style="display: none;" data-field="id">
+            <span class="field-display">${idPaciente}</span>
+            <input type="text" class="field-edit" value="${idPaciente}" style="display: none;" data-field="id">
           </td>
           <td>
             <span class="field-display">${vacuna.medico || ''}</span>
@@ -727,20 +731,24 @@ function displayVacunasTable(vacunas) {
             <input type="text" class="field-edit" value="${vacuna.vacunaColocada || ''}" style="display: none;" data-field="vacunaColocada">
           </td>
           <td>
+            <span class="field-display">${vacuna.entregaA || ''}</span>
+            <input type="text" class="field-edit" value="${vacuna.entregaA || ''}" style="display: none;" data-field="entregaA">
+          </td>
+          <td>
             <span class="field-display">${vacuna.factura !== undefined && vacuna.factura !== null ? vacuna.factura : ''}</span>
             <input type="text" class="field-edit" value="${vacuna.factura !== undefined && vacuna.factura !== null ? vacuna.factura : ''}" style="display: none;" data-field="factura">
           </td>
           <td>
-            <button class="btn-edit-vacuna" onclick="editVacunaRow('${vacuna.id}')" title="Editar registro">
+            <button class="btn-edit-vacuna" onclick="editVacunaRow('${fbKey}')" title="Editar registro">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="btn-save-vacuna" onclick="saveVacunaRow('${vacuna.id}')" style="display: none;" title="Guardar cambios">
+            <button class="btn-save-vacuna" onclick="saveVacunaRow('${fbKey}')" style="display: none;" title="Guardar cambios">
               <i class="fas fa-save"></i>
             </button>
-            <button class="btn-cancel-vacuna" onclick="cancelEditVacunaRow('${vacuna.id}')" style="display: none;" title="Cancelar edición">
+            <button class="btn-cancel-vacuna" onclick="cancelEditVacunaRow('${fbKey}')" style="display: none;" title="Cancelar edición">
               <i class="fas fa-times"></i>
             </button>
-            <button class="btn-delete-vacuna" onclick="deleteVacunaRow('${vacuna.id}')" title="Eliminar registro">
+            <button class="btn-delete-vacuna" onclick="deleteVacunaRow('${fbKey}')" title="Eliminar registro">
               <i class="fas fa-trash"></i>
             </button>
           </td>
@@ -749,25 +757,26 @@ function displayVacunasTable(vacunas) {
     } else {
       // Versión solo lectura para consulta externa (solo puede editar factura)
       return `
-        <tr data-id="${vacuna.id}" data-firebase-key="${vacuna.id}">
+        <tr data-id="${fbKey}" data-firebase-key="${fbKey}">
           <td>${vacuna.hora || ''}</td>
           <td>${vacuna.nombrePaciente || ''}</td>
           <td>${vacuna.apellidoCliente || ''}</td>
-          <td>${vacuna.id || ''}</td>
+          <td>${idPaciente}</td>
           <td>${vacuna.medico || ''}</td>
           <td>${vacuna.vacunaColocada || ''}</td>
+          <td>${vacuna.entregaA || ''}</td>
           <td>
             <span class="factura-display">${vacuna.factura !== undefined && vacuna.factura !== null ? vacuna.factura : ''}</span>
             <input type="text" class="factura-edit" value="${vacuna.factura !== undefined && vacuna.factura !== null ? vacuna.factura : ''}" style="display: none;">
           </td>
           <td>
-            <button class="btn-edit-factura-vacuna" onclick="editVacunaFactura('${vacuna.id}')" title="Editar factura">
+            <button class="btn-edit-factura-vacuna" onclick="editVacunaFactura('${fbKey}')" title="Editar factura">
               <i class="fas fa-edit"></i>
             </button>
-            <button class="btn-save-factura-vacuna" onclick="saveVacunaFactura('${vacuna.id}')" style="display: none;" title="Guardar factura">
+            <button class="btn-save-factura-vacuna" onclick="saveVacunaFactura('${fbKey}')" style="display: none;" title="Guardar factura">
               <i class="fas fa-save"></i>
             </button>
-            <button class="btn-cancel-factura-vacuna" onclick="cancelEditVacunaFactura('${vacuna.id}')" style="display: none;" title="Cancelar edición">
+            <button class="btn-cancel-factura-vacuna" onclick="cancelEditVacunaFactura('${fbKey}')" style="display: none;" title="Cancelar edición">
               <i class="fas fa-times"></i>
             </button>
           </td>
@@ -808,23 +817,41 @@ window.editVacunaRow = function(vacunaId) {
   if (deleteBtn) deleteBtn.style.display = 'none';
 };
 
+function resolveVacunaFirebaseKey(vacunaRowOrKey) {
+  if (!vacunaRowOrKey) return '';
+  if (typeof vacunaRowOrKey === 'object' && vacunaRowOrKey.getAttribute) {
+    return vacunaRowOrKey.getAttribute('data-firebase-key') || vacunaRowOrKey.getAttribute('data-id') || '';
+  }
+  const row = document.querySelector(`tr[data-id="${vacunaRowOrKey}"]`);
+  if (row) {
+    return row.getAttribute('data-firebase-key') || row.getAttribute('data-id') || vacunaRowOrKey;
+  }
+  return vacunaRowOrKey;
+}
+
 // Guardar cambios de fila de vacuna
 window.saveVacunaRow = function(vacunaId) {
   const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
   if (!row) return;
+
+  const firebaseKey = resolveVacunaFirebaseKey(row);
+  if (!firebaseKey) {
+    showNotification('No se encontró el registro en la base de datos', 'error');
+    return;
+  }
   
   const updatedData = {};
   row.querySelectorAll('.field-edit').forEach(input => {
     const field = input.getAttribute('data-field');
     // Asegurar que el campo factura siempre se guarde, incluso si está vacío
-    if (field === 'factura') {
+    if (field === 'factura' || field === 'entregaA') {
       updatedData[field] = input.value.trim() || '';
     } else {
       updatedData[field] = input.value;
     }
   });
   
-  console.log('Actualizando vacuna:', vacunaId, 'datos:', updatedData);
+  console.log('Actualizando vacuna:', firebaseKey, 'datos:', updatedData);
   console.log('Campo factura en datos:', updatedData.factura);
   
   // Actualizar en Firebase
@@ -834,7 +861,7 @@ window.saveVacunaRow = function(vacunaId) {
   }
   
   const database = firebase.database();
-  const ref = database.ref(`vacunas/${vacunaId}`);
+  const ref = database.ref(`vacunas/${firebaseKey}`);
   
   ref.update(updatedData)
     .then(() => {
@@ -867,13 +894,6 @@ window.saveVacunaRow = function(vacunaId) {
       saveBtn.style.display = 'none';
       cancelBtn.style.display = 'none';
       if (deleteBtn) deleteBtn.style.display = 'inline-block';
-      
-      // Recargar datos después de un breve delay para asegurar consistencia
-      if (currentVacunasFecha && currentVacunasTurno) {
-        setTimeout(() => {
-          loadVacunasData(currentVacunasFecha, currentVacunasTurno);
-        }, 300);
-      }
     })
     .catch((error) => {
       console.error('Error al actualizar vacuna:', error);
@@ -940,7 +960,7 @@ window.deleteVacunaRow = function(vacunaId) {
     return;
   }
   
-  const firebaseKey = row.getAttribute('data-firebase-key');
+  const firebaseKey = resolveVacunaFirebaseKey(row);
   console.log('Clave de Firebase obtenida:', firebaseKey);
   
   if (!firebaseKey) {
@@ -984,7 +1004,7 @@ window.deleteVacunaRow = function(vacunaId) {
             // Si no quedan filas, mostrar mensaje de no datos
             const tbody = document.getElementById('vacunasTableBody');
             if (tbody) {
-              tbody.innerHTML = '<tr><td colspan="8" class="no-data">No hay vacunas registradas para este turno</td></tr>';
+              tbody.innerHTML = '<tr><td colspan="9" class="no-data">No hay vacunas registradas para este turno</td></tr>';
             }
           }
         }
@@ -1026,11 +1046,17 @@ window.editVacunaFactura = function(vacunaId) {
 window.saveVacunaFactura = function(vacunaId) {
   const row = document.querySelector(`tr[data-id="${vacunaId}"]`);
   if (!row) return;
+
+  const firebaseKey = resolveVacunaFirebaseKey(row);
+  if (!firebaseKey) {
+    showNotification('No se encontró el registro en la base de datos', 'error');
+    return;
+  }
   
   const facturaEdit = row.querySelector('.factura-edit');
   const newFactura = facturaEdit ? facturaEdit.value.trim() : '';
   
-  console.log('Guardando factura para vacuna:', vacunaId, 'valor:', newFactura);
+  console.log('Guardando factura para vacuna:', firebaseKey, 'valor:', newFactura);
   
   if (!firebase || !firebase.database) {
     showNotification('Error: Firebase no está disponible', 'error');
@@ -1038,7 +1064,7 @@ window.saveVacunaFactura = function(vacunaId) {
   }
   
   const database = firebase.database();
-  const ref = database.ref(`vacunas/${vacunaId}`);
+  const ref = database.ref(`vacunas/${firebaseKey}`);
   
   // Asegurar que siempre se guarde el campo, incluso si está vacío
   const updateData = { factura: newFactura || '' };
@@ -1053,14 +1079,7 @@ window.saveVacunaFactura = function(vacunaId) {
         facturaDisplay.textContent = newFactura;
         console.log('Display actualizado con valor:', newFactura);
       }
-      cancelEditVacunaFactura(vacunaId);
-      
-      // Recargar datos después de un breve delay para asegurar consistencia
-      if (currentVacunasFecha && currentVacunasTurno) {
-        setTimeout(() => {
-          loadVacunasData(currentVacunasFecha, currentVacunasTurno);
-        }, 300);
-      }
+      cancelEditVacunaFactura(firebaseKey);
     })
     .catch((error) => {
       console.error('Error al actualizar factura:', error);
@@ -1172,9 +1191,11 @@ function verificarEstadoTurno(fecha, turno) {
 function mostrarFormularioApertura() {
   const abrirSection = document.getElementById('abrirTurnoSection');
   const inventarioSection = document.getElementById('inventarioActualSection');
+  const resumenInicial = document.getElementById('inventarioInicialResumen');
   
   if (abrirSection) abrirSection.style.display = 'block';
   if (inventarioSection) inventarioSection.style.display = 'none';
+  if (resumenInicial) resumenInicial.style.display = 'none';
   
   // Habilitar todos los inputs de inventario para edición
   habilitarInputsInventario(true);
@@ -1203,6 +1224,69 @@ function mostrarFormularioApertura() {
   }
 }
 
+function getTituloInventarioInicialTurno(turno) {
+  const map = {
+    Mañana: 'Inventario al abrir turno',
+    Tarde: 'Inventario al entregar turno',
+    Noche: 'Inventario al cerrar turno'
+  };
+  return map[turno] || 'Inventario inicial del turno';
+}
+
+function getInventarioInicialFromTurno(turnoData) {
+  if (!turnoData) return {};
+  if (turnoData.inventarioInicial && typeof turnoData.inventarioInicial === 'object') {
+    return turnoData.inventarioInicial;
+  }
+  return {};
+}
+
+function renderInventarioInicialResumen(turnoData) {
+  const box = document.getElementById('inventarioInicialResumen');
+  const tituloEl = document.getElementById('inventarioInicialResumenTitulo');
+  const metaEl = document.getElementById('inventarioInicialResumenMeta');
+  const gridEl = document.getElementById('inventarioInicialResumenGrid');
+  if (!box || !gridEl) return;
+
+  const inventarioInicial = getInventarioInicialFromTurno(turnoData);
+  const turno = turnoData?.turno || currentVacunasTurno;
+  const tieneDatos = [...vacunasDisponibles.anual, ...vacunasDisponibles.trimestral].some((v) => {
+    const n = inventarioInicial[sanitizeFirebaseKey(v)];
+    return typeof n === 'number' && n > 0;
+  });
+
+  if (!turnoData?.inventarioInicial) {
+    box.style.display = 'none';
+    return;
+  }
+
+  box.style.display = 'block';
+  if (tituloEl) {
+    tituloEl.innerHTML = `<i class="fas fa-clipboard-list"></i> ${getTituloInventarioInicialTurno(turno)}`;
+  }
+  if (metaEl) {
+    const resp = turnoData.responsable || '—';
+    const hora = turnoData.horaApertura || '—';
+    metaEl.textContent = `Registrado por ${resp} a las ${hora}.`;
+  }
+
+  if (!tieneDatos) {
+    gridEl.innerHTML = '<p class="inventario-inicial-vacio">Sin unidades registradas en la apertura.</p>';
+    return;
+  }
+
+  const chips = [];
+  [...vacunasDisponibles.anual, ...vacunasDisponibles.trimestral].forEach((vacuna) => {
+    const cantidad = inventarioInicial[sanitizeFirebaseKey(vacuna)] || 0;
+    if (cantidad > 0) {
+      chips.push(
+        `<span class="inventario-inicial-chip"><span>${vacuna}</span><strong>${cantidad}</strong></span>`
+      );
+    }
+  });
+  gridEl.innerHTML = chips.join('');
+}
+
 // Mostrar inventario actual
 function mostrarInventarioActual(turnoData) {
   const abrirSection = document.getElementById('abrirTurnoSection');
@@ -1223,6 +1307,8 @@ function mostrarInventarioActual(turnoData) {
   
   if (responsableActual) responsableActual.textContent = turnoData.responsable || 'No especificado';
   if (horaApertura) horaApertura.textContent = turnoData.horaApertura || 'No especificado';
+
+  renderInventarioInicialResumen(turnoData);
   
   // Actualizar inventario
   inventarioActual = turnoData.inventario || {};
@@ -1311,14 +1397,15 @@ function abrirTurno() {
       inventarioInicial[sanitizeFirebaseKey(vacuna)] = valor;
     });
     
-    // Crear datos del turno
+    // Crear datos del turno (inventarioInicial no cambia; inventario es el stock actual)
     const turnoData = {
       responsable: responsable,
       fecha: currentVacunasFecha,
       turno: currentVacunasTurno,
       horaApertura: new Date().toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }),
       timestamp: Date.now(),
-      inventario: inventarioInicial
+      inventario: inventarioInicial,
+      inventarioInicial: { ...inventarioInicial }
     };
     
     // Guardar en Firebase

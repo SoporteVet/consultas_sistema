@@ -34,37 +34,74 @@ class InternamientoModule {
         this._aaCountdownVencidoPorId = {};
         this._loadCountdownVencidoFromStorage();
 
-        console.log('Módulo de Internamiento inicializando...');
+        console.log('Módulo de Internamiento listo (Firebase al entrar al módulo)');
     }
 
     // ================================================================
-    // INICIALIZACIÓN
+    // INICIALIZACIÓN (solo al abrir Internamientos, no al cargar la app)
     // ================================================================
     
     async init() {
-        if (!window.database) {
-            console.log('Esperando Firebase...');
-            setTimeout(() => this.init(), 500);
+        if (this.initialized && this.internamientosRef) {
             return;
         }
 
-        // Verificar permisos
+        if (!window.database) {
+            console.log('Esperando Firebase...');
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            return this.init();
+        }
+
+        if (!sessionStorage.getItem('userRole')) {
+            console.log('Esperando sesión de usuario...');
+            await new Promise((resolve) => setTimeout(resolve, 200));
+            return this.init();
+        }
+
         if (!this.canAccessModule()) {
             console.log('Usuario sin permisos para internamiento');
             return;
         }
 
-        // Inicializar referencias de Firebase
         this.internamientosRef = window.database.ref('internamientos');
-        
-        // Setup listeners
         this.setupFirebaseListeners();
-        
-        // Setup UI
-        this.setupUI();
-        
+
         this.initialized = true;
-        console.log('Módulo de Internamiento inicializado');
+        console.log('Módulo de Internamiento: Firebase conectado');
+    }
+
+    /** Al entrar a Ver / Nuevo / Visitas: conecta Firebase y carga datos. */
+    async onModuleEnter(maxWaitMs = 20000) {
+        if (!this.canAccessModule()) {
+            this.showAlert('No tienes permisos para acceder a Internamientos', 'Acceso Denegado', 'error');
+            return false;
+        }
+        const ok = await this.ensureInitialized(maxWaitMs);
+        if (!ok) {
+            this.showAlert(
+                'No se pudo cargar Internamientos. Verifique la conexión e intente de nuevo.',
+                'Error de conexión',
+                'error'
+            );
+            return false;
+        }
+        return true;
+    }
+
+    /** Espera a Firebase + sesión antes de crear/listar. */
+    async ensureInitialized(maxWaitMs = 20000) {
+        const deadline = Date.now() + maxWaitMs;
+        while (Date.now() < deadline) {
+            if (this.initialized && this.internamientosRef) {
+                return true;
+            }
+            await this.init();
+            if (this.initialized && this.internamientosRef) {
+                return true;
+            }
+            await new Promise((resolve) => setTimeout(resolve, 250));
+        }
+        return !!(this.initialized && this.internamientosRef);
     }
 
     canAccessModule() {
@@ -85,11 +122,11 @@ class InternamientoModule {
                     const data = childSnapshot.val();
                     this.internamientos.set(childSnapshot.key, data);
                 });
-
                 console.log(`Cargados ${this.internamientos.size} internamientos`);
-                this.refreshInternamientosList();
-                this.refreshAdmisionEdicionSelect();
             }
+
+            this.refreshInternamientosList();
+            this.refreshAdmisionEdicionSelect();
         });
 
         this.listeners.push(activeListener);
@@ -404,7 +441,7 @@ class InternamientoModule {
     // NAVEGACIÓN Y VISTAS
     // ================================================================
     
-    showInternamientosSection() {
+    async showInternamientosSection() {
         // Cerrar sidebar en móviles
         if (window.innerWidth <= 980 && typeof closeSidebar === 'function') {
             closeSidebar();
@@ -427,8 +464,18 @@ class InternamientoModule {
             
             // Mostrar lista, ocultar otras vistas
             this.showInternamientoView('lista');
-            
-            // Refresh lista
+
+            const container = document.getElementById('internamientosActivosContainer');
+            if (container && !this.initialized) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <p>Cargando internamientos…</p>
+                    </div>`;
+            }
+
+            const listo = await this.onModuleEnter();
+            if (!listo) return;
             this.refreshInternamientosList();
             
             // Establecer botón activo en sidebar
@@ -440,15 +487,13 @@ class InternamientoModule {
         }
     }
 
-    showVisitasView() {
-        // Ocultar todas las secciones principales
+    async showVisitasView() {
         const sections = document.querySelectorAll('.content section');
         sections.forEach(section => {
             section.classList.add('hidden');
             section.classList.remove('active');
         });
 
-        // Mostrar sección de internamientos
         const internamientosSection = document.getElementById('internamientosSection');
         if (!internamientosSection) {
             console.error('No se encontró la sección internamientosSection');
@@ -458,12 +503,22 @@ class InternamientoModule {
         setTimeout(() => {
             internamientosSection.classList.add('active');
         }, 50);
-        
-        // Mostrar directamente la vista de visitas (no la lista)
+
         this.showInternamientoView('visitas');
-        setTimeout(() => this.loadVisitasView(), 100);
-        
-        // Establecer botón activo en sidebar
+        const visitasContainer = document.getElementById('internamiento-visitas');
+        if (visitasContainer) {
+            visitasContainer.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando visitas…</p>
+                </div>`;
+        }
+
+        const listo = await this.onModuleEnter();
+        if (!listo) return;
+
+        this.loadVisitasView();
+
         if (typeof setActiveSubmenuButtonHTML === 'function') {
             setActiveSubmenuButtonHTML('visitasBtn');
         }
@@ -1142,26 +1197,41 @@ class InternamientoModule {
     // ADMISIÓN - FORMULARIO
     // ================================================================
     
-    showAdmisionForm(ticketData = null) {
+    async showAdmisionForm(ticketData = null) {
         // Nuevo internamiento: no hay ID; así en Pendientes no se pide código de verificación
         this.currentInternamientoId = null;
-        // Ocultar todas las secciones principales
         const sections = document.querySelectorAll('.content section');
         sections.forEach(section => {
             section.classList.add('hidden');
             section.classList.remove('active');
         });
 
-        // Mostrar sección de internamientos
         const internamientosSection = document.getElementById('internamientosSection');
         if (internamientosSection) {
             internamientosSection.classList.remove('hidden');
             setTimeout(() => {
                 internamientosSection.classList.add('active');
             }, 50);
-            
-            // Mostrar directamente la vista de admisión (no la lista)
+
             this.showInternamientoView('admision');
+            const admisionView = document.getElementById('internamiento-admision');
+            if (admisionView && !this.initialized) {
+                const prevDisplay = admisionView.style.display;
+                admisionView.dataset.prevDisplay = prevDisplay;
+                const loading = document.createElement('div');
+                loading.id = 'internamientoAdmisionLoading';
+                loading.className = 'empty-state';
+                loading.style.margin = '20px';
+                loading.innerHTML = `
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <p>Cargando formulario de admisión…</p>`;
+                admisionView.prepend(loading);
+            }
+
+            const listo = await this.onModuleEnter();
+            const loadingEl = document.getElementById('internamientoAdmisionLoading');
+            if (loadingEl) loadingEl.remove();
+            if (!listo) return;
             this.pendientesAdmision = [];
             this.medicamentosAdmision = [];
             this.renderListaPendientesAdmision();
@@ -2088,6 +2158,18 @@ class InternamientoModule {
                 return;
             }
 
+            const listo = await this.ensureInitialized();
+            if (!listo || !this.internamientosRef) {
+                this.submittingAdmision = false;
+                if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = originalBtnContent || '<i class="fas fa-save"></i> Crear Internamiento'; }
+                this.showAlert(
+                    'El módulo de internamiento aún se está conectando. Espere unos segundos e intente de nuevo.',
+                    'Conexión',
+                    'warning'
+                );
+                return;
+            }
+
             // Crear internamiento
             const internamientoId = await this.crearInternamiento(formData);
             
@@ -2231,6 +2313,11 @@ class InternamientoModule {
     }
 
     async crearInternamiento(data) {
+        const listo = await this.ensureInitialized();
+        if (!listo || !this.internamientosRef) {
+            throw new Error('Conexión con internamientos no disponible. Recargue la página e intente de nuevo.');
+        }
+
         const userId = sessionStorage.getItem('userId');
         const userName = sessionStorage.getItem('userName');
         const empresa = sessionStorage.getItem('userEmpresa') || 'veterinaria_smp';
@@ -2445,6 +2532,7 @@ class InternamientoModule {
 
         // Guardar en Firebase
         await this.internamientosRef.child(internamientoId).set(internamientoData);
+        this.internamientos.set(internamientoId, internamientoData);
 
         // Actualizar estadísticas iniciales
         await this.actualizarEstadisticasInternamiento(internamientoId);
@@ -9430,29 +9518,15 @@ class InternamientoModule {
 // Crear instancia global
 window.internamientoModule = null;
 
+/** Solo menú y listeners; Firebase se conecta al entrar al módulo (Ver / Nuevo / Visitas). */
 function initInternamientoModule() {
     if (window.internamientoModule) {
-        return; // Ya está inicializado
+        return;
     }
-    
-    // Crear instancia inmediatamente
+
     window.internamientoModule = new InternamientoModule();
-    
-    // Agregar botón al sidebar inmediatamente (no espera Firebase)
     window.internamientoModule.addMenuButton();
     window.internamientoModule.setupEventListeners();
-    
-    // Inicializar Firebase después (con delay si es necesario)
-    const initFirebase = () => {
-        if (window.database) {
-            window.internamientoModule.init();
-        } else {
-            setTimeout(initFirebase, 200);
-        }
-    };
-    
-    // Esperar un momento para que otros módulos terminen de cargar
-    setTimeout(initFirebase, 500);
 }
 
 // Auto-inicialización cuando el DOM esté listo

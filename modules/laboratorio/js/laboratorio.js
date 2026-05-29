@@ -71,8 +71,7 @@ function initLaboratorioSystem() {
             console.log('✅ Firebase database disponible');
             labTicketsRef = window.database.ref('lab_tickets');
             console.log('✅ Referencia lab_tickets creada');
-            // La carga de datos ocurre en la primera renderLabTickets (!labTicketsAllDataLoaded):
-            // una sola lectura completa de lab_tickets (antes estaba ligada al filtro "Todos").
+            // Ver Tickets Lab: pendiente/proceso cargan todo; reportados por mes. Otras secciones usan setupLabFirebaseListeners.
         } else {
             console.error('❌ Firebase database NO disponible');
             return;
@@ -526,6 +525,16 @@ function getLabFilterMonthValue() {
     return (el && el.value) ? el.value : getLocalYearMonthString();
 }
 
+/** Pestañas con carga y filtro por mes (como Reportados por Lab). */
+function usesLabMonthFilter(filter) {
+    return (
+        filter === 'reportado' ||
+        filter === 'reportado_cliente' ||
+        filter === 'internos' ||
+        filter === 'cliente_no_contesta'
+    );
+}
+
 function getMonthRangeStringsFromYm(ym) {
     const parts = (ym || '').split('-').map(Number);
     let y = parts[0];
@@ -610,7 +619,7 @@ function setupLabReportadosMonthFirebaseListener(initialFilter) {
         labReportadosMonthDataReady = true;
         const activeBtn = document.querySelector('.lab-filter-btn.active');
         const activeFilter = activeBtn ? activeBtn.getAttribute('data-filter') : initialFilter;
-        if (activeFilter !== 'reportado' && activeFilter !== 'reportado_cliente') return;
+        if (!usesLabMonthFilter(activeFilter)) return;
 
         const medicoEl = document.getElementById('labMedicoFilter');
         const mf = medicoEl ? medicoEl.value : '';
@@ -809,7 +818,7 @@ function setupLabEventListeners() {
             const currentStateFilter = activeFilterBtn ? activeFilterBtn.getAttribute('data-filter') : 'pendiente';
             const medicoFilter = document.getElementById('labMedicoFilter');
             const currentMedicoFilter = medicoFilter ? medicoFilter.value : '';
-            if (currentStateFilter === 'reportado' || currentStateFilter === 'reportado_cliente') {
+            if (usesLabMonthFilter(currentStateFilter)) {
                 teardownLabReportadosMonthListeners();
             }
             renderLabTickets(currentStateFilter, currentMedicoFilter);
@@ -1738,7 +1747,7 @@ function renderLabTicketsFromSource(sourceTickets, filter, medicoFilter = '') {
     container.innerHTML = '';
 
     let pool = sourceTickets;
-    if (filter === 'reportado' || filter === 'reportado_cliente') {
+    if (usesLabMonthFilter(filter)) {
         const ym = getLabFilterMonthValue();
         pool = filterTicketsByLabMonthInclusive(pool, ym);
     }
@@ -1806,9 +1815,7 @@ function renderLabTicketsFromSource(sourceTickets, filter, medicoFilter = '') {
 
 // Renderizar tickets de laboratorio
 function renderLabTickets(filter = 'pendiente', medicoFilter = '') {
-    const isReportadosTab = filter === 'reportado' || filter === 'reportado_cliente';
-
-    if (isReportadosTab) {
+    if (usesLabMonthFilter(filter)) {
         if (labTicketsAllDataLoaded) {
             teardownLabReportadosMonthListeners();
             renderLabTicketsFromSource(labTickets, filter, medicoFilter);
@@ -1827,7 +1834,6 @@ function renderLabTickets(filter = 'pendiente', medicoFilter = '') {
 
     teardownLabReportadosMonthListeners();
 
-    // Carga completa de lab_tickets una sola vez en sesión (pendiente, proceso, etc.).
     if (!labTicketsAllDataLoaded) {
         setupLabFirebaseListeners(true);
         return;
@@ -3819,12 +3825,12 @@ function toggleMedicoFilter(filter) {
     }
 }
 
-// Mes calendario solo para reportados por lab y reportado al cliente
+// Selector de mes (reportados, internos, cliente no contesta)
 function toggleDateFilter(filter) {
     const dateFilterContainer = document.getElementById('labDateFilterContainer');
     if (!dateFilterContainer) return;
 
-    if (filter === 'reportado' || filter === 'reportado_cliente') {
+    if (usesLabMonthFilter(filter)) {
         dateFilterContainer.style.display = 'block';
     } else {
         dateFilterContainer.style.display = 'none';
