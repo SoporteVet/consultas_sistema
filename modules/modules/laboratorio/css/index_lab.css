@@ -1,0 +1,418 @@
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #f4f4f9;
+    color: #333;
+    font-family: "Poppins", sans-serif;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 2px; /* Reducir el padding */
+    margin: 1px 0; /* Reducir el margen */
+    box-sizing: border-box;
+    border: 1px solid #ccc; /* Reducir el borde */
+    border-radius: 2px; /* Reducir el radio del borde */
+    font-size: 13px; /* Reducir el tamaño de la fuente */
+    line-height: 1.7;
+    border: none;
+}
+input[type="text"]:focus {
+    border-color: #0096d2;
+    outline: none;
+    box-shadow: 0 0 3px rgba(0, 150, 210, 0.5); /* Reducir la sombra */
+}
+input[type="text"] {
+    font-weight: bold;
+}
+input, textarea {
+    width: 100%;
+    padding: 8px;
+    margin-top: 5px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+
+input[type="text"]:focus {
+    border-color: #0096d2;
+    outline: none;
+}
+
+.input-container {
+    position: relative;
+    width: 100%;
+}
+
+.valor-bajo::after {
+    content: "↓";
+    position: absolute;
+    right: 210px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #0096d2;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.valor-alto::after {
+    content: "↑";
+    position: absolute;
+    right: 220px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: red;
+    font-size: 12px;
+    font-weight: bold;
+}
+button {
+    margin: 0;
+    padding: 10px 15px;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+    min-width: 120px;
+}
+
+button:hover {
+    background-color: #0056b3;
+    transform: translateY(-2px);
+}
+
+button:active {
+    transform: translateY(0);
+}
+
+#menuButton {
+    background-color: #007bff;
+}
+
+#menuButton:hover {
+    background-color: #0056b3;
+}
+
+.loading-indicator {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 20px;
+    border-radius: 8px;
+    z-index: 9999;
+    font-size: 14px;
+    text-align: center;
+    display: none; /* Oculto por defecto */
+}
+
+.spinner {
+    display: inline-block;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #03a9f4;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin-right: 10px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+    .container {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 32px auto;
+        max-width: 900px;
+        padding: 5px; /* Reducir el padding */
+        position: relative;
+        background-color: #fff;
+        border-radius: 16px;
+        box-shadow: 0 2px 16px #0001;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 5px; /* Aumentar ligeramente el margen */
+        width: 100%;
+    }
+
+    .small-image {
+        max-width: 100px; /* Ajustar el tamaño de la imagen */
+        height: auto;
+        margin-right: 10px; /* Añadir un margen derecho para separar la imagen del texto */
+    }
+    
+
+.header h1,
+.header-title {
+    flex: 1;
+    text-align: center;
+    font-size: 24px;
+    margin: 0;
+}
+
+.patient-id-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    background: #eef5ff;
+    border: 1px solid #bcd6ff;
+    border-radius: 8px;
+    padding: 1px 5px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #1f2933;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.patient-id-input {
+    border: none;
+    background: transparent;
+    font-size: 13px;
+    font-weight: 600;
+    color: #0f172a;
+    text-align: right;
+    min-width: 48px;
+    max-width: 90px;
+}
+
+.patient-id-input::placeholder {
+    color: #90a4c3;
+    font-weight: 400;
+}
+
+.patient-id-input:focus {
+    outline: none;
+}
+
+.subheader {
+    margin-top: -25px; /* Reducir el margen superior para acercar el texto */
+    font-size: 15px; /* Ajustar el tamaño de la fuente si es necesario */
+    color: #007bff;
+    text-align: center;
+}
+
+.titulos {
+    font-size: 15px; /* Ajustar el tamaño de la fuente si es necesario */
+    color: #007bff;
+    text-align: center;
+}
+
+.date-input {
+    border: none; /* Eliminar el borde */
+    background-color: transparent; /* Hacer el fondo transparente */
+    font-size: 15px; /* Ajustar el tamaño de la fuente */
+    font-family: Arial, sans-serif; /* Ajustar la fuente */
+    color: #333; /* Ajustar el color del texto */
+    padding: 4px; /* Ajustar el padding */
+    box-sizing: border-box;
+}
+
+.date-input:focus {
+    outline: none; /* Eliminar el borde de enfoque */
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 20px;
+    background-color: #fff;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+table, th, td {
+    border: 1px solid #ddd;
+    vertical-align: middle;
+}
+
+th, td {
+    padding: 2px; /* Reducir el padding */
+    text-align: left;
+    font-size: 12px; /* Reducir el tamaño de la fuente */
+    vertical-align: middle;
+}
+
+th {
+    background-color: #007bff;
+    color: #fff;
+    font-weight: bold;
+}
+
+td {
+    background-color: #f9f9f9;
+}
+select {
+    width: 40%;
+    padding: 7px;
+    margin: 7px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    background-color: #f9f9f9;
+    font-size: 18px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 10px;
+    appearance: none; /* Remove default arrow */
+    flex: 1; /* Allow the select elements to grow and fill the available space */
+}
+
+select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+select:hover {
+    border-color: #007bff;
+}
+.controls {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+    flex-wrap: wrap;
+}
+.controls label {
+    margin-right: 5px;
+}
+
+.controls select, .controls button {
+    padding: 10px;
+    font-size: 16px;
+    margin: 5px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+}
+
+.controls select:focus, .controls button:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+}
+
+button {
+    background-color: #007bff;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+.parameter-selector-panel {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin: 24px auto;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.parameter-selector-panel h3 {
+    margin-top: 0;
+    color: #007bff;
+    margin-bottom: 15px;
+}
+
+.selector-container {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+}
+
+.parameter-dropdown {
+    flex-grow: 1;
+    padding: 8px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+}
+     /* Estilos para controlar la estructura de la página */
+     .a4-container {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 auto;
+        background: #fff;
+        padding: 10px;
+    }
+    
+    /* Asegura que las plantillas aparezcan justo debajo de los datos básicos */
+    #datosBasicos {
+        margin-bottom: 25px;
+    }
+    
+    .plantilla {
+        display: none;
+    }
+    .sign-column {
+        text-align: center;
+        font-weight: bold;
+        width: 50px;
+    }
+.plantilla {
+    margin-top: 15px; /* Espacio adicional encima de cada plantilla */
+    border-top: 1px solid #fff; /* Línea separadora sutil (opcional) */
+    padding-top: 15px; /* Espaciado interior superior */
+}
+
+/* También puedes mejorar la presentación visual de las plantillas */
+.plantilla h3.subheader {
+    margin-top: 5px; /* Ajusta el margen superior del título de la plantilla */
+    margin-bottom: 15px; /* Espacio entre el título y la tabla */
+}
+.morfologia-container {
+    position: relative;
+}
+.morfologia-dropdown {
+    position: absolute;
+    background-color: white;
+    border: 1px solid #ccc;
+    padding: 8px;
+    z-index: 1000;
+    width: 100%;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.morfologia-dropdown div {
+    padding: 3px 0;
+}
+.footer {
+    font-size: 12px;
+    text-align: center;
+    margin-top: 20px;
+    font-weight: bold;
+}
+
+

@@ -1,0 +1,2436 @@
+/* ============================================================
+   MÓDULO DE INTERNAMIENTO - ESTILOS
+   ============================================================
+   Versión: 2.0 - Tema claro (consistente con el sistema)
+   ============================================================ */
+
+/* ============================================================
+   VARIABLES CSS - PALETA DE COLORES (Consistente con el sistema)
+   ============================================================ */
+:root {
+    --internamiento-primary: var(--primary-color, #4285f4);
+    --internamiento-secondary: var(--primary-gradient-end, #5a9cf2);
+    --internamiento-accent: var(--consultorio-color, #42a5f5);
+    --internamiento-light: var(--surface-muted, #eceff1);
+    --internamiento-dark: var(--primary-hover, #3367d6);
+    --internamiento-hover: var(--primary-hover, #3367d6);
+
+    --internamiento-activo: var(--terminado-color, #66bb6a);
+    --internamiento-critico: var(--urgencia-alta, #f44336);
+    --internamiento-alta: var(--espera-color, #ff9800);
+    --internamiento-egresado: #9e9e9e;
+
+    --internamiento-success: var(--secondary-color, #34a853);
+    --internamiento-warning: var(--espera-color, #ff9800);
+    --internamiento-danger: var(--accent-color, #ea4335);
+    --internamiento-info: var(--primary-color, #4285f4);
+
+    --internamiento-bg: var(--surface-page, #f9f9f9);
+    --internamiento-card-bg: var(--surface-card, #ffffff);
+    --internamiento-border: var(--border-subtle, #e0e0e0);
+
+    --internamiento-text: var(--dark-color, #202124);
+    --internamiento-text-secondary: var(--dark-gray, #5f6368);
+    --internamiento-text-muted: #999999;
+
+    --internamiento-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.08));
+    --internamiento-shadow-hover: var(--shadow, 0 4px 16px rgba(0, 0, 0, 0.12));
+
+    --internamiento-transition: var(--transition, all 0.3s ease);
+}
+
+/* ============================================================
+   SECCIÓN PRINCIPAL DE INTERNAMIENTOS
+   ============================================================ */
+
+#internamientosSection {
+    padding: 20px;
+    background: var(--internamiento-bg);
+    min-height: 100vh;
+    font-family: var(--font-body, 'Lexend', 'Segoe UI', system-ui, sans-serif);
+}
+
+#internamientosSection .int-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* ============================================================
+   HEADER DE SECCIÓN
+   ============================================================ */
+
+#internamientosSection .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid var(--internamiento-border);
+}
+
+#internamientosSection .section-header h2 {
+    font-family: var(--font-display, var(--font-body));
+    font-size: 1.8rem;
+    color: var(--internamiento-primary);
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-weight: 600;
+}
+
+#internamientosSection .section-header h2 i {
+    color: var(--internamiento-primary);
+    font-size: 1.6rem;
+}
+
+/* Badge BETA */
+.beta-badge {
+    background: linear-gradient(135deg, #ff9800, #f57c00) !important;
+    color: white !important;
+    padding: 5px 12px !important;
+    border-radius: 20px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 6px rgba(255, 152, 0, 0.3);
+}
+
+/* Banner de Beta */
+#internamientosSection .banner-beta {
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    border: 1px solid #ffcc80;
+    color: #e65100;
+    padding: 14px 20px;
+    border-radius: 10px;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 0.9rem;
+}
+
+#internamientosSection .banner-beta i {
+    font-size: 20px;
+    color: #ff9800;
+}
+
+/* ============================================================
+   BARRA DE BÚSQUEDA
+   ============================================================ */
+
+#internamientosSection #buscarInternamiento {
+    width: 100%;
+    padding: 14px 20px 14px 48px;
+    background: white;
+    border: 1px solid var(--internamiento-border);
+    border-radius: 25px;
+    color: var(--internamiento-text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: var(--internamiento-transition);
+    box-shadow: var(--internamiento-shadow);
+}
+
+#internamientosSection #buscarInternamiento::placeholder {
+    color: var(--internamiento-text-muted);
+}
+
+#internamientosSection #buscarInternamiento:focus {
+    outline: none;
+    border-color: var(--internamiento-primary);
+    box-shadow: var(--primary-focus-shadow, 0 0 0 3px rgba(66, 133, 244, 0.2));
+}
+
+/* ============================================================
+   FILTROS DE ESTADO
+   ============================================================ */
+
+#internamientosSection .filters-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+#internamientosSection .filter-btn {
+    padding: 10px 20px;
+    background: #f5f5f5;
+    border: none;
+    border-radius: 20px;
+    color: #333;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--internamiento-transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#internamientosSection .filter-btn:hover {
+    background: #e0e0e0;
+}
+
+#internamientosSection .filter-btn.active {
+    background: var(--internamiento-primary);
+    color: white;
+}
+
+#internamientosSection .filter-btn i {
+    font-size: 0.95rem;
+}
+
+/* ============================================================
+   CARDS DE INTERNAMIENTOS
+   ============================================================ */
+
+.internamiento-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 15px;
+    box-shadow: var(--internamiento-shadow);
+    transition: var(--internamiento-transition);
+    cursor: pointer;
+    border-left: 5px solid var(--internamiento-activo);
+    position: relative;
+}
+
+.internamiento-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--internamiento-shadow-hover);
+}
+
+/* Estados de cards */
+.internamiento-card[data-estado="activo"] {
+    border-left-color: var(--internamiento-activo);
+}
+
+.internamiento-card[data-estado="critico"] {
+    border-left-color: var(--internamiento-critico);
+    animation: pulse-critico 2s ease-in-out infinite;
+}
+
+@keyframes pulse-critico {
+    0%, 100% {
+        box-shadow: 0 2px 8px rgba(244, 67, 54, 0.15);
+    }
+    50% {
+        box-shadow: 0 4px 20px rgba(244, 67, 54, 0.3);
+    }
+}
+
+.internamiento-card[data-estado="alta"] {
+    border-left-color: var(--internamiento-alta);
+}
+
+.internamiento-card h3 {
+    margin: 0;
+    color: var(--internamiento-text);
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.internamiento-card .card-info {
+    color: var(--internamiento-text-secondary);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    margin-top: 10px;
+}
+
+.internamiento-card .card-info strong {
+    color: var(--internamiento-text);
+}
+
+/* Badges de estado */
+.badge-estado-activo,
+.badge-estado-critico,
+.badge-estado-alta,
+.badge-estado-egresado,
+.badge-estado-defuncion {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.badge-estado-activo {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+.badge-estado-critico {
+    background: #ffebee;
+    color: #c62828;
+    animation: badge-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes badge-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+.badge-estado-alta {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.badge-estado-egresado {
+    background: #f5f5f5;
+    color: #616161;
+}
+
+.badge-estado-defuncion {
+    background: #eceff1;
+    color: #455a64;
+}
+
+/* Badge estado en header */
+.badge-estado-header {
+    padding: 8px 18px !important;
+    font-size: 0.8rem !important;
+    border-radius: 20px !important;
+    font-weight: 700 !important;
+}
+
+.badge-estado-header.badge-estado-activo {
+    background: var(--internamiento-activo) !important;
+    color: white !important;
+}
+
+.badge-estado-header.badge-estado-critico {
+    background: var(--internamiento-critico) !important;
+    color: white !important;
+}
+
+.badge-estado-header.badge-estado-alta {
+    background: var(--internamiento-alta) !important;
+    color: white !important;
+}
+
+.badge-estado-header.badge-estado-egresado {
+    background: var(--internamiento-egresado) !important;
+    color: white !important;
+}
+
+.badge-estado-header.badge-estado-defuncion {
+    background: #5c5c5c !important;
+    color: white !important;
+}
+
+/* ============================================================
+   FORMULARIOS - SECCIONES
+   ============================================================ */
+
+#internamientosSection .form-section {
+    background: white;
+    padding: 25px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: var(--internamiento-shadow);
+    border-left: 4px solid var(--internamiento-primary);
+}
+
+#internamientosSection .form-section h3 {
+    color: var(--internamiento-primary);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 20px 0;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--internamiento-border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+#internamientosSection .form-section h3 i {
+    color: var(--internamiento-secondary);
+    font-size: 1rem;
+}
+
+/* ============================================================
+   FORMULARIOS - CAMPOS
+   ============================================================ */
+
+#internamientosSection .form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 18px;
+    margin-bottom: 18px;
+}
+
+#internamientosSection .form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+#internamientosSection .form-group label {
+    color: var(--internamiento-text);
+    font-size: 0.9rem;
+    font-weight: 500;
+    margin-bottom: 8px;
+}
+
+#internamientosSection .form-group input,
+#internamientosSection .form-group select,
+#internamientosSection .form-group textarea {
+    padding: 12px 15px;
+    background: white;
+    border: 1px solid var(--internamiento-border);
+    border-radius: 8px;
+    color: var(--internamiento-text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: var(--internamiento-transition);
+}
+
+#internamientosSection .form-group input:focus,
+#internamientosSection .form-group select:focus,
+#internamientosSection .form-group textarea:focus {
+    outline: none;
+    border-color: var(--internamiento-primary);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+#internamientosSection .form-group textarea {
+    resize: vertical;
+    min-height: 100px;
+}
+
+#internamientosSection .form-group input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--internamiento-primary);
+}
+
+/* Reticulocitos: layout compacto y claro */
+#internamientosSection .reticulocitos-section {
+    background: linear-gradient(135deg, #f8f9fc 0%, #f0f4ff 100%);
+    border: 1px solid #e0e4f0;
+    border-radius: 12px;
+    padding: 18px 20px;
+}
+#internamientosSection .reticulocitos-row {
+    margin-bottom: 12px;
+}
+#internamientosSection .reticulocitos-check-wrap {
+    grid-column: 1 / -1;
+}
+#internamientosSection .reticulocitos-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-bottom: 12px;
+    color: var(--internamiento-text);
+}
+#internamientosSection .reticulocitos-check {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--internamiento-primary);
+}
+#internamientosSection .reticulocitos-clasificacion-wrap {
+    margin-left: 28px;
+    padding-top: 6px;
+}
+#internamientosSection .reticulocitos-radios {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+#internamientosSection .reticulocitos-radio-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: normal;
+    cursor: pointer;
+    color: var(--internamiento-text);
+}
+#internamientosSection .reticulocitos-radio-label input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--internamiento-primary);
+}
+
+/* ============================================================
+   BOTONES
+   ============================================================ */
+
+#internamientosSection .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--internamiento-transition);
+    text-decoration: none;
+}
+
+#internamientosSection .btn:hover {
+    transform: translateY(-2px);
+}
+
+#internamientosSection .btn:active {
+    transform: scale(0.98);
+}
+
+/* Variantes de botones */
+#internamientosSection .btn-primary {
+    background: var(--internamiento-primary);
+    color: white;
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+}
+
+#internamientosSection .btn-primary:hover {
+    background: var(--internamiento-hover);
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4);
+}
+
+#internamientosSection .btn-secondary {
+    background: #f5f5f5;
+    color: #333;
+    border: 1px solid #e0e0e0;
+}
+
+#internamientosSection .btn-secondary:hover {
+    background: #e0e0e0;
+}
+
+#internamientosSection .btn-success {
+    background: var(--internamiento-success);
+    color: white;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+#internamientosSection .btn-success:hover {
+    background: #43a047;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+#internamientosSection .btn-warning {
+    background: var(--internamiento-warning);
+    color: white;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3);
+}
+
+#internamientosSection .btn-warning:hover {
+    background: #f57c00;
+}
+
+#internamientosSection .btn-danger {
+    background: var(--internamiento-danger);
+    color: white;
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+#internamientosSection .btn-danger:hover {
+    background: #e53935;
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+}
+
+#internamientosSection .btn-info {
+    background: var(--internamiento-info);
+    color: white;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3);
+}
+
+#internamientosSection .btn-info:hover {
+    background: #1e88e5;
+}
+
+/* Botones de acción especiales */
+.btn-turno {
+    background: var(--internamiento-secondary) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(90, 156, 242, 0.3) !important;
+}
+
+.btn-turno:hover {
+    background: var(--internamiento-primary) !important;
+}
+
+.btn-medicacion {
+    background: #26a69a !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(38, 166, 154, 0.3) !important;
+}
+
+.btn-medicacion:hover {
+    background: #00897b !important;
+}
+
+.btn-procedimientos {
+    background: #7e57c2 !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(126, 87, 194, 0.3) !important;
+}
+
+.btn-procedimientos:hover {
+    background: #673ab7 !important;
+}
+
+.btn-transfusion {
+    background: #ef5350 !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(239, 83, 80, 0.3) !important;
+}
+
+.btn-transfusion:hover {
+    background: #e53935 !important;
+}
+
+.btn-evolucion {
+    background: #42a5f5 !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(66, 165, 245, 0.3) !important;
+}
+
+.btn-evolucion:hover {
+    background: #1e88e5 !important;
+}
+
+.btn-llamada {
+    background: #66bb6a !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(102, 187, 106, 0.3) !important;
+}
+
+.btn-llamada:hover {
+    background: #43a047 !important;
+}
+
+.btn-cirugias {
+    background: #795548 !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(121, 85, 72, 0.3) !important;
+}
+
+.btn-cirugias:hover {
+    background: #6d4c41 !important;
+}
+
+.btn-critico {
+    background: #f44336 !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3) !important;
+}
+
+.btn-critico:hover {
+    background: #e53935 !important;
+}
+
+.btn-alta {
+    background: #ff9800 !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3) !important;
+}
+
+.btn-alta:hover {
+    background: #f57c00 !important;
+}
+
+.btn-egreso {
+    background: #4caf50 !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3) !important;
+    animation: btn-egreso-pulse 2s ease-in-out infinite;
+}
+
+@keyframes btn-egreso-pulse {
+    0%, 100% { box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3); }
+    50% { box-shadow: 0 4px 20px rgba(76, 175, 80, 0.5); }
+}
+
+.btn-egreso:hover {
+    background: #43a047 !important;
+}
+
+/* Botones pequeños */
+#internamientosSection .btn-sm {
+    padding: 8px 14px;
+    font-size: 0.85rem;
+}
+
+/* ============================================================
+   PANEL PRINCIPAL - HEADER DEL PACIENTE
+   ============================================================ */
+
+#panelHeaderContainer .panel-header-main {
+    background: white;
+    border-radius: 12px;
+    padding: 25px;
+    margin-bottom: 25px;
+    box-shadow: var(--internamiento-shadow);
+    border-top: 4px solid var(--internamiento-primary);
+}
+
+#panelHeaderContainer h2 {
+    color: var(--internamiento-text) !important;
+    font-size: 1.6rem !important;
+    font-weight: 700 !important;
+    margin: 0 0 15px 0 !important;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+#panelHeaderContainer h2 i {
+    color: var(--internamiento-primary) !important;
+}
+
+#panelHeaderContainer .patient-info {
+    display: flex;
+    gap: 25px;
+    flex-wrap: wrap;
+}
+
+#panelHeaderContainer .patient-info-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--internamiento-text-secondary) !important;
+    font-size: 0.9rem;
+}
+
+#panelHeaderContainer .patient-info-item i {
+    color: var(--internamiento-secondary) !important;
+}
+
+#panelHeaderContainer .patient-info-item strong {
+    color: var(--internamiento-text) !important;
+}
+
+#panelHeaderContainer .peso-hoy-tab:hover {
+    background: #e8eaf6 !important;
+    border-color: var(--internamiento-hover) !important;
+}
+
+/* Grid de acciones */
+.panel-actions-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.panel-actions-grid .btn {
+    padding: 14px 16px;
+    justify-content: flex-start;
+    font-size: 0.85rem;
+}
+
+.panel-actions-grid .btn i {
+    width: 20px;
+    text-align: center;
+}
+
+/* Acciones especiales */
+.panel-actions-special {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding-top: 18px;
+    border-top: 1px solid var(--internamiento-border);
+    margin-top: 18px;
+}
+
+/* ============================================================
+   PANEL - GRID DE INFORMACIÓN
+   ============================================================ */
+
+.panel-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+}
+
+/* Info Cards */
+.info-card {
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: var(--internamiento-shadow) !important;
+    overflow: hidden;
+}
+
+.info-card:hover {
+    box-shadow: var(--internamiento-shadow-hover) !important;
+}
+
+.info-card h3 {
+    background: linear-gradient(135deg, var(--internamiento-primary), var(--internamiento-secondary)) !important;
+    color: white !important;
+    padding: 15px 20px !important;
+    margin: 0 !important;
+    font-size: 0.95rem !important;
+    font-weight: 600 !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    border: none !important;
+}
+
+.info-card > div {
+    padding: 15px;
+}
+
+/* Cards de turnos */
+#panelUltimosTurnos > div:not(:first-child) {
+    background: #f8f9fa !important;
+    border-left: 4px solid var(--internamiento-primary) !important;
+    border: 1px solid #e8e8e8 !important;
+    border-left: 4px solid var(--internamiento-primary) !important;
+    padding: 14px !important;
+    margin: 10px 0 !important;
+    border-radius: 8px !important;
+    transition: var(--internamiento-transition);
+}
+
+#panelUltimosTurnos > div:not(:first-child):hover {
+    transform: translateX(4px);
+    box-shadow: var(--internamiento-shadow);
+}
+
+#panelUltimosTurnos strong {
+    color: var(--internamiento-text) !important;
+}
+
+#panelUltimosTurnos .parametros-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: var(--internamiento-text-secondary);
+}
+
+#panelUltimosTurnos .parametros-grid i {
+    color: var(--internamiento-secondary);
+    margin-right: 5px;
+}
+
+/* Cards de medicación */
+#panelMedicaciones > div:not(:first-child) {
+    background: #e8f5e9 !important;
+    border: 1px solid #c8e6c9 !important;
+    border-left: 4px solid #4caf50 !important;
+    padding: 14px !important;
+    margin: 10px 0 !important;
+    border-radius: 8px !important;
+}
+
+#panelMedicaciones strong {
+    color: var(--internamiento-text) !important;
+}
+
+/* Cards de procedimientos */
+#panelProcedimientos > div:not(:first-child) {
+    background: #ede7f6 !important;
+    border: 1px solid #d1c4e9 !important;
+    border-left: 4px solid #673ab7 !important;
+    padding: 14px !important;
+    margin: 10px 0 !important;
+    border-radius: 8px !important;
+}
+
+#panelProcedimientos strong {
+    color: var(--internamiento-text) !important;
+}
+
+/* ============================================================
+   TABLAS
+   ============================================================ */
+
+#internamientosSection .data-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: var(--internamiento-shadow);
+}
+
+#internamientosSection .data-table thead {
+    background: linear-gradient(135deg, var(--internamiento-primary), var(--internamiento-secondary));
+    color: white;
+}
+
+#internamientosSection .data-table th {
+    padding: 14px 18px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+#internamientosSection .data-table td {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--internamiento-border);
+    color: var(--internamiento-text);
+}
+
+#internamientosSection .data-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+#internamientosSection .data-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ============================================================
+   MODALES
+   ============================================================ */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    animation: modal-fade-in 0.3s ease;
+}
+
+@keyframes modal-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-overlay .modal-content {
+    background: white;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 500px;
+    width: 90%;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    animation: modal-slide-up 0.3s ease;
+}
+
+@keyframes modal-slide-up {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.modal-overlay .modal-content > div:first-child {
+    background: linear-gradient(135deg, var(--internamiento-primary), var(--internamiento-secondary));
+    color: white;
+    padding: 20px 25px;
+    margin: 0;
+}
+
+.modal-overlay .modal-content h3 {
+    color: white !important;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.modal-overlay .modal-content form,
+.modal-overlay .modal-content > div:last-child {
+    padding: 25px;
+}
+
+.modal-overlay .modal-content input,
+.modal-overlay .modal-content select,
+.modal-overlay .modal-content textarea {
+    padding: 12px 15px;
+    background: white;
+    border: 1px solid var(--internamiento-border);
+    border-radius: 8px;
+    color: var(--internamiento-text);
+    font-size: 0.95rem;
+    font-family: inherit;
+    transition: var(--internamiento-transition);
+    width: 100%;
+    margin-top: 8px;
+}
+
+.modal-overlay .modal-content input:focus,
+.modal-overlay .modal-content select:focus,
+.modal-overlay .modal-content textarea:focus {
+    outline: none;
+    border-color: var(--internamiento-primary);
+    box-shadow: 0 0 0 3px rgba(66, 133, 244, 0.1);
+}
+
+.modal-overlay .modal-content label {
+    color: var(--internamiento-text);
+    font-size: 0.9rem;
+    font-weight: 500;
+    display: block;
+}
+
+.modal-overlay .modal-content .form-group {
+    margin-bottom: 18px;
+}
+
+/* Botones dentro de modales */
+.modal-overlay .btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    padding: 12px 24px !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    font-family: inherit !important;
+    cursor: pointer !important;
+    transition: var(--internamiento-transition) !important;
+    text-decoration: none !important;
+    color: white !important;
+    -webkit-appearance: none !important;
+    -moz-appearance: none !important;
+    appearance: none !important;
+    box-sizing: border-box !important;
+}
+
+.modal-overlay .btn:hover {
+    transform: translateY(-2px) !important;
+}
+
+.modal-overlay .btn:active {
+    transform: scale(0.98) !important;
+}
+
+.modal-overlay .btn-primary {
+    background: var(--internamiento-primary) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3) !important;
+}
+
+.modal-overlay .btn-primary:hover {
+    background: var(--internamiento-hover) !important;
+    box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4) !important;
+}
+
+.modal-overlay .btn-secondary {
+    background: #f5f5f5 !important;
+    color: #333 !important;
+    border: 1px solid #e0e0e0 !important;
+}
+
+.modal-overlay .btn-secondary:hover {
+    background: #e0e0e0 !important;
+    color: #333 !important;
+}
+
+.modal-overlay .btn-success {
+    background: var(--internamiento-success) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3) !important;
+}
+
+.modal-overlay .btn-success:hover {
+    background: #43a047 !important;
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4) !important;
+}
+
+.modal-overlay .btn-warning {
+    background: var(--internamiento-warning) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(255, 152, 0, 0.3) !important;
+}
+
+.modal-overlay .btn-warning:hover {
+    background: #f57c00 !important;
+}
+
+.modal-overlay .btn-danger {
+    background: var(--internamiento-danger) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3) !important;
+}
+
+.modal-overlay .btn-danger:hover {
+    background: #e53935 !important;
+    box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4) !important;
+}
+
+.modal-overlay .btn-info {
+    background: var(--internamiento-info) !important;
+    color: white !important;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.3) !important;
+}
+
+.modal-overlay .btn-info:hover {
+    background: #1e88e5 !important;
+}
+
+/* ============================================================
+   ESTADOS VACÍOS
+   ============================================================ */
+
+#internamientosSection .empty-state {
+    text-align: center;
+    padding: 50px 25px;
+    color: var(--internamiento-text-muted);
+}
+
+#internamientosSection .empty-state i {
+    font-size: 60px;
+    margin-bottom: 20px;
+    color: #e0e0e0;
+}
+
+#internamientosSection .empty-state p {
+    font-size: 1rem;
+    margin-bottom: 20px;
+    color: var(--internamiento-text-secondary);
+}
+
+/* ============================================================
+   BARRA DE PROGRESO
+   ============================================================ */
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--internamiento-primary), var(--internamiento-secondary));
+    border-radius: 10px;
+    transition: width 0.5s ease;
+}
+
+/* ============================================================
+   PROCEDIMIENTOS - LISTA
+   ============================================================ */
+
+.procedimientos-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.procedimiento-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    background: #f8f9fa;
+    border: 1px solid var(--internamiento-border);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    transition: var(--internamiento-transition);
+}
+
+.procedimiento-item:hover {
+    background: #f0f0f0;
+}
+
+.procedimiento-item.completado {
+    opacity: 0.6;
+}
+
+.procedimiento-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 22px;
+    height: 22px;
+    border: 2px solid #bdbdbd;
+    border-radius: 5px;
+    cursor: pointer;
+    position: relative;
+    transition: var(--internamiento-transition);
+    flex-shrink: 0;
+}
+
+.procedimiento-checkbox:hover {
+    border-color: var(--internamiento-primary);
+}
+
+.procedimiento-checkbox:checked {
+    background: var(--internamiento-success);
+    border-color: var(--internamiento-success);
+}
+
+.procedimiento-checkbox:checked::after {
+    content: '✓';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+/* Tags de prioridad */
+.priority-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.priority-alta {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.priority-media {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.priority-baja {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
+/* ============================================================
+   PARÁMETROS VITALES GRID
+   ============================================================ */
+
+.parametros-vitales-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 12px;
+}
+
+.parametro-item {
+    background: #f8f9fa;
+    border: 1px solid var(--internamiento-border);
+    border-radius: 10px;
+    padding: 15px;
+    text-align: center;
+    transition: var(--internamiento-transition);
+}
+
+.parametro-item:hover {
+    border-color: var(--internamiento-primary);
+    box-shadow: var(--internamiento-shadow);
+}
+
+.parametro-label {
+    font-size: 0.75rem;
+    color: var(--internamiento-text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.parametro-valor {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--internamiento-text);
+    display: block;
+}
+
+.parametro-valor.alerta {
+    color: var(--internamiento-danger);
+    animation: valor-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes valor-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
+.parametro-unidad {
+    font-size: 0.75rem;
+    color: var(--internamiento-text-muted);
+}
+
+/* ============================================================
+   MODAL DETALLE DE TURNO (SOLO LECTURA)
+   ============================================================ */
+
+.turno-detalle-modal {
+    max-height: 75vh;
+    overflow-y: auto;
+    padding: 4px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.turno-detalle-modal::-webkit-scrollbar {
+    width: 8px;
+}
+.turno-detalle-modal::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+.turno-detalle-modal::-webkit-scrollbar-thumb {
+    background: var(--internamiento-secondary);
+    border-radius: 4px;
+}
+
+.turno-detalle-header {
+    background: linear-gradient(135deg, var(--internamiento-primary) 0%, var(--internamiento-secondary) 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.turno-detalle-header-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.turno-detalle-header-info h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.15rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.turno-detalle-header-info .meta {
+    font-size: 0.9rem;
+    opacity: 0.95;
+}
+
+.turno-detalle-header-badge {
+    margin-left: auto;
+    background: rgba(255,255,255,0.25);
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.turno-detalle-section {
+    background: var(--internamiento-card-bg);
+    border: 1px solid var(--internamiento-border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--internamiento-shadow);
+}
+
+.turno-detalle-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 16px 0;
+    padding-bottom: 12px;
+    border-bottom: 2px solid var(--internamiento-light);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--internamiento-primary);
+}
+
+.turno-detalle-section-title i {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.turno-detalle-section.turno-vitales .parametro-item {
+    padding: 12px 14px;
+}
+.turno-detalle-section.turno-vitales .parametro-label {
+    font-size: 0.7rem;
+}
+.turno-detalle-section.turno-vitales .parametro-valor {
+    font-size: 1.15rem;
+}
+
+.turno-detalle-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 16px;
+}
+.turno-detalle-fila:last-child {
+    border-bottom: none;
+}
+.turno-detalle-fila .label {
+    font-size: 0.875rem;
+    color: var(--internamiento-text-secondary);
+    flex-shrink: 0;
+}
+.turno-detalle-fila .value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--internamiento-text);
+    text-align: right;
+}
+
+.turno-detalle-fluidoterapia {
+    background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%);
+    border: 1px solid #90caf9;
+    border-radius: 12px;
+}
+
+.turno-detalle-observaciones {
+    background: linear-gradient(135deg, #fffde7 0%, #fff9c4 100%);
+    border: 1px solid #ffee58;
+    border-radius: 12px;
+    padding: 16px 20px;
+    white-space: pre-wrap;
+    min-height: 48px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: #5d4037;
+}
+
+.turno-detalle-alertas {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    border: 1px solid #ef5350;
+    border-radius: 12px;
+    padding: 14px 20px;
+}
+.turno-detalle-alertas .chip {
+    display: inline-block;
+    background: rgba(183, 28, 28, 0.15);
+    color: #b71c1c;
+    padding: 6px 12px;
+    border-radius: 8px;
+    margin: 4px 6px 4px 0;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+.turno-detalle-alertas .chip i {
+    margin-right: 6px;
+}
+
+/* ============================================================
+   MODAL DATOS DE INGRESO
+   ============================================================ */
+
+.ingreso-detalle-modal {
+    max-height: 75vh;
+    overflow-y: auto;
+    padding: 4px;
+    font-family: 'Segoe UI', system-ui, sans-serif;
+}
+
+.ingreso-detalle-modal::-webkit-scrollbar {
+    width: 8px;
+}
+.ingreso-detalle-modal::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+.ingreso-detalle-modal::-webkit-scrollbar-thumb {
+    background: var(--internamiento-secondary);
+    border-radius: 4px;
+}
+
+.ingreso-detalle-header {
+    background: linear-gradient(135deg, var(--internamiento-primary) 0%, var(--internamiento-secondary) 100%);
+    color: white;
+    padding: 20px 24px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 14px rgba(66, 133, 244, 0.25);
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.ingreso-detalle-header-icon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255,255,255,0.25);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.ingreso-detalle-header-info h3 {
+    margin: 0 0 6px 0;
+    font-size: 1.2rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
+
+.ingreso-detalle-header-info .meta {
+    font-size: 0.9rem;
+    opacity: 0.95;
+}
+
+.ingreso-detalle-section {
+    background: var(--internamiento-card-bg);
+    border: 1px solid var(--internamiento-border);
+    border-radius: 12px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    box-shadow: var(--internamiento-shadow);
+}
+
+.ingreso-detalle-section-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px 0;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--internamiento-light);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--internamiento-primary);
+}
+
+.ingreso-detalle-section-title i {
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.ingreso-detalle-fila {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 8px 0;
+    border-bottom: 1px solid #f0f0f0;
+    gap: 16px;
+}
+.ingreso-detalle-fila:last-child {
+    border-bottom: none;
+}
+.ingreso-detalle-fila .label {
+    font-size: 0.875rem;
+    color: var(--internamiento-text-secondary);
+    flex-shrink: 0;
+}
+.ingreso-detalle-fila .value {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--internamiento-text);
+    text-align: right;
+}
+
+.ingreso-detalle-texto {
+    margin-top: 6px;
+    padding: 12px 14px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border-left: 4px solid var(--internamiento-primary);
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+    line-height: 1.5;
+    color: var(--internamiento-text);
+}
+
+.ingreso-detalle-controles {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 10px;
+}
+.ingreso-detalle-controles .item {
+    padding: 10px 12px;
+    background: #e8eaf6;
+    border: 1px solid var(--internamiento-accent);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 44px;
+}
+.ingreso-detalle-controles .item span {
+    flex: 1 1 0%;
+    min-width: 0;
+    line-height: 1.35;
+    word-break: break-word;
+}
+.ingreso-detalle-controles .item strong {
+    flex-shrink: 0;
+    color: var(--internamiento-primary);
+    white-space: nowrap;
+}
+
+.ingreso-detalle-med-item {
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-left: 4px solid #0284c7;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+.ingreso-detalle-med-item:last-child {
+    margin-bottom: 0;
+}
+.ingreso-detalle-med-item strong {
+    color: #0369a1;
+}
+
+.ingreso-detalle-proc-item {
+    padding: 12px 14px;
+    background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
+    border-left: 4px solid var(--internamiento-secondary);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    margin-bottom: 10px;
+}
+.ingreso-detalle-proc-item:last-child {
+    margin-bottom: 0;
+}
+.ingreso-detalle-proc-item strong {
+    color: var(--internamiento-dark);
+}
+
+.ingreso-detalle-footer {
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 2px solid var(--internamiento-border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* Contenedor estado general: una columna de filas */
+.turno-detalle-estado-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+/* ============================================================
+   ALERTAS
+   ============================================================ */
+
+.alert-box {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 8px;
+    margin-bottom: 14px;
+    border-left: 4px solid;
+}
+
+.alert-box.success {
+    background: #e8f5e9;
+    border-color: #4caf50;
+    color: #2e7d32;
+}
+
+.alert-box.warning {
+    background: #fff3e0;
+    border-color: #ff9800;
+    color: #e65100;
+}
+
+.alert-box.danger {
+    background: #ffebee;
+    border-color: #f44336;
+    color: #c62828;
+}
+
+.alert-box.info {
+    background: #e3f2fd;
+    border-color: #2196f3;
+    color: #1565c0;
+}
+
+.alert-box i {
+    font-size: 1.2rem;
+}
+
+/* ============================================================
+   TIMELINE
+   ============================================================ */
+
+.timeline {
+    position: relative;
+    padding-left: 35px;
+    margin: 20px 0;
+}
+
+.timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    background: linear-gradient(to bottom, var(--internamiento-primary), #e0e0e0);
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 20px;
+    padding: 15px;
+    background: white;
+    border: 1px solid var(--internamiento-border);
+    border-radius: 8px;
+    box-shadow: var(--internamiento-shadow);
+    transition: var(--internamiento-transition);
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: -31px;
+    top: 18px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--internamiento-primary);
+    border: 3px solid white;
+    box-shadow: 0 0 0 2px var(--internamiento-primary);
+}
+
+.timeline-item:hover {
+    transform: translateX(4px);
+    box-shadow: var(--internamiento-shadow-hover);
+}
+
+/* ============================================================
+   TABS
+   ============================================================ */
+
+.tabs-container {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 20px;
+    background: #f5f5f5;
+    border-radius: 10px;
+    padding: 5px;
+}
+
+/* Pestañas RER en columna (muchos días) */
+.tabs-container.rer-tabs-vertical {
+    flex-direction: column;
+    max-height: 70vh;
+    overflow-y: auto;
+    padding: 8px;
+    margin-bottom: 16px;
+}
+.tabs-container.rer-tabs-vertical .tab-btn {
+    width: 100%;
+    text-align: left;
+    padding: 12px 16px;
+}
+
+.tab-btn {
+    padding: 10px 20px;
+    border: none;
+    background: transparent;
+    color: var(--internamiento-text-secondary);
+    font-weight: 500;
+    font-size: 0.9rem;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--internamiento-transition);
+    border-radius: 8px;
+}
+
+.tab-btn:hover {
+    color: var(--internamiento-text);
+    background: white;
+}
+
+.tab-btn.active {
+    background: var(--internamiento-primary);
+    color: white;
+    box-shadow: var(--internamiento-shadow);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+    animation: tab-fade-in 0.3s ease;
+}
+
+@keyframes tab-fade-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* ============================================================
+   STATS CARDS
+   ============================================================ */
+
+.stats-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+    box-shadow: var(--internamiento-shadow);
+    transition: var(--internamiento-transition);
+    border-top: 4px solid var(--internamiento-primary);
+}
+
+.stats-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--internamiento-shadow-hover);
+}
+
+.stats-value {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--internamiento-primary);
+    margin: 10px 0;
+}
+
+.stats-label {
+    font-size: 0.85rem;
+    color: var(--internamiento-text-muted);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.stats-icon {
+    font-size: 1.8rem;
+    color: var(--internamiento-secondary);
+}
+
+/* ============================================================
+   CHIPS
+   ============================================================ */
+
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    background: #f5f5f5;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    color: var(--internamiento-text-secondary);
+    margin: 3px;
+    transition: var(--internamiento-transition);
+}
+
+.chip:hover {
+    background: var(--internamiento-primary);
+    color: white;
+}
+
+/* ============================================================
+   DIVIDER
+   ============================================================ */
+
+.divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--internamiento-border), transparent);
+    margin: 25px 0;
+}
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (max-width: 1024px) {
+    #internamientosSection .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .panel-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .panel-actions-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    #internamientosSection {
+        padding: 15px;
+    }
+    
+    #internamientosSection .section-header h2 {
+        font-size: 1.4rem;
+    }
+    
+    #internamientosSection .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    #internamientosSection .filters-container {
+        flex-direction: column;
+    }
+    
+    #internamientosSection .filter-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .panel-actions-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .parametros-vitales-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    #panelHeaderContainer h2 {
+        font-size: 1.3rem !important;
+    }
+    
+    #panelHeaderContainer .patient-info {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .stats-value {
+        font-size: 1.8rem;
+    }
+    
+    .timeline {
+        padding-left: 28px;
+    }
+    
+    .timeline::before {
+        left: 6px;
+    }
+    
+    .timeline-item::before {
+        left: -26px;
+        width: 10px;
+        height: 10px;
+    }
+}
+
+/* ============================================================
+   VISITAS - DISEÑO PREMIUM
+   ============================================================ */
+
+/* Filtro de fecha para visitas */
+.visitas-date-filter {
+    background: white;
+    padding: 15px 20px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    border-left: 4px solid var(--internamiento-secondary);
+    margin-bottom: 20px;
+}
+
+.visitas-date-filter label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #334155;
+    font-weight: 500;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.visitas-date-filter label i {
+    color: var(--internamiento-secondary);
+    font-size: 1.1rem;
+}
+
+.visitas-date-filter input[type="date"] {
+    padding: 10px 15px;
+    border: 2px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    width: 100%;
+    max-width: 250px;
+    transition: all 0.3s ease;
+    background: white;
+    color: #334155;
+}
+
+.visitas-date-filter input[type="date"]:hover {
+    border-color: var(--internamiento-secondary);
+}
+
+.visitas-date-filter input[type="date"]:focus {
+    outline: none;
+    border-color: var(--internamiento-secondary);
+    box-shadow: 0 0 0 3px rgba(90, 156, 242, 0.15);
+}
+
+/* Filtros de visitas */
+.visitas-filters-container {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.visita-filter-btn {
+    padding: 10px 20px;
+    background: #f5f5f5;
+    border: none;
+    border-radius: 20px;
+    color: #333;
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: inherit;
+    cursor: pointer;
+    transition: var(--internamiento-transition);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.visita-filter-btn:hover {
+    background: #e0e0e0;
+    transform: translateY(-2px);
+}
+
+.visita-filter-btn.active {
+    background: linear-gradient(135deg, var(--internamiento-secondary), var(--internamiento-primary));
+    color: white;
+    box-shadow: 0 4px 12px rgba(90, 156, 242, 0.3);
+}
+
+.visita-filter-btn i {
+    font-size: 0.95rem;
+}
+
+/* Agrupador de visitas por día */
+.visitas-day-group {
+    margin-bottom: 30px;
+}
+
+.visitas-day-header {
+    background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
+    border-left: 4px solid var(--internamiento-secondary);
+    padding: 12px 20px;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 6px rgba(90, 156, 242, 0.15);
+}
+
+.visitas-day-header i {
+    color: var(--internamiento-primary);
+    font-size: 1.2rem;
+}
+
+.visitas-day-header h3 {
+    color: var(--internamiento-hover);
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.visitas-day-header .visitas-count {
+    margin-left: auto;
+    background: white;
+    color: var(--internamiento-secondary);
+    padding: 4px 12px;
+    border-radius: 15px;
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+
+/* Tarjetas de visitas premium */
+.visita-card {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    transition: all 0.3s ease;
+    border-left: 5px solid var(--internamiento-secondary);
+    position: relative;
+    overflow: hidden;
+}
+
+.visita-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(90, 156, 242, 0.03) 0%, rgba(66, 133, 244, 0.03) 100%);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.visita-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(90, 156, 242, 0.2);
+}
+
+.visita-card:hover::before {
+    opacity: 1;
+}
+
+/* Estados de visitas */
+.visita-card[data-estado="En espera"] {
+    border-left-color: #ff9800;
+}
+
+.visita-card[data-estado="En curso"] {
+    border-left-color: #2196f3;
+}
+
+.visita-card[data-estado="Finalizada"] {
+    border-left-color: #4caf50;
+}
+
+/* Header de la tarjeta */
+.visita-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 15px;
+    gap: 15px;
+}
+
+.visita-card-time {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--internamiento-secondary);
+    font-weight: 600;
+    font-size: 0.95rem;
+}
+
+.visita-card-time i {
+    font-size: 1rem;
+}
+
+/* Badge de estado en tarjeta */
+.visita-estado-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.visita-estado-badge.en-espera {
+    background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+    color: #e65100;
+    border: 1px solid #ffcc80;
+}
+
+.visita-estado-badge.en-curso {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    color: #1565c0;
+    border: 1px solid #90caf9;
+}
+
+.visita-estado-badge.finalizada {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+.visita-estado-badge i {
+    font-size: 0.85rem;
+}
+
+/* Contenido principal de tarjeta */
+.visita-card-body {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.visita-card-info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.visita-card-info-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.visita-card-info-label i {
+    color: var(--internamiento-secondary);
+    font-size: 0.85rem;
+}
+
+.visita-card-info-value {
+    font-size: 0.95rem;
+    color: #1e293b;
+    font-weight: 500;
+}
+
+/* Motivo de visita */
+.visita-card-motivo {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-left: 3px solid var(--internamiento-secondary);
+    padding: 12px 15px;
+    border-radius: 8px;
+    margin-top: 12px;
+}
+
+.visita-card-motivo-label {
+    font-size: 0.75rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.visita-card-motivo-label i {
+    color: var(--internamiento-secondary);
+}
+
+.visita-card-motivo-text {
+    color: #334155;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+/* Footer de tarjeta con acciones */
+.visita-card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 15px;
+    border-top: 1px solid #e2e8f0;
+    margin-top: 15px;
+}
+
+.visita-card-patient {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #475569;
+    font-size: 0.85rem;
+}
+
+.visita-card-patient i {
+    color: var(--internamiento-secondary);
+    font-size: 1rem;
+}
+
+.visita-card-patient strong {
+    color: #1e293b;
+    font-weight: 600;
+}
+
+/* Select de estado en tarjeta */
+.visita-estado-select-card {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 2px solid #e2e8f0;
+    background: white;
+    color: #334155;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-family: inherit;
+}
+
+.visita-estado-select-card:hover {
+    border-color: var(--internamiento-secondary);
+}
+
+.visita-estado-select-card:focus {
+    outline: none;
+    border-color: var(--internamiento-secondary);
+    box-shadow: 0 0 0 3px rgba(90, 156, 242, 0.15);
+}
+
+/* Empty state para visitas */
+.visitas-empty-state {
+    text-align: center;
+    padding: 60px 30px;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+    margin-top: 20px;
+}
+
+.visitas-empty-state i {
+    font-size: 4rem;
+    color: #c5cae9;
+    margin-bottom: 20px;
+}
+
+.visitas-empty-state h3 {
+    color: #475569;
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin: 0 0 10px 0;
+}
+
+.visitas-empty-state p {
+    color: #64748b;
+    font-size: 0.95rem;
+    margin: 0;
+}
+
+/* Contador de resultados */
+.visitas-results-count {
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-left: 4px solid var(--internamiento-secondary);
+    padding: 12px 18px;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #334155;
+    font-size: 0.9rem;
+}
+
+.visitas-results-count i {
+    color: var(--internamiento-secondary);
+    font-size: 1.1rem;
+}
+
+.visitas-results-count strong {
+    color: #1e293b;
+    font-weight: 700;
+}
+
+/* Responsive para visitas */
+@media (max-width: 768px) {
+    .visita-card-header {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .visita-card-body {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    
+    .visita-card-footer {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+    }
+    
+    .visitas-filters-container {
+        flex-direction: column;
+    }
+    
+    .visita-filter-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .visitas-day-header {
+        flex-wrap: wrap;
+    }
+}
+
+/* ============================================================
+   UTILIDADES
+   ============================================================ */
+
+#internamientosSection .text-center { text-align: center; }
+#internamientosSection .text-right { text-align: right; }
+#internamientosSection .mt-10 { margin-top: 10px; }
+#internamientosSection .mt-20 { margin-top: 20px; }
+#internamientosSection .mb-10 { margin-bottom: 10px; }
+#internamientosSection .mb-20 { margin-bottom: 20px; }
+#internamientosSection .p-20 { padding: 20px; }
+#internamientosSection .hidden { display: none !important; }
+
+/* Animación fade-in-up */
+.fade-in-up {
+    animation: fade-in-up 0.4s ease;
+}
+
+@keyframes fade-in-up {
+    from {
+        opacity: 0;
+        transform: translateY(15px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+/* Sección bloqueada */
+.section-locked {
+    position: relative;
+}
+
+.section-locked::after {
+    content: '🔒 Solo Lectura';
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #f44336;
+    color: white;
+    padding: 6px 14px;
+    border-radius: 15px;
+    font-weight: 600;
+    font-size: 0.8rem;
+    box-shadow: var(--internamiento-shadow);
+}
+
+/* Botones deshabilitados */
+#internamientosSection .btn:disabled,
+#internamientosSection .btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}

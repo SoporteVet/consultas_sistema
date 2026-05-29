@@ -1,0 +1,698 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Plantillas</title>
+    <link rel="stylesheet" href="../css/index_lab.css">
+    <script defer src="../js/lab-report-header.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.4.0/jspdf.umd.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=ABeeZee:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Kanit:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=League+Spartan:wght@100..900&family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700&display=swap" rel="stylesheet">
+
+    <style>
+        .historial-container {
+            margin: 10px 0;
+        }
+
+        .historial-container label {
+            margin-right: 10px;
+        }
+
+        .historial-container select {
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            background: white;
+        }
+        
+        .resultado-section {
+            margin: 20px 0;
+        }
+        
+        .resultado-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        
+        .resultado-table th,
+        .resultado-table td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+            font-size: 14px;
+            vertical-align: middle;
+        }
+        
+        .resultado-table th {
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+            width: 30%;
+        }
+        
+        .resultado-table td {
+            background-color: #f9f9f9;
+            width: 70%;
+        }
+        
+        .resultado-table input {
+            width: 100%;
+            padding: 2px;
+            margin: 1px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        
+        .resultado-table input:focus {
+            outline: none;
+            border-color: #0096d2;
+            box-shadow: 0 0 3px rgba(0, 150, 210, 0.5);
+        }
+        
+        .imagen-interpretacion {
+            margin: 20px auto;
+            max-width: 60%;
+            height: auto;
+            display: block;
+        }
+        
+        .guia-interpretacion {
+            text-align: center;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+<script>
+// Autollenado desde parámetros URL
+document.addEventListener('DOMContentLoaded', function(){
+  try {
+    const p = new URLSearchParams(location.search);
+    const setVal = (id, v) => { const el = document.getElementById(id); if (el && v!=null && v!=='') el.value = v; };
+    setVal('mascotaNombre', p.get('mascotaNombre'));
+    setVal('propietarioNombre', p.get('propietarioNombre'));
+    setVal('propietarioCedula', p.get('propietarioCedula'));
+    setVal('propietarioTelefono', p.get('propietarioTelefono'));
+    setVal('propietarioEmail', p.get('propietarioEmail'));
+    setVal('nombreMedico', p.get('nombreMedico'));
+    setVal('mascotaRaza', p.get('mascotaRaza'));
+    setVal('mascotaEdad', p.get('mascotaEdad'));
+    setVal('mascotaPeso', p.get('mascotaPeso'));
+    
+    // Verificar el mensaje del médico después del autollenado
+    const medico = p.get('nombreMedico');
+    if (medico) {
+      setTimeout(() => {
+        verificarMedico();
+      }, 100);
+    }
+    
+    const especie = p.get('especie');
+    const sexo = p.get('mascotaSexo');
+    if (especie) {
+      const especieSelector = document.getElementById('especieSelector');
+      if (especieSelector) {
+        especieSelector.value = capitalize(especie);
+        const evt = new Event('change'); especieSelector.dispatchEvent(evt);
+      }
+    }
+    if (sexo) {
+      const sexoSelector = document.getElementById('sexoSelector');
+      if (sexoSelector) {
+        sexoSelector.value = capitalize(sexo);
+        const evt = new Event('change'); sexoSelector.dispatchEvent(evt);
+      }
+    }
+  } catch(e) { console.warn('Autollenado falló:', e); }
+  function capitalize(s){ if(!s) return s; return s.charAt(0).toUpperCase()+s.slice(1).toLowerCase(); }
+});
+</script>
+    <div class="controls">
+        <label for="sexoSelector">Selecciona el sexo:</label>
+        <select id="sexoSelector" onchange="actualizarSexoEnPlantilla(),actualizarContenidoPorEspecie()">
+            <option value="Seleccionar" selected>-- Seleccionar --</option>
+            <option value="Macho">Macho</option>
+            <option value="Hembra">Hembra</option>
+        </select>
+        <label for="especieSelector">Selecciona la especie:</label>
+        <select id="especieSelector" onchange="actualizarEspecieEnPlantilla(),actualizarContenidoPorEspecie()">
+            <option value="Seleccionar" selected>-- Seleccionar --</option>
+            <option value="Canino">Canino</option>
+            <option value="Felino">Felino</option>
+        </select>
+    </div>
+
+<div class="container" id="template1" style="display: block;">
+    <div class="header">
+        <img src="../img/empresa.jpg" alt="Logo de la Empresa" class="small-image">
+        <h1>Laboratorio Clínico Veterinario</h1>
+    </div>
+    <h3 class="subheader" id="tituloTipificacion">TIPIFICACIÓN</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th colspan="2">DATOS DE LA MASCOTA</th>
+                    <th colspan="2">DATOS DEL PROPIETARIO</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Nombre</td>
+                    <td><input type="text" id="mascotaNombre" onkeydown="moverFocoConFlechas(event, 'propietarioNombre', 'propietarioNombre', 'mascotaNombre', 'mascotaRaza')"></td>
+                    <td>Nombre</td>
+                    <td><input type="text" id="propietarioNombre"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaNombre', 'mascotaNombre', 'propietarioCedula')"></td>
+                </tr>
+                <tr>
+                    <td>Raza</td>
+                    <td><input type="text" id="mascotaRaza" list="razas"  onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaNombre', 'mascotaNombre', 'mascotaSexo')"></td>
+                    <datalist id="razas">
+                    </datalist>
+                    
+                    <td>Cédula</td>
+                    <td><input type="text" id="propietarioCedula"  onkeydown="moverFocoConFlechas(event, 'propietarioTelefono', 'mascotaRaza', 'propietarioNombre', 'propietarioTelefono')"></td>
+                </tr>
+                <tr>
+                    <td>Sexo</td>
+                    <td><input type="text" id="sexoEnPlantilla"></td>
+                    <td>Teléfono</td>
+                    <td><input type="text" id="propietarioTelefono" onkeydown="moverFocoConFlechas(event, 'propietarioCedula', 'mascotaSexo', 'propietarioCedula', 'propietarioEmail')"></td>
+                </tr>
+                <tr>
+                    <td>Especie</td>
+                    <td><input type="text" id="especieEnPlantilla"></td>
+                    <td>Email</td>
+                    <td><input type="text" id="propietarioEmail"  onkeydown="moverFocoConFlechas(event, 'mascotaEspecie', 'mascotaEspecie', 'propietarioTelefono', 'nombreMedico')"></td>
+                </tr>
+                <tr>
+                    <td>Edad</td>
+                    <td><input type="text" id="mascotaEdad" list="edades"  onkeydown="moverFocoConFlechas(event, 'nombreMedico', 'mascotaEspecie', 'mascotaEspecie', 'mascotaPeso')"></td>
+                    <datalist id="edades">
+                        <option value="1 mes"><option value="2 meses"><option value="3 meses"><option value="4 meses">
+                        <option value="5 meses"><option value="6 meses"><option value="7 meses"><option value="8 meses"><option value="9 meses">
+                        <option value="10 meses"><option value="11 meses"><option value="12 meses">
+                        <option value="1 año"><option value="2 años"><option value="3 años"><option value="4 años">
+                        <option value="5 años"><option value="6 años"><option value="7 años"><option value="8 años"><option value="9 años">
+                        <option value="10 años"><option value="11 años"><option value="12 años"><option value="13 años"></option><option value="14 años"></option>
+                        <option value="15 años"><option value="16 años"><option value="17 años"><option value="18 años"></option>
+                        <option value="19 años"><option value="20 años"></option>    
+                    </datalist>
+                    </datalist>
+                    <td>Médico</td>
+                    <td>
+                        <input type="text" id="nombreMedico" list="medicos" 
+                            onkeydown="moverFocoConFlechas(event, 'propietarioFecha', 'mascotaEdad', 'propietarioEmail', 'propietarioFecha')" 
+                            oninput="verificarMedico()">
+                    </td>
+                    <datalist id="medicos">
+                        <option value="N.A">
+                        <option value="Dr. Randall Azofeifa">
+                        <option value="Dr. Luis Coto">
+                        <option value="Dr. Gustavo Gónzalez">
+                        <option value="Dra. Daniela Sancho">
+                        <option value="Dra. Franciny Nuñez">
+                        <option value="Dra. Lourdes Chacón">
+                        <option value="Dra. Alejandra León">
+                        <option value="Dra. Karla Quesada">
+                        <option value="Dra. Kharen Moreno">
+                        <option value="Dra. Karina Madrigal">
+                        <option value="Dra. Natalia Alvarado">
+                        <option value="Dra. Eliany Lopez">
+                        <option value="Dra. Adriana Rojas">
+                        <option value="Dra. Nicole Sibaja">
+                    </datalist>
+                </tr>
+                <script>    
+                        function actualizarSexoEnPlantilla() {
+                            const sexo = document.getElementById('sexoSelector').value;
+                            document.getElementById('sexoEnPlantilla').value = sexo.charAt(0).toUpperCase() + sexo.slice(1);
+                        }
+                        function actualizarEspecieEnPlantilla() {
+                            const especie = document.getElementById('especieSelector').value;
+                            document.getElementById('especieEnPlantilla').value = especie;
+                            actualizarRazasPorEspecie();
+                        }
+                        function verificarMedico() {
+                            const medico = document.getElementById('nombreMedico').value;
+                            const mensaje = document.getElementById('mensajeMedico');
+                            if (medico === 'N.A' || medico === 'NA' || medico === '' || medico === 'N.A.' || medico.toLowerCase() === 'na') {
+                                mensaje.style.display = 'none';
+                            } else {
+                                mensaje.style.display = 'block';
+                            }
+                        }
+                        </script>
+                </tr>
+                <tr>
+                    <td>Peso</td>
+<td><input type="text" id="mascotaPeso" list="pesos" onkeydown="moverFocoConFlechas(event, 'propietarioFecha', 'mascotaEdad', 'mascotaEdad', 'mascotaPeso')"></td>
+
+    <datalist id="pesos">
+        <option value="N.A">N.A</option><option value="0,1 kg">0,1 kg</option><option value="0,2 kg">0,2 kg</option><option value="0,3 kg">0,3 kg</option><option value="0,4 kg">0,4 kg</option>
+        <option value="0,5 kg">0,5 kg</option><option value="0,6 kg">0,6 kg</option><option value="0,7 kg">0,7 kg</option><option value="0,8 kg">0,8 kg</option><option value="0,9 kg">0,9 kg</option>
+        <option value="1,0 kg">1,0 kg</option><option value="1,1 kg">1,1 kg</option><option value="1,2 kg">1,2 kg</option><option value="1,3 kg">1,3 kg</option><option value="1,4 kg">1,4 kg</option>
+        <option value="1,5 kg">1,5 kg</option><option value="1,6 kg">1,6 kg</option><option value="1,7 kg">1,7 kg</option><option value="1,8 kg">1,8 kg</option><option value="1,9 kg">1,9 kg</option>
+        <option value="2,0 kg">2,0 kg</option><option value="2,1 kg">2,1 kg</option><option value="2,2 kg">2,2 kg</option><option value="2,3 kg">2,3 kg</option><option value="2,4 kg">2,4 kg</option>
+        <option value="2,5 kg">2,5 kg</option><option value="2,6 kg">2,6 kg</option><option value="2,7 kg">2,7 kg</option><option value="2,8 kg">2,8 kg</option><option value="2,9 kg">2,9 kg</option>
+        <option value="3,0 kg">3,0 kg</option><option value="3,1 kg">3,1 kg</option><option value="3,2 kg">3,2 kg</option><option value="3,3 kg">3,3 kg</option><option value="3,4 kg">3,4 kg</option>
+        <option value="3,5 kg">3,5 kg</option><option value="3,6 kg">3,6 kg</option><option value="3,7 kg">3,7 kg</option><option value="3,8 kg">3,8 kg</option><option value="3,9 kg">3,9 kg</option>
+        <option value="4,0 kg">4,0 kg</option><option value="4,1 kg">4,1 kg</option><option value="4,2 kg">4,2 kg</option><option value="4,3 kg">4,3 kg</option><option value="4,4 kg">4,4 kg</option>
+        <option value="4,5 kg">4,5 kg</option><option value="4,6 kg">4,6 kg</option><option value="4,7 kg">4,7 kg</option><option value="4,8 kg">4,8 kg</option><option value="4,9 kg">4,9 kg</option>
+        <option value="5,0 kg">5,0 kg</option><option value="5,1 kg">5,1 kg</option><option value="5,2 kg">5,2 kg</option><option value="5,3 kg">5,3 kg</option><option value="5,4 kg">5,4 kg</option>
+        <option value="5,5 kg">5,5 kg</option><option value="5,6 kg">5,6 kg</option><option value="5,7 kg">5,7 kg</option><option value="5,8 kg">5,8 kg</option><option value="5,9 kg">5,9 kg</option>
+        <option value="6,0 kg">6,0 kg</option><option value="6,1 kg">6,1 kg</option><option value="6,2 kg">6,2 kg</option><option value="6,3 kg">6,3 kg</option><option value="6,4 kg">6,4 kg</option>
+        <option value="6,5 kg">6,5 kg</option><option value="6,6 kg">6,6 kg</option><option value="6,7 kg">6,7 kg</option><option value="6,8 kg">6,8 kg</option><option value="6,9 kg">6,9 kg</option>
+        <option value="7,0 kg">7,0 kg</option><option value="7,1 kg">7,1 kg</option><option value="7,2 kg">7,2 kg</option><option value="7,3 kg">7,3 kg</option><option value="7,4 kg">7,4 kg</option>
+        <option value="7,5 kg">7,5 kg</option><option value="7,6 kg">7,6 kg</option><option value="7,7 kg">7,7 kg</option><option value="7,8 kg">7,8 kg</option><option value="7,9 kg">7,9 kg</option>
+        <option value="8,0 kg">8,0 kg</option><option value="8,1 kg">8,1 kg</option><option value="8,2 kg">8,2 kg</option><option value="8,3 kg">8,3 kg</option><option value="8,4 kg">8,4 kg</option>
+        <option value="8,5 kg">8,5 kg</option><option value="8,6 kg">8,6 kg</option><option value="8,7 kg">8,7 kg</option><option value="8,8 kg">8,8 kg</option><option value="8,9 kg">8,9 kg</option>
+        <option value="9,0 kg">9,0 kg</option><option value="9,1 kg">9,1 kg</option><option value="9,2 kg">9,2 kg</option><option value="9,3 kg">9,3 kg</option><option value="9,4 kg">9,4 kg</option>
+        <option value="9,5 kg">9,5 kg</option><option value="9,6 kg">9,6 kg</option><option value="9,7 kg">9,7 kg</option><option value="9,8 kg">9,8 kg</option><option value="9,9 kg">9,9 kg</option>
+        <option value="10,0 kg">10,0 kg</option><option value="10,1 kg">10,1 kg</option><option value="10,2 kg">10,2 kg</option><option value="10,3 kg">10,3 kg</option><option value="10,4 kg">10,4 kg</option>
+        <option value="10,5 kg">10,5 kg</option><option value="10,6 kg">10,6 kg</option><option value="10,7 kg">10,7 kg</option><option value="10,8 kg">10,8 kg</option><option value="10,9 kg">10,9 kg</option>
+        <option value="11,0 kg">11,0 kg</option><option value="11,1 kg">11,1 kg</option><option value="11,2 kg">11,2 kg</option><option value="11,3 kg">11,3 kg</option><option value="11,4 kg">11,4 kg</option>
+        <option value="11,5 kg">11,5 kg</option><option value="11,6 kg">11,6 kg</option><option value="11,7 kg">11,7 kg</option><option value="11,8 kg">11,8 kg</option><option value="11,9 kg">11,9 kg</option>
+        <option value="12,0 kg">12,0 kg</option>
+        
+    </datalist>
+        <td>Fecha</td>
+        <td><input type="date" id="propietarioFecha" class="date-input" onkeydown="moverFocoConFlechas(event, 'nombreMedico', 'mascotaPeso', 'nombreMedico', 'propietarioFecha')"></td>
+                </tr>
+                
+                <script>
+                function moverFocoConFlechas(event, derechaId, izquierdaId, arribaId, abajoId) {
+                    switch (event.key) {
+                        case 'ArrowRight':
+                            event.preventDefault();
+                            document.getElementById(derechaId).focus();
+                            break;
+                        case 'ArrowLeft':
+                            event.preventDefault();
+                            document.getElementById(izquierdaId).focus();
+                            break;
+                        case 'ArrowUp':
+                            event.preventDefault();
+                            document.getElementById(arribaId).focus();
+                            break;
+                        case 'ArrowDown':
+                            event.preventDefault();
+                            document.getElementById(abajoId).focus();
+                            break;
+                    }
+                }
+                
+                // Lista de razas caninas
+                const razasCaninas = [
+                    "SRD", "Labrador Retriever", "Golden Retriever", "Pastor Alemán", "Bulldog", 
+                    "Beagle", "French Bulldog", "Rottweiler", "Yorkshire Terrier", "Boxer",
+                    "Dachshund", "Siberian Husky", "Great Dane", "Doberman Pinscher", "Shih Tzu",
+                    "Border Collie", "Australian Shepherd", "Pomeranian", "Chihuahua", "Maltese"
+                ];
+                
+                // Lista de razas felinas
+                const razasFelinas = [
+                    "SRD", "Persa", "Maine Coon", "Siames", "Ragdoll", "British Shorthair",
+                    "Abyssinian", "Bengal", "Scottish Fold", "American Shorthair", "Russian Blue"
+                ];
+                
+                function actualizarRazasPorEspecie() {
+                    const especie = document.getElementById('especieSelector').value;
+                    const datalistRazas = document.getElementById('razas');
+                    
+                    // Limpiar opciones anteriores
+                    datalistRazas.innerHTML = '';
+                    
+                    const campoRaza = document.getElementById('mascotaRaza');
+                    
+                    // Restablecer el campo de raza si se cambia la especie
+                    if (campoRaza.value && campoRaza.value !== "SRD") {
+                        campoRaza.value = '';
+                    }
+                    
+                    // Agregar las razas según la especie seleccionada
+                    if (especie === "Canino") {
+                        razasCaninas.forEach(raza => {
+                            const option = document.createElement('option');
+                            option.value = raza;
+                            datalistRazas.appendChild(option);
+                        });
+                    } else if (especie === "Felino") {
+                        razasFelinas.forEach(raza => {
+                            const option = document.createElement('option');
+                            option.value = raza;
+                            datalistRazas.appendChild(option);
+                        });
+                    }
+                }
+                
+                function actualizarContenidoPorEspecie() {
+                    const especie = document.getElementById('especieSelector').value;
+                    
+                    // Contenedores de contenido por especie
+                    const contenidoCanino = document.getElementById('contenidoCanino');
+                    const contenidoFelino = document.getElementById('contenidoFelino');
+                    const tituloTipificacion = document.getElementById('tituloTipificacion');
+                    
+                    if (especie === "Canino") {
+                        if (tituloTipificacion) tituloTipificacion.textContent = "TIPIFICACIÓN CANINA";
+                        if (contenidoCanino) contenidoCanino.style.display = 'block';
+                        if (contenidoFelino) contenidoFelino.style.display = 'none';
+                    } else if (especie === "Felino") {
+                        if (tituloTipificacion) tituloTipificacion.textContent = "TIPIFICACIÓN FELINA";
+                        if (contenidoCanino) contenidoCanino.style.display = 'none';
+                        if (contenidoFelino) contenidoFelino.style.display = 'block';
+                    } else {
+                        if (tituloTipificacion) tituloTipificacion.textContent = "TIPIFICACIÓN";
+                        if (contenidoCanino) contenidoCanino.style.display = 'none';
+                        if (contenidoFelino) contenidoFelino.style.display = 'none';
+                    }
+                }
+                </script>
+            </tbody>
+        </table>
+
+        <!-- Sección de resultado y guía - Canino -->
+        <div id="contenidoCanino" style="display: none;">
+            <table class="resultado-table">
+                <tr>
+                    <th>RESULTADO</th>
+                    <td>
+                        <input type="text" id="resultadoCanino" placeholder="DEA 1-">
+                    </td>
+                </tr>
+            </table>
+            
+            <div class="guia-interpretacion">
+                <img src="../img/tipificación_canino.jpg" alt="Guía de Interpretación Tipificación Canina" class="imagen-interpretacion">
+            </div>
+        </div>
+
+        <!-- Sección de resultado y guía - Felino -->
+        <div id="contenidoFelino" style="display: none;">
+            <table class="resultado-table">
+                <tr>
+                    <th>RESULTADO</th>
+                    <td>
+                        <input type="text" id="resultadoFelino" placeholder="AB" list="tiposSangreFelino">
+                        <datalist id="tiposSangreFelino">
+                            <option value="A">
+                            <option value="B">
+                            <option value="AB">
+                        </datalist>
+                    </td>
+                </tr>
+            </table>
+            
+            <div class="guia-interpretacion">
+                <img src="../img/tipificación felino.jpg" alt="Guía de Interpretación Tipificación Felina" class="imagen-interpretacion">
+            </div>
+        </div>
+        
+  <div class="footer">
+    <p id="mensajeMedico" style="display: none;">El personal médico cuenta con un plazo de 24 a 48 horas para interpretar el reporte de los resultados.</p>
+    <p>Facebook: Veterinaria San Martin de Porres | Teléfono: 4000 - 1365 | Ext: 106</p>
+    <p>WhatsApp: 8839 - 2214 | San Rafael Abajo de Desamparados, 50 metros Norte del Mall Zona Centro</p>
+    <p>Correo: laboratorio@vetsanmartin.com</p>
+</div>
+</div>
+<div class="controls">
+    <button id="pdfButton" onclick="generatePDF()">Generar PDF</button>
+    <button id="menuButton" onclick="window.location.href='index.html'">Volver al Menú</button>
+    <div id="loadingPdf" class="loading-indicator">
+        <div class="spinner"></div>
+        <span>Generando PDF...</span>
+    </div>
+</div>
+  <script>
+async function generatePDF() {
+    // Mostrar el indicador de carga
+    const loadingIndicator = document.getElementById('loadingPdf');
+    const pdfButton = document.getElementById('pdfButton');
+    
+    loadingIndicator.style.display = 'flex';
+    pdfButton.disabled = true;
+    
+    try {
+        const { jsPDF } = window.jspdf;
+        const selectedTemplate = document.getElementById('template1');
+
+        if (!selectedTemplate) {
+            alert('No se encontró la plantilla.');
+            return;
+        }
+
+        // Obtener el nombre de la mascota y el apellido del propietario
+        const mascotaNombre = document.getElementById('mascotaNombre').value || 'Sin_nombre';
+        const propietarioNombre = document.getElementById('propietarioNombre').value || 'Sin_apellido';
+        const propietarioApellido = propietarioNombre.split(' ').pop();
+
+        // Espera a que todas las imágenes dentro del elemento se carguen
+        const images = selectedTemplate.getElementsByTagName('img');
+        const loadImages = Array.from(images).map(img => {
+            return new Promise((resolve, reject) => {
+                if (img.complete) {
+                    resolve();
+                } else {
+                    img.onload = resolve;
+                    img.onerror = reject;
+                }
+            });
+        });
+
+        await Promise.all(loadImages);
+
+        // Genera el canvas
+        const canvas = await html2canvas(selectedTemplate, {
+            scale: 2,
+            useCORS: true,
+            logging: false,
+            allowTaint: true,
+            backgroundColor: '#ffffff'
+        });
+
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgWidth = 150; 
+        const pageHeight = 297;
+        const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        // Calcular la posición para centrar la imagen con márgenes
+        const x = (pdf.internal.pageSize.getWidth() - imgWidth) / 2;
+        const y = 5;
+
+        // Agrega la imagen de la plantilla escalada y centrada
+        pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
+
+        // Genera el nombre del archivo según la plantilla actual y datos
+        const fileName = `Tipificacion ${mascotaNombre} ${propietarioApellido}.pdf`;
+
+        // Guarda el PDF
+        pdf.save(fileName);
+    } catch (error) {
+        console.error('Error al generar el PDF:', error);
+        alert('Ocurrió un error al generar el PDF: ' + error.message);
+    } finally {
+        // Ocultar el indicador de carga y habilitar el botón nuevamente
+        loadingIndicator.style.display = 'none';
+        pdfButton.disabled = false;
+    }
+}
+
+// Configurar historial de análisis
+document.addEventListener('DOMContentLoaded', function() {
+    setupHistorial();
+    
+    // Añadir evento para guardar los datos al generar el PDF
+    const pdfButton = document.getElementById('pdfButton');
+    if (pdfButton) {
+        const originalHandler = pdfButton.onclick;
+        pdfButton.onclick = async function() {
+            guardarAnalisisActual();
+            if (originalHandler) {
+                return originalHandler.apply(this, arguments);
+            }
+        };
+    }
+});
+
+function setupHistorial() {
+    const controlsDiv = document.querySelector('.controls');
+    
+    if (controlsDiv) {
+        const historialContainer = document.createElement('div');
+        historialContainer.className = 'historial-container';
+        
+        const label = document.createElement('label');
+        label.htmlFor = 'historialSelector';
+        label.textContent = 'Historial de análisis:';
+        
+        const select = document.createElement('select');
+        select.id = 'historialSelector';
+        
+        const defaultOption = document.createElement('option');
+        defaultOption.value = '';
+        defaultOption.textContent = '-- Seleccionar análisis anterior --';
+        defaultOption.selected = true;
+        select.appendChild(defaultOption);
+        
+        cargarOpcionesHistorial(select);
+        
+        select.addEventListener('change', function() {
+            if (this.value) {
+                cargarAnalisisDesdeHistorial(this.value);
+            }
+        });
+        
+        historialContainer.appendChild(label);
+        historialContainer.appendChild(select);
+        controlsDiv.appendChild(historialContainer);
+        
+        // Botón para borrar historial
+        const borrarHistorialBtn = document.createElement('button');
+        borrarHistorialBtn.id = 'borrarHistorialBtn';
+        borrarHistorialBtn.textContent = 'Borrar Historial';
+        borrarHistorialBtn.onclick = function() {
+            if (confirm('¿Estás seguro de que quieres borrar todo el historial de análisis?')) {
+                localStorage.removeItem('tipificacionHistorial');
+                cargarOpcionesHistorial(document.getElementById('historialSelector'));
+                alert('Historial borrado correctamente');
+            }
+        };
+        controlsDiv.appendChild(borrarHistorialBtn);
+    }
+}
+
+function cargarOpcionesHistorial(selectElement) {
+    while (selectElement.options.length > 1) {
+        selectElement.remove(1);
+    }
+    
+    const historial = JSON.parse(localStorage.getItem('tipificacionHistorial') || '[]');
+    
+    historial.forEach((analisis, index) => {
+        const option = document.createElement('option');
+        option.value = index;
+        
+        const fecha = new Date(analisis.timestamp);
+        const fechaStr = fecha.toLocaleDateString();
+        const horaStr = fecha.toLocaleTimeString();
+        
+        option.textContent = `${analisis.mascotaNombre} - ${analisis.propietarioNombre} (${fechaStr} ${horaStr})`;
+        
+        selectElement.appendChild(option);
+    });
+}
+
+function guardarAnalisisActual() {
+    const getValueSafe = (id) => {
+        const element = document.getElementById(id);
+        return element ? element.value : '';
+    };
+
+    const formData = {
+        mascotaNombre: getValueSafe('mascotaNombre'),
+        mascotaRaza: getValueSafe('mascotaRaza'),
+        mascotaEspecie: getValueSafe('especieEnPlantilla'),
+        mascotaSexo: getValueSafe('sexoEnPlantilla'),
+        mascotaEdad: getValueSafe('mascotaEdad'),
+        mascotaPeso: getValueSafe('mascotaPeso'),
+        
+        propietarioNombre: getValueSafe('propietarioNombre'),
+        propietarioCedula: getValueSafe('propietarioCedula'),
+        propietarioTelefono: getValueSafe('propietarioTelefono'),
+        propietarioEmail: getValueSafe('propietarioEmail'),
+        propietarioFecha: getValueSafe('propietarioFecha'),
+        nombreMedico: getValueSafe('nombreMedico'),
+        
+        resultadoCanino: getValueSafe('resultadoCanino'),
+        resultadoFelino: getValueSafe('resultadoFelino'),
+        
+        especieSelector: getValueSafe('especieSelector'),
+        sexoSelector: getValueSafe('sexoSelector'),
+        
+        timestamp: new Date().toISOString()
+    };
+
+    let historial = JSON.parse(localStorage.getItem('tipificacionHistorial') || '[]');
+    historial.push(formData);
+    
+    // Limitar historial a los últimos 50 análisis
+    if (historial.length > 50) {
+        historial = historial.slice(-50);
+    }
+    
+    localStorage.setItem('tipificacionHistorial', JSON.stringify(historial));
+    cargarOpcionesHistorial(document.getElementById('historialSelector'));
+}
+
+function cargarAnalisisDesdeHistorial(index) {
+    const historial = JSON.parse(localStorage.getItem('tipificacionHistorial') || '[]');
+    
+    if (!historial[index]) return;
+    
+    const analisis = historial[index];
+    
+    document.getElementById('mascotaNombre').value = analisis.mascotaNombre || '';
+    document.getElementById('mascotaRaza').value = analisis.mascotaRaza || '';
+    document.getElementById('especieEnPlantilla').value = analisis.mascotaEspecie || '';
+    document.getElementById('sexoEnPlantilla').value = analisis.mascotaSexo || '';
+    document.getElementById('mascotaEdad').value = analisis.mascotaEdad || '';
+    document.getElementById('mascotaPeso').value = analisis.mascotaPeso || '';
+    
+    document.getElementById('propietarioNombre').value = analisis.propietarioNombre || '';
+    document.getElementById('propietarioCedula').value = analisis.propietarioCedula || '';
+    document.getElementById('propietarioTelefono').value = analisis.propietarioTelefono || '';
+    document.getElementById('propietarioEmail').value = analisis.propietarioEmail || '';
+    document.getElementById('propietarioFecha').value = analisis.propietarioFecha || '';
+    document.getElementById('nombreMedico').value = analisis.nombreMedico || '';
+    
+    document.getElementById('resultadoCanino').value = analisis.resultadoCanino || '';
+    document.getElementById('resultadoFelino').value = analisis.resultadoFelino || '';
+    
+    if (analisis.especieSelector) {
+        document.getElementById('especieSelector').value = analisis.especieSelector;
+        const event = new Event('change');
+        document.getElementById('especieSelector').dispatchEvent(event);
+    }
+    
+    if (analisis.sexoSelector) {
+        document.getElementById('sexoSelector').value = analisis.sexoSelector;
+        const event = new Event('change');
+        document.getElementById('sexoSelector').dispatchEvent(event);
+    }
+    
+    verificarMedico();
+    
+    alert(`Datos de ${analisis.mascotaNombre} cargados correctamente`);
+}
+
+// Ejecutar al cargar la página para actualizar razas
+document.addEventListener('DOMContentLoaded', function() {
+    const especieSelector = document.getElementById('especieSelector');
+    if (especieSelector) {
+        if (especieSelector.value !== "Seleccionar") {
+            actualizarRazasPorEspecie();
+            actualizarContenidoPorEspecie();
+        }
+        especieSelector.addEventListener('change', actualizarRazasPorEspecie);
+        especieSelector.addEventListener('change', actualizarContenidoPorEspecie);
+    }
+});
+</script>
+</body>
+</html>
+
+
