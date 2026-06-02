@@ -358,7 +358,9 @@ class InternamientoModule {
         if (!container) return;
 
         const estadoActual = (int) => int.estado?.actual || 'activo';
-        let filtered = Array.from(this.internamientos.values());
+        let filtered = Array.from(this.internamientos.entries())
+            .filter(([id]) => this.esRegistroInternamientoReal(id))
+            .map(([, int]) => int);
 
         // Aplicar filtro (si falta estado.actual se considera activo)
         switch(filter) {
@@ -412,7 +414,10 @@ class InternamientoModule {
 
         const queryLower = query.toLowerCase().trim();
         
-        let filtered = Array.from(this.internamientos.values()).filter(int => {
+        let filtered = Array.from(this.internamientos.entries())
+            .filter(([id]) => this.esRegistroInternamientoReal(id))
+            .map(([, int]) => int)
+            .filter(int => {
             const nombreMascota = (int.referencias?.nombreMascota || '').toLowerCase();
             const expediente = (int.metadata?.expedienteNumero || '').toLowerCase();
             const propietario = this.getNombrePropietario(int).toLowerCase();
@@ -574,10 +579,16 @@ class InternamientoModule {
             const propietario = this.getNombrePropietario(int) || '';
             const pacienteLabel = propietario ? `${nombreMascota} — ${propietario}` : nombreMascota;
             Object.entries(visitas).forEach(([visitaId, v]) => {
+                const nombreMascotaVisita = v.nombrePaciente || nombreMascota;
+                const pacienteLabelVisita = v.nombrePaciente
+                    ? v.nombrePaciente
+                    : pacienteLabel;
                 todasLasVisitas.push({
                     visitaId,
                     internamientoId,
-                    pacienteLabel,
+                    pacienteLabel: pacienteLabelVisita,
+                    nombreMascota: nombreMascotaVisita,
+                    nombrePropietario: v.nombrePaciente ? '' : propietario,
                     nombreVisitante: v.nombreVisitante || '',
                     parentesco: v.parentesco || '',
                     motivo: v.motivo || '',
@@ -679,6 +690,13 @@ class InternamientoModule {
                 
                 return `
                     <div class="visita-card" data-estado="${v(visita.estado)}">
+                        <div class="visita-card-paciente-titulo">
+                            <i class="fas fa-paw"></i>
+                            <div class="visita-card-paciente-nombres">
+                                <span class="visita-card-mascota-nombre">${v(visita.nombreMascota)}</span>
+                                ${visita.nombrePropietario ? `<span class="visita-card-propietario-nombre">${v(visita.nombrePropietario)}</span>` : ''}
+                            </div>
+                        </div>
                         <div class="visita-card-header">
                             <div class="visita-card-time">
                                 <i class="fas fa-clock"></i>
@@ -719,11 +737,8 @@ class InternamientoModule {
                         </div>
                         
                         <div class="visita-card-footer">
-                            <div class="visita-card-patient">
-                                <i class="fas fa-paw"></i>
-                                <span>Paciente: <strong>${v(visita.pacienteLabel)}</strong></span>
-                            </div>
-                            <select class="visita-estado-select-card" data-internamiento-id="${v(visita.internamientoId)}" data-visita-id="${v(visita.visitaId)}">
+                            <label class="visita-card-estado-label" for="visita-estado-${v(visita.visitaId)}">Estado de la visita</label>
+                            <select id="visita-estado-${v(visita.visitaId)}" class="visita-estado-select-card" data-internamiento-id="${v(visita.internamientoId)}" data-visita-id="${v(visita.visitaId)}">
                                 ${estados.map(e => `<option value="${v(e)}" ${visita.estado === e ? 'selected' : ''}>${v(e)}</option>`).join('')}
                             </select>
                         </div>
@@ -878,11 +893,22 @@ class InternamientoModule {
         }
     }
 
-    showModalAgregarVisita() {
+    _escapeVisitaHtml(str) {
+        return String(str ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
+    }
+
+    /** Pacientes disponibles para sugerencias al registrar visitas */
+    getPacientesParaVisitas() {
         const hace48h = 48 * 60 * 60 * 1000;
         const ahora = Date.now();
-        const lista = Array.from(this.internamientos.values())
+        return Array.from(this.internamientos.values())
             .filter(int => {
+                const id = int.metadata?.internamientoId;
+                if (!id || id === '_visitas_sin_vincular') return false;
                 const estado = int.estado?.actual;
                 if (['activo', 'critico', 'alta'].includes(estado)) return true;
                 if (estado === 'egresado' || estado === 'defuncion') {
@@ -892,22 +918,67 @@ class InternamientoModule {
                 return false;
             })
             .sort((a, b) => (b.metadata?.fechaCreacion || b.datosIngreso?.fechaIngreso || 0) - (a.metadata?.fechaCreacion || a.datosIngreso?.fechaIngreso || 0));
-        const opcionesPaciente = lista.map(int => {
-            const nombreMascota = (int.referencias?.nombreMascota || 'Sin nombre').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-            const propietario = (this.getNombrePropietario(int) || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
-            const id = (int.metadata?.internamientoId || '').replace(/"/g, '&quot;');
+    }
+
+    buscarInternamientoIdPorNombreMascota(nombre) {
+        const q = (nombre || '').trim().toLowerCase();
+        if (!q) return '';
+        const lista = this.getPacientesParaVisitas();
+        const exacto = lista.find(int => (int.referencias?.nombreMascota || '').trim().toLowerCase() === q);
+        return exacto ? (exacto.metadata?.internamientoId || '') : '';
+    }
+
+    esRegistroInternamientoReal(internamientoId) {
+        return internamientoId && internamientoId !== '_visitas_sin_vincular';
+    }
+
+    initVisitaNombrePacienteInput(modalEl, lista) {
+        const input = modalEl.querySelector('#visitaNombrePaciente');
+        const hiddenId = modalEl.querySelector('#visitaPacienteId');
+        if (!input || !hiddenId) return;
+
+        const mapaPorNombre = new Map();
+        lista.forEach(int => {
+            const nombre = (int.referencias?.nombreMascota || '').trim();
+            const id = int.metadata?.internamientoId || '';
+            if (nombre && id) mapaPorNombre.set(nombre.toLowerCase(), id);
+        });
+
+        const actualizarVinculo = () => {
+            const val = input.value.trim().toLowerCase();
+            hiddenId.value = val ? (mapaPorNombre.get(val) || '') : '';
+        };
+
+        input.addEventListener('input', actualizarVinculo);
+        input.addEventListener('change', actualizarVinculo);
+    }
+
+    showModalAgregarVisita() {
+        const lista = this.getPacientesParaVisitas();
+        const esc = (s) => this._escapeVisitaHtml(s);
+        const opcionesDatalist = lista.map(int => {
+            const nombreMascota = int.referencias?.nombreMascota || '';
+            if (!nombreMascota) return '';
+            const propietario = this.getNombrePropietario(int) || '';
             const label = propietario ? `${nombreMascota} — ${propietario}` : nombreMascota;
-            return `<option value="${id}">${label}</option>`;
+            return `<option value="${esc(nombreMascota)}">${esc(label)}</option>`;
         }).join('');
+
         const contenido = `
             <div style="max-height: 70vh; overflow-y: auto; padding: 8px;">
                 <form id="formAgregarVisita">
-                    <div class="form-group" style="margin-bottom: 16px;">
-                        <label>Nombre del paciente *</label>
-                        <select id="visitaPacienteId" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
-                            <option value="">Seleccione el paciente</option>
-                            ${opcionesPaciente}
-                        </select>
+                    <div class="form-group visita-paciente-form-group" style="margin-bottom: 16px;">
+                        <label>Nombre del paciente (mascota) *</label>
+                        <input type="hidden" id="visitaPacienteId" value="">
+                        <input type="text" id="visitaNombrePaciente" required
+                            list="visitaPacientesDatalist"
+                            placeholder="Escriba el nombre de la mascota"
+                            autocomplete="off"
+                            style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                        <datalist id="visitaPacientesDatalist">
+                            ${opcionesDatalist}
+                        </datalist>
+                        <p class="visita-paciente-ayuda-texto">Si no está internado o no aparece en las sugerencias, escriba el nombre manualmente.</p>
                     </div>
                     <div class="form-group" style="margin-bottom: 16px;">
                         <label>Nombre de la persona que viene a ver al paciente *</label>
@@ -940,16 +1011,21 @@ class InternamientoModule {
         `;
         const modal = this.createModal('Agregar visita', contenido, 'fa-user-plus');
         document.body.appendChild(modal);
+        this.initVisitaNombrePacienteInput(modal, lista);
         const form = document.getElementById('formAgregarVisita');
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
-                const internamientoId = document.getElementById('visitaPacienteId')?.value?.trim() || '';
+                const nombrePaciente = modal.querySelector('#visitaNombrePaciente')?.value?.trim() || '';
+                let internamientoId = modal.querySelector('#visitaPacienteId')?.value?.trim() || '';
+                if (!internamientoId) {
+                    internamientoId = this.buscarInternamientoIdPorNombreMascota(nombrePaciente);
+                }
                 const nombrePersona = document.getElementById('visitaNombrePersona')?.value?.trim() || '';
                 const parentesco = document.getElementById('visitaParentesco')?.value?.trim() || '';
                 const motivo = document.getElementById('visitaMotivo')?.value?.trim() || '';
-                if (!internamientoId) {
-                    this.showAlert('Seleccione el paciente.', 'Campo requerido', 'warning');
+                if (!nombrePaciente) {
+                    this.showAlert('Escriba el nombre del paciente (mascota).', 'Campo requerido', 'warning');
                     return;
                 }
                 if (!nombrePersona) {
@@ -964,30 +1040,44 @@ class InternamientoModule {
                     this.showAlert('Seleccione el motivo de la visita.', 'Campo requerido', 'warning');
                     return;
                 }
-                this.guardarVisita(internamientoId, { nombreVisitante: nombrePersona, parentesco, motivo });
+                this.guardarVisita({
+                    internamientoId: internamientoId || null,
+                    nombrePaciente,
+                    nombreVisitante: nombrePersona,
+                    parentesco,
+                    motivo
+                });
             });
         }
     }
 
-    async guardarVisita(internamientoId, datos) {
+    async guardarVisita(datos) {
+        const internamientoId = datos.internamientoId || '_visitas_sin_vincular';
         const ref = this.internamientosRef.child(internamientoId);
         const visitasRef = ref.child('visitas');
         const visitaId = 'visita_' + Date.now();
         const ahora = Date.now();
         const visita = {
             visitaId,
+            nombrePaciente: datos.nombrePaciente || '',
             nombreVisitante: datos.nombreVisitante || '',
             parentesco: datos.parentesco || '',
             motivo: datos.motivo || '',
             estado: 'En espera',
             fechaHora: new Date().toISOString(),
             timestamp: ahora,
-            horaEnEspera: ahora // Registrar automáticamente la hora cuando se crea en estado "En espera"
+            horaEnEspera: ahora
         };
         try {
             await visitasRef.child(visitaId).set(visita);
-            await ref.child('metadata/fechaUltimaActualizacion').set(Date.now());
-            const internamiento = this.internamientos.get(internamientoId);
+            if (datos.internamientoId) {
+                await ref.child('metadata/fechaUltimaActualizacion').set(Date.now());
+            }
+            let internamiento = this.internamientos.get(internamientoId);
+            if (!internamiento) {
+                internamiento = { visitas: {} };
+                this.internamientos.set(internamientoId, internamiento);
+            }
             if (internamiento) {
                 const v = internamiento.visitas || {};
                 v[visitaId] = visita;
@@ -1031,7 +1121,9 @@ class InternamientoModule {
 
         // Filtrar internamientos activos (si falta estado.actual se considera activo para no ocultar registros)
         const estadoActual = (int) => int.estado?.actual || 'activo';
-        const activos = Array.from(this.internamientos.values())
+        const activos = Array.from(this.internamientos.entries())
+            .filter(([id]) => this.esRegistroInternamientoReal(id))
+            .map(([, int]) => int)
             .filter(int => ['activo', 'critico', 'alta'].includes(estadoActual(int)));
 
         if (activos.length === 0) {
