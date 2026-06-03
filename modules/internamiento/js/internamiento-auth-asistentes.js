@@ -1,10 +1,43 @@
 // ====================================================================
 // SISTEMA DE CÓDIGOS DE PERSONAL MÉDICO
 // ====================================================================
-// Gestión de códigos para personal médico (asistentes, etc.)
+// Gestión de códigos para asistentes, técnicos y doctores (internamiento, etc.)
+
+function normalizeDoctorProfileInternamiento(value) {
+    if (value == null) return null;
+    if (typeof value === 'string') return { name: value, pin: '' };
+    if (typeof value === 'object') {
+        return {
+            name: value.name || value.nombre || '',
+            pin: value.pin || ''
+        };
+    }
+    return null;
+}
+
+function getDoctorNameInternamiento(value) {
+    const profile = normalizeDoctorProfileInternamiento(value);
+    return profile ? profile.name : '';
+}
+
+/** Nombre legible: primero doctors/{id}, luego assistants/{id}. */
+InternamientoModule.prototype.resolverNombrePersonalMedico = function(personId, assistants, doctors) {
+    if (!personId) return '';
+
+    const doctorRaw = doctors && doctors[personId];
+    if (doctorRaw != null) {
+        const doctorName = getDoctorNameInternamiento(doctorRaw);
+        if (doctorName && String(doctorName).trim()) return String(doctorName).trim();
+    }
+
+    const assistantData = assistants && assistants[personId];
+    if (assistantData == null) return '';
+    if (typeof assistantData === 'string') return String(assistantData).trim();
+    return String(assistantData.nombre || assistantData.name || '').trim();
+};
 
 // ================================================================
-// VERIFICAR CÓDIGO DE ASISTENTE
+// VERIFICAR CÓDIGO DE ASISTENTE / DOCTOR
 // ================================================================
 
 InternamientoModule.prototype.verificarCodigoAsistente = async function(accion = 'acceso') {
@@ -159,9 +192,13 @@ InternamientoModule.prototype.getCodigoAsistenteFormHTML = function(accion) {
 
 // ================================================================
 // VALIDAR CÓDIGO EN FIREBASE
-// Compara el código ingresado con los códigos asignados en la
-// gestión de códigos de personal médico (assistants_codigos).
+// assistants_codigos, doctors_codigos y PIN de doctor (recetas).
 // ================================================================
+
+InternamientoModule.prototype._codigoCoincide = function(codigoNormalizado, codigoGuardado) {
+    if (codigoGuardado == null || codigoGuardado === '') return false;
+    return codigoNormalizado === String(codigoGuardado).trim();
+};
 
 InternamientoModule.prototype.validarCodigoAsistente = async function(codigoIngresado) {
     try {
@@ -170,44 +207,84 @@ InternamientoModule.prototype.validarCodigoAsistente = async function(codigoIngr
             return { valido: false, mensaje: 'Código requerido' };
         }
 
-        // Cargar personal médico (assistants) y códigos asignados (assistants_codigos)
-        const [assistantsSnapshot, codigosSnapshot] = await Promise.all([
+        const [assistantsSnapshot, codigosSnapshot, doctorsSnapshot, doctorsCodigosSnapshot] = await Promise.all([
             window.database.ref('assistants').once('value'),
-            window.database.ref('assistants_codigos').once('value')
+            window.database.ref('assistants_codigos').once('value'),
+            window.database.ref('doctors').once('value'),
+            window.database.ref('doctors_codigos').once('value')
         ]);
 
-        const assistants = assistantsSnapshot.val();
+        const assistants = assistantsSnapshot.val() || {};
         const codigos = codigosSnapshot.val() || {};
+        const doctors = doctorsSnapshot.val() || {};
+        const doctorsCodigos = doctorsCodigosSnapshot.val() || {};
 
-        if (!assistants) {
-            return { valido: false, mensaje: 'No hay personal médico registrado en el sistema' };
+        // Doctores primero (código en doctors_codigos)
+        for (const [doctorId, codigoData] of Object.entries(doctorsCodigos)) {
+            if (!codigoData || codigoData.codigo == null || codigoData.codigo === '') continue;
+            if (!this._codigoCoincide(codigoNormalizado, codigoData.codigo)) continue;
+
+            const doctorName = this.resolverNombrePersonalMedico(doctorId, assistants, doctors);
+            if (!doctorName) {
+                return { valido: false, mensaje: 'Doctor no encontrado en el sistema' };
+            }
+
+            await this.registrarUsoCodigoAsistente(doctorId, doctorName, 'validacion_exitosa', 'doctor');
+
+            return {
+                valido: true,
+                assistantId: doctorId,
+                doctorId: doctorId,
+                tipoPersonal: 'doctor',
+                nombre: doctorName,
+                codigo: codigoNormalizado
+            };
         }
 
-        // Buscar si el código ingresado coincide con algún código asignado en el sistema
+        // Doctores: PIN del perfil (recetas / firma)
+        for (const [doctorId, doctorRaw] of Object.entries(doctors)) {
+            const profile = normalizeDoctorProfileInternamiento(doctorRaw);
+            const pin = profile && profile.pin ? String(profile.pin).trim() : '';
+            if (!pin || !this._codigoCoincide(codigoNormalizado, pin)) continue;
+
+            const doctorName = this.resolverNombrePersonalMedico(doctorId, assistants, doctors);
+            if (!doctorName) {
+                return { valido: false, mensaje: 'Doctor no encontrado en el sistema' };
+            }
+
+            await this.registrarUsoCodigoAsistente(doctorId, doctorName, 'validacion_exitosa', 'doctor');
+
+            return {
+                valido: true,
+                assistantId: doctorId,
+                doctorId: doctorId,
+                tipoPersonal: 'doctor',
+                nombre: doctorName,
+                codigo: codigoNormalizado
+            };
+        }
+
+        // Asistentes / técnicos (assistants_codigos)
         for (const [assistantId, codigoData] of Object.entries(codigos)) {
             if (!codigoData || codigoData.codigo == null || codigoData.codigo === '') continue;
+            if (!this._codigoCoincide(codigoNormalizado, codigoData.codigo)) continue;
 
-            // Comparar como string para evitar 1234 (número) !== "1234" (string)
-            const codigoGuardado = String(codigoData.codigo).trim();
-            if (codigoNormalizado === codigoGuardado) {
-                // Obtener nombre del asistente
-                const assistantData = assistants[assistantId];
-                const assistantName = assistantData == null
-                    ? 'Personal médico'
-                    : (typeof assistantData === 'string' ? assistantData : (assistantData.nombre || assistantData.name || 'Personal médico'));
-
-                await this.registrarUsoCodigoAsistente(assistantId, assistantName, 'validacion_exitosa');
-
-                return {
-                    valido: true,
-                    assistantId: assistantId,
-                    nombre: assistantName,
-                    codigo: codigoNormalizado
-                };
+            const assistantName = this.resolverNombrePersonalMedico(assistantId, assistants, doctors);
+            if (!assistantName) {
+                return { valido: false, mensaje: 'Personal no encontrado en el sistema' };
             }
+
+            await this.registrarUsoCodigoAsistente(assistantId, assistantName, 'validacion_exitosa', 'assistant');
+
+            return {
+                valido: true,
+                assistantId: assistantId,
+                tipoPersonal: 'assistant',
+                nombre: assistantName,
+                codigo: codigoNormalizado
+            };
         }
 
-        // Código no encontrado en ningún personal médico asignado
         await this.registrarUsoCodigoAsistente(null, null, 'validacion_fallida');
         return { valido: false, mensaje: 'Código incorrecto' };
     } catch (error) {
@@ -216,13 +293,14 @@ InternamientoModule.prototype.validarCodigoAsistente = async function(codigoIngr
     }
 };
 
-InternamientoModule.prototype.registrarUsoCodigoAsistente = async function(assistantId, assistantName, resultado) {
+InternamientoModule.prototype.registrarUsoCodigoAsistente = async function(assistantId, assistantName, resultado, tipoPersonal) {
     try {
         const registro = {
             timestamp: Date.now(),
             fecha: new Date().toISOString(),
             assistantId: assistantId || null,
             assistantName: assistantName || null,
+            tipoPersonal: tipoPersonal || null,
             resultado: resultado,
             internamientoId: this.currentInternamientoId || null,
             userAgent: navigator.userAgent
@@ -241,31 +319,17 @@ InternamientoModule.prototype.registrarUsoCodigoAsistente = async function(assis
 
 InternamientoModule.prototype.validarCodigoYObtenerNombre = async function(codigoIngresado) {
     try {
-        const codigosSnapshot = await window.database.ref('assistants_codigos').once('value');
-        const codigos = codigosSnapshot.val();
-        if (!codigos) {
-            return { valido: false, mensaje: 'No hay códigos asignados en el sistema' };
+        const resultado = await this.validarCodigoAsistente(codigoIngresado);
+        if (!resultado.valido) {
+            return { valido: false, mensaje: resultado.mensaje || 'Código no válido o no asignado' };
         }
-        let assistantIdEncontrado = null;
-        for (const [assistantId, data] of Object.entries(codigos)) {
-            const codigoGuardado = data && data.codigo ? String(data.codigo).trim() : null;
-            const normalizado = (codigoIngresado || '').trim();
-            if (codigoGuardado && normalizado === codigoGuardado) {
-                assistantIdEncontrado = assistantId;
-                break;
-            }
-        }
-        if (!assistantIdEncontrado) {
-            return { valido: false, mensaje: 'Código no válido o no asignado' };
-        }
-        const assistantsSnapshot = await window.database.ref('assistants').once('value');
-        const assistants = assistantsSnapshot.val();
-        if (!assistants || !assistants[assistantIdEncontrado]) {
-            return { valido: false, mensaje: 'Personal no encontrado' };
-        }
-        const data = assistants[assistantIdEncontrado];
-        const nombre = typeof data === 'string' ? data : (data.nombre || data.name || data);
-        return { valido: true, nombre: nombre || 'Sin nombre', assistantId: assistantIdEncontrado };
+        return {
+            valido: true,
+            nombre: resultado.nombre || 'Sin nombre',
+            assistantId: resultado.assistantId,
+            doctorId: resultado.doctorId || null,
+            tipoPersonal: resultado.tipoPersonal || null
+        };
     } catch (error) {
         console.error('Error validando código:', error);
         throw error;
@@ -400,12 +464,16 @@ InternamientoModule.prototype.getGestionCodigosHTML = function() {
                     <i class="fas fa-info-circle"></i> Sistema de Códigos de Personal Médico
                 </div>
                 <div style="font-size: 0.9rem; color: #1976d2;">
-                    Asigna códigos personales al personal médico. Estos códigos son requeridos para:
+                    Asigna códigos personales a asistentes, técnicos y doctores. Estos códigos son requeridos para:
                     <ul style="margin: 10px 0; padding-left: 20px;">
+                        <li>Ingresar un internamiento (admisión)</li>
                         <li>Administrar medicamentos</li>
                         <li>Registrar turnos de internamiento</li>
                         <li>Acceder a módulos sensibles</li>
                     </ul>
+                    <div style="margin-top: 8px; font-size: 0.85rem;">
+                        Los doctores con PIN en su perfil (recetas) también pueden usar ese mismo PIN al verificar en admisión.
+                    </div>
                 </div>
             </div>
 
@@ -437,44 +505,62 @@ InternamientoModule.prototype.cargarListaUsuariosConCodigos = async function() {
     const container = document.getElementById('listaUsuariosCodigos');
     if (!container) return;
 
-        try {
-        // Cargar lista de personal médico desde Firebase (assistants)
-        const assistantsSnapshot = await window.database.ref('assistants').once('value');
-        const assistants = assistantsSnapshot.val();
+    try {
+        const [assistantsSnapshot, codigosSnapshot, doctorsSnapshot, doctorsCodigosSnapshot] = await Promise.all([
+            window.database.ref('assistants').once('value'),
+            window.database.ref('assistants_codigos').once('value'),
+            window.database.ref('doctors').once('value'),
+            window.database.ref('doctors_codigos').once('value')
+        ]);
 
-        if (!assistants || Object.keys(assistants).length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-user-friends"></i>
-                    <p>No hay personal médico registrado en el sistema</p>
-                </div>
-            `;
-            return;
-        }
-
-        // Cargar códigos
-        const codigosSnapshot = await window.database.ref('assistants_codigos').once('value');
+        const assistants = assistantsSnapshot.val() || {};
         const codigos = codigosSnapshot.val() || {};
+        const doctors = doctorsSnapshot.val() || {};
+        const doctorsCodigos = doctorsCodigosSnapshot.val() || {};
 
-        // Convertir a array y ordenar por nombre
-        const assistantsArray = Object.entries(assistants).map(([id, data]) => {
-            // Si data es un string, es el nombre directamente
-            // Si data es un objeto, puede tener nombre o ser un objeto con propiedades
-            const nombre = typeof data === 'string' ? data : (data.nombre || data);
+        const lista = [];
+
+        Object.entries(assistants).forEach(([id, data]) => {
+            const nombre = typeof data === 'string' ? data : (data.nombre || data.name || data);
             const codigoData = codigos[id] || {};
-            
-            return {
-                id: id,
-                nombre: nombre,
-                codigoAsistente: codigoData.codigo || null
-            };
-        }).sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+            lista.push({
+                id,
+                nombre: nombre || 'Sin nombre',
+                tipo: 'assistant',
+                codigoAsistente: codigoData.codigo || null,
+                codigoOrigen: codigoData.codigo ? 'internamiento' : null
+            });
+        });
 
-        if (assistantsArray.length === 0) {
+        Object.entries(doctors).forEach(([id, data]) => {
+            const profile = normalizeDoctorProfileInternamiento(data);
+            const nombre = profile ? profile.name : '';
+            const codigoInternamiento = doctorsCodigos[id] && doctorsCodigos[id].codigo
+                ? doctorsCodigos[id].codigo
+                : null;
+            const pinPerfil = profile && profile.pin ? String(profile.pin).trim() : '';
+            const codigoEfectivo = codigoInternamiento || pinPerfil || null;
+            let codigoOrigen = null;
+            if (codigoInternamiento) codigoOrigen = 'internamiento';
+            else if (pinPerfil) codigoOrigen = 'pin_recetas';
+
+            lista.push({
+                id,
+                nombre: nombre || 'Sin nombre',
+                tipo: 'doctor',
+                codigoAsistente: codigoEfectivo,
+                codigoOrigen,
+                tienePinSolo: !codigoInternamiento && !!pinPerfil
+            });
+        });
+
+        lista.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+
+        if (lista.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-user-friends"></i>
-                    <p>No hay personal médico registrado en el sistema</p>
+                    <p>No hay personal médico ni doctores registrados en el sistema</p>
                 </div>
             `;
             return;
@@ -484,14 +570,15 @@ InternamientoModule.prototype.cargarListaUsuariosConCodigos = async function() {
             <table class="data-table">
                 <thead>
                     <tr>
-                        <th>Personal médico</th>
+                        <th>Personal</th>
+                        <th>Rol</th>
                         <th>Código</th>
                         <th>Estado</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    ${assistantsArray.map(asistente => this.renderFilaUsuarioCodigo(asistente)).join('')}
+                    ${lista.map(persona => this.renderFilaUsuarioCodigo(persona)).join('')}
                 </tbody>
             </table>
         `;
@@ -508,7 +595,17 @@ InternamientoModule.prototype.cargarListaUsuariosConCodigos = async function() {
 
 InternamientoModule.prototype.renderFilaUsuarioCodigo = function(asistente) {
     const tieneCodigo = asistente.codigoAsistente && asistente.codigoAsistente !== '';
-    const codigoMasked = tieneCodigo ? '****' + asistente.codigoAsistente.slice(-2) : 'Sin código';
+    const codigoMasked = tieneCodigo ? '****' + String(asistente.codigoAsistente).slice(-2) : 'Sin código';
+    const esDoctor = asistente.tipo === 'doctor';
+    const rolLabel = esDoctor
+        ? '<span style="color:#1565c0;"><i class="fas fa-user-md"></i> Doctor</span>'
+        : '<span style="color:#6a1b9a;"><i class="fas fa-user-nurse"></i> Asistente / técnico</span>';
+    const origenHint = asistente.codigoOrigen === 'pin_recetas'
+        ? '<div style="font-size:0.75rem;color:#856404;margin-top:4px;">PIN de recetas (perfil)</div>'
+        : '';
+    const nombreSafe = (asistente.nombre || '').replace(/'/g, "\\'");
+    const tipoSafe = asistente.tipo || 'assistant';
+    const puedeEliminar = tieneCodigo && asistente.codigoOrigen === 'internamiento';
 
     return `
         <tr>
@@ -516,10 +613,12 @@ InternamientoModule.prototype.renderFilaUsuarioCodigo = function(asistente) {
                 <div style="font-weight: 600;">${asistente.nombre || 'Sin nombre'}</div>
                 <div style="font-size: 0.85rem; color: #6c757d;">ID: ${asistente.id}</div>
             </td>
+            <td>${rolLabel}</td>
             <td>
                 <span style="font-family: monospace; font-weight: 600; color: ${tieneCodigo ? '#27ae60' : '#95a5a6'};">
                     ${codigoMasked}
                 </span>
+                ${origenHint}
             </td>
             <td>
                 ${tieneCodigo 
@@ -528,14 +627,14 @@ InternamientoModule.prototype.renderFilaUsuarioCodigo = function(asistente) {
             </td>
             <td>
                 <button class="btn btn-sm btn-primary" 
-                        onclick="window.internamientoModule.editarCodigoUsuario('${asistente.id}', '${(asistente.nombre || '').replace(/'/g, "\\'")}')"
+                        onclick="window.internamientoModule.editarCodigoUsuario('${asistente.id}', '${nombreSafe}', '${tipoSafe}')"
                         title="${tieneCodigo ? 'Cambiar código' : 'Asignar código'}">
                     <i class="fas fa-${tieneCodigo ? 'edit' : 'plus'}"></i> ${tieneCodigo ? 'Cambiar' : 'Asignar'}
                 </button>
-                ${tieneCodigo ? `
+                ${puedeEliminar ? `
                     <button class="btn btn-sm btn-danger" 
-                            onclick="window.internamientoModule.eliminarCodigoUsuario('${asistente.id}', '${(asistente.nombre || '').replace(/'/g, "\\'")}')"
-                            title="Eliminar código"
+                            onclick="window.internamientoModule.eliminarCodigoUsuario('${asistente.id}', '${nombreSafe}', '${tipoSafe}')"
+                            title="Eliminar código de internamiento"
                             style="margin-left: 5px;">
                         <i class="fas fa-trash"></i>
                     </button>
@@ -553,9 +652,10 @@ InternamientoModule.prototype.asignarCodigoNuevo = function() {
     this.showAlert('Selecciona un usuario de la lista y haz clic en "Asignar" o "Cambiar"', 'Asignar Código', 'info');
 };
 
-InternamientoModule.prototype.editarCodigoUsuario = async function(assistantId, assistantName) {
+InternamientoModule.prototype.editarCodigoUsuario = async function(personId, personName, tipo) {
+    const esDoctor = tipo === 'doctor';
     const codigo = await this.showPrompt(
-        `Ingresa el nuevo código para ${assistantName}:`,
+        `Ingresa el código de internamiento para ${personName}${esDoctor ? ' (doctor)' : ''}:`,
         'Asignar/Cambiar Código',
         '',
         true
@@ -565,18 +665,17 @@ InternamientoModule.prototype.editarCodigoUsuario = async function(assistantId, 
         return;
     }
 
-    // Validar formato de código (4-6 dígitos)
     if (!/^\d{4,6}$/.test(codigo.trim())) {
         this.showAlert('El código debe tener entre 4 y 6 dígitos numéricos', 'Formato Inválido', 'warning');
         return;
     }
 
     try {
-        // Guardar código en assistants_codigos
-        await window.database.ref(`assistants_codigos/${assistantId}/codigo`).set(codigo.trim());
-        this.showNotification(`Código asignado exitosamente a ${assistantName}`, 'success');
-        
-        // Recargar lista
+        const refPath = esDoctor
+            ? `doctors_codigos/${personId}/codigo`
+            : `assistants_codigos/${personId}/codigo`;
+        await window.database.ref(refPath).set(codigo.trim());
+        this.showNotification(`Código asignado exitosamente a ${personName}`, 'success');
         this.cargarListaUsuariosConCodigos();
     } catch (error) {
         console.error('Error asignando código:', error);
@@ -584,9 +683,12 @@ InternamientoModule.prototype.editarCodigoUsuario = async function(assistantId, 
     }
 };
 
-InternamientoModule.prototype.eliminarCodigoUsuario = async function(assistantId, assistantName) {
+InternamientoModule.prototype.eliminarCodigoUsuario = async function(personId, personName, tipo) {
+    const esDoctor = tipo === 'doctor';
     const confirmar = await this.showConfirm(
-        `¿Eliminar el código de ${assistantName}?\n\nEsto revocará su acceso a funciones que requieren código.`,
+        esDoctor
+            ? `¿Eliminar el código de internamiento de ${personName}?\n\nSi tiene PIN de recetas en su perfil, seguirá pudiendo usar ese PIN.`
+            : `¿Eliminar el código de ${personName}?\n\nEsto revocará su acceso a funciones que requieren código.`,
         'Eliminar Código',
         { danger: true, confirmText: 'Eliminar', cancelText: 'Cancelar', icon: 'fa-trash', iconColor: '#e74c3c' }
     );
@@ -594,11 +696,11 @@ InternamientoModule.prototype.eliminarCodigoUsuario = async function(assistantId
     if (!confirmar) return;
 
     try {
-        // Eliminar código de assistants_codigos
-        await window.database.ref(`assistants_codigos/${assistantId}/codigo`).remove();
-        this.showNotification(`Código eliminado de ${assistantName}`, 'success');
-        
-        // Recargar lista
+        const refPath = esDoctor
+            ? `doctors_codigos/${personId}/codigo`
+            : `assistants_codigos/${personId}/codigo`;
+        await window.database.ref(refPath).remove();
+        this.showNotification(`Código eliminado de ${personName}`, 'success');
         this.cargarListaUsuariosConCodigos();
     } catch (error) {
         console.error('Error eliminando código:', error);
