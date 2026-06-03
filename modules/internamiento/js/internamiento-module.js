@@ -905,10 +905,9 @@ class InternamientoModule {
     getPacientesParaVisitas() {
         const hace48h = 48 * 60 * 60 * 1000;
         const ahora = Date.now();
-        return Array.from(this.internamientos.values())
-            .filter(int => {
-                const id = int.metadata?.internamientoId;
-                if (!id || id === '_visitas_sin_vincular') return false;
+        return Array.from(this.internamientos.entries())
+            .filter(([mapKey, int]) => {
+                if (mapKey === '_visitas_sin_vincular') return false;
                 const estado = int.estado?.actual;
                 if (['activo', 'critico', 'alta'].includes(estado)) return true;
                 if (estado === 'egresado' || estado === 'defuncion') {
@@ -916,6 +915,13 @@ class InternamientoModule {
                     return (ahora - fechaCambio) <= hace48h;
                 }
                 return false;
+            })
+            .map(([mapKey, int]) => {
+                const resolvedId = int.metadata?.internamientoId || mapKey;
+                return {
+                    ...int,
+                    metadata: { ...(int.metadata || {}), internamientoId: resolvedId }
+                };
             })
             .sort((a, b) => (b.metadata?.fechaCreacion || b.datosIngreso?.fechaIngreso || 0) - (a.metadata?.fechaCreacion || a.datosIngreso?.fechaIngreso || 0));
     }
@@ -1409,7 +1415,7 @@ class InternamientoModule {
                 input.placeholder = '';
                 input.style.borderColor = '#28a745';
             }
-            this.showNotification('Código verificado correctamente', 'success');
+            this.showNotification(`Bienvenido(a), ${resultado.nombre}`, 'success');
         } else if (!resultado.cancelado) {
             this.codigoAdmisionVerificado = null;
             const input = document.getElementById('admisionNombreAutenticado');
@@ -5589,10 +5595,18 @@ class InternamientoModule {
         minutos.sort((a, b) => a - b);
 
         if (minutos.length !== numDosisEsperado) {
+            const ejemplo = numDosisEsperado === 1
+                ? 'una hora de inicio (ej: 03:00)'
+                : this.calcularHorarios(frecuenciaHoras).join(', ');
             return {
                 valido: false,
-                mensaje: `Para "cada ${frecuenciaHoras}h" deben ser exactamente ${numDosisEsperado} horarios en el día (ej: ${this.calcularHorarios(frecuenciaHoras).join(', ')}). Tiene ${minutos.length}.`
+                mensaje: `Para "cada ${frecuenciaHoras}h" deben ser exactamente ${numDosisEsperado} horario(s) en el día (ej: ${ejemplo}). Tiene ${minutos.length}.`
             };
+        }
+
+        // Una sola dosis al día (p. ej. cada 24h): cualquier hora exacta es válida como ancla
+        if (minutos.length <= 1) {
+            return { valido: true };
         }
 
         for (let i = 0; i < minutos.length; i++) {
