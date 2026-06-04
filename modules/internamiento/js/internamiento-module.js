@@ -33,6 +33,8 @@ class InternamientoModule {
         this._insulinaNCountdownVencidoPorId = {};
         this._aaCountdownVencidoPorId = {};
         this._loadCountdownVencidoFromStorage();
+        this._medicamentosSeleccionados = new Set();
+        this._editandoTurnoId = null;
 
         console.log('Módulo de Internamiento listo (Firebase al entrar al módulo)');
     }
@@ -84,6 +86,12 @@ class InternamientoModule {
                 'error'
             );
             return false;
+        }
+        if (typeof this.cargarConfigSesionCodigo === 'function') {
+            await this.cargarConfigSesionCodigo();
+        }
+        if (typeof this.actualizarBannerSesionCodigo === 'function') {
+            this.actualizarBannerSesionCodigo();
         }
         return true;
     }
@@ -1114,6 +1122,9 @@ class InternamientoModule {
             targetView.style.display = ''; // Restaurar display
         } else {
             console.warn(`No se encontró la vista: internamiento-${viewName}`);
+        }
+        if (typeof this.actualizarBannerSesionCodigo === 'function') {
+            this.actualizarBannerSesionCodigo();
         }
     }
 
@@ -2669,6 +2680,9 @@ class InternamientoModule {
         this.showInternamientosSection();
         
         this.currentInternamientoId = internamientoId;
+        if (typeof this.actualizarBannerSesionCodigo === 'function') {
+            setTimeout(() => this.actualizarBannerSesionCodigo(), 50);
+        }
         
         // Luego mostrar la vista del panel
         setTimeout(() => {
@@ -3629,7 +3643,7 @@ class InternamientoModule {
         container.innerHTML = `
             <h3><i class="fas fa-clipboard-list"></i> Últimos Turnos</h3>
             <div style="padding: 20px;">
-                ${turnos.map(turno => this.renderTurnoCard(turno)).join('')}
+                ${turnos.map((turno, i) => this.renderTurnoCard(turno, i === 0)).join('')}
                 <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 10px;" onclick="window.internamientoModule.showTurnosView()">
                     <i class="fas fa-plus"></i> Ir a Turnos
                 </button>
@@ -3637,13 +3651,14 @@ class InternamientoModule {
         `;
     }
 
-    renderTurnoCard(turno) {
+    renderTurnoCard(turno, esUltimo = false) {
         const fecha = new Date(turno.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
         const hora = new Date(turno.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
         const temp = turno.parametrosVitales?.temperatura;
         const tempAlerta = temp && (temp < 37 || temp > 39.5);
         const fc = turno.parametrosVitales?.fc;
         const fcAlerta = fc && (fc < 60 || fc > 160);
+        const turnoIdSafe = (turno.turnoId || '').replace(/'/g, "\\'");
 
         return `
             <div style="background: #f8f9fa; border: 1px solid #e8e8e8; border-left: 4px solid #5c6bc0; padding: 14px; border-radius: 8px; margin-bottom: 10px; transition: all 0.3s ease;" onmouseenter="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseleave="this.style.boxShadow='none'">
@@ -3653,9 +3668,15 @@ class InternamientoModule {
                             ${turno.turno || 'Turno'}
                         </div>
                         ${turno.responsableNombre ? `<span style="font-size: 0.85rem; color: #666;"><i class="fas fa-user-nurse" style="margin-right: 4px; color: #5c6bc0;"></i>${turno.responsableNombre}</span>` : ''}
+                        ${turno.editadoEn ? `<span style="font-size: 0.75rem; color: #856404; background: #fff3cd; padding: 2px 8px; border-radius: 8px;"><i class="fas fa-edit"></i> Editado</span>` : ''}
                     </div>
                     <div style="display: flex; align-items: center; gap: 8px;">
-                        <button class="btn btn-sm btn-info" onclick="window.internamientoModule.verTurnoDetalle('${turno.turnoId || ''}')" title="Ver todo el registro (solo lectura)" style="padding: 6px 12px; font-size: 0.8rem;">
+                        ${esUltimo ? `
+                        <button class="btn btn-sm btn-warning" onclick="window.internamientoModule.iniciarEdicionTurno('${turnoIdSafe}')" title="Solo quien registró este turno puede editarlo" style="padding: 6px 12px; font-size: 0.8rem;">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        ` : ''}
+                        <button class="btn btn-sm btn-info" onclick="window.internamientoModule.verTurnoDetalle('${turnoIdSafe}')" title="Ver todo el registro (solo lectura)" style="padding: 6px 12px; font-size: 0.8rem;">
                             <i class="fas fa-eye"></i> Ver detalle
                         </button>
                         <span style="font-size: 0.8rem; color: #888; background: white; padding: 4px 10px; border-radius: 10px; border: 1px solid #e0e0e0;">
@@ -3909,6 +3930,8 @@ class InternamientoModule {
             responsableInput.value = '';
         }
         this._codigoTurnoResult = null;
+        this._editandoTurnoId = null;
+        this._actualizarTituloFormularioTurno(false);
 
         // Pre-seleccionar turno actual
         this.preseleccionarTurno();
@@ -3960,8 +3983,15 @@ class InternamientoModule {
         try {
             const codigoResult = this._codigoTurnoResult || null;
             if (codigoResult) this._codigoTurnoResult = null;
-            await this.guardarTurno(turnoData, codigoResult);
-            this.showNotification('Turno registrado exitosamente', 'success');
+
+            if (this._editandoTurnoId) {
+                await this.actualizarTurno(this._editandoTurnoId, turnoData, codigoResult);
+                this._editandoTurnoId = null;
+                this.showNotification('Turno actualizado exitosamente', 'success');
+            } else {
+                await this.guardarTurno(turnoData, codigoResult);
+                this.showNotification('Turno registrado exitosamente', 'success');
+            }
             this.showTurnosView();
             this.loadTurnosView();
         } catch (error) {
@@ -4254,6 +4284,235 @@ class InternamientoModule {
         await internamientoRef.child('auditoria/historialCambios').push(auditEntry);
     }
 
+    _actualizarTituloFormularioTurno(esEdicion) {
+        const header = document.querySelector('#internamiento-turno .section-header h2');
+        if (header) {
+            header.innerHTML = esEdicion
+                ? '<i class="fas fa-edit"></i> Editar Turno (solo quien lo registró)'
+                : '<i class="fas fa-clipboard-check"></i> Registro de Turno';
+        }
+        const btnSubmit = document.querySelector('#formRegistroTurno button[type="submit"]');
+        if (btnSubmit) {
+            btnSubmit.innerHTML = esEdicion
+                ? '<i class="fas fa-save"></i> Guardar cambios'
+                : '<i class="fas fa-save"></i> Guardar Turno';
+        }
+    }
+
+    _personaCoincideConResponsableTurno(persona, turno) {
+        if (!persona || !turno) return false;
+        const idPersona = persona.assistantId || persona.doctorId || null;
+        const idTurno = turno.responsable || null;
+        if (idPersona && idTurno && String(idPersona) === String(idTurno)) return true;
+        const n1 = (persona.nombre || '').trim().toLowerCase();
+        const n2 = (turno.responsableNombre || '').trim().toLowerCase();
+        return !!(n1 && n2 && n1 === n2);
+    }
+
+    async verificarPuedeEditarTurno(turno) {
+        const sesion = typeof this.getSesionCodigoActiva === 'function'
+            ? this.getSesionCodigoActiva(this.currentInternamientoId)
+            : null;
+        if (sesion && this._personaCoincideConResponsableTurno(sesion, turno)) {
+            return { valido: true, ...sesion, desdeSesion: true };
+        }
+        const resultado = await this.verificarCodigoAsistente('editar_turno');
+        if (!resultado.valido || resultado.cancelado) return resultado;
+        if (!this._personaCoincideConResponsableTurno(resultado, turno)) {
+            this.showAlert(
+                'Solo la persona que registró este turno puede editarlo.\n\nResponsable del turno: ' + (turno.responsableNombre || 'N/A'),
+                'Edición no permitida',
+                'error'
+            );
+            return { valido: false, cancelado: true };
+        }
+        return resultado;
+    }
+
+    obtenerTurnoMasRecienteId() {
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        if (!internamiento?.turnos) return null;
+        const lista = Object.values(internamiento.turnos).sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
+        return lista[0]?.turnoId || null;
+    }
+
+    async iniciarEdicionTurno(turnoId) {
+        if (!this.currentInternamientoId) return;
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        const turno = internamiento?.turnos?.[turnoId];
+        if (!turno) {
+            this.showAlert('Turno no encontrado', 'Error', 'error');
+            return;
+        }
+        if (this.obtenerTurnoMasRecienteId() !== turnoId) {
+            this.showAlert('Solo se puede editar el turno más reciente.', 'Edición no permitida', 'warning');
+            return;
+        }
+        const auth = await this.verificarPuedeEditarTurno(turno);
+        if (!auth.valido || auth.cancelado) return;
+
+        this._editandoTurnoId = turnoId;
+        this._codigoTurnoResult = auth;
+        this.showInternamientoView('turno');
+        this.llenarFormularioTurno(turno);
+        this._actualizarTituloFormularioTurno(true);
+
+        const formElement = document.getElementById('formRegistroTurno');
+        if (formElement) {
+            formElement.onsubmit = (e) => this.handleTurnoSubmit(e);
+        }
+    }
+
+    llenarFormularioTurno(turno) {
+        const pv = turno.parametrosVitales || {};
+        const eg = turno.estadoGeneral || {};
+        const flu = turno.fluidoterapia || {};
+        const fecha = turno.fechaFormato || (turno.fecha ? new Date(turno.fecha).toISOString().split('T')[0] : '');
+        const horaDate = turno.fecha ? new Date(turno.fecha) : new Date();
+        const horaStr = `${String(horaDate.getHours()).padStart(2, '0')}:${String(horaDate.getMinutes()).padStart(2, '0')}`;
+
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val != null && val !== '' ? val : ''; };
+        const setChk = (id, val) => { const el = document.getElementById(id); if (el) el.checked = !!val; };
+
+        setVal('turnoFecha', fecha);
+        if (typeof window.setTimePicker12Value === 'function') {
+            window.setTimePicker12Value('turnoHora', horaStr);
+        } else {
+            setVal('turnoHora', horaStr);
+        }
+        setVal('turnoFranja', turno.turno || '6am-2pm');
+        setVal('turnoResponsable', turno.responsableNombre || '');
+        setVal('turnoPeso', pv.peso);
+        setVal('turnoFC', pv.fc);
+        setVal('turnoFR', pv.fr);
+        setVal('turnoTemperatura', pv.temperatura);
+        setVal('turnoTLLC', pv.tllc);
+        setVal('turnoDeshidratacion', pv.deshidratacion != null ? pv.deshidratacion : 0);
+        setVal('turnoPresionArterial', pv.presionArterial);
+        setVal('turnoPO2', pv.po2);
+        setVal('turnoMucosas', pv.mucosas || 'rosadas');
+        setVal('turnoVia', pv.via || '');
+        setVal('turnoTiempoVia', pv.tiempoVia || '');
+        setVal('turnoSonda', pv.sonda || '');
+        setVal('turnoTiempoSonda', pv.tiempoSonda || '');
+        setVal('turnoParametrosPulmonares', pv.parametrosPulmonares);
+        setVal('turnoEstadoMental', eg.estadoMental || 'alerta');
+        setVal('turnoNivelDolor', eg.nivelDolor || 'sin_dolor');
+        setVal('glasgowPuntaje', eg.glasgowPuntaje || 0);
+        setChk('turnoIngestaAgua', eg.ingestaAgua);
+        setVal('turnoCantidadAgua', eg.cantidadAgua);
+        setChk('turnoApetito', eg.apetito);
+        setVal('turnoAlimentoCantidad', eg.alimentoCantidad);
+        setVal('turnoAlimentoTipo', eg.alimentoTipo);
+        setVal('turnoDefecacion', eg.defecacion);
+        setVal('turnoDefecacionNotas', eg.defecacionNotas);
+        setChk('turnoMiccion', eg.miccion);
+        setVal('turnoMiccionColor', eg.miccionColor);
+        setVal('turnoMiccionFrecuencia', eg.miccionFrecuencia);
+        setVal('turnoMiccionVolumen', eg.miccionVolumen);
+        setVal('turnoMiccionNotas', eg.miccionNotas);
+        setChk('turnoVomitos', eg.vomitos);
+        setVal('turnoDescripcionVomitos', eg.descripcionVomitos);
+        setChk('turnoFluidoterapia', flu.administrada);
+        setVal('turnoFluidoTipo', flu.tipo);
+        setVal('turnoFluidoFrecuencia', flu.frecuencia);
+        setVal('turnoObservaciones', turno.observaciones);
+    }
+
+    async actualizarTurno(turnoId, data, codigoResult) {
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        const turnoExistente = internamiento?.turnos?.[turnoId];
+        if (!turnoExistente) throw new Error('Turno no encontrado');
+
+        const userId = sessionStorage.getItem('userId');
+        const responsableNombre = turnoExistente.responsableNombre || data.responsable;
+        const responsableId = turnoExistente.responsable || userId;
+        const editorNombre = codigoResult?.nombre || responsableNombre;
+        const editorId = codigoResult?.assistantId || responsableId;
+
+        const turnoData = {
+            turnoId: turnoId,
+            fecha: turnoExistente.fecha,
+            fechaFormato: turnoExistente.fechaFormato,
+            turno: data.turno,
+            responsable: responsableId,
+            responsableNombre: responsableNombre,
+            codigoVerificado: turnoExistente.codigoVerificado ?? !!codigoResult,
+            fechaRegistro: turnoExistente.fechaRegistro || Date.now(),
+            editadoEn: Date.now(),
+            editadoPor: editorId,
+            editadoPorNombre: editorNombre,
+
+            parametrosVitales: {
+                peso: data.peso,
+                fc: data.fc,
+                fr: data.fr,
+                temperatura: data.temperatura,
+                tllc: data.tllc,
+                deshidratacion: data.deshidratacion,
+                mucosas: data.mucosas,
+                via: data.via || '',
+                tiempoVia: data.tiempoVia || '',
+                sonda: data.sonda || '',
+                tiempoSonda: data.tiempoSonda || '',
+                parametrosPulmonares: data.parametrosPulmonares || '',
+                presionArterial: data.presionArterial,
+                po2: data.po2
+            },
+
+            estadoGeneral: {
+                estadoMental: data.estadoMental,
+                nivelDolor: data.nivelDolor,
+                glasgowPuntaje: data.glasgowPuntaje,
+                ingestaAgua: data.ingestaAgua,
+                cantidadAgua: data.cantidadAgua,
+                apetito: data.apetito,
+                alimentoCantidad: data.alimentoCantidad,
+                alimentoTipo: data.alimentoTipo,
+                defecacion: data.defecacion,
+                defecacionNotas: data.defecacionNotas,
+                miccion: data.miccion,
+                miccionColor: data.miccionColor,
+                miccionFrecuencia: data.miccionFrecuencia,
+                miccionVolumen: data.miccionVolumen,
+                miccionNotas: data.miccionNotas,
+                vomitos: data.vomitos,
+                descripcionVomitos: data.descripcionVomitos
+            },
+
+            fluidoterapia: {
+                administrada: data.fluidoterapiaAdministrada,
+                tipo: data.fluidoTipo,
+                frecuencia: data.fluidoFrecuencia
+            },
+
+            observaciones: data.observaciones,
+            alertasAutomaticas: this.generarAlertasAutomaticas(data)
+        };
+
+        const updates = {};
+        updates[`turnos/${turnoId}`] = turnoData;
+        updates['metadata/fechaUltimaActualizacion'] = Date.now();
+
+        const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
+        await internamientoRef.update(updates);
+
+        if (internamiento) {
+            if (!internamiento.turnos) internamiento.turnos = {};
+            internamiento.turnos[turnoId] = turnoData;
+            this.internamientos.set(this.currentInternamientoId, internamiento);
+        }
+
+        await internamientoRef.child('auditoria/historialCambios').push({
+            timestamp: Date.now(),
+            userId: editorId,
+            usuarioNombre: editorNombre,
+            accion: 'editar_turno',
+            codigoVerificado: !!codigoResult,
+            detalles: { turnoId, turno: data.turno }
+        });
+    }
+
     getCambioViaRestante(cambioVia) {
         if (!cambioVia?.activo || !cambioVia.fechaVencimiento) return null;
         const restante = cambioVia.fechaVencimiento - Date.now();
@@ -4516,6 +4775,7 @@ class InternamientoModule {
             return;
         }
 
+        this._medicamentosSeleccionados = new Set();
         this.showInternamientoView('medicacion');
         this.loadMedicacionView();
     }
@@ -4564,7 +4824,22 @@ class InternamientoModule {
             'Otra': { icon: 'fa-prescription-bottle', color: '#757575', label: 'Otra' }
         };
 
+        const activosAdministrar = activos.filter(m => !m.puestoPorConsultaExterna && this.puedeAdministrarAhora(m));
+
         container.innerHTML = `
+            ${activosAdministrar.length > 0 ? `
+            <div id="barraMedicamentosLote" style="display:none;margin-bottom:16px;padding:14px 18px;background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+                <span style="font-weight:600;color:#1565c0;"><i class="fas fa-check-double"></i> <span id="contadorMedicamentosSeleccionados">0</span> medicamento(s) seleccionado(s)</span>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button type="button" class="btn btn-success btn-sm" onclick="window.internamientoModule.administrarMedicamentosSeleccionados()">
+                        <i class="fas fa-syringe"></i> Administrar seleccionados (un solo código)
+                    </button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.internamientoModule.limpiarSeleccionMedicamentos()">
+                        <i class="fas fa-times"></i> Limpiar selección
+                    </button>
+                </div>
+            </div>
+            ` : ''}
             <div style="margin-bottom: 30px;">
                 <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
                     <div style="width: 46px; height: 46px; background: linear-gradient(135deg, #26a69a, #00897b); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
@@ -4588,10 +4863,19 @@ class InternamientoModule {
                         const ultimaAdminNombre = ultimaAdmin ? (ultimaAdmin.administradoNombre || '—') : null;
                         const esc = (s) => (s || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
                         
+                        const medIdSafe = (med.medicamentoId || '').replace(/'/g, "\\'");
+                        const puedeSeleccionar = !med.puestoPorConsultaExterna && puedeAdministrar;
+                        const seleccionado = this._medicamentosSeleccionados?.has?.(med.medicamentoId);
+                        
                         return `
-                            <div style="background: white; border: 1px solid ${esAhora ? '#f44336' : '#e0e0e0'}; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.3s ease; ${esAhora ? 'animation: pulse-critico 2s ease-in-out infinite;' : ''}" onmouseenter="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)';" onmouseleave="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';">
+                            <div style="background: white; border: 1px solid ${esAhora ? '#f44336' : seleccionado ? '#2196f3' : '#e0e0e0'}; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.3s ease; ${esAhora ? 'animation: pulse-critico 2s ease-in-out infinite;' : ''}" onmouseenter="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)';" onmouseleave="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';">
                                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
                                     <div style="display: flex; align-items: center; gap: 12px;">
+                                        ${puedeSeleccionar ? `
+                                        <label style="display:flex;align-items:center;cursor:pointer;margin:0;" title="Seleccionar para administración múltiple">
+                                            <input type="checkbox" class="chk-med-lote" data-med-id="${medIdSafe}" ${seleccionado ? 'checked' : ''} onchange="window.internamientoModule.toggleSeleccionMedicamento('${medIdSafe}', this.checked)" style="width:18px;height:18px;cursor:pointer;">
+                                        </label>
+                                        ` : ''}
                                         <div style="width: 44px; height: 44px; background: ${via.color}15; border: 1px solid ${via.color}30; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
                                             <i class="fas ${via.icon}" style="color: ${via.color}; font-size: 1.1rem;"></i>
                                         </div>
@@ -4720,6 +5004,33 @@ class InternamientoModule {
                 </div>
             ` : ''}
         `;
+        this.actualizarBarraMedicamentosSeleccionados();
+    }
+
+    toggleSeleccionMedicamento(medicamentoId, checked) {
+        if (!this._medicamentosSeleccionados) this._medicamentosSeleccionados = new Set();
+        if (checked) {
+            this._medicamentosSeleccionados.add(medicamentoId);
+        } else {
+            this._medicamentosSeleccionados.delete(medicamentoId);
+        }
+        this.actualizarBarraMedicamentosSeleccionados();
+    }
+
+    actualizarBarraMedicamentosSeleccionados() {
+        const barra = document.getElementById('barraMedicamentosLote');
+        const contador = document.getElementById('contadorMedicamentosSeleccionados');
+        const n = this._medicamentosSeleccionados?.size || 0;
+        if (barra) {
+            barra.style.display = n > 0 ? 'flex' : 'none';
+        }
+        if (contador) contador.textContent = String(n);
+    }
+
+    limpiarSeleccionMedicamentos() {
+        this._medicamentosSeleccionados = new Set();
+        document.querySelectorAll('.chk-med-lote').forEach(chk => { chk.checked = false; });
+        this.actualizarBarraMedicamentosSeleccionados();
     }
 
     renderMedicamentoRow(medicamento) {
@@ -5895,7 +6206,7 @@ class InternamientoModule {
             <div style="background: white; padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 <h3 style="margin: 0 0 16px 0; color: #333; font-size: 1rem;"><i class="fas fa-list"></i> Turnos registrados (${turnosList.length})</h3>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                    ${turnosList.map(t => this.renderTurnoCard(t)).join('')}
+                    ${turnosList.map((t, i) => this.renderTurnoCard(t, i === 0)).join('')}
                 </div>
             </div>
             `

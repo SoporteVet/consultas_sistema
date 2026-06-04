@@ -20,6 +20,208 @@ function getDoctorNameInternamiento(value) {
     return profile ? profile.name : '';
 }
 
+// ================================================================
+// SESIÓN TEMPORAL DE CÓDIGO (evita pedir código en cada acción)
+// ================================================================
+
+const INTERNAMIENTO_SESIONES_CODIGO_KEY = 'internamiento_codigo_sesiones';
+const INTERNAMIENTO_SESION_CODIGO_DEFAULT_MIN = 20;
+const INTERNAMIENTO_ACCIONES_SIEMPRE_CODIGO = ['defuncion', 'activar_protocolo'];
+
+InternamientoModule.prototype._leerSesionesCodigoMap = function() {
+    try {
+        const raw = sessionStorage.getItem(INTERNAMIENTO_SESIONES_CODIGO_KEY);
+        if (!raw) return {};
+        const map = JSON.parse(raw);
+        return map && typeof map === 'object' ? map : {};
+    } catch (e) {
+        return {};
+    }
+};
+
+InternamientoModule.prototype._guardarSesionesCodigoMap = function(map) {
+    sessionStorage.setItem(INTERNAMIENTO_SESIONES_CODIGO_KEY, JSON.stringify(map || {}));
+};
+
+InternamientoModule.prototype._getInternamientoIdSesionCodigo = function(internamientoId) {
+    return internamientoId || this.currentInternamientoId || null;
+};
+
+InternamientoModule.prototype._getConfigSesionCodigo = function() {
+    const cfg = this._configSesionCodigoCache;
+    if (cfg) return cfg;
+    return {
+        habilitada: true,
+        duracionMinutos: INTERNAMIENTO_SESION_CODIGO_DEFAULT_MIN,
+        accionesSiempreCodigo: INTERNAMIENTO_ACCIONES_SIEMPRE_CODIGO.slice()
+    };
+};
+
+InternamientoModule.prototype.cargarConfigSesionCodigo = async function() {
+    try {
+        const snap = await window.database.ref('internamiento_config/sesion_codigo').once('value');
+        const data = snap.val();
+        this._configSesionCodigoCache = {
+            habilitada: data?.habilitada !== false,
+            duracionMinutos: Math.max(1, Math.min(480, Number(data?.duracionMinutos) || INTERNAMIENTO_SESION_CODIGO_DEFAULT_MIN)),
+            accionesSiempreCodigo: Array.isArray(data?.accionesSiempreCodigo) && data.accionesSiempreCodigo.length
+                ? data.accionesSiempreCodigo
+                : INTERNAMIENTO_ACCIONES_SIEMPRE_CODIGO.slice()
+        };
+    } catch (e) {
+        console.warn('Config sesión código: usando valores por defecto', e);
+        this._configSesionCodigoCache = this._getConfigSesionCodigo();
+    }
+    return this._configSesionCodigoCache;
+};
+
+InternamientoModule.prototype.guardarConfigSesionCodigo = async function(habilitada, duracionMinutos) {
+    const userRole = sessionStorage.getItem('userRole');
+    if (userRole !== 'admin') {
+        this.showAlert('Solo administradores pueden cambiar esta configuración', 'Acceso Denegado', 'error');
+        return;
+    }
+    const payload = {
+        habilitada: !!habilitada,
+        duracionMinutos: Math.max(1, Math.min(480, Number(duracionMinutos) || INTERNAMIENTO_SESION_CODIGO_DEFAULT_MIN)),
+        accionesSiempreCodigo: INTERNAMIENTO_ACCIONES_SIEMPRE_CODIGO.slice(),
+        actualizadoEn: Date.now()
+    };
+    await window.database.ref('internamiento_config/sesion_codigo').set(payload);
+    this._configSesionCodigoCache = payload;
+    this.showNotification('Configuración de sesión de código guardada', 'success');
+};
+
+InternamientoModule.prototype.getSesionCodigoActiva = function(internamientoId) {
+    const id = this._getInternamientoIdSesionCodigo(internamientoId);
+    if (!id) return null;
+    try {
+        const map = this._leerSesionesCodigoMap();
+        const sesion = map[id];
+        if (!sesion || !sesion.valido || !sesion.expiresAt) return null;
+        if (Date.now() >= sesion.expiresAt) {
+            delete map[id];
+            this._guardarSesionesCodigoMap(map);
+            return null;
+        }
+        return sesion;
+    } catch (e) {
+        const map = this._leerSesionesCodigoMap();
+        delete map[id];
+        this._guardarSesionesCodigoMap(map);
+        return null;
+    }
+};
+
+InternamientoModule.prototype.crearSesionCodigo = function(resultado, accion, internamientoId) {
+    const cfg = this._getConfigSesionCodigo();
+    const id = this._getInternamientoIdSesionCodigo(internamientoId);
+    if (!cfg.habilitada || !resultado?.valido || !id) return;
+    const duracionMs = (cfg.duracionMinutos || INTERNAMIENTO_SESION_CODIGO_DEFAULT_MIN) * 60 * 1000;
+    const sesion = {
+        valido: true,
+        internamientoId: id,
+        assistantId: resultado.assistantId || null,
+        doctorId: resultado.doctorId || null,
+        tipoPersonal: resultado.tipoPersonal || null,
+        nombre: resultado.nombre || '',
+        codigo: resultado.codigo || '',
+        expiresAt: Date.now() + duracionMs,
+        iniciadaEn: Date.now(),
+        ultimaAccion: accion || 'acceso',
+        desdeSesion: false
+    };
+    const map = this._leerSesionesCodigoMap();
+    map[id] = sesion;
+    this._guardarSesionesCodigoMap(map);
+    this.actualizarBannerSesionCodigo();
+};
+
+InternamientoModule.prototype.limpiarSesionCodigo = function(silencioso, internamientoId) {
+    const id = this._getInternamientoIdSesionCodigo(internamientoId);
+    if (id) {
+        const map = this._leerSesionesCodigoMap();
+        delete map[id];
+        this._guardarSesionesCodigoMap(map);
+    }
+    this.actualizarBannerSesionCodigo();
+    if (!silencioso) {
+        this.showNotification('Sesión de código cerrada para este paciente', 'info');
+    }
+};
+
+InternamientoModule.prototype.requiereCodigoFresco = function(accion) {
+    const cfg = this._getConfigSesionCodigo();
+    if (!cfg.habilitada) return true;
+    const lista = cfg.accionesSiempreCodigo || INTERNAMIENTO_ACCIONES_SIEMPRE_CODIGO;
+    return lista.includes(accion);
+};
+
+InternamientoModule.prototype.getMinutosRestantesSesionCodigo = function() {
+    const sesion = this.getSesionCodigoActiva();
+    if (!sesion) return 0;
+    return Math.max(0, Math.ceil((sesion.expiresAt - Date.now()) / 60000));
+};
+
+InternamientoModule.prototype.actualizarBannerSesionCodigo = function() {
+    const section = document.getElementById('internamientosSection');
+    if (!section) return;
+
+    let banner = document.getElementById('internamientoSesionCodigoBanner');
+    const sesion = this.getSesionCodigoActiva();
+    const cfg = this._getConfigSesionCodigo();
+
+    if (!sesion || !cfg.habilitada) {
+        if (banner) banner.remove();
+        if (this._sesionCodigoInterval) {
+            clearInterval(this._sesionCodigoInterval);
+            this._sesionCodigoInterval = null;
+        }
+        return;
+    }
+
+    const minRestantes = this.getMinutosRestantesSesionCodigo();
+    const nombreEsc = (sesion.nombre || 'Personal').replace(/</g, '&lt;');
+    const internamiento = this.internamientos?.get?.(this.currentInternamientoId);
+    const mascotaEsc = (internamiento?.referencias?.nombreMascota || 'Paciente actual').replace(/</g, '&lt;');
+
+    if (!banner) {
+        banner = document.createElement('div');
+        banner.id = 'internamientoSesionCodigoBanner';
+        banner.style.cssText = 'margin-bottom:16px;padding:12px 16px;border-radius:8px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;background:linear-gradient(135deg,#e8f5e9 0%,#c8e6c9 100%);border:1px solid #81c784;color:#1b5e20;';
+        const container = section.querySelector('.int-container') || section;
+        container.insertBefore(banner, container.firstChild);
+    }
+
+    banner.innerHTML = `
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <i class="fas fa-user-shield" style="font-size:1.2rem;"></i>
+            <span><strong>${nombreEsc}</strong> autenticado en <strong>${mascotaEsc}</strong> · sin código por <strong id="internamientoSesionMinRestantes">${minRestantes}</strong> min</span>
+            <span style="font-size:0.85rem;opacity:0.85;">(sesión por paciente — al cambiar de internamiento se pedirá código)</span>
+        </div>
+        <button type="button" class="btn btn-sm btn-secondary" id="btnCerrarSesionCodigoInternamiento" style="white-space:nowrap;">
+            <i class="fas fa-sign-out-alt"></i> Cerrar sesión
+        </button>
+    `;
+
+    const btnCerrar = document.getElementById('btnCerrarSesionCodigoInternamiento');
+    if (btnCerrar) {
+        btnCerrar.onclick = () => this.limpiarSesionCodigo(false);
+    }
+
+    if (!this._sesionCodigoInterval) {
+        this._sesionCodigoInterval = setInterval(() => {
+            const activa = this.getSesionCodigoActiva();
+            if (!activa) {
+                this.actualizarBannerSesionCodigo();
+                return;
+            }
+            const el = document.getElementById('internamientoSesionMinRestantes');
+            if (el) el.textContent = String(this.getMinutosRestantesSesionCodigo());
+        }, 30000);
+    }
+};
+
 /** Nombre legible: primero doctors/{id}, luego assistants/{id}. */
 InternamientoModule.prototype.resolverNombrePersonalMedico = function(personId, assistants, doctors) {
     if (!personId) return '';
@@ -41,6 +243,37 @@ InternamientoModule.prototype.resolverNombrePersonalMedico = function(personId, 
 // ================================================================
 
 InternamientoModule.prototype.verificarCodigoAsistente = async function(accion = 'acceso') {
+    if (!this._configSesionCodigoCache) {
+        await this.cargarConfigSesionCodigo();
+    }
+
+    const internamientoId = this.currentInternamientoId;
+    if (!internamientoId && accion !== 'acceso') {
+        this.showAlert('Seleccione un paciente internado antes de continuar.', 'Paciente requerido', 'warning');
+        return { valido: false, cancelado: true };
+    }
+
+    const cfg = this._getConfigSesionCodigo();
+    if (cfg.habilitada && internamientoId && !this.requiereCodigoFresco(accion)) {
+        const sesion = this.getSesionCodigoActiva(internamientoId);
+        if (sesion) {
+            sesion.ultimaAccion = accion;
+            const map = this._leerSesionesCodigoMap();
+            map[internamientoId] = sesion;
+            this._guardarSesionesCodigoMap(map);
+            this.actualizarBannerSesionCodigo();
+            return {
+                valido: true,
+                assistantId: sesion.assistantId,
+                doctorId: sesion.doctorId,
+                tipoPersonal: sesion.tipoPersonal,
+                nombre: sesion.nombre,
+                codigo: sesion.codigo,
+                desdeSesion: true
+            };
+        }
+    }
+
     return new Promise((resolve, reject) => {
         const modalContent = this.getCodigoAsistenteFormHTML(accion);
         const modal = this.createModal('Código de Personal Médico Requerido', modalContent, 'fa-lock');
@@ -75,7 +308,12 @@ InternamientoModule.prototype.verificarCodigoAsistente = async function(accion =
                         const resultado = await this.validarCodigoAsistente(codigo);
                         
                         if (resultado.valido) {
-                            this.showNotification(`Bienvenido(a), ${resultado.nombre}`, 'success');
+                            this.crearSesionCodigo(resultado, accion);
+                            const cfgSesion = this._getConfigSesionCodigo();
+                            const msgSesion = cfgSesion.habilitada && !this.requiereCodigoFresco(accion)
+                                ? ` · Sesión activa ${cfgSesion.duracionMinutos} min`
+                                : '';
+                            this.showNotification(`Bienvenido(a), ${resultado.nombre}${msgSesion}`, 'success');
                             modal.remove();
                             resolve(resultado);
                         } else {
@@ -138,7 +376,9 @@ InternamientoModule.prototype.getCodigoAsistenteFormHTML = function(accion) {
         'agregar_hidratacion': 'registrar esta hidratación',
         'guardar_glucosa': 'guardar esta medición de glucosa',
         'imagenologia': 'registrar este estudio de imagenología',
-        'edicion_ingreso_consulta_externa': 'guardar los cambios de ingreso (consulta externa)'
+        'edicion_ingreso_consulta_externa': 'guardar los cambios de ingreso (consulta externa)',
+        'editar_turno': 'editar este turno',
+        'medicacion_lote': 'administrar varios medicamentos seleccionados'
     };
 
     return `
@@ -180,7 +420,13 @@ InternamientoModule.prototype.getCodigoAsistenteFormHTML = function(accion) {
                 </div>
             </form>
 
-            <div style="margin-top: 20px; padding: 15px; background: #fff3cd; border-radius: 6px; border-left: 4px solid #ffc107;">
+            <div style="margin-top: 20px; padding: 15px; background: #e8f5e9; border-radius: 6px; border-left: 4px solid #4caf50;">
+                <div style="font-size: 0.85rem; color: #2e7d32;">
+                    <strong><i class="fas fa-clock"></i> Sesión temporal:</strong> Tras verificar, podrás realizar acciones en <strong>este paciente</strong> sin volver a ingresar el código durante el tiempo configurado. Al entrar a otro internamiento se pedirá código de nuevo (excepto defunción y protocolo).
+                </div>
+            </div>
+
+            <div style="margin-top: 12px; padding: 15px; background: #fff3cd; border-radius: 6px; border-left: 4px solid #ffc107;">
                 <div style="font-size: 0.85rem; color: #856404;">
                     <strong><i class="fas fa-shield-alt"></i> Seguridad:</strong> Tu código es personal e intransferible. 
                     No lo compartas con nadie. Cada uso queda registrado en el sistema.
@@ -450,7 +696,26 @@ InternamientoModule.prototype.mostrarGestionCodigos = async function() {
     const modal = this.createModal('Gestión de Códigos de Personal Médico', modalContent, 'fa-cog');
     document.body.appendChild(modal);
 
-    setTimeout(() => {
+    setTimeout(async () => {
+        await this.cargarConfigSesionCodigo();
+        const cfg = this._getConfigSesionCodigo();
+        const chk = document.getElementById('cfgSesionCodigoHabilitada');
+        const minInput = document.getElementById('cfgSesionCodigoMinutos');
+        const btnGuardar = document.getElementById('btnGuardarConfigSesionCodigo');
+        if (chk) chk.checked = cfg.habilitada !== false;
+        if (minInput) minInput.value = String(cfg.duracionMinutos || INTERNAMIENTO_SESION_CODIGO_DEFAULT_MIN);
+        if (btnGuardar) {
+            btnGuardar.onclick = async () => {
+                try {
+                    await this.guardarConfigSesionCodigo(
+                        document.getElementById('cfgSesionCodigoHabilitada')?.checked,
+                        document.getElementById('cfgSesionCodigoMinutos')?.value
+                    );
+                } catch (err) {
+                    this.showAlert('Error al guardar: ' + (err.message || err), 'Error', 'error');
+                }
+            };
+        }
         this.cargarListaUsuariosConCodigos();
     }, 100);
 };
@@ -458,6 +723,30 @@ InternamientoModule.prototype.mostrarGestionCodigos = async function() {
 InternamientoModule.prototype.getGestionCodigosHTML = function() {
     return `
         <div style="padding: 15px; max-height: 75vh; overflow-y: auto;">
+            <!-- Configuración sesión temporal -->
+            <div id="configSesionCodigoPanel" style="background: #e8f5e9; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #4caf50;">
+                <div style="font-weight: 600; color: #2e7d32; margin-bottom: 10px;">
+                    <i class="fas fa-clock"></i> Sesión temporal de código
+                </div>
+                <div style="font-size: 0.9rem; color: #33691e; margin-bottom: 12px;">
+                    Tras ingresar el código una vez, el personal puede trabajar en <strong>ese paciente</strong> sin repetirlo hasta que expire el tiempo.
+                    Al cambiar de internamiento se pedirá código de nuevo. Defunción y activación de protocolo siempre piden código nuevo.
+                </div>
+                <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:center;">
+                    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                        <input type="checkbox" id="cfgSesionCodigoHabilitada" checked>
+                        Sesión habilitada
+                    </label>
+                    <label style="display:flex;align-items:center;gap:8px;">
+                        Duración (minutos):
+                        <input type="number" id="cfgSesionCodigoMinutos" min="1" max="480" value="20" style="width:80px;padding:6px;border-radius:4px;border:1px solid #ccc;">
+                    </label>
+                    <button type="button" class="btn btn-sm btn-primary" id="btnGuardarConfigSesionCodigo">
+                        <i class="fas fa-save"></i> Guardar
+                    </button>
+                </div>
+            </div>
+
             <!-- Información -->
             <div style="background: #e3f2fd; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2196f3;">
                 <div style="font-weight: 600; color: #1565c0; margin-bottom: 8px;">
@@ -712,57 +1001,6 @@ InternamientoModule.prototype.eliminarCodigoUsuario = async function(personId, p
 // INTEGRACIÓN CON ADMINISTRACIÓN DE MEDICAMENTOS
 // ================================================================
 
-InternamientoModule.prototype.administrarMedicamentoConCodigo = async function(medicamentoId) {
-    const internamiento = this.internamientos.get(this.currentInternamientoId);
-    if (!internamiento) return;
-
-    // Verificar si está en alta o egresado
-    if (['alta', 'egresado'].includes(internamiento.estado?.actual)) {
-        this.showAlert('No se puede administrar medicación\n\nEl paciente está en proceso de egreso o egresado.', 'Acción Bloqueada', 'warning');
-        return;
-    }
-
-    const medicamento = internamiento.planTerapeutico?.medicamentos?.[medicamentoId];
-    if (!medicamento) {
-        this.showAlert('Medicamento no encontrado', 'Error', 'error');
-        return;
-    }
-    if (medicamento.puestoPorConsultaExterna) {
-        this.showAlert('No se puede administrar dosis en medicamentos puestos por consulta externa.', 'Acción bloqueada', 'warning');
-        return;
-    }
-    if (!this.puedeAdministrarAhora(medicamento)) {
-        this.showAlert('Solo se puede administrar cuando corresponda la próxima dosis (contador en cero). Espere a que el tiempo indicado llegue a cero.', 'Próxima dosis no correspondiente', 'warning');
-        return;
-    }
-
-    // SOLICITAR CÓDIGO DE ASISTENTE
-    const resultadoCodigo = await this.verificarCodigoAsistente('medicacion');
-    
-    if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
-        this.showNotification('Administración cancelada', 'info');
-        return;
-    }
-
-    // Confirmar administración
-    const confirmar = await this.showConfirm(
-        `${medicamento.nombreComercial}\nDosis: ${this.formatDosisUnidad(medicamento)}\nVía: ${medicamento.viaAdministracion}`,
-        'Confirmar Administración',
-        { confirmText: 'Administrar', cancelText: 'Cancelar', icon: 'fa-syringe', iconColor: '#27ae60' }
-    );
-    
-    if (!confirmar) return;
-
-    try {
-        await this.registrarAdministracionConCodigo(medicamentoId, medicamento, resultadoCodigo);
-        this.showNotification('Medicación administrada por ' + resultadoCodigo.nombre, 'success');
-        this.loadMedicacionView();
-    } catch (error) {
-        console.error('Error registrando administración:', error);
-        this.showAlert('Error al registrar administración: ' + error.message, 'Error', 'error');
-    }
-};
-
 InternamientoModule.prototype.registrarAdministracionConCodigo = async function(medicamentoId, medicamento, codigoData) {
     const assistantId = codigoData.assistantId || null;
     const assistantName = codigoData.nombre || sessionStorage.getItem('userName');
@@ -804,6 +1042,114 @@ InternamientoModule.prototype.registrarAdministracionConCodigo = async function(
         }
     };
     await internamientoRef.child('auditoria/historialCambios').push(auditEntry);
+};
+
+InternamientoModule.prototype.administrarMedicamentoConCodigo = async function(medicamentoId) {
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    if (!internamiento) return;
+
+    if (['alta', 'egresado'].includes(internamiento.estado?.actual)) {
+        this.showAlert('No se puede administrar medicación\n\nEl paciente está en proceso de egreso o egresado.', 'Acción Bloqueada', 'warning');
+        return;
+    }
+
+    const medicamento = internamiento.planTerapeutico?.medicamentos?.[medicamentoId];
+    if (!medicamento) {
+        this.showAlert('Medicamento no encontrado', 'Error', 'error');
+        return;
+    }
+    if (medicamento.puestoPorConsultaExterna) {
+        this.showAlert('No se puede administrar dosis en medicamentos puestos por consulta externa.', 'Acción bloqueada', 'warning');
+        return;
+    }
+    if (!this.puedeAdministrarAhora(medicamento)) {
+        this.showAlert('Solo se puede administrar cuando corresponda la próxima dosis (contador en cero). Espere a que el tiempo indicado llegue a cero.', 'Próxima dosis no correspondiente', 'warning');
+        return;
+    }
+
+    const resultadoCodigo = await this.verificarCodigoAsistente('medicacion');
+    if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
+        this.showNotification('Administración cancelada', 'info');
+        return;
+    }
+
+    const confirmar = await this.showConfirm(
+        `${medicamento.nombreComercial}\nDosis: ${this.formatDosisUnidad(medicamento)}\nVía: ${medicamento.viaAdministracion}`,
+        'Confirmar Administración',
+        { confirmText: 'Administrar', cancelText: 'Cancelar', icon: 'fa-syringe', iconColor: '#27ae60' }
+    );
+    if (!confirmar) return;
+
+    try {
+        await this.registrarAdministracionConCodigo(medicamentoId, medicamento, resultadoCodigo);
+        this.showNotification('Medicación administrada por ' + resultadoCodigo.nombre, 'success');
+        this.loadMedicacionView();
+    } catch (error) {
+        console.error('Error registrando administración:', error);
+        this.showAlert('Error al registrar administración: ' + error.message, 'Error', 'error');
+    }
+};
+
+InternamientoModule.prototype.administrarMedicamentosSeleccionados = async function() {
+    const ids = Array.from(this._medicamentosSeleccionados || []);
+    if (ids.length === 0) {
+        this.showAlert('Seleccione al menos un medicamento con el checkbox.', 'Sin selección', 'warning');
+        return;
+    }
+
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    if (!internamiento) return;
+
+    if (['alta', 'egresado'].includes(internamiento.estado?.actual)) {
+        this.showAlert('No se puede administrar medicación\n\nEl paciente está en proceso de egreso o egresado.', 'Acción Bloqueada', 'warning');
+        return;
+    }
+
+    const medicamentos = [];
+    for (const id of ids) {
+        const med = internamiento.planTerapeutico?.medicamentos?.[id];
+        if (!med) continue;
+        if (med.puestoPorConsultaExterna) continue;
+        if (!this.puedeAdministrarAhora(med)) continue;
+        medicamentos.push({ id, med });
+    }
+
+    if (medicamentos.length === 0) {
+        this.showAlert('Ninguno de los medicamentos seleccionados puede administrarse ahora (verifique el contador de dosis).', 'Sin medicamentos válidos', 'warning');
+        return;
+    }
+
+    const resultadoCodigo = await this.verificarCodigoAsistente('medicacion_lote');
+    if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
+        this.showNotification('Administración cancelada', 'info');
+        return;
+    }
+
+    const listaTexto = medicamentos.map(({ med }) =>
+        `• ${med.nombreComercial || 'Sin nombre'} — ${this.formatDosisUnidad(med)} (${med.viaAdministracion || '—'})`
+    ).join('\n');
+
+    const confirmar = await this.showConfirm(
+        `Se administrarán ${medicamentos.length} medicamento(s):\n\n${listaTexto}\n\nResponsable: ${resultadoCodigo.nombre}`,
+        'Confirmar administración múltiple',
+        { confirmText: 'Administrar todos', cancelText: 'Cancelar', icon: 'fa-syringe', iconColor: '#27ae60' }
+    );
+    if (!confirmar) return;
+
+    try {
+        let ok = 0;
+        for (const { id, med } of medicamentos) {
+            await this.registrarAdministracionConCodigo(id, med, resultadoCodigo);
+            ok++;
+        }
+        this._medicamentosSeleccionados = new Set();
+        this.showNotification(`${ok} medicamento(s) administrados por ${resultadoCodigo.nombre}`, 'success');
+        this.loadMedicacionView();
+    } catch (error) {
+        console.error('Error en administración múltiple:', error);
+        this.showAlert('Error al registrar administraciones: ' + error.message, 'Error', 'error');
+        this.loadMedicacionView();
+    }
 };
 
 console.log('Sistema de Códigos de Personal Médico cargado');
