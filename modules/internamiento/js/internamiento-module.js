@@ -35,6 +35,9 @@ class InternamientoModule {
         this._loadCountdownVencidoFromStorage();
         this._medicamentosSeleccionados = new Set();
         this._editandoTurnoId = null;
+        this.visitasListMode = false;
+        this._visitasRefreshTimer = null;
+        this._glucosaCountdownInterval = null;
 
         console.log('Módulo de Internamiento listo (Firebase al entrar al módulo)');
     }
@@ -135,9 +138,26 @@ class InternamientoModule {
 
             this.refreshInternamientosList();
             this.refreshAdmisionEdicionSelect();
+            this.refreshVisitasIfVisible();
         });
 
         this.listeners.push(activeListener);
+    }
+
+    /** Refresca la lista de visitas si el usuario está en "Ver visitas". */
+    refreshVisitasIfVisible() {
+        const visitasContainer = document.getElementById('internamiento-visitas');
+        if (!visitasContainer || visitasContainer.classList.contains('hidden')) return;
+        if (!this.visitasListMode) return;
+
+        clearTimeout(this._visitasRefreshTimer);
+        this._visitasRefreshTimer = setTimeout(() => {
+            const fechaInput = document.getElementById('visitasFilterDate');
+            const fechaFiltro = fechaInput ? fechaInput.value : null;
+            const estadoBtn = document.querySelector('.visita-filter-btn.active');
+            const filtroEstado = estadoBtn ? estadoBtn.getAttribute('data-estado') : null;
+            this.loadVisitasListView(filtroEstado, fechaFiltro);
+        }, 150);
     }
 
     // ================================================================
@@ -538,6 +558,7 @@ class InternamientoModule {
     }
 
     loadVisitasView() {
+        this.visitasListMode = false;
         const container = document.getElementById('internamiento-visitas');
         if (!container) return;
         container.innerHTML = `
@@ -568,6 +589,7 @@ class InternamientoModule {
     }
 
     loadVisitasListView(filtroEstado = null, fechaFiltro = null) {
+        this.visitasListMode = true;
         const container = document.getElementById('internamiento-visitas');
         if (!container) return;
         
@@ -1099,12 +1121,18 @@ class InternamientoModule {
             }
             document.querySelector('.modal-overlay')?.remove();
             this.showNotification('Visita registrada correctamente', 'success');
+            if (this.visitasListMode) {
+                this.refreshVisitasIfVisible();
+            }
         } catch (err) {
             this.showAlert('Error al guardar: ' + (err.message || err), 'Error', 'error');
         }
     }
 
     showInternamientoView(viewName) {
+        if (viewName !== 'curva_glucosa') {
+            this._clearGlucosaCountdownInterval();
+        }
         // Ocultar todas las vistas de internamiento
         const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas'];
         views.forEach(view => {
@@ -7576,6 +7604,268 @@ class InternamientoModule {
         }
     }
 
+    getHorariosCurvaGlucosa(curva) {
+        if (!curva || typeof curva !== 'object') return [];
+        if (curva.horariosExactos && curva.horariosExactos.length > 0) return curva.horariosExactos;
+        if (curva.horariosCalculados && curva.horariosCalculados.length > 0) return curva.horariosCalculados;
+        if (curva.frecuenciaHoras) return this.calcularHorarios(curva.frecuenciaHoras);
+        return [];
+    }
+
+    tieneHorariosGlucosaConfigurados(curva) {
+        return this.getHorariosCurvaGlucosa(curva).length > 0;
+    }
+
+    getTextoHorariosGlucosa(curva) {
+        if (curva?.horariosExactos?.length) return curva.horariosExactos.join(', ');
+        if (curva?.horariosCalculados?.length) return curva.horariosCalculados.join(', ');
+        if (curva?.frecuenciaHoras) return 'c/' + curva.frecuenciaHoras + 'h';
+        return 'Sin configurar';
+    }
+
+    calcularProximaMedicionGlucosa(curva) {
+        if (!this.tieneHorariosGlucosaConfigurados(curva)) return 'Configure los horarios de toma';
+        const mediciones = Object.values(curva.mediciones || {});
+        const administraciones = {};
+        mediciones.forEach((m, i) => {
+            if (!m.fechaHora) return;
+            const ts = new Date(m.fechaHora).getTime();
+            if (isNaN(ts)) return;
+            administraciones['m' + i] = { estado: 'administrado', fechaHoraReal: ts };
+        });
+        return this.calcularProximaDosis({
+            frecuenciaHoras: curva.frecuenciaHoras,
+            horariosExactos: curva.horariosExactos,
+            horariosCalculados: curva.horariosCalculados,
+            administraciones
+        });
+    }
+
+    getEstadoHorariosGlucosaHoy(curva) {
+        const horarios = this.getHorariosCurvaGlucosa(curva);
+        if (!horarios.length) return [];
+        const mediciones = Object.values(curva.mediciones || {})
+            .filter(m => m.fechaHora)
+            .map(m => new Date(m.fechaHora))
+            .filter(d => !isNaN(d.getTime()));
+        const hoy = new Date();
+        const toleranciaMs = 30 * 60 * 1000;
+
+        return horarios.map(slot => {
+            const part = String(slot).trim().match(/^(\d{1,2}):(\d{2})$/);
+            if (!part) return null;
+            const slotDate = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate(), parseInt(part[1], 10), parseInt(part[2], 10), 0);
+            const tomada = mediciones.some(m => {
+                if (m.toDateString() !== slotDate.toDateString()) return false;
+                return Math.abs(m.getTime() - slotDate.getTime()) <= toleranciaMs;
+            });
+            let estado = 'pendiente';
+            if (tomada) estado = 'tomada';
+            else if (slotDate.getTime() <= Date.now()) estado = 'vencida';
+            const display = (typeof window.formatTime12Hour === 'function') ? window.formatTime12Hour(slot) : slot;
+            return { slot, display, estado, slotDate };
+        }).filter(Boolean);
+    }
+
+    _clearGlucosaCountdownInterval() {
+        if (this._glucosaCountdownInterval) {
+            clearInterval(this._glucosaCountdownInterval);
+            this._glucosaCountdownInterval = null;
+        }
+    }
+
+    _startGlucosaCountdownInterval(curva) {
+        this._clearGlucosaCountdownInterval();
+        const el = document.getElementById('glucosa-proxima-medicion');
+        if (!el || !this.tieneHorariosGlucosaConfigurados(curva)) return;
+        const tick = () => {
+            const intern = this.internamientos.get(this.currentInternamientoId);
+            const c = intern?.curvaGlucosa || curva;
+            el.innerHTML = this.calcularProximaMedicionGlucosa(c);
+        };
+        tick();
+        this._glucosaCountdownInterval = setInterval(tick, 30000);
+    }
+
+    getHorariosGlucosaFieldsHTML(curva) {
+        const v = (x) => (x != null && x !== undefined ? String(x).replace(/"/g, '&quot;').replace(/</g, '&lt;') : '');
+        const horasInicial = ((curva?.horariosExactos && curva.horariosExactos.length) || (curva?.horariosCalculados && curva.horariosCalculados.length))
+            ? ((curva.horariosExactos && curva.horariosExactos.length) ? curva.horariosExactos : curva.horariosCalculados || []).join(',')
+            : '';
+        const tieneHorarios = this.tieneHorariosGlucosaConfigurados(curva);
+        return `
+            <div style="margin-bottom: 20px; padding: 16px; background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 10px;">
+                <div style="font-weight: 600; color: #6a1b9a; margin-bottom: 12px;">
+                    <i class="fas fa-clock"></i> Horarios de toma de glucosa
+                </div>
+                <p style="margin: 0 0 14px 0; font-size: 0.88rem; color: #64748b; line-height: 1.45;">
+                    ${tieneHorarios
+                        ? 'Puede ajustar la frecuencia o las horas exactas al registrar esta medición.'
+                        : 'Indique cada cuántas horas debe tomarse la glucosa o las horas exactas del día, igual que en medicación.'}
+                </p>
+                <div class="form-group" style="margin-bottom: 14px;">
+                    <label><i class="fas fa-clock" style="color: #f59e0b; margin-right: 6px;"></i>Frecuencia (cada X horas)</label>
+                    <input type="number" id="gluFrecuencia" min="1" placeholder="Ej: 4" value="${curva?.frecuenciaHoras != null ? v(curva.frecuenciaHoras) : ''}" style="width:100%;padding:10px;border-radius:6px;border:1px solid #cbd5e1;">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                    <label><i class="fas fa-list-ol" style="color: #0ea5e9; margin-right: 6px;"></i>Horas exactas (opcional)</label>
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                        <span style="display: inline-flex; align-items: center; gap: 4px;">
+                            <select id="gluHoraExactaH" title="Hora (1-12)" style="min-width: 52px; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd;">
+                                ${Array.from({ length: 12 }, (_, i) => i + 1).map(n => `<option value="${n}">${n}</option>`).join('')}
+                            </select>
+                            <span style="font-weight: bold;">:</span>
+                            <select id="gluHoraExactaM" title="Minuto" style="min-width: 52px; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd;">
+                                ${Array.from({ length: 60 }, (_, i) => `<option value="${String(i).padStart(2, '0')}">${String(i).padStart(2, '0')}</option>`).join('')}
+                            </select>
+                            <select id="gluHoraExactaAmpm" title="AM/PM" style="min-width: 58px; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd;">
+                                <option value="AM">AM</option>
+                                <option value="PM">PM</option>
+                            </select>
+                        </span>
+                        <button type="button" class="btn btn-secondary" onclick="window.internamientoModule.agregarHoraExactaGlucosaForm()"><i class="fas fa-plus"></i> Agregar hora</button>
+                    </div>
+                    <input type="hidden" id="gluHorasExactas" value="${v(horasInicial)}">
+                    <div id="gluHorasExactasLista" style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; min-height: 24px;"></div>
+                    <small style="color: #6c757d; font-size: 0.8rem;">Hora (AM/PM)</small>
+                    <div id="gluAdvertenciaCoherenciaHorarios" style="display: none; margin-top: 10px; padding: 10px 12px; background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; color: #b91c1c; font-size: 0.9rem;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right: 6px;"></i><span id="gluAdvertenciaCoherenciaTexto"></span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    obtenerConfigHorariosGlucosaDesdeForm(requiereSiVacio = false) {
+        const frecuenciaHoras = parseInt(document.getElementById('gluFrecuencia')?.value, 10) || 0;
+        const rawHorasExactas = document.getElementById('gluHorasExactas')?.value?.trim() || '';
+        const horariosExactos = this.parsearHorasExactas(rawHorasExactas);
+
+        if (!frecuenciaHoras && horariosExactos.length === 0) {
+            if (requiereSiVacio) {
+                return { error: 'Indique la frecuencia (cada X horas) o las horas exactas de toma de glucosa.' };
+            }
+            return null;
+        }
+        if (frecuenciaHoras && horariosExactos.length > 0) {
+            const coherencia = this.validarCoherenciaFrecuenciaYHorasExactas(frecuenciaHoras, horariosExactos);
+            if (!coherencia.valido) {
+                return { error: coherencia.mensaje };
+            }
+        }
+
+        const horariosCalculados = horariosExactos.length > 0
+            ? []
+            : this.calcularHorarios(frecuenciaHoras || 0);
+
+        const config = {
+            frecuenciaHoras: frecuenciaHoras || null,
+            horariosExactos: horariosExactos.length > 0 ? horariosExactos : null,
+            horariosCalculados: horariosCalculados.length > 0 ? horariosCalculados : null,
+            horariosConfiguradosEn: Date.now(),
+            horariosConfiguradosPor: this._glucosaRegistradoPor || ''
+        };
+
+        return {
+            config,
+            updates: {
+                'curvaGlucosa/frecuenciaHoras': config.frecuenciaHoras,
+                'curvaGlucosa/horariosExactos': config.horariosExactos,
+                'curvaGlucosa/horariosCalculados': config.horariosCalculados,
+                'curvaGlucosa/horariosConfiguradosEn': config.horariosConfiguradosEn,
+                'curvaGlucosa/horariosConfiguradosPor': config.horariosConfiguradosPor
+            }
+        };
+    }
+
+    initHorariosGlucosaEnFormulario() {
+        this.poblarListaHorasExactasGlucosaDesdeHidden();
+        const freqInput = document.getElementById('gluFrecuencia');
+        if (freqInput) freqInput.addEventListener('input', () => this.actualizarAdvertenciaCoherenciaHorariosGlucosaForm());
+        this.actualizarAdvertenciaCoherenciaHorariosGlucosaForm();
+    }
+
+    agregarHoraExactaGlucosaForm() {
+        const selH = document.getElementById('gluHoraExactaH');
+        const selM = document.getElementById('gluHoraExactaM');
+        const selAmpm = document.getElementById('gluHoraExactaAmpm');
+        const hidden = document.getElementById('gluHorasExactas');
+        const lista = document.getElementById('gluHorasExactasLista');
+        if (!selH || !selM || !selAmpm || !hidden || !lista) return;
+        let h24 = parseInt(selH.value, 10) || 1;
+        const ampm = selAmpm.value || 'AM';
+        if (ampm === 'PM' && h24 !== 12) h24 += 12;
+        if (ampm === 'AM' && h24 === 12) h24 = 0;
+        const m = String(selM.value || '00').padStart(2, '0');
+        const hora = String(h24).padStart(2, '0') + ':' + m;
+        const actuales = (hidden.value || '').split(',').map(x => x.trim()).filter(Boolean);
+        if (actuales.includes(hora)) return;
+        actuales.push(hora);
+        actuales.sort();
+        hidden.value = actuales.join(',');
+        const displayHora = (typeof window.formatTime12Hour === 'function') ? window.formatTime12Hour(hora) : hora;
+        const span = document.createElement('span');
+        span.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; background: #7b1fa2; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.9rem;';
+        span.innerHTML = `${displayHora} <button type="button" onclick="window.internamientoModule.quitarHoraExactaGlucosaForm('${hora}')" style="background: transparent; border: none; color: white; cursor: pointer; padding: 0 2px;">&times;</button>`;
+        lista.appendChild(span);
+        selH.value = '1';
+        selM.value = '00';
+        selAmpm.value = 'AM';
+        this.actualizarAdvertenciaCoherenciaHorariosGlucosaForm();
+    }
+
+    quitarHoraExactaGlucosaForm(hora) {
+        const hidden = document.getElementById('gluHorasExactas');
+        const lista = document.getElementById('gluHorasExactasLista');
+        if (!hidden || !lista) return;
+        const actuales = (hidden.value || '').split(',').map(h => h.trim()).filter(Boolean).filter(h => h !== hora);
+        hidden.value = actuales.join(',');
+        lista.innerHTML = '';
+        actuales.forEach(h => {
+            const displayHora = (typeof window.formatTime12Hour === 'function') ? window.formatTime12Hour(h) : h;
+            const span = document.createElement('span');
+            span.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; background: #7b1fa2; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.9rem;';
+            span.innerHTML = `${displayHora} <button type="button" onclick="window.internamientoModule.quitarHoraExactaGlucosaForm('${h}')" style="background: transparent; border: none; color: white; cursor: pointer; padding: 0 2px;">&times;</button>`;
+            lista.appendChild(span);
+        });
+        this.actualizarAdvertenciaCoherenciaHorariosGlucosaForm();
+    }
+
+    actualizarAdvertenciaCoherenciaHorariosGlucosaForm() {
+        const box = document.getElementById('gluAdvertenciaCoherenciaHorarios');
+        const texto = document.getElementById('gluAdvertenciaCoherenciaTexto');
+        if (!box || !texto) return;
+        const frecuenciaVal = parseInt(document.getElementById('gluFrecuencia')?.value, 10) || 0;
+        const rawHoras = document.getElementById('gluHorasExactas')?.value?.trim() || '';
+        const horariosExactos = this.parsearHorasExactas(rawHoras);
+        if (!frecuenciaVal || horariosExactos.length === 0) {
+            box.style.display = 'none';
+            return;
+        }
+        const coherencia = this.validarCoherenciaFrecuenciaYHorasExactas(frecuenciaVal, horariosExactos);
+        if (coherencia.valido) {
+            box.style.display = 'none';
+            return;
+        }
+        texto.textContent = coherencia.mensaje || 'Las horas exactas deben estar separadas según la frecuencia indicada.';
+        box.style.display = 'block';
+    }
+
+    poblarListaHorasExactasGlucosaDesdeHidden() {
+        const hidden = document.getElementById('gluHorasExactas');
+        const lista = document.getElementById('gluHorasExactasLista');
+        if (!hidden || !lista) return;
+        const horas = (hidden.value || '').split(',').map(h => h.trim()).filter(Boolean);
+        lista.innerHTML = '';
+        horas.forEach(hora => {
+            const displayHora = (typeof window.formatTime12Hour === 'function') ? window.formatTime12Hour(hora) : hora;
+            const span = document.createElement('span');
+            span.style.cssText = 'display: inline-flex; align-items: center; gap: 6px; background: #7b1fa2; color: white; padding: 4px 10px; border-radius: 20px; font-size: 0.9rem;';
+            span.innerHTML = `${displayHora} <button type="button" onclick="window.internamientoModule.quitarHoraExactaGlucosaForm('${hora}')" style="background: transparent; border: none; color: white; cursor: pointer; padding: 0 2px;">&times;</button>`;
+            lista.appendChild(span);
+        });
+    }
+
     showCurvaGlucosaView() {
         if (!this.currentInternamientoId) { this.showAlert('No hay internamiento seleccionado', 'Error', 'error'); return; }
         const internamiento = this.internamientos.get(this.currentInternamientoId);
@@ -7588,6 +7878,7 @@ class InternamientoModule {
     }
 
     loadCurvaGlucosaView() {
+        this._clearGlucosaCountdownInterval();
         const container = document.getElementById('internamiento-curva_glucosa');
         if (!container) return;
         const id = this.currentInternamientoId;
@@ -7600,6 +7891,51 @@ class InternamientoModule {
             return ta - tb;
         });
         const hasMediciones = mediciones.length > 0;
+        const tieneHorarios = this.tieneHorariosGlucosaConfigurados(curva);
+        const horariosTexto = this.getTextoHorariosGlucosa(curva);
+        const proximaMedicion = this.calcularProximaMedicionGlucosa(curva);
+        const proximaEsAhora = String(proximaMedicion).includes('AHORA');
+        const horariosHoy = this.getEstadoHorariosGlucosaHoy(curva);
+
+        const horariosHoyHTML = horariosHoy.length > 0 ? `
+            <div style="margin-top: 16px;">
+                <div style="font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.4px;">Horarios de hoy</div>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                    ${horariosHoy.map(h => {
+                        const estilos = h.estado === 'tomada'
+                            ? 'background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7;'
+                            : h.estado === 'vencida'
+                                ? 'background: #ffebee; color: #c62828; border: 1px solid #ef9a9a;'
+                                : 'background: #f3e5f5; color: #6a1b9a; border: 1px solid #ce93d8;';
+                        const icono = h.estado === 'tomada' ? 'check-circle' : h.estado === 'vencida' ? 'exclamation-circle' : 'clock';
+                        const etiqueta = h.estado === 'tomada' ? 'Tomada' : h.estado === 'vencida' ? 'Pendiente' : 'Programada';
+                        return `<span style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; ${estilos}">
+                            <i class="fas fa-${icono}"></i> ${h.display} · ${etiqueta}
+                        </span>`;
+                    }).join('')}
+                </div>
+            </div>
+        ` : '';
+
+        const horariosHTML = tieneHorarios ? `
+            <div style="background: white; border-radius: 12px; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #e2e8f0; overflow: hidden;">
+                <div style="padding: 16px 20px; border-bottom: 1px solid #e2e8f0; font-weight: 600; color: #334155;">
+                    <i class="fas fa-clock"></i> Horarios de toma de glucosa
+                </div>
+                <div style="padding: 20px;">
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+                        <span style="background: #7b1fa2; color: white; padding: 6px 14px; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                            <i class="fas fa-calendar-alt"></i> ${horariosTexto}
+                        </span>
+                        <span style="font-size: 0.9rem; color: ${proximaEsAhora ? '#c62828' : '#475569'}; font-weight: ${proximaEsAhora ? '700' : '500'};">
+                            <i class="fas fa-hourglass-half"></i> Próxima medición: <span id="glucosa-proxima-medicion">${proximaMedicion}</span>
+                        </span>
+                    </div>
+                    ${horariosHoyHTML}
+                    ${curva.horariosConfiguradosPor ? `<div style="margin-top: 12px; font-size: 0.85rem; color: #94a3b8;"><i class="fas fa-user"></i> Configurado por: ${String(curva.horariosConfiguradosPor).replace(/</g, '&lt;')}</div>` : ''}
+                </div>
+            </div>
+        ` : '';
 
         const medicionesHTML = hasMediciones
             ? `
@@ -7642,8 +7978,9 @@ class InternamientoModule {
             </div>
             <div style="background: linear-gradient(135deg, #f3e5f5 0%, #e1bee7 100%); border: 1px solid #ce93d8; border-radius: 12px; padding: 24px; margin-top: 20px;">
                 <p style="margin: 0 0 12px 0; color: #6a1b9a; font-weight: 600;"><i class="fas fa-info-circle"></i> Curva de glucosa</p>
-                <p style="margin: 0; color: #334155; font-size: 0.95rem; line-height: 1.5;">Registre aquí las mediciones de glucosa en sangre (mg/dL) del paciente. La fecha y hora se toman automáticamente de la computadora.</p>
+                <p style="margin: 0; color: #334155; font-size: 0.95rem; line-height: 1.5;">Al registrar una medición puede indicar la frecuencia y las horas exactas de toma. La fecha y hora de cada medición se toman automáticamente de la computadora.</p>
             </div>
+            ${horariosHTML}
             ${hasMediciones ? medicionesHTML : `
             <div class="empty-state" style="background: white; padding: 40px; margin-top: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; color: #64748b;">
                 <i class="fas fa-chart-line" style="font-size: 2.5rem; color: #7b1fa2; margin-bottom: 16px; opacity: 0.8;"></i>
@@ -7652,6 +7989,9 @@ class InternamientoModule {
             </div>
             `}
         `;
+        if (tieneHorarios) {
+            this._startGlucosaCountdownInterval(curva);
+        }
     }
 
     async agregarMedicionCurvaGlucosa() {
@@ -7667,12 +8007,14 @@ class InternamientoModule {
             return;
         }
         this._glucosaRegistradoPor = resultadoCodigo.nombre || '';
+        const curva = internamiento?.curvaGlucosa && typeof internamiento.curvaGlucosa === 'object' ? internamiento.curvaGlucosa : {};
 
         const modalContent = `
             <form id="formCurvaGlucosa" style="max-height: 70vh; overflow-y: auto;">
-                <p style="margin: 0 0 16px 0; padding: 10px 12px; background: #f3e5f5; border: 1px solid #ce93d8; border-radius: 8px; font-size: 0.9rem; color: #4a148c;">
-                    <i class="fas fa-clock"></i> La fecha y hora se registran automáticamente según la computadora.
-                </p>
+                ${this.getHorariosGlucosaFieldsHTML(curva)}
+                <div style="margin: 0 0 16px 0; padding: 10px 12px; background: #f3e5f5; border: 1px solid #ce93d8; border-radius: 8px; font-size: 0.9rem; color: #4a148c;">
+                    <i class="fas fa-clock"></i> La fecha y hora de la medición se registran automáticamente según la computadora.
+                </div>
                 <div class="form-group" style="margin-bottom: 16px;">
                     <label>Glucosa (mg/dL)</label>
                     <input type="number" id="curvaGlucosaValor" class="form-control" min="0" step="0.1" placeholder="Ej. 120" style="width:100%;padding:10px;border-radius:6px;color:#1e293b;background:#f8fafc;border:1px solid #cbd5e1;">
@@ -7711,6 +8053,7 @@ class InternamientoModule {
         `;
         const modal = this.createModal('Registrar medición de glucosa', modalContent, 'fa-chart-line');
         document.body.appendChild(modal);
+        setTimeout(() => this.initHorariosGlucosaEnFormulario(), 50);
         const insulinaSelect = document.getElementById('curvaGlucosaInsulinaAplicada');
         const insulinaCampos = document.getElementById('curvaGlucosaInsulinaCampos');
         if (insulinaSelect && insulinaCampos) {
@@ -7751,6 +8094,15 @@ class InternamientoModule {
                         return;
                     }
                 }
+                const curvaActual = internamiento?.curvaGlucosa && typeof internamiento.curvaGlucosa === 'object'
+                    ? internamiento.curvaGlucosa
+                    : {};
+                const requiereHorarios = !this.tieneHorariosGlucosaConfigurados(curvaActual);
+                const horariosResult = this.obtenerConfigHorariosGlucosaDesdeForm(requiereHorarios);
+                if (horariosResult?.error) {
+                    this.showAlert(horariosResult.error, requiereHorarios ? 'Datos requeridos' : 'Frecuencia y horarios', 'warning');
+                    return;
+                }
                 const registroId = 'glu_' + Date.now();
                 const nuevo = {
                     id: registroId,
@@ -7764,6 +8116,9 @@ class InternamientoModule {
                 };
                 const updates = {};
                 updates[`curvaGlucosa/mediciones/${registroId}`] = nuevo;
+                if (horariosResult?.updates) {
+                    Object.assign(updates, horariosResult.updates);
+                }
                 updates['metadata/fechaUltimaActualizacion'] = Date.now();
                 const ref = this.internamientosRef.child(this.currentInternamientoId);
                 ref.update(updates).then(() => {
@@ -7772,7 +8127,11 @@ class InternamientoModule {
                         const c = intern.curvaGlucosa || {};
                         const med = c.mediciones || {};
                         med[registroId] = nuevo;
-                        intern.curvaGlucosa = { ...c, mediciones: med };
+                        intern.curvaGlucosa = {
+                            ...c,
+                            ...(horariosResult?.config || {}),
+                            mediciones: med
+                        };
                     }
                     if (tipoInsulina === 'N' || tipoInsulina === 'RN') {
                         const id = this.currentInternamientoId;

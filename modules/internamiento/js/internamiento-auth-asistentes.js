@@ -375,6 +375,7 @@ InternamientoModule.prototype.getCodigoAsistenteFormHTML = function(accion) {
         'agregar_toma_alimentacion_asistida': 'registrar esta toma de Alimentación asistida',
         'agregar_hidratacion': 'registrar esta hidratación',
         'guardar_glucosa': 'guardar esta medición de glucosa',
+        'configurar_horarios_glucosa': 'configurar los horarios de toma de glucosa',
         'imagenologia': 'registrar este estudio de imagenología',
         'edicion_ingreso_consulta_externa': 'guardar los cambios de ingreso (consulta externa)',
         'editar_turno': 'editar este turno',
