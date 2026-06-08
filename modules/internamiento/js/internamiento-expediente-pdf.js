@@ -461,9 +461,18 @@ window.InternamientoExpedientePDF = (() => {
         const completados = sorted.filter(p => p.estado === 'completado');
         const pendientes = sorted.filter(p => p.estado !== 'completado');
 
+        const origenBadge = (item) => {
+            if (item?.puestoPorInternos) {
+                return ' <span style="background:#ede9fe;color:#5b21b6;font-size:9px;padding:2px 6px;border-radius:4px;">Puesto por internos</span>';
+            }
+            if (item?.puestoPorConsultaExterna) {
+                return ' <span style="background:#ecfdf5;color:#0f766e;font-size:9px;padding:2px 6px;border-radius:4px;">Puesto por consulta externa</span>';
+            }
+            return '';
+        };
         const row = (p) => `<tr>
             <td>${esc(tipoMap[p.tipo] || p.tipo)}</td>
-            <td style="font-weight:600;">${esc(p.descripcion)}${p.puestoPorConsultaExterna ? ' <span style="background:#ecfdf5;color:#0f766e;font-size:9px;padding:2px 6px;border-radius:4px;">Consulta externa</span>' : ''}</td>
+            <td style="font-weight:600;">${esc(p.descripcion)}${origenBadge(p)}</td>
             <td>${prioridadBadge(p.prioridad)}</td>
             <td>${esc(p.creadoNombre)}<br><span style="font-size:9px;color:#777;">${fts(p.fechaCreacion)}</span></td>
             <td>${p.completadoNombre ? esc(p.completadoNombre) + '<br><span style="font-size:9px;color:#777;">' + fts(p.fechaCompletado) + '</span>' : '—'}</td>

@@ -242,14 +242,32 @@ InternamientoModule.prototype.resolverNombrePersonalMedico = function(personId, 
 // VERIFICAR CÓDIGO DE ASISTENTE / DOCTOR
 // ================================================================
 
+InternamientoModule.prototype._resolveInternamientoIdParaCodigo = function(accion) {
+    if (this.currentInternamientoId) return this.currentInternamientoId;
+    if (this.edicionIngresoConsultaId) return this.edicionIngresoConsultaId;
+    if (this._edicionMedicamentoInternamientoId) return this._edicionMedicamentoInternamientoId;
+    return null;
+};
+
+InternamientoModule.prototype._accionesCodigoSinPacienteInternado = function() {
+    return new Set(['acceso', 'admision']);
+};
+
 InternamientoModule.prototype.verificarCodigoAsistente = async function(accion = 'acceso') {
     if (!this._configSesionCodigoCache) {
         await this.cargarConfigSesionCodigo();
     }
 
-    const internamientoId = this.currentInternamientoId;
-    if (!internamientoId && accion !== 'acceso') {
-        this.showAlert('Seleccione un paciente internado antes de continuar.', 'Paciente requerido', 'warning');
+    const internamientoId = this._resolveInternamientoIdParaCodigo(accion);
+    if (!internamientoId && !this._accionesCodigoSinPacienteInternado().has(accion)) {
+        const mensajesPorAccion = {
+            edicion_ingreso_consulta_externa: 'Seleccione un paciente en el desplegable «Paciente a editar (últimas 24 h)» antes de verificar el código.',
+            editar_pendiente_consulta_externa: 'Seleccione primero el paciente a editar en el desplegable de las últimas 24 horas.',
+            editar_procedimiento_consulta_externa: 'Seleccione primero el paciente a editar en el desplegable de las últimas 24 horas.'
+        };
+        const mensaje = mensajesPorAccion[accion]
+            || 'Abra el panel de un paciente internado o selecciónelo en el formulario de admisión antes de continuar.';
+        this.showAlert(mensaje, 'Paciente requerido', 'warning');
         return { valido: false, cancelado: true };
     }
 

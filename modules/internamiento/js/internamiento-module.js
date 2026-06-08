@@ -121,6 +121,118 @@ class InternamientoModule {
         return this.betaEnabled && allowedRoles.includes(userRole);
     }
 
+    /** Origen de ítems agregados desde Nuevo internamiento según rol del usuario. */
+    getOrigenIngresoAdmision() {
+        const role = sessionStorage.getItem('userRole') || '';
+        if (role === 'consulta_externa') {
+            return {
+                origen: 'consulta_externa',
+                puestoPorConsultaExterna: true,
+                puestoPorInternos: false,
+                etiqueta: 'Puesto por consulta externa',
+                etiquetaCorta: 'Consulta externa',
+                icono: 'fa-stethoscope',
+                estiloBg: '#ecfdf5',
+                estiloColor: '#0f766e',
+                estiloBorder: '#0d9488'
+            };
+        }
+        if (role === 'internos') {
+            return {
+                origen: 'internos',
+                puestoPorConsultaExterna: false,
+                puestoPorInternos: true,
+                etiqueta: 'Puesto por internos',
+                etiquetaCorta: 'Internos',
+                icono: 'fa-bed',
+                estiloBg: '#ede9fe',
+                estiloColor: '#5b21b6',
+                estiloBorder: '#c4b5fd'
+            };
+        }
+        return {
+            origen: 'admision',
+            puestoPorConsultaExterna: false,
+            puestoPorInternos: false,
+            etiqueta: '',
+            etiquetaCorta: '',
+            icono: '',
+            estiloBg: '',
+            estiloColor: '',
+            estiloBorder: ''
+        };
+    }
+
+    getEtiquetaOrigenItem(item) {
+        if (item?.puestoPorInternos) {
+            return {
+                etiqueta: 'Puesto por internos',
+                icono: 'fa-bed',
+                estilo: 'background: #ede9fe; color: #5b21b6;'
+            };
+        }
+        if (item?.puestoPorConsultaExterna) {
+            return {
+                etiqueta: 'Puesto por consulta externa',
+                icono: 'fa-stethoscope',
+                estilo: 'background: #ecfdf5; color: #0f766e;'
+            };
+        }
+        return null;
+    }
+
+    renderChipOrigenItem(item) {
+        const e = this.getEtiquetaOrigenItem(item);
+        if (!e) return '';
+        return `<span style="${e.estilo} font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-left: 6px; white-space: nowrap; font-weight: 500;"><i class="fas ${e.icono}" style="margin-right: 4px;"></i>${e.etiqueta}</span>`;
+    }
+
+    renderBannerOrigenItem(item) {
+        const e = this.getEtiquetaOrigenItem(item);
+        if (!e) return '';
+        return `
+            <div style="${e.estilo} border-left: 3px solid currentColor; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
+                <span style="font-size: 0.8rem; font-weight: 600;">
+                    <i class="fas ${e.icono}" style="margin-right: 6px;"></i>${e.etiqueta}
+                </span>
+            </div>
+        `;
+    }
+
+    getOrigenAdmisionFormHTML() {
+        const origen = this.getOrigenIngresoAdmision();
+        if (!origen.etiqueta) return '';
+        const hiddenConsulta = origen.puestoPorConsultaExterna
+            ? '<input type="hidden" id="medPuestoPorConsultaExterna" value="true">'
+            : '';
+        const hiddenInternos = origen.puestoPorInternos
+            ? '<input type="hidden" id="medPuestoPorInternos" value="true">'
+            : '';
+        return `
+            <div class="form-group" style="margin-top: 12px; padding: 10px 12px; background: ${origen.estiloBg}; border-radius: 8px; border: 1px solid ${origen.estiloBorder};">
+                ${hiddenConsulta}${hiddenInternos}
+                <span style="color: ${origen.estiloColor}; font-weight: 500;"><i class="fas ${origen.icono}" style="margin-right: 6px;"></i>${origen.etiqueta}</span>
+                <small style="display: block; color: ${origen.estiloColor}; font-size: 0.8rem; margin-top: 4px; opacity: 0.9;">Según su rol de acceso. No editable.</small>
+            </div>
+        `;
+    }
+
+    getOrigenAdmisionFlagsDesdeForm() {
+        const origen = this.getOrigenIngresoAdmision();
+        const elConsulta = document.getElementById('medPuestoPorConsultaExterna');
+        const elInternos = document.getElementById('medPuestoPorInternos');
+        if (elConsulta || elInternos) {
+            return {
+                puestoPorConsultaExterna: elConsulta ? elConsulta.value === 'true' : false,
+                puestoPorInternos: elInternos ? elInternos.value === 'true' : false
+            };
+        }
+        return {
+            puestoPorConsultaExterna: origen.puestoPorConsultaExterna,
+            puestoPorInternos: origen.puestoPorInternos
+        };
+    }
+
     setupFirebaseListeners() {
         if (!this.internamientosRef) return;
 
@@ -1554,6 +1666,8 @@ class InternamientoModule {
     onAdmisionEditarPacienteChange(e) {
         const id = (e.target.value || '').trim();
         this.edicionIngresoConsultaId = id || null;
+        // Sincronizar ID para verificación de código y sesión mientras se edita desde admisión
+        this.currentInternamientoId = id || null;
         if (!id) {
             this.edicionConsultaVerificado = null;
             const inputEdicion = document.getElementById('admisionNombreEdicionConsulta');
@@ -1769,7 +1883,7 @@ class InternamientoModule {
         this.medicamentosAdmision = [];
         const procs = int.procedimientos || {};
         Object.entries(procs).forEach(([procId, proc]) => {
-            if (proc && proc.puestoPorConsultaExterna) {
+            if (proc && (proc.puestoPorConsultaExterna || proc.puestoPorInternos)) {
                 this.pendientesAdmision.push({
                     procedimientoId: procId,
                     tipo: proc.tipo || '',
@@ -1778,13 +1892,14 @@ class InternamientoModule {
                     observaciones: proc.observaciones || '',
                     paraFernanda: !!proc.paraFernanda,
                     marcarCompletado: proc.estado === 'completado',
-                    puestoPorConsultaExterna: true
+                    puestoPorConsultaExterna: !!proc.puestoPorConsultaExterna,
+                    puestoPorInternos: !!proc.puestoPorInternos
                 });
             }
         });
         const meds = int.planTerapeutico?.medicamentos || {};
         Object.entries(meds).forEach(([medId, med]) => {
-            if (med && med.puestoPorConsultaExterna) {
+            if (med && (med.puestoPorConsultaExterna || med.puestoPorInternos)) {
                 this.medicamentosAdmision.push({
                     medicamentoId: medId,
                     nombreComercial: med.nombreComercial,
@@ -1795,7 +1910,8 @@ class InternamientoModule {
                     horariosExactos: med.horariosExactos || [],
                     horariosCalculados: med.horariosCalculados || [],
                     observaciones: med.observaciones || '',
-                    puestoPorConsultaExterna: true,
+                    puestoPorConsultaExterna: !!med.puestoPorConsultaExterna,
+                    puestoPorInternos: !!med.puestoPorInternos,
                     pedidoPermisoEmergencia: med.pedidoPermisoEmergencia || false,
                     encargadaContactada: med.encargadaContactada || null
                 });
@@ -1901,6 +2017,7 @@ class InternamientoModule {
                     prescritoNombre: creadorNombre,
                     observaciones: m.observaciones || '',
                     puestoPorConsultaExterna: m.puestoPorConsultaExterna || false,
+                    puestoPorInternos: m.puestoPorInternos || false,
                     pedidoPermisoEmergencia: m.pedidoPermisoEmergencia || false,
                     encargadaContactada: m.encargadaContactada || null,
                     administraciones: {}
@@ -1925,6 +2042,7 @@ class InternamientoModule {
                     observaciones: p.observaciones || '',
                     paraFernanda: !!p.paraFernanda,
                     puestoPorConsultaExterna: !!p.puestoPorConsultaExterna,
+                    puestoPorInternos: !!p.puestoPorInternos,
                     estado: marcarCompletado ? 'completado' : 'pendiente',
                     fechaCreacion: procExistente?.fechaCreacion ?? ahora,
                     creadoPor: procExistente?.creadoPor ?? creadorId,
@@ -2066,7 +2184,7 @@ class InternamientoModule {
                         <li style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; gap: 10px; ${p.paraFernanda ? 'background: #fce4ec; border-left: 4px solid #ec407a;' : ''}">
                             <span style="font-size: 0.9rem;">
                                 <strong>${(p.descripcion || '').replace(/</g, '&lt;')}</strong>
-                                <span style="background: #ecfdf5; color: #0f766e; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px; margin-left: 4px;"><i class="fas fa-stethoscope"></i> Consulta externa</span>
+                                ${this.renderChipOrigenItem(p)}
                                 ${p.paraFernanda ? ' <span style="background: #f8bbd0; color: #c2185b; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px;">FERNANDA</span>' : ''}
                                 ${p.tipo ? ` <span style="color: #6c757d; font-size: 0.8rem;">(${tiposLabel[p.tipo] || p.tipo})</span>` : ''}
                                 ${p.prioridad === 'alta' ? ' <span style="color: #d32f2f; font-size: 0.75rem;">Urgente</span>' : ''}
@@ -2107,7 +2225,7 @@ class InternamientoModule {
                         <li style="padding: 10px 12px; border-bottom: 1px solid #e0e0e0; display: flex; align-items: center; justify-content: space-between; gap: 10px;">
                             <span style="font-size: 0.9rem;">
                                 <strong>${(m.nombreComercial || '').replace(/</g, '&lt;')}</strong>
-                                <span style="background: #ecfdf5; color: #0f766e; font-size: 0.75rem; padding: 2px 8px; border-radius: 10px; margin-left: 6px;"><i class="fas fa-stethoscope"></i> Consulta externa</span>
+                                ${this.renderChipOrigenItem(m)}
                                 <span style="color: #6c757d; font-size: 0.8rem;"> ${this.formatDosisUnidad(m)} · ${viaLabel[m.viaAdministracion] || m.viaAdministracion || ''}</span>
                                 ${(m.horariosCalculados && m.horariosCalculados.length) ? ` <span style="color: #0ea5e9; font-size: 0.8rem;">${(m.horariosCalculados || []).join(', ')}</span>` : (m.frecuenciaHoras ? ` <span style="font-size: 0.8rem;">Cada ${m.frecuenciaHoras}h</span>` : '')}
                             </span>
@@ -2400,7 +2518,7 @@ class InternamientoModule {
         }
 
         if (!data.doctorResponsable) {
-            this.showAlert('Debe seleccionar el doctor responsable (médico de consulta externa) para poder iniciar el internamiento.', 'Campo Requerido', 'warning');
+            this.showAlert('Debe seleccionar el doctor responsable para poder iniciar el internamiento.', 'Campo Requerido', 'warning');
             const sel = document.getElementById('internamientoDoctorAdmision');
             if (sel) sel.focus();
             return false;
@@ -2553,8 +2671,8 @@ class InternamientoModule {
                 const lista = snapshotMedicamentos;
                 lista.forEach((m) => {
                     // Si es puesto por consulta externa, prescrito = persona asociada al código verificado (igual que en pendientes)
-                    const prescritoPor = (m.puestoPorConsultaExterna && ingresoPorId) ? ingresoPorId : userId;
-                    const prescritoNombre = (m.puestoPorConsultaExterna && ingresoPorNombre) ? ingresoPorNombre : userName;
+                    const prescritoPor = ((m.puestoPorConsultaExterna || m.puestoPorInternos) && ingresoPorId) ? ingresoPorId : userId;
+                    const prescritoNombre = ((m.puestoPorConsultaExterna || m.puestoPorInternos) && ingresoPorNombre) ? ingresoPorNombre : userName;
                     meds[m.medicamentoId] = {
                         medicamentoId: m.medicamentoId,
                         nombreComercial: m.nombreComercial,
@@ -2571,6 +2689,7 @@ class InternamientoModule {
                         prescritoNombre: prescritoNombre,
                         observaciones: m.observaciones || '',
                         puestoPorConsultaExterna: m.puestoPorConsultaExterna || false,
+                        puestoPorInternos: m.puestoPorInternos || false,
                         pedidoPermisoEmergencia: m.pedidoPermisoEmergencia || false,
                         encargadaContactada: m.encargadaContactada || null,
                         administraciones: {}
@@ -2601,7 +2720,8 @@ class InternamientoModule {
                         prioridad: p.prioridad || 'normal',
                         observaciones: p.observaciones || '',
                         paraFernanda: !!p.paraFernanda,
-                        puestoPorConsultaExterna: true,
+                        puestoPorConsultaExterna: !!p.puestoPorConsultaExterna,
+                        puestoPorInternos: !!p.puestoPorInternos,
                         estado: marcarCompletado ? 'completado' : 'pendiente',
                         fechaCreacion: Date.now(),
                         creadoPor: creadorProcedimientosId,
@@ -3784,7 +3904,7 @@ class InternamientoModule {
                                         <i class="fas ${via.icon}" style="color: ${via.color};"></i>
                                     </div>
                                     <div>
-                                        <strong style="color: #333; font-size: 0.95rem;">${med.nombreComercial || 'Sin nombre'}</strong>
+                                        <strong style="color: #333; font-size: 0.95rem;">${med.nombreComercial || 'Sin nombre'}</strong>${this.renderChipOrigenItem(med)}
                                         <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">${via.label} · Dosis: ${this.formatDosisUnidad(med)}</div>
                                     </div>
                                 </div>
@@ -4908,7 +5028,7 @@ class InternamientoModule {
                                             <i class="fas ${via.icon}" style="color: ${via.color}; font-size: 1.1rem;"></i>
                                         </div>
                                         <div>
-                                            <h4 style="margin: 0; color: #333; font-size: 1rem; font-weight: 600;">${med.nombreComercial || 'Sin nombre'}</h4>
+                                            <h4 style="margin: 0; color: #333; font-size: 1rem; font-weight: 600; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">${med.nombreComercial || 'Sin nombre'}${this.renderChipOrigenItem(med)}</h4>
                                             <span style="font-size: 0.85rem; color: ${via.color};">${via.label}</span>
                                         </div>
                                     </div>
@@ -4955,13 +5075,7 @@ class InternamientoModule {
                                     <span style="font-size: 0.9rem; color: #334155;">${med.observaciones}</span>
                                 </div>
                                 ` : ''}
-                                ${med.puestoPorConsultaExterna ? `
-                                <div style="background: #ecfdf5; border-left: 3px solid #0d9488; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
-                                    <span style="font-size: 0.8rem; color: #0f766e; font-weight: 600;">
-                                        <i class="fas fa-stethoscope" style="margin-right: 6px;"></i>Puesto por consulta externa
-                                    </span>
-                                </div>
-                                ` : ''}
+                                ${this.renderBannerOrigenItem(med)}
                                 ${med.pedidoPermisoEmergencia && med.encargadaContactada ? `
                                 <div style="background: #fef3c7; border-left: 3px solid #d97706; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
                                     <span style="font-size: 0.8rem; color: #92400e; font-weight: 600;">
@@ -5078,7 +5192,7 @@ class InternamientoModule {
         return `
             <tr>
                 <td>
-                    <strong>${medicamento.nombreComercial || 'Sin nombre'}</strong>
+                    <strong>${medicamento.nombreComercial || 'Sin nombre'}</strong>${this.renderChipOrigenItem(medicamento)}
                     ${medicamento.observaciones ? `<div style="font-size: 0.8rem; color: #666; margin-top: 2px;"><i class="fas fa-comment"></i> ${medicamento.observaciones}</div>` : ''}
                 </td>
                 <td>${this.formatDosisUnidad(medicamento)}</td>
@@ -5361,19 +5475,15 @@ class InternamientoModule {
                     <label><i class="fas fa-comment-medical" style="color: #6366f1; margin-right: 6px;"></i>Observaciones</label>
                     <textarea id="medObservaciones" rows="2" placeholder="Ej: Administrar lentamente, con alimento, etc.">${esEdicion ? v(medParaEditar.observaciones || '') : ''}</textarea>
                 </div>
-                ${(!esEdicion && this.agregarMedicamentoContexto === 'admision') ? `
-                <div class="form-group" style="margin-top: 12px; padding: 10px 12px; background: #ecfdf5; border-radius: 8px; border: 1px solid #0d9488;">
-                    <input type="hidden" id="medPuestoPorConsultaExterna" value="true">
-                    <span style="color: #0f766e; font-weight: 500;"><i class="fas fa-stethoscope" style="margin-right: 6px;"></i>Puesto por consulta externa</span>
-                    <small style="display: block; color: #0f766e; font-size: 0.8rem; margin-top: 4px;">Siempre indicado por consulta externa. No editable.</small>
-                </div>
-                ` : (esEdicion && medParaEditar.puestoPorConsultaExterna) ? `
-                <div class="form-group" style="margin-top: 12px; padding: 10px 12px; background: #ecfdf5; border-radius: 8px; border: 1px solid #0d9488;">
-                    <input type="hidden" id="medPuestoPorConsultaExterna" value="true">
-                    <span style="color: #0f766e; font-weight: 500;"><i class="fas fa-stethoscope" style="margin-right: 6px;"></i>Puesto por consulta externa</span>
-                    <small style="display: block; color: #0f766e; font-size: 0.8rem; margin-top: 4px;">Este medicamento fue agregado en admisión por consulta externa y no puede modificarse esta opción.</small>
-                </div>
-                ` : ''}
+                ${(!esEdicion && this.agregarMedicamentoContexto === 'admision') ? this.getOrigenAdmisionFormHTML() : (esEdicion && (medParaEditar.puestoPorConsultaExterna || medParaEditar.puestoPorInternos)) ? (() => {
+                    const e = this.getEtiquetaOrigenItem(medParaEditar);
+                    if (!e) return '';
+                    return `
+                <div class="form-group" style="margin-top: 12px; padding: 10px 12px; border-radius: 8px; ${e.estilo}">
+                    <span style="font-weight: 500;"><i class="fas ${e.icono}" style="margin-right: 6px;"></i>${e.etiqueta}</span>
+                    <small style="display: block; font-size: 0.8rem; margin-top: 4px; opacity: 0.9;">Este medicamento fue agregado en admisión y no puede modificarse esta opción.</small>
+                </div>`;
+                })() : ''}
                 ${(!esEdicion && this.agregarMedicamentoContexto !== 'admision') ? `
                 <div class="form-group" style="margin-top: 16px; padding: 14px; background: #fef3c7; border-radius: 8px; border: 1px solid #f59e0b;">
                     <div style="margin-bottom: 12px; padding: 10px 12px; background: #fff7ed; border-left: 4px solid #ea580c; border-radius: 6px;">
@@ -5600,10 +5710,7 @@ class InternamientoModule {
         const horariosExactos = this.parsearHorasExactas(rawHorasExactas);
 
         const pedidoPermisoEmergencia = document.getElementById('medPedidoPermisoEmergencia')?.checked || false;
-        const elMedConsultaExterna = document.getElementById('medPuestoPorConsultaExterna');
-        const puestoPorConsultaExternaLectura = elMedConsultaExterna
-            ? (elMedConsultaExterna.type === 'checkbox' ? elMedConsultaExterna.checked : elMedConsultaExterna.value === 'true')
-            : false;
+        const origenFlags = esAdmision ? this.getOrigenAdmisionFlagsDesdeForm() : { puestoPorConsultaExterna: false, puestoPorInternos: false };
         const medicamentoData = {
             nombreComercial: document.getElementById('medNombreComercial')?.value.trim() || '',
             dosis: document.getElementById('medDosis')?.value.trim() || '',
@@ -5612,7 +5719,8 @@ class InternamientoModule {
             frecuenciaHoras: parseInt(document.getElementById('medFrecuencia')?.value) || 0,
             horariosExactos: horariosExactos,
             observaciones: document.getElementById('medObservaciones')?.value.trim() || '',
-            puestoPorConsultaExterna: this.agregarMedicamentoContexto === 'admision' ? puestoPorConsultaExternaLectura : false,
+            puestoPorConsultaExterna: esAdmision ? origenFlags.puestoPorConsultaExterna : false,
+            puestoPorInternos: esAdmision ? origenFlags.puestoPorInternos : false,
             pedidoPermisoEmergencia: pedidoPermisoEmergencia,
             encargadaContactada: pedidoPermisoEmergencia ? 'Alejandra Cardona' : null
         };
@@ -5648,6 +5756,7 @@ class InternamientoModule {
                 horariosCalculados: horariosCalculados,
                 observaciones: medicamentoData.observaciones,
                 puestoPorConsultaExterna: medicamentoData.puestoPorConsultaExterna || false,
+                puestoPorInternos: medicamentoData.puestoPorInternos || false,
                 pedidoPermisoEmergencia: medicamentoData.pedidoPermisoEmergencia || false,
                 encargadaContactada: medicamentoData.encargadaContactada || null
             });

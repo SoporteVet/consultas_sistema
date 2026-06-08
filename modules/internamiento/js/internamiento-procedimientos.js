@@ -187,7 +187,7 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
                         <span style="font-size: 1.05rem; font-weight: 600; color: ${completado ? '#95a5a6' : 'var(--internamiento-primary)'}; ${completado ? 'text-decoration: line-through;' : ''}">
                             ${proc.descripcion}
                         </span>
-                        ${proc.puestoPorConsultaExterna ? `<span class="chip" style="background: #ecfdf5; color: #0f766e; font-size: 0.8rem;"><i class="fas fa-stethoscope"></i> Consulta externa</span>` : ''}
+                        ${this.renderChipOrigenItem(proc)}
                         ${paraFernanda ? `<span class="chip" style="background: #f8bbd0; color: #c2185b; font-size: 0.8rem;"><i class="fas fa-user-check"></i> FERNANDA</span>` : ''}
                         ${urgente && !completado ? `<span class="priority-tag priority-alta"><i class="fas fa-exclamation-circle"></i> Urgente</span>` : ''}
                         ${proc.tipo ? `<span class="chip" style="background: #e3f2fd; color: #1976d2; font-size: 0.8rem;">${this.traducirTipoProcedimiento(proc.tipo)}</span>` : ''}
@@ -355,12 +355,7 @@ InternamientoModule.prototype.agregarProcedimiento = function() {
                 <textarea id="procObservaciones" rows="2" placeholder="Detalles adicionales, indicaciones especiales..."></textarea>
             </div>
 
-            ${!this.currentInternamientoId || this.edicionIngresoConsultaId ? `
-            <div class="form-group" style="padding: 10px 12px; background: #ecfdf5; border-radius: 8px; border: 1px solid #0d9488;">
-                <span style="color: #0f766e; font-weight: 500;"><i class="fas fa-stethoscope" style="margin-right: 6px;"></i>Puesto por consulta externa</span>
-                <small style="display: block; color: #0f766e; font-size: 0.8rem; margin-top: 4px;">Siempre indicado por consulta externa. No editable.</small>
-            </div>
-            ` : ''}
+            ${!this.currentInternamientoId || this.edicionIngresoConsultaId ? this.getOrigenAdmisionFormHTML() : ''}
 
             <div class="form-group">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
@@ -405,8 +400,11 @@ InternamientoModule.prototype.handleAgregarProcedimiento = async function(e) {
 
     // Evitar doble envío (ej. doble clic en Agregar)
     if (this._agregandoProcedimientoAdmision) return;
-    const esNuevoInternamiento = !this.currentInternamientoId;
-    if (esNuevoInternamiento) this._agregandoProcedimientoAdmision = true;
+    const esAdmisionListaLocal = !this.currentInternamientoId || !!this.edicionIngresoConsultaId;
+    if (esAdmisionListaLocal) this._agregandoProcedimientoAdmision = true;
+    const origenFlags = esAdmisionListaLocal
+        ? this.getOrigenAdmisionFlagsDesdeForm()
+        : { puestoPorConsultaExterna: false, puestoPorInternos: false };
 
     const procData = {
         tipo: document.getElementById('procTipo')?.value || '',
@@ -415,17 +413,19 @@ InternamientoModule.prototype.handleAgregarProcedimiento = async function(e) {
         observaciones: document.getElementById('procObservaciones')?.value.trim() || '',
         marcarCompletado: document.getElementById('procMarcarCompletado')?.checked || false,
         paraFernanda: document.getElementById('procParaFernanda')?.checked || false,
-        // Solo consulta externa cuando se agrega desde el formulario de Nuevo internamiento (sin panel abierto). Desde Medicación/Procedimientos del panel → false.
-        puestoPorConsultaExterna: esNuevoInternamiento
+        puestoPorConsultaExterna: !!origenFlags.puestoPorConsultaExterna,
+        puestoPorInternos: !!origenFlags.puestoPorInternos
     };
 
-    // Nuevo internamiento: no pedir código de verificación. El responsable se guarda al crear el internamiento
-    // con el nombre de quien verificó su código en la sección Autenticación (persona que registra el internamiento).
-    if (esNuevoInternamiento) {
+    // Nuevo internamiento o edición desde admisión: lista local, sin código aún.
+    if (esAdmisionListaLocal) {
         this.pendientesAdmision = this.pendientesAdmision || [];
         this.pendientesAdmision.push(procData);
         this._agregandoProcedimientoAdmision = false;
-        this.showNotification('Tarea agregada. Se guardará al crear el internamiento.', 'success');
+        const msg = this.edicionIngresoConsultaId
+            ? 'Tarea agregada. Se guardará al guardar los cambios de ingreso.'
+            : 'Tarea agregada. Se guardará al crear el internamiento.';
+        this.showNotification(msg, 'success');
         document.querySelector('.modal-overlay')?.remove();
         this.renderListaPendientesAdmision();
         return;
@@ -609,6 +609,7 @@ InternamientoModule.prototype.editarProcedimiento = function(procedimientoId) {
         return;
     }
 
+    const origenEtiqueta = this.getEtiquetaOrigenItem(proc);
     const modalContent = `
         <form id="formEditarProcedimiento">
             <div class="form-group">
@@ -637,6 +638,11 @@ InternamientoModule.prototype.editarProcedimiento = function(procedimientoId) {
                 </label>
             </div>
 
+            ${origenEtiqueta ? `
+            <div class="form-group" style="padding: 10px 12px; border-radius: 8px; ${origenEtiqueta.estilo}">
+                <span style="font-weight: 500;"><i class="fas ${origenEtiqueta.icono}" style="margin-right: 6px;"></i>${origenEtiqueta.etiqueta}</span>
+            </div>
+            ` : ''}
             ${proc.puestoPorConsultaExterna ? `
             <div class="form-group">
                 <label>Motivo del cambio *</label>
