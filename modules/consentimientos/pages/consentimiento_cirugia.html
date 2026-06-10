@@ -39,6 +39,16 @@
         input[type="text"]:-webkit-autofill,input[type="text"]:-webkit-autofill:hover,input[type="text"]:-webkit-autofill:focus{-webkit-box-shadow:0 0 0px 1000px white inset;-webkit-text-fill-color:var(--text-color)!important;background:white!important;}
         @media print{.autofill-banner,.autocomplete-banner,.pdf-button-container{display:none!important;}body{background:white!important;}.container{box-shadow:none!important;border:none!important;}}
         .pdf-generation .autofill-banner,.pdf-generation .autocomplete-banner,.pdf-generation .pdf-button-container{display:none!important;}
+        .exam-section{margin:20px 0;padding:18px;border:1px solid var(--border-color);border-radius:8px;background:var(--secondary-color);}
+        .exam-section p{margin-bottom:12px;}
+        .exam-acceptance{display:flex;flex-direction:column;gap:10px;margin-bottom:15px;}
+        .exam-acceptance label{display:flex;align-items:center;gap:8px;font-weight:normal;cursor:pointer;}
+        .exam-acceptance input[type="radio"]{transform:scale(1.2);cursor:pointer;}
+        .exam-selector{margin-top:10px;}
+        .exam-selector label{display:block;margin-bottom:8px;}
+        .exam-selector select{width:100%;max-width:620px;padding:10px 12px;font-size:14px;font-family:inherit;border:1px solid var(--border-color);border-radius:6px;background:white;color:var(--text-color);}
+        .exam-selector select:focus{outline:none;border-color:var(--accent-color);}
+        .exam-rejection-text{margin-top:10px;font-style:italic;color:#555;}
     </style>
 </head>
 <body>
@@ -124,6 +134,34 @@
             <li>Acudir a las citas de revisión programadas para valorar la evolución postquirúrgica.</li>
             <li>Informar de inmediato a la clínica en caso de observar signos anormales como fiebre, apatía, pérdida de apetito o sangrado persistente.</li>
         </ul>
+        <div class="exam-section">
+            <p><strong>Exámenes Prequirúrgicos:</strong></p>
+            <p>Se han recomendado exámenes de laboratorio previos a la cirugía para evaluar el estado de salud del paciente. Indique su decisión:</p>
+            <div class="exam-acceptance">
+                <label>
+                    <input type="radio" name="aceptaExamenes" value="si" id="aceptaExamenesSi">
+                    <span>Acepto realizar los exámenes prequirúrgicos recomendados</span>
+                </label>
+                <label>
+                    <input type="radio" name="aceptaExamenes" value="no" id="aceptaExamenesNo">
+                    <span>No acepto realizar los exámenes prequirúrgicos</span>
+                </label>
+            </div>
+            <div class="exam-selector" id="examenesSelectorContainer" style="display: none;">
+                <label for="tipoExamenPrequirurgico"><strong>Examen autorizado a realizar:</strong></label>
+                <select id="tipoExamenPrequirurgico">
+                    <option value="">-- Seleccione el examen --</option>
+                    <option value="Perfil Quimico con Hemograma">Perfil Quimico con Hemograma</option>
+                    <option value="Perfil Quimico sin Hemograma">Perfil Quimico sin Hemograma</option>
+                    <option value="Examen pre quirurgico con hemograma y tiempos de coagulación">Examen pre quirurgico con hemograma y tiempos de coagulación</option>
+                    <option value="Hemograma Básico">Hemograma Básico</option>
+                </select>
+            </div>
+            <p class="exam-rejection-text" id="examenesRechazoText" style="display: none;">
+                El propietario declara haber sido informado de los riesgos asociados a no realizar los exámenes prequirúrgicos y asume la responsabilidad de esta decisión.
+            </p>
+        </div>
+
         <p><strong>Declaración del Propietario:</strong></p>
         <p>
             Yo, <input type="text" id="declOwner" placeholder="Nombre del propietario" required>, en mi calidad de propietario del paciente <input type="text" id="declPet" placeholder="Nombre del paciente" required>, declaro que:
@@ -131,6 +169,7 @@
         <ul>
             <li>He sido informado de manera clara sobre la naturaleza del procedimiento, sus riesgos, beneficios y cuidados postoperatorios.</li>
             <li>He tenido la oportunidad de realizar preguntas y estas han sido respondidas a mi satisfacción.</li>
+            <li id="declaracionExamenesItem" style="display: none;">He sido informado sobre la importancia de los exámenes prequirúrgicos y <span id="declaracionExamenesTexto"></span>.</li>
             <li>Autorizo la realización de la enucleación al paciente <input type="text" id="surgType3" placeholder="Procedimiento" required>, así como su hospitalización posterior según las recomendaciones médicas.</li>
         </ul>
         <p>Firmado a las <span id="surgTime"></span> horas, el día <span id="surgDay"></span> del mes <span id="surgMonth"></span> del año <span id="surgYear"></span>.</p>
@@ -310,6 +349,50 @@
                 ownerNameField.addEventListener('input', updateObservacionesPageData);
             }
             
+            const examenesSelectorContainer = document.getElementById('examenesSelectorContainer');
+            const examenesRechazoText = document.getElementById('examenesRechazoText');
+            const tipoExamenPrequirurgico = document.getElementById('tipoExamenPrequirurgico');
+            const declaracionExamenesItem = document.getElementById('declaracionExamenesItem');
+            const declaracionExamenesTexto = document.getElementById('declaracionExamenesTexto');
+            const aceptaExamenesRadios = document.querySelectorAll('input[name="aceptaExamenes"]');
+
+            function updateExamenesSection() {
+                const acepta = document.querySelector('input[name="aceptaExamenes"]:checked');
+                if (!acepta) {
+                    if (examenesSelectorContainer) examenesSelectorContainer.style.display = 'none';
+                    if (examenesRechazoText) examenesRechazoText.style.display = 'none';
+                    if (declaracionExamenesItem) declaracionExamenesItem.style.display = 'none';
+                    return;
+                }
+
+                if (acepta.value === 'si') {
+                    if (examenesSelectorContainer) examenesSelectorContainer.style.display = 'block';
+                    if (examenesRechazoText) examenesRechazoText.style.display = 'none';
+                    if (declaracionExamenesItem) declaracionExamenesItem.style.display = 'list-item';
+                    const examen = tipoExamenPrequirurgico?.value || '';
+                    if (declaracionExamenesTexto) {
+                        declaracionExamenesTexto.textContent = examen
+                            ? `autorizo la realización del examen: ${examen}`
+                            : 'autorizo la realización de los exámenes prequirúrgicos indicados';
+                    }
+                } else {
+                    if (examenesSelectorContainer) examenesSelectorContainer.style.display = 'none';
+                    if (tipoExamenPrequirurgico) tipoExamenPrequirurgico.value = '';
+                    if (examenesRechazoText) examenesRechazoText.style.display = 'block';
+                    if (declaracionExamenesItem) declaracionExamenesItem.style.display = 'list-item';
+                    if (declaracionExamenesTexto) {
+                        declaracionExamenesTexto.textContent = 'declino la realización de los exámenes prequirúrgicos recomendados';
+                    }
+                }
+            }
+
+            aceptaExamenesRadios.forEach(radio => {
+                radio.addEventListener('change', updateExamenesSection);
+            });
+            if (tipoExamenPrequirurgico) {
+                tipoExamenPrequirurgico.addEventListener('change', updateExamenesSection);
+            }
+
             const c=document.getElementById('surgSigPad');
             function rz(canvas){const r=Math.max(window.devicePixelRatio||1,2);canvas.width=canvas.offsetWidth*r;canvas.height=canvas.offsetHeight*r;canvas.getContext('2d').scale(r,r);}rz(c);
             window.signaturePads={surgSigPad:new SignaturePad(c,{backgroundColor:'rgba(255,255,255,0)',penColor:'rgb(0,0,100)'})};
@@ -319,10 +402,25 @@
         async function generatePDF(){
             const ownerName = document.getElementById('ownerName').value;
             const petName = document.getElementById('petName').value;
+            const aceptaExamenes = document.querySelector('input[name="aceptaExamenes"]:checked');
+            const tipoExamen = document.getElementById('tipoExamenPrequirurgico')?.value || '';
+
             if (!ownerName || !petName) {
                 alert('Complete nombre del propietario y de la mascota');
                 return;
             }
+            if (!aceptaExamenes) {
+                alert('Indique si acepta o no los exámenes prequirúrgicos');
+                return;
+            }
+            if (aceptaExamenes.value === 'si' && !tipoExamen) {
+                alert('Seleccione el examen prequirúrgico que autoriza realizar');
+                return;
+            }
+
+            document.querySelectorAll('input[name="aceptaExamenes"]').forEach(radio => {
+                radio.dispatchEvent(new Event('change'));
+            });
             
             // Actualizar datos en la página de observaciones antes de generar PDF
             if (typeof updateObservacionesPageData === 'function') {
