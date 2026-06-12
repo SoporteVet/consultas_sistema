@@ -64,6 +64,22 @@ const PERMISSIONS = {
     canEditVacunas: false,
     canEditTurnos: false
   },
+  lab_reportes: {
+    canViewTickets: false,
+    canCreateTickets: false,
+    canEditTickets: false,
+    canDeleteTickets: false,
+    canViewStats: false,
+    canManageBackup: false,
+    canViewFullTicket: false,
+    canViewSchedule: false,
+    canExportData: false,
+    canViewConsentForms: false,
+    canViewVacunas: false,
+    canEditVacunas: false,
+    canEditTurnos: false,
+    canAccessLabReportes: true
+  },
   quirofano: {
     canViewTickets: true,
     canCreateTickets: true,
@@ -260,6 +276,17 @@ function hasPermission(permission) {
   return rolePermissions[permission] === true;
 }
 
+function hasLabReportesOnlyAccess() {
+  return sessionStorage.getItem('userRole') === 'lab_reportes';
+}
+
+function getAllowedLabSectionsForRole() {
+  if (hasLabReportesOnlyAccess()) {
+    return ['reportesLabSection'];
+  }
+  return null;
+}
+
 // Get current user's empresa
 function getUserEmpresa() {
   return sessionStorage.getItem('userEmpresa') || 'veterinaria_smp';
@@ -311,6 +338,8 @@ function signOut() {
 // Add to global scope
 window.checkAuth = checkAuth;
 window.hasPermission = hasPermission;
+window.hasLabReportesOnlyAccess = hasLabReportesOnlyAccess;
+window.getAllowedLabSectionsForRole = getAllowedLabSectionsForRole;
 window.isAdminRole = isAdminRole;
 window.normalizeRole = normalizeRole;
 window.signOut = signOut;
