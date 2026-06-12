@@ -651,7 +651,7 @@ function refreshLabNextTicketIdFromFirebase() {
 // Verificar si el usuario tiene acceso al módulo de laboratorio
 function hasLabAccess() {
     const userRole = sessionStorage.getItem('userRole');
-    const allowedRoles = ['admin', 'internos', 'consulta_externa', 'laboratorio', 'quirofano'];
+    const allowedRoles = ['admin', 'internos', 'consulta_externa', 'laboratorio', 'quirofano', 'lab_reportes'];
     return allowedRoles.includes(userRole);
 }
 
@@ -1482,6 +1482,16 @@ function getQuirofanoEstadoLabel(estado) {
 // Mostrar sección de laboratorio
 function showLabSection(sectionId) {
     console.log(`📍 showLabSection llamado con sectionId: ${sectionId}`);
+
+    const allowedSections = typeof getAllowedLabSectionsForRole === 'function'
+        ? getAllowedLabSectionsForRole()
+        : null;
+    if (allowedSections && !allowedSections.includes(sectionId)) {
+        if (typeof showNotification === 'function') {
+            showNotification('No tiene permisos para acceder a esta sección de laboratorio', 'error');
+        }
+        return;
+    }
     
     try {
         // Ocultar todas las secciones
