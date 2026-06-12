@@ -5,6 +5,17 @@
 // Este módulo es completamente independiente y no modifica otros módulos
 // ====================================================================
 
+const MEDICAMENTOS_PREDETERMINADOS = [
+    'Amikacina', 'Amoxicilina', 'Ampicilina', 'Ankofen', 'Apeticat', 'Baytril',
+    'Bladuryl', 'Buddy Tabs', 'Ceftazidima', 'Cefotaxima', 'Cistocure', 'Complejo B',
+    'Convenia', 'Dexametasona', 'Dextrosa', 'Dextrovitam', 'Diurex', 'Dipirona',
+    'Doxin', 'Doxiciclina', 'Enzybiotic', 'Hepatin', 'Hidromax', 'Himpyrim',
+    'Inmunol', 'Insulina N', 'Insulina R', 'Meloxicam', 'Metadona', 'Metronidazol',
+    'Modifical', 'Nefrotec', 'Nexium', 'Peptobismol', 'Penicilina', 'Pharmotil',
+    'Quercetol', 'Ranipeb', 'Renal N', 'Renal P', 'Rilatem', 'Selmix', 'Serentis',
+    'Sinvirax', 'Suero Oral', 'Sucramal', 'Tramadol', 'Trilox', 'Vancomicina', 'Vitamina K'
+];
+
 class InternamientoModule {
     constructor() {
         this.internamientosRef = null;
@@ -1420,25 +1431,39 @@ class InternamientoModule {
     getDatosPropietario(internamiento) {
         const ref = internamiento.referencias || {};
         const vacio = { nombre: 'No especificado', telefono: '', correo: '' };
-        if (ref.nombrePropietario != null && ref.nombrePropietario !== '' || ref.telefonoPropietario != null || ref.correoPropietario != null) {
-            return {
-                nombre: (ref.nombrePropietario || '').trim() || 'No especificado',
-                telefono: (ref.telefonoPropietario || '').trim(),
-                correo: (ref.correoPropietario || '').trim()
-            };
+
+        const nombreRef = (ref.nombrePropietario || '').trim();
+        const telefonoRef = (ref.telefonoPropietario || '').trim();
+        const correoRef = (ref.correoPropietario || '').trim();
+        if (nombreRef) {
+            return { nombre: nombreRef, telefono: telefonoRef, correo: correoRef };
         }
+
         const cedula = ref.cedulaCliente;
-        if (!cedula) return vacio;
-        if (window.patientDatabase) {
+        if (cedula && window.patientDatabase) {
             const patient = window.patientDatabase.findPatientByCedula(cedula);
             if (patient) {
-                return {
-                    nombre: (patient.nombre || '').trim() || 'No especificado',
-                    telefono: (patient.telefono || '').trim(),
-                    correo: (patient.correo || '').trim()
-                };
+                const nombrePaciente = (patient.nombre || '').trim();
+                if (nombrePaciente) {
+                    return {
+                        nombre: nombrePaciente,
+                        telefono: (patient.telefono || '').trim(),
+                        correo: (patient.correo || '').trim()
+                    };
+                }
             }
         }
+
+        const consent = internamiento.consentimientos?.personaResponsable || {};
+        const nombreConsent = (consent.nombre || '').trim();
+        if (nombreConsent) {
+            return {
+                nombre: nombreConsent,
+                telefono: (consent.telefono || telefonoRef).trim(),
+                correo: correoRef
+            };
+        }
+
         return vacio;
     }
 
@@ -2607,6 +2632,9 @@ class InternamientoModule {
             referencias: {
                 ticketId: null, // null por ahora, en futuro vincular con ticket
                 cedulaCliente: data.cedula,
+                nombrePropietario: (data.nombre || '').trim(),
+                telefonoPropietario: (data.telefono || '').trim(),
+                correoPropietario: (data.correo || '').trim(),
                 idPaciente: data.idPaciente || data.mascota, // Fallback a nombre si no hay ID
                 nombreMascota: data.mascota,
                 tipoMascota: data.tipoMascota
@@ -5329,6 +5357,28 @@ class InternamientoModule {
         if (freqInput) freqInput.addEventListener('input', () => this.actualizarAdvertenciaCoherenciaHorariosForm());
     }
 
+    getMedicamentosPredeterminados() {
+        return MEDICAMENTOS_PREDETERMINADOS;
+    }
+
+    escapeMedicamentoOption(valor) {
+        return String(valor || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+    }
+
+    /** Primera letra mayúscula, resto minúscula (p. ej. MELOXICAM → Meloxicam). */
+    normalizeNombreMedicamento(nombre) {
+        const trimmed = (nombre || '').trim();
+        if (!trimmed) return '';
+        return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+    }
+
+    getMedicamentosPredeterminadosDatalistHTML() {
+        const opciones = this.getMedicamentosPredeterminados().map(nombre =>
+            `<option value="${this.escapeMedicamentoOption(nombre)}"></option>`
+        ).join('');
+        return `<datalist id="medicamentosPredeterminadosList">${opciones}</datalist>`;
+    }
+
     agregarHoraExactaAlForm() {
         const selH = document.getElementById('medHoraExactaH');
         const selM = document.getElementById('medHoraExactaM');
@@ -5406,7 +5456,13 @@ class InternamientoModule {
                 ${esEdicion ? `<input type="hidden" id="medEditId" value="${v(medParaEditar.medicamentoId)}">` : ''}
                 <div class="form-group">
                     <label><i class="fas fa-pills" style="color: #14b8a6; margin-right: 6px;"></i>Nombre del Medicamento *</label>
-                    <input type="text" id="medNombreComercial" required placeholder="Ej: Convenia, Meloxicam, etc." value="${esEdicion ? v(medParaEditar.nombreComercial) : ''}">
+                    <input type="text" id="medNombreComercial" required
+                        list="medicamentosPredeterminadosList"
+                        autocomplete="off"
+                        placeholder="Seleccione de la lista o escriba otro medicamento"
+                        value="${esEdicion ? v(medParaEditar.nombreComercial) : ''}">
+                    ${this.getMedicamentosPredeterminadosDatalistHTML()}
+                    <small style="display: block; color: #6c757d; font-size: 0.8rem; margin-top: 6px;">Escriba para buscar en la lista o ingrese un medicamento personalizado.</small>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
                     <div class="form-group">
@@ -5634,6 +5690,24 @@ class InternamientoModule {
         this._edicionMedicamentoInternamientoId = null;
     }
 
+    /** True si el único cambio respecto al medicamento actual es el nombre. */
+    esSoloCambioNombreMedicamento(medActual, data) {
+        if (!medActual || !data) return false;
+        const norm = (v) => String(v ?? '').trim();
+        const horasActuales = ((medActual.horariosExactos && medActual.horariosExactos.length)
+            ? medActual.horariosExactos
+            : (medActual.horariosCalculados || [])).slice().sort().join(',');
+        const horasNuevas = (data.horariosExactos || []).slice().sort().join(',');
+        const nombreCambio = this.normalizeNombreMedicamento(medActual.nombreComercial) !== this.normalizeNombreMedicamento(data.nombreComercial);
+        if (!nombreCambio) return false;
+        return norm(medActual.dosis) === norm(data.dosis)
+            && norm(medActual.unidadMedida) === norm(data.unidadMedida)
+            && norm(medActual.viaAdministracion) === norm(data.viaAdministracion)
+            && (parseInt(medActual.frecuenciaHoras, 10) || 0) === (parseInt(data.frecuenciaHoras, 10) || 0)
+            && horasActuales === horasNuevas
+            && norm(medActual.observaciones) === norm(data.observaciones);
+    }
+
     /** Inicia el flujo de edición (motivo, código, formulario) tras cerrar la vista de historial. */
     async iniciarEdicionMedicamentoDesdeHistorial(medicamentoId) {
         document.querySelector('.modal-overlay')?.remove();
@@ -5649,21 +5723,18 @@ class InternamientoModule {
             return;
         }
         const motivoCambio = await this.showPrompt(
-            'Indique el motivo del cambio de medicación (obligatorio):',
+            'Indique el motivo del cambio (opcional si solo corrige el nombre del medicamento):',
             'Motivo del cambio',
             '',
-            true
+            false
         );
-        if (!motivoCambio || !motivoCambio.trim()) {
-            this.showNotification('Debe indicar el motivo del cambio', 'warning');
-            return;
-        }
+        if (motivoCambio === null) return;
         const resultadoCodigo = await this.verificarCodigoAsistente('editar_medicamento');
         if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
             this.showNotification('Edición cancelada', 'info');
             return;
         }
-        this._edicionMedicamentoPending = { medicamentoId, motivoCambio: motivoCambio.trim(), codigoResult: resultadoCodigo };
+        this._edicionMedicamentoPending = { medicamentoId, motivoCambio: (motivoCambio || '').trim(), codigoResult: resultadoCodigo };
         const modal = this.createModal('Editar Medicamento', this.getAgregarMedicamentoFormHTML(med), 'fa-pills');
         document.body.appendChild(modal);
         setTimeout(() => {
@@ -5712,7 +5783,7 @@ class InternamientoModule {
         const pedidoPermisoEmergencia = document.getElementById('medPedidoPermisoEmergencia')?.checked || false;
         const origenFlags = esAdmision ? this.getOrigenAdmisionFlagsDesdeForm() : { puestoPorConsultaExterna: false, puestoPorInternos: false };
         const medicamentoData = {
-            nombreComercial: document.getElementById('medNombreComercial')?.value.trim() || '',
+            nombreComercial: this.normalizeNombreMedicamento(document.getElementById('medNombreComercial')?.value),
             dosis: document.getElementById('medDosis')?.value.trim() || '',
             unidadMedida: document.getElementById('medUnidadMedida')?.value?.trim() || '',
             viaAdministracion: document.getElementById('medVia')?.value || '',
@@ -5869,7 +5940,7 @@ class InternamientoModule {
             ? (elConsultaExterna.type === 'checkbox' ? elConsultaExterna.checked : elConsultaExterna.value === 'true')
             : false;
         const data = {
-            nombreComercial: document.getElementById('medNombreComercial')?.value.trim() || '',
+            nombreComercial: this.normalizeNombreMedicamento(document.getElementById('medNombreComercial')?.value),
             dosis: document.getElementById('medDosis')?.value.trim() || '',
             unidadMedida: document.getElementById('medUnidadMedida')?.value?.trim() || '',
             viaAdministracion: document.getElementById('medVia')?.value || '',
@@ -5888,6 +5959,14 @@ class InternamientoModule {
                 this.showAlert(coherencia.mensaje, 'Frecuencia y horarios', 'warning');
                 return;
             }
+        }
+        const idInternamiento = this._edicionMedicamentoInternamientoId || this.currentInternamientoId;
+        const internamiento = this.internamientos.get(idInternamiento);
+        const medActual = internamiento?.planTerapeutico?.medicamentos?.[medicamentoId];
+        const soloCambioNombre = medActual && this.esSoloCambioNombreMedicamento(medActual, data);
+        if (!soloCambioNombre && !(pending.motivoCambio || '').trim()) {
+            this.showAlert('Debe indicar el motivo del cambio cuando modifica datos distintos al nombre del medicamento.', 'Motivo requerido', 'warning');
+            return;
         }
         try {
             await this.actualizarMedicamento(medicamentoId, data, { motivoCambio: pending.motivoCambio, codigoResult: pending.codigoResult });

@@ -295,7 +295,7 @@ InternamientoModule.prototype.showPrompt = function(message, title = 'Ingrese in
                 return;
             }
             modal.remove();
-            resolve(value || null);
+            resolve(required ? (value || null) : value);
         };
 
         const handleCancel = () => {
