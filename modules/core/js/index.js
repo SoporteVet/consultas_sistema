@@ -666,6 +666,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     mainContainer.classList.add('sidebar-hidden');
                 }
             }
+        } else if (userRole === 'lab_reportes') {
+            if (typeof showLabSection === 'function') {
+                showLabSection('reportesLabSection');
+            }
+            const reportesLabBtn = document.getElementById('reportesLabBtn');
+            if (reportesLabBtn) reportesLabBtn.classList.add('active');
         } else {
             // Para otros usuarios, mostrar la sección de crear ticket
             const crearTicketSection = document.getElementById('crearTicketSection');
@@ -869,7 +875,10 @@ function applyRoleBasedUI(role) {
         userNameElement.textContent = sessionStorage.getItem('userName') || 'Usuario';
     }
     if (userRoleElement) {
-        userRoleElement.textContent = role.charAt(0).toUpperCase() + role.slice(1);
+        const roleDisplayNames = {
+            lab_reportes: 'Reportes Lab'
+        };
+        userRoleElement.textContent = roleDisplayNames[role] || role.charAt(0).toUpperCase() + role.slice(1);
     }
     
     // Add role-specific class to body element for CSS targeting
@@ -938,7 +947,7 @@ function applyRoleBasedUI(role) {
     // Control de visibilidad del botón de laboratorio basado en roles
     const laboratorioBtn = document.getElementById('laboratorioBtn');
     const laboratorioCategory = laboratorioBtn ? laboratorioBtn.closest('.nav-category') : null;
-    const allowedLabRoles = ['admin', 'consulta_externa', 'internos', 'quirofano', 'laboratorio'];
+    const allowedLabRoles = ['admin', 'consulta_externa', 'internos', 'quirofano', 'laboratorio', 'lab_reportes'];
     
     if (laboratorioCategory) {
         if (allowedLabRoles.includes(role)) {
@@ -948,6 +957,26 @@ function applyRoleBasedUI(role) {
             laboratorioCategory.style.display = 'none';
 
         }
+    }
+
+    if (role === 'lab_reportes') {
+        const restrictedLabButtons = [
+            'crearLabBtn',
+            'verLabBtn',
+            'pendientesReportarLabBtn',
+            'inyectablesBtn'
+        ];
+        restrictedLabButtons.forEach((btnId) => {
+            const btn = document.getElementById(btnId);
+            if (btn) btn.style.display = 'none';
+        });
+
+        const hiddenNavCategories = ['consultasBtn', 'consentimientosBtn', 'quirofanoBtn', 'internamientosBtn'];
+        hiddenNavCategories.forEach((btnId) => {
+            const btn = document.getElementById(btnId);
+            const category = btn ? btn.closest('.nav-category') : null;
+            if (category) category.style.display = 'none';
+        });
     }
     
     // Control de visibilidad del botón de quirófano basado en roles
@@ -969,7 +998,7 @@ function applyRoleBasedUI(role) {
     const consentimientosCategory = consentimientosBtn ? consentimientosBtn.closest('.nav-category') : null;
     
     if (consentimientosCategory) {
-        if (role !== 'visitas') {
+        if (role !== 'visitas' && role !== 'lab_reportes') {
             consentimientosCategory.style.display = 'block';
         } else {
             consentimientosCategory.style.display = 'none';
@@ -6372,6 +6401,15 @@ function navigateToConsultas() {
 
 function navigateToLab(sectionId, buttonId) {
 
+    if (typeof getAllowedLabSectionsForRole === 'function') {
+        const allowedSections = getAllowedLabSectionsForRole();
+        if (allowedSections && !allowedSections.includes(sectionId)) {
+            if (typeof showNotification === 'function') {
+                showNotification('No tiene permisos para acceder a esta sección de laboratorio', 'error');
+            }
+            return;
+        }
+    }
     
     // Cerrar sidebar en móviles después de navegar
     if (window.innerWidth <= 980) {

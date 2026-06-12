@@ -172,6 +172,7 @@ function renderUsersList(users) {
     'recepcion': 'Recepción',
     'consulta_externa': 'Consulta Externa',
     'laboratorio': 'Laboratorio',
+    'lab_reportes': 'Reportes Lab',
     'quirofano': 'Quirófano',
     'internos': 'Internos',
     'visitas': 'Visitas'
