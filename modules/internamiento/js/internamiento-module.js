@@ -701,7 +701,7 @@ class InternamientoModule {
             </div>
             <div style="background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%); border: 1px solid #7986cb; border-radius: 12px; padding: 24px; margin-top: 20px;">
                 <p style="margin: 0 0 12px 0; color: #3949ab; font-weight: 600;"><i class="fas fa-info-circle"></i> Vista de visitas</p>
-                <p style="margin: 0; color: #334155; font-size: 0.95rem; line-height: 1.5;">Aquí podrá gestionar las visitas a los pacientes internados.</p>
+                <p style="margin: 0; color: #334155; font-size: 0.95rem; line-height: 1.5;">Registre visitas indicando fecha y hora programada. Disponible para recepción, internos y demás personal autorizado.</p>
             </div>
             <div class="empty-state" style="background: white; padding: 40px; margin-top: 24px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; color: #64748b;">
                 <i class="fas fa-user-friends" style="font-size: 2.5rem; color: #5c6bc0; margin-bottom: 16px; opacity: 0.8;"></i>
@@ -853,7 +853,7 @@ class InternamientoModule {
                         <div class="visita-card-header">
                             <div class="visita-card-time">
                                 <i class="fas fa-clock"></i>
-                                <span>${horaStr}</span>
+                                <span title="Hora de visita">${horaStr}</span>
                             </div>
                             <span class="visita-estado-badge ${estadoClass}">
                                 <i class="fas fa-${estadoIcono}"></i>
@@ -1115,6 +1115,12 @@ class InternamientoModule {
     showModalAgregarVisita() {
         const lista = this.getPacientesParaVisitas();
         const esc = (s) => this._escapeVisitaHtml(s);
+        const ahora = new Date();
+        const fechaActual = ahora.getFullYear() + '-' +
+            String(ahora.getMonth() + 1).padStart(2, '0') + '-' +
+            String(ahora.getDate()).padStart(2, '0');
+        const horaActual = String(ahora.getHours()).padStart(2, '0') + ':' +
+            String(ahora.getMinutes()).padStart(2, '0');
         const opcionesDatalist = lista.map(int => {
             const nombreMascota = int.referencias?.nombreMascota || '';
             if (!nombreMascota) return '';
@@ -1161,6 +1167,26 @@ class InternamientoModule {
                             <option value="Recolección de cuerpo">Recolección de cuerpo</option>
                         </select>
                     </div>
+                    <div class="form-group" style="margin-bottom: 16px;">
+                        <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #3949ab;">
+                            <i class="fas fa-clock"></i> Fecha y hora de la visita *
+                        </label>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                            <div>
+                                <label for="visitaFecha" style="display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 4px;">Fecha</label>
+                                <input type="date" id="visitaFecha" required value="${fechaActual}"
+                                    style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                            </div>
+                            <div>
+                                <label for="visitaHora" style="display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 4px;">Hora</label>
+                                <input type="time" id="visitaHora" required value="${horaActual}"
+                                    style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                            </div>
+                        </div>
+                        <small style="color: #64748b; display: block; margin-top: 6px;">
+                            Indique cuándo está programada o registrada la visita.
+                        </small>
+                    </div>
                     <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
                         <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
                         <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Agregar</button>
@@ -1183,6 +1209,8 @@ class InternamientoModule {
                 const nombrePersona = document.getElementById('visitaNombrePersona')?.value?.trim() || '';
                 const parentesco = document.getElementById('visitaParentesco')?.value?.trim() || '';
                 const motivo = document.getElementById('visitaMotivo')?.value?.trim() || '';
+                const fechaVisita = document.getElementById('visitaFecha')?.value?.trim() || '';
+                const horaVisita = document.getElementById('visitaHora')?.value?.trim() || '';
                 if (!nombrePaciente) {
                     this.showAlert('Escriba el nombre del paciente (mascota).', 'Campo requerido', 'warning');
                     return;
@@ -1199,12 +1227,24 @@ class InternamientoModule {
                     this.showAlert('Seleccione el motivo de la visita.', 'Campo requerido', 'warning');
                     return;
                 }
+                if (!fechaVisita || !horaVisita) {
+                    this.showAlert('Indique la fecha y hora de la visita.', 'Campo requerido', 'warning');
+                    return;
+                }
+                const [anio, mes, dia] = fechaVisita.split('-').map(Number);
+                const [horas, minutos] = horaVisita.split(':').map(Number);
+                const fechaHoraVisita = new Date(anio, mes - 1, dia, horas, minutos, 0, 0);
+                if (isNaN(fechaHoraVisita.getTime())) {
+                    this.showAlert('La fecha u hora de la visita no es válida.', 'Campo requerido', 'warning');
+                    return;
+                }
                 this.guardarVisita({
                     internamientoId: internamientoId || null,
                     nombrePaciente,
                     nombreVisitante: nombrePersona,
                     parentesco,
-                    motivo
+                    motivo,
+                    fechaHoraMs: fechaHoraVisita.getTime()
                 });
             });
         }
@@ -1216,6 +1256,9 @@ class InternamientoModule {
         const visitasRef = ref.child('visitas');
         const visitaId = 'visita_' + Date.now();
         const ahora = Date.now();
+        const fechaVisitaMs = datos.fechaHoraMs ?? ahora;
+        const userId = sessionStorage.getItem('userId') || '';
+        const userName = sessionStorage.getItem('userName') || '';
         const visita = {
             visitaId,
             nombrePaciente: datos.nombrePaciente || '',
@@ -1223,9 +1266,11 @@ class InternamientoModule {
             parentesco: datos.parentesco || '',
             motivo: datos.motivo || '',
             estado: 'En espera',
-            fechaHora: new Date().toISOString(),
-            timestamp: ahora,
-            horaEnEspera: ahora
+            fechaHora: new Date(fechaVisitaMs).toISOString(),
+            timestamp: fechaVisitaMs,
+            horaEnEspera: fechaVisitaMs,
+            registradoPor: userId,
+            registradoNombre: userName
         };
         try {
             await visitasRef.child(visitaId).set(visita);
@@ -3941,6 +3986,17 @@ class InternamientoModule {
                                 </span>
                             </div>
                             ${med.observaciones ? `<div style="font-size: 0.8rem; color: #555; margin-bottom: 8px;"><i class="fas fa-comment" style="margin-right: 4px;"></i>${med.observaciones}</div>` : ''}
+                            ${(() => {
+                                const dias = this.obtenerDiasAdministracionMedicamento(med);
+                                if (dias.length === 0) return '';
+                                const mesesCortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+                                const mostrarMes = new Set(dias.map(d => d.mes)).size > 1 || new Set(dias.map(d => d.anio)).size > 1;
+                                const chips = dias.map(d => {
+                                    const label = mostrarMes ? `Día ${d.dia} ${mesesCortos[d.mes]}` : `Día ${d.dia}`;
+                                    return `<span style="display:inline-flex;align-items:center;gap:4px;background:#fff;border:1px solid #a5d6a7;border-radius:6px;padding:2px 6px;font-size:0.75rem;color:#2e7d32;font-weight:600;">${label}<span style="width:16px;height:16px;background:#2e7d32;color:#fff;border-radius:3px;display:inline-flex;align-items:center;justify-content:center;font-size:0.65rem;font-weight:700;">X</span></span>`;
+                                }).join('');
+                                return `<div style="margin-bottom:8px;display:flex;flex-wrap:wrap;gap:4px;align-items:center;"><span style="font-size:0.75rem;color:#558b2f;font-weight:600;margin-right:4px;"><i class="fas fa-calendar-check"></i></span>${chips}</div>`;
+                            })()}
                             <div style="display: flex; justify-content: space-between; align-items: center; padding-top: 10px; border-top: 1px solid #c8e6c9;">
                                 <span style="font-size: 0.85rem; color: #555;">
                                     <i class="fas fa-prescription" style="margin-right: 4px; color: #4caf50;"></i>
@@ -5111,6 +5167,7 @@ class InternamientoModule {
                                     </span>
                                 </div>
                                 ` : ''}
+                                ${this.renderRegistroDiasAdministracion(med)}
                                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 14px; border-top: 1px solid #e8e8e8;">
                                     <div style="display: flex; flex-direction: column; gap: 4px;">
                                         <span style="font-size: 0.85rem; color: #666;">
@@ -5248,6 +5305,68 @@ class InternamientoModule {
         const unidad = med && med.unidadMedida ? String(med.unidadMedida).trim() : '';
         if (!cant && !unidad) return '--';
         return unidad ? `${cant || '--'} ${unidad}` : (cant || '--');
+    }
+
+    /** Timestamp numérico de una administración (fechaHoraReal). */
+    _administracionToTs(administracion) {
+        const v = administracion?.fechaHoraReal;
+        if (v == null) return 0;
+        return typeof v === 'number' ? v : (new Date(v).getTime() || 0);
+    }
+
+    /** Días únicos (fecha local) en que el medicamento fue administrado, ordenados cronológicamente. */
+    obtenerDiasAdministracionMedicamento(medicamento) {
+        const diasMap = new Map();
+        Object.values(medicamento?.administraciones || {}).forEach(a => {
+            if (a.estado !== 'administrado') return;
+            const ts = this._administracionToTs(a);
+            if (!ts) return;
+            const d = new Date(ts);
+            const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            if (!diasMap.has(key)) {
+                diasMap.set(key, { ts, dia: d.getDate(), mes: d.getMonth(), anio: d.getFullYear() });
+            }
+        });
+        return Array.from(diasMap.values()).sort((a, b) => a.ts - b.ts);
+    }
+
+    /** HTML del registro de días aplicados visible en la tarjeta del medicamento. */
+    renderRegistroDiasAdministracion(medicamento) {
+        const dias = this.obtenerDiasAdministracionMedicamento(medicamento);
+        const mesesCortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+        const mostrarMes = dias.length > 0 && (
+            new Set(dias.map(d => d.mes)).size > 1 || new Set(dias.map(d => d.anio)).size > 1
+        );
+
+        if (dias.length === 0) {
+            return `
+                <div style="background: #fafafa; border: 1px dashed #d0d0d0; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+                    <span style="display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 6px; font-weight: 600;">
+                        <i class="fas fa-calendar-check" style="margin-right: 6px;"></i>Días aplicados
+                    </span>
+                    <span style="font-size: 0.85rem; color: #999;">Sin días registrados</span>
+                </div>
+            `;
+        }
+
+        const items = dias.map(d => {
+            const label = mostrarMes ? `Día ${d.dia} ${mesesCortos[d.mes]}` : `Día ${d.dia}`;
+            return `
+                <div style="display: inline-flex; align-items: center; gap: 8px; background: #e8f5e9; border: 1px solid #a5d6a7; border-radius: 8px; padding: 6px 10px;">
+                    <span style="font-size: 0.85rem; font-weight: 600; color: #2e7d32;">${label}</span>
+                    <span style="width: 22px; height: 22px; background: #2e7d32; color: white; border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; font-weight: 700; font-size: 0.8rem; line-height: 1;" title="Aplicado">X</span>
+                </div>
+            `;
+        }).join('');
+
+        return `
+            <div style="background: #f1f8e9; border: 1px solid #c5e1a5; border-radius: 8px; padding: 12px 14px; margin-bottom: 14px;">
+                <span style="display: block; font-size: 0.75rem; color: #558b2f; text-transform: uppercase; margin-bottom: 10px; font-weight: 600;">
+                    <i class="fas fa-calendar-check" style="margin-right: 6px;"></i>Días aplicados (${dias.length})
+                </span>
+                <div style="display: flex; flex-wrap: wrap; gap: 8px;">${items}</div>
+            </div>
+        `;
     }
 
     /**
