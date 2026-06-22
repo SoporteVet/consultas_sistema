@@ -5036,6 +5036,7 @@ class InternamientoModule {
 
         if (activos.length === 0) {
             container.innerHTML = `
+                ${this.renderMedicacionViewToggle ? this.renderMedicacionViewToggle() : ''}
                 <div class="empty-state" style="padding: 60px 30px;">
                     <i class="fas fa-pills" style="font-size: 64px;"></i>
                     <p style="font-size: 1.1rem;">No hay medicamentos activos</p>
@@ -5057,8 +5058,12 @@ class InternamientoModule {
         };
 
         const activosAdministrar = activos.filter(m => !m.puestoPorConsultaExterna && this.puedeAdministrarAhora(m));
+        const vistaTabla = this.getMedicacionVista ? this.getMedicacionVista() === 'tabla' : true;
 
         container.innerHTML = `
+            ${this.renderMedicacionViewToggle ? this.renderMedicacionViewToggle() : ''}
+            ${vistaTabla && this.renderTablaControlMedicacion ? this.renderTablaControlMedicacion(internamiento, activos) : ''}
+            <div id="medicacionTarjetasWrap" style="${vistaTabla ? 'display:none;' : ''}">
             ${activosAdministrar.length > 0 ? `
             <div id="barraMedicamentosLote" style="display:none;margin-bottom:16px;padding:14px 18px;background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                 <span style="font-weight:600;color:#1565c0;"><i class="fas fa-check-double"></i> <span id="contadorMedicamentosSeleccionados">0</span> medicamento(s) seleccionado(s)</span>
@@ -5230,6 +5235,7 @@ class InternamientoModule {
                     </div>
                 </div>
             ` : ''}
+            </div>
         `;
         this.actualizarBarraMedicamentosSeleccionados();
     }
@@ -6371,7 +6377,7 @@ class InternamientoModule {
             return typeof v === 'number' ? v : (new Date(v).getTime() || 0);
         };
         const administraciones = Object.entries(med.administraciones || {})
-            .filter(([, a]) => a.estado === 'administrado')
+            .filter(([, a]) => a.estado === 'administrado' || a.estado === 'omitido' || a.estado === 'no_administrado')
             .map(([id, a]) => ({ id, ...a }))
             .sort((a, b) => {
                 const bTs = toTs(b);
@@ -6383,13 +6389,19 @@ class InternamientoModule {
         const nombreMed = esc(med.nombreComercial || 'Sin nombre');
         let tableBody = '';
         if (administraciones.length === 0) {
-            tableBody = '<tr><td colspan="2" style="padding: 24px; text-align: center; color: #888;">Aún no hay administraciones registradas para este medicamento.</td></tr>';
+            tableBody = '<tr><td colspan="3" style="padding: 24px; text-align: center; color: #888;">Aún no hay registros para este medicamento.</td></tr>';
         } else {
             tableBody = administraciones.map(a => {
                 const fechaStr = a.fechaHoraReal ? (() => { const d = new Date(a.fechaHoraReal); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })() : '—';
                 const quien = esc(a.administradoNombre || '—');
                 const codigoOk = a.codigoVerificado ? ' <span style="color: #2e7d32; font-size: 0.75rem;" title="Código verificado"><i class="fas fa-check-circle"></i></span>' : '';
-                return `<tr><td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${quien}${codigoOk}</td></tr>`;
+                const esOmitido = a.estado === 'omitido' || a.estado === 'no_administrado';
+                const estadoLabel = esOmitido
+                    ? '<span style="color:#c62828;font-weight:600;">No administrado</span>'
+                    : '<span style="color:#2e7d32;font-weight:600;">Administrado</span>';
+                const obs = a.observaciones ? `<div style="font-size:0.8rem;color:#666;margin-top:2px;">${esc(a.observaciones)}</div>` : '';
+                const slot = a.slotDia && a.slotHora ? `<div style="font-size:0.75rem;color:#888;">Programado: ${a.slotDia} ${a.slotHora}</div>` : '';
+                return `<tr><td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}${slot}</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${estadoLabel}${obs}</td><td style="padding: 10px; border-bottom: 1px solid #eee;">${quien}${codigoOk}</td></tr>`;
             }).join('');
         }
         const html = `
@@ -6401,7 +6413,8 @@ class InternamientoModule {
                 <thead>
                     <tr style="background: #f5f5f5;">
                         <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Fecha y hora</th>
-                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Administrado por</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Estado</th>
+                        <th style="padding: 10px; text-align: left; border-bottom: 2px solid #e0e0e0;">Registrado por</th>
                     </tr>
                 </thead>
                 <tbody>${tableBody}</tbody>
