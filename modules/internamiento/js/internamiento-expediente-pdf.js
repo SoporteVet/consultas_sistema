@@ -379,7 +379,10 @@ window.InternamientoExpedientePDF = (() => {
                 ['Presión arterial', esc(pv.presionArterial) || '—'],
                 ['PO₂', pv.po2 != null ? pv.po2 + ' mmHg' : '—'],
                 ['Vía', esc(pv.via) || '—'],
-                ['Sonda', esc(pv.sonda) || '—'],
+                ['Sonda esofágica', esc(pv.sondaEsofagica || pv.sonda) || '—'],
+                ['Tiempo sonda esofágica', esc(pv.tiempoSondaEsofagica || pv.tiempoSonda) || '—'],
+                ['Sonda urinaria', esc(pv.sondaUrinaria) || '—'],
+                ['Tiempo sonda urinaria', esc(pv.tiempoSondaUrinaria) || '—'],
                 ['Pulmonares', esc(pv.parametrosPulmonares) || '—']
             ];
 

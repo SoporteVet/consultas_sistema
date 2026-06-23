@@ -1303,7 +1303,7 @@ class InternamientoModule {
             this._clearGlucosaCountdownInterval();
         }
         // Ocultar todas las vistas de internamiento
-        const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas', 'facturas', 'medicaciones_pendientes'];
+        const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas', 'facturas', 'presupuestos_facturas', 'medicaciones_pendientes'];
         views.forEach(view => {
             const element = document.getElementById(`internamiento-${view}`);
             if (element) {
@@ -1411,7 +1411,7 @@ class InternamientoModule {
                                 <i class="fas fa-exclamation-triangle"></i> Cambio de vía
                             </span>
                             ` : ''}
-                            ${internamiento.cambioSonda?.activo && internamiento.cambioSonda?.fechaVencimiento && Date.now() >= internamiento.cambioSonda.fechaVencimiento ? `
+                            ${this._sondaCambioVencida(this._obtenerCambioSondaEsofagica(internamiento)) || this._sondaCambioVencida(this._obtenerCambioSondaUrinaria(internamiento)) ? `
                             <span style="background: #e65100; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
                                 <i class="fas fa-exclamation-triangle"></i> Cambio de sonda
                             </span>
@@ -2072,6 +2072,9 @@ class InternamientoModule {
                 if (existentes && existentes[medId]) {
                     medId = 'med_' + ahora + '_' + idx + '_' + Math.random().toString(36).substr(2, 9);
                 }
+                const administraciones = m.aplicadoEnConsultaExterna
+                    ? this.buildAdministracionesAplicadoConsultaExterna(m, creadorId, creadorNombre, ahora)
+                    : {};
                 const medData = {
                     medicamentoId: medId,
                     nombreComercial: m.nombreComercial,
@@ -2079,6 +2082,7 @@ class InternamientoModule {
                     unidadMedida: m.unidadMedida || '',
                     viaAdministracion: m.viaAdministracion,
                     frecuenciaHoras: m.frecuenciaHoras || null,
+                    dosisUnica: !!m.dosisUnica,
                     horariosExactos: m.horariosExactos || [],
                     horariosCalculados: m.horariosCalculados || [],
                     fechaInicio: ahora,
@@ -2091,7 +2095,8 @@ class InternamientoModule {
                     puestoPorInternos: m.puestoPorInternos || false,
                     pedidoPermisoEmergencia: m.pedidoPermisoEmergencia || false,
                     encargadaContactada: m.encargadaContactada || null,
-                    administraciones: {}
+                    aplicadoEnConsultaExterna: !!m.aplicadoEnConsultaExterna,
+                    administraciones
                 };
                 updates[`planTerapeutico/medicamentos/${medId}`] = medData;
             });
@@ -2297,6 +2302,7 @@ class InternamientoModule {
                             <span style="font-size: 0.9rem;">
                                 <strong>${(m.nombreComercial || '').replace(/</g, '&lt;')}</strong>
                                 ${this.renderChipOrigenItem(m)}
+                                ${m.aplicadoEnConsultaExterna ? '<span style="background:#d1fae5;color:#065f46;font-size:0.75rem;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:500;"><i class="fas fa-check-circle" style="margin-right:4px;"></i>Aplicado en CE</span>' : ''}
                                 <span style="color: #6c757d; font-size: 0.8rem;"> ${this.formatDosisUnidad(m)} · ${viaLabel[m.viaAdministracion] || m.viaAdministracion || ''}</span>
                                 ${(() => { const t = this._formatHorariosCompacto(m); return t && t !== '--' ? ` <span style="color: #0ea5e9; font-size: 0.8rem;">${t}</span>` : ''; })()}
                             </span>
@@ -2747,6 +2753,9 @@ class InternamientoModule {
                     // Si es puesto por consulta externa, prescrito = persona asociada al código verificado (igual que en pendientes)
                     const prescritoPor = ((m.puestoPorConsultaExterna || m.puestoPorInternos) && ingresoPorId) ? ingresoPorId : userId;
                     const prescritoNombre = ((m.puestoPorConsultaExterna || m.puestoPorInternos) && ingresoPorNombre) ? ingresoPorNombre : userName;
+                    const administraciones = m.aplicadoEnConsultaExterna
+                        ? this.buildAdministracionesAplicadoConsultaExterna(m, prescritoPor, prescritoNombre, Date.now())
+                        : {};
                     meds[m.medicamentoId] = {
                         medicamentoId: m.medicamentoId,
                         nombreComercial: m.nombreComercial,
@@ -2754,6 +2763,7 @@ class InternamientoModule {
                         unidadMedida: m.unidadMedida || '',
                         viaAdministracion: m.viaAdministracion,
                         frecuenciaHoras: m.frecuenciaHoras || null,
+                        dosisUnica: !!m.dosisUnica,
                         horariosExactos: m.horariosExactos || [],
                         horariosCalculados: m.horariosCalculados || [],
                         fechaInicio: Date.now(),
@@ -2766,7 +2776,8 @@ class InternamientoModule {
                         puestoPorInternos: m.puestoPorInternos || false,
                         pedidoPermisoEmergencia: m.pedidoPermisoEmergencia || false,
                         encargadaContactada: m.encargadaContactada || null,
-                        administraciones: {}
+                        aplicadoEnConsultaExterna: !!m.aplicadoEnConsultaExterna,
+                        administraciones
                     };
                 });
                 return {
@@ -2951,15 +2962,20 @@ class InternamientoModule {
         }
 
         // Si el contador de cambio de sonda está en 0, mostrar advertencia
-        if (internamiento.cambioSonda?.activo) {
-            const restanteSonda = this.getCambioSondaRestante(internamiento.cambioSonda);
-            if (restanteSonda?.vencido) {
-                this.showAlert(
-                    'Este paciente ya le toca cambio de sonda. Pasaron más de 72 horas desde el último registro de sonda nueva. Por favor realice el cambio y registre un nuevo turno indicando el tipo de sonda.',
-                    'Cambio de sonda pendiente',
-                    'warning'
-                );
-            }
+        const sondaE = this._obtenerCambioSondaEsofagica(internamiento);
+        const sondaU = this._obtenerCambioSondaUrinaria(internamiento);
+        if (this._sondaCambioVencida(sondaE)) {
+            this.showAlert(
+                'Este paciente ya le toca cambio de sonda esofágica. Pasaron más de 72 horas desde el último registro. Registre un nuevo turno indicando el cambio.',
+                'Cambio de sonda esofágica pendiente',
+                'warning'
+            );
+        } else if (this._sondaCambioVencida(sondaU)) {
+            this.showAlert(
+                'Este paciente ya le toca cambio de sonda urinaria. Pasaron más de 72 horas desde el último registro. Registre un nuevo turno indicando el cambio.',
+                'Cambio de sonda urinaria pendiente',
+                'warning'
+            );
         }
 
         // Renderizar información extracurricular
@@ -3565,27 +3581,8 @@ class InternamientoModule {
                 </div>`;
                 })() : ''}
 
-                ${internamiento.cambioSonda?.activo ? (() => {
-                    const restanteSonda = this.getCambioSondaRestante(internamiento.cambioSonda);
-                    if (!restanteSonda) return '';
-                    if (restanteSonda.vencido) {
-                        return `
-                <div class="cambio-sonda-vencido" style="margin-top: 16px; padding: 16px 20px; background: #fff3e0; border: 2px solid #ff9800; border-radius: 10px;">
-                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
-                        <span style="background: #e65100; color: white; padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 0.95rem;">
-                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>CAMBIO DE SONDA PENDIENTE
-                        </span>
-                        <span style="color: #bf360c; font-weight: 600;">El paciente ya le toca cambio de sonda (pasaron 72h desde el último registro).</span>
-                    </div>
-                </div>`;
-                    }
-                    return `
-                <div style="margin-top: 16px; padding: 12px 18px; background: #fff8e1; border: 1px solid #ffc107; border-radius: 10px;">
-                    <span style="font-weight: 600; color: #f57f17;"><i class="fas fa-clock" style="margin-right: 8px;"></i>Cambio de sonda:</span>
-                    <span style="color: #e65100; font-weight: 700; margin-left: 6px;">${restanteSonda.texto} restantes</span>
-                    <span style="font-size: 0.85rem; color: #666; margin-left: 8px;">(72h desde último registro de sonda nueva)</span>
-                </div>`;
-                })() : ''}
+                ${this._renderBannerCambioSonda(internamiento, this._obtenerCambioSondaEsofagica, 'Sonda esofágica')}
+                ${this._renderBannerCambioSonda(internamiento, this._obtenerCambioSondaUrinaria, 'Sonda urinaria')}
 
                 ${dejarComerHTML}
 
@@ -3609,8 +3606,8 @@ class InternamientoModule {
                         <button class="btn btn-procedimientos" onclick="window.internamientoModule.showProcedimientosView()">
                             <i class="fas fa-clipboard-list"></i> Pendientes
                         </button>
-                        <button class="btn" style="background:#1565c0;color:white;" onclick="window.internamientoModule.showFacturasView()">
-                            <i class="fas fa-file-invoice-dollar"></i> Facturas
+                        <button class="btn" style="background:#0d9488;color:white;" onclick="window.internamientoModule.showPresupuestosFacturasView()">
+                            <i class="fas fa-file-invoice-dollar"></i> Presupuestos y Facturas
                         </button>
                         <button class="btn btn-transfusion" onclick="window.internamientoModule.showTransfusionesView()">
                             <i class="fas fa-tint"></i> Transfusión
@@ -3868,7 +3865,7 @@ class InternamientoModule {
         container.innerHTML = `
             <h3><i class="fas fa-clipboard-list"></i> Últimos Turnos</h3>
             <div style="padding: 20px;">
-                ${turnos.map((turno, i) => this.renderTurnoCard(turno, i === 0)).join('')}
+                ${turnos.map((turno, i) => this.renderTurnoCard(turno, i === 0, 'compacto')).join('')}
                 <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 10px;" onclick="window.internamientoModule.showTurnosView()">
                     <i class="fas fa-plus"></i> Ir a Turnos
                 </button>
@@ -3876,7 +3873,54 @@ class InternamientoModule {
         `;
     }
 
-    renderTurnoCard(turno, esUltimo = false) {
+    renderTurnoCard(turno, esUltimo = false, modo = 'completo') {
+        if (modo === 'compacto') {
+            return this.renderTurnoCardCompacto(turno, esUltimo);
+        }
+
+        const fecha = new Date(turno.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
+        const hora = new Date(turno.fecha).toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true });
+        const turnoIdSafe = (turno.turnoId || '').replace(/'/g, "\\'");
+        const camposGrid = typeof this.renderTurnoCardCamposGrid === 'function'
+            ? this.renderTurnoCardCamposGrid(turno)
+            : '';
+
+        return `
+            <div class="turno-card">
+                <div class="turno-card-header">
+                    <div class="turno-card-header-left">
+                        <div class="turno-card-badge">
+                            ${turno.turno || 'Turno'}
+                        </div>
+                        ${turno.responsableNombre ? `<span class="turno-card-responsable"><i class="fas fa-user-nurse"></i>${turno.responsableNombre}</span>` : ''}
+                        ${turno.editadoEn ? `<span class="turno-card-editado"><i class="fas fa-edit"></i> Editado</span>` : ''}
+                    </div>
+                    <div class="turno-card-header-actions">
+                        ${esUltimo ? `
+                        <button class="btn btn-sm btn-warning" onclick="window.internamientoModule.iniciarEdicionTurno('${turnoIdSafe}')" title="Solo quien registró este turno puede editarlo">
+                            <i class="fas fa-edit"></i> Editar
+                        </button>
+                        ` : ''}
+                        <button class="btn btn-sm btn-info" onclick="window.internamientoModule.verTurnoDetalle('${turnoIdSafe}')" title="Ver todo el registro (solo lectura)">
+                            <i class="fas fa-eye"></i> Ver detalle
+                        </button>
+                        <span class="turno-card-fecha">
+                            <i class="fas fa-clock"></i>${fecha} ${hora}
+                        </span>
+                    </div>
+                </div>
+                ${camposGrid}
+                ${turno.observaciones ? `
+                <div class="turno-card-observaciones">
+                    <p><i class="fas fa-comment"></i>${this._escTurnoCard ? this._escTurnoCard(turno.observaciones.substring(0, 100)) : turno.observaciones.substring(0, 100)}${turno.observaciones.length > 100 ? '...' : ''}</p>
+                </div>
+                ` : ''}
+            </div>
+        `;
+    }
+
+    /** Vista rápida del panel principal: resumen compacto (Temp, FC, FR). */
+    renderTurnoCardCompacto(turno, esUltimo = false) {
         const fecha = new Date(turno.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
         const hora = new Date(turno.fecha).toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true });
         const temp = turno.parametrosVitales?.temperatura;
@@ -3887,15 +3931,15 @@ class InternamientoModule {
 
         return `
             <div style="background: #f8f9fa; border: 1px solid #e8e8e8; border-left: 4px solid #5c6bc0; padding: 14px; border-radius: 8px; margin-bottom: 10px; transition: all 0.3s ease;" onmouseenter="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseleave="this.style.boxShadow='none'">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
                         <div style="background: linear-gradient(135deg, #5c6bc0, #3f51b5); padding: 5px 12px; border-radius: 15px; font-size: 0.8rem; font-weight: 600; color: white;">
                             ${turno.turno || 'Turno'}
                         </div>
                         ${turno.responsableNombre ? `<span style="font-size: 0.85rem; color: #666;"><i class="fas fa-user-nurse" style="margin-right: 4px; color: #5c6bc0;"></i>${turno.responsableNombre}</span>` : ''}
                         ${turno.editadoEn ? `<span style="font-size: 0.75rem; color: #856404; background: #fff3cd; padding: 2px 8px; border-radius: 8px;"><i class="fas fa-edit"></i> Editado</span>` : ''}
                     </div>
-                    <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                         ${esUltimo ? `
                         <button class="btn btn-sm btn-warning" onclick="window.internamientoModule.iniciarEdicionTurno('${turnoIdSafe}')" title="Solo quien registró este turno puede editarlo" style="padding: 6px 12px; font-size: 0.8rem;">
                             <i class="fas fa-edit"></i> Editar
@@ -3909,7 +3953,7 @@ class InternamientoModule {
                         </span>
                     </div>
                 </div>
-                <div class="parametros-grid" style="grid-template-columns: repeat(3, 1fr); gap: 8px;">
+                <div class="parametros-grid">
                     <div style="text-align: center; padding: 10px; background: white; border-radius: 8px; border: 1px solid ${tempAlerta ? '#f44336' : '#e0e0e0'};">
                         <i class="fas fa-thermometer-half" style="color: ${tempAlerta ? '#f44336' : '#ff9800'}; margin-right: 4px;"></i>
                         <span style="font-weight: 700; color: ${tempAlerta ? '#f44336' : '#333'};">${temp || '--'}°C</span>
@@ -4230,6 +4274,11 @@ class InternamientoModule {
             }
             this.showTurnosView();
             this.loadTurnosView();
+            this.refreshInternamientosList();
+            if (this.currentInternamientoId) {
+                const int = this.internamientos.get(this.currentInternamientoId);
+                if (int) this.renderPanelHeader(int);
+            }
         } catch (error) {
             console.error('Error guardando turno:', error);
             this.showAlert('Error al guardar turno: ' + error.message, 'Error', 'error');
@@ -4275,6 +4324,11 @@ class InternamientoModule {
             this.showNotification('Turno registrado por ' + resultadoCodigo.nombre, 'success');
             this.showTurnosView();
             this.loadTurnosView();
+            this.refreshInternamientosList();
+            if (this.currentInternamientoId) {
+                const int = this.internamientos.get(this.currentInternamientoId);
+                if (int) this.renderPanelHeader(int);
+            }
         } catch (error) {
             console.error('Error guardando turno:', error);
             this.showAlert('Error al guardar turno: ' + error.message, 'Error', 'error');
@@ -4298,8 +4352,10 @@ class InternamientoModule {
             mucosas: document.getElementById('turnoMucosas')?.value || 'rosadas',
             via: document.getElementById('turnoVia')?.value || '',
             tiempoVia: document.getElementById('turnoTiempoVia')?.value || '',
-            sonda: document.getElementById('turnoSonda')?.value || '',
-            tiempoSonda: document.getElementById('turnoTiempoSonda')?.value || '',
+            sondaEsofagica: document.getElementById('turnoSondaEsofagica')?.value || '',
+            tiempoSondaEsofagica: document.getElementById('turnoTiempoSondaEsofagica')?.value || '',
+            sondaUrinaria: document.getElementById('turnoSondaUrinaria')?.value || '',
+            tiempoSondaUrinaria: document.getElementById('turnoTiempoSondaUrinaria')?.value || '',
             parametrosPulmonares: document.getElementById('turnoParametrosPulmonares')?.value?.trim() || '',
             presionArterial: document.getElementById('turnoPresionArterial')?.value.trim() || '',
             po2: parseInt(document.getElementById('turnoPO2')?.value) || null,
@@ -4362,6 +4418,88 @@ class InternamientoModule {
         return true;
     }
 
+    _obtenerCambioSondaEsofagica(internamiento) {
+        if (!internamiento) return null;
+        if (internamiento.cambioSondaEsofagica?.activo) return internamiento.cambioSondaEsofagica;
+        if (internamiento.cambioSonda?.activo && !internamiento.cambioSondaUrinaria?.activo) {
+            return internamiento.cambioSonda;
+        }
+        return null;
+    }
+
+    _obtenerCambioSondaUrinaria(internamiento) {
+        return internamiento?.cambioSondaUrinaria?.activo ? internamiento.cambioSondaUrinaria : null;
+    }
+
+    _sondaCambioVencida(contador) {
+        return contador?.activo && contador.fechaVencimiento && Date.now() >= contador.fechaVencimiento;
+    }
+
+    _renderBannerCambioSonda(internamiento, obtenerFn, titulo) {
+        const contador = obtenerFn.call(this, internamiento);
+        if (!contador?.activo) return '';
+        const restante = this.getCambioSondaRestante(contador);
+        if (!restante) return '';
+        if (restante.vencido) {
+            return `
+                <div class="cambio-sonda-vencido" style="margin-top: 16px; padding: 16px 20px; background: #fff3e0; border: 2px solid #ff9800; border-radius: 10px;">
+                    <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+                        <span style="background: #e65100; color: white; padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 0.95rem;">
+                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>CAMBIO PENDIENTE — ${titulo.toUpperCase()}
+                        </span>
+                        <span style="color: #bf360c; font-weight: 600;">Pasaron 72h desde el último registro. Registre el cambio en un nuevo turno.</span>
+                    </div>
+                </div>`;
+        }
+        return `
+            <div style="margin-top: 16px; padding: 12px 18px; background: #fff8e1; border: 1px solid #ffc107; border-radius: 10px;">
+                <span style="font-weight: 600; color: #f57f17;"><i class="fas fa-clock" style="margin-right: 8px;"></i>${titulo}:</span>
+                <span style="color: #e65100; font-weight: 700; margin-left: 6px;">${restante.texto} restantes</span>
+                <span style="font-size: 0.85rem; color: #666; margin-left: 8px;">(72h desde último registro)</span>
+            </div>`;
+    }
+
+    _aplicarContadorSondaTipo(updates, firebaseKey, sondaVal, tiempoVal, turnoId) {
+        if (sondaVal === 'no_tiene_sonda') {
+            updates[firebaseKey] = null;
+        } else if (tiempoVal && tiempoVal !== 'sin_cambios') {
+            const ahora = Date.now();
+            updates[firebaseKey] = {
+                activo: true,
+                fechaInicio: ahora,
+                fechaVencimiento: ahora + (72 * 60 * 60 * 1000),
+                turnoIdOrigen: turnoId
+            };
+        }
+    }
+
+    _aplicarContadoresViaSondaEnUpdates(updates, data, turnoId) {
+        if (data.via === 'no_tiene_via') {
+            updates.cambioVia = null;
+        } else if (data.tiempoVia && data.tiempoVia !== 'sin_cambios') {
+            const ahora = Date.now();
+            updates.cambioVia = {
+                activo: true,
+                fechaInicio: ahora,
+                fechaVencimiento: ahora + (72 * 60 * 60 * 1000),
+                turnoIdOrigen: turnoId
+            };
+        }
+
+        this._aplicarContadorSondaTipo(updates, 'cambioSondaEsofagica', data.sondaEsofagica, data.tiempoSondaEsofagica, turnoId);
+        this._aplicarContadorSondaTipo(updates, 'cambioSondaUrinaria', data.sondaUrinaria, data.tiempoSondaUrinaria, turnoId);
+        updates.cambioSonda = null;
+    }
+
+    _sincronizarCambioViaSondaLocal(internamiento, updates) {
+        if (!internamiento) return;
+        ['cambioVia', 'cambioSonda', 'cambioSondaEsofagica', 'cambioSondaUrinaria'].forEach((key) => {
+            if (!Object.prototype.hasOwnProperty.call(updates, key)) return;
+            if (updates[key] === null) delete internamiento[key];
+            else internamiento[key] = updates[key];
+        });
+    }
+
     async guardarTurno(data, codigoResult) {
         const userId = sessionStorage.getItem('userId');
         const userName = sessionStorage.getItem('userName');
@@ -4398,8 +4536,10 @@ class InternamientoModule {
                 mucosas: data.mucosas,
                 via: data.via || '',
                 tiempoVia: data.tiempoVia || '',
-                sonda: data.sonda || '',
-                tiempoSonda: data.tiempoSonda || '',
+                sondaEsofagica: data.sondaEsofagica || '',
+                tiempoSondaEsofagica: data.tiempoSondaEsofagica || '',
+                sondaUrinaria: data.sondaUrinaria || '',
+                tiempoSondaUrinaria: data.tiempoSondaUrinaria || '',
                 parametrosPulmonares: data.parametrosPulmonares || '',
                 presionArterial: data.presionArterial,
                 po2: data.po2
@@ -4446,40 +4586,7 @@ class InternamientoModule {
         updates['metadata/fechaUltimaActualizacion'] = Date.now();
         updates['estadisticas/totalTurnos'] = (this.internamientos.get(this.currentInternamientoId)?.estadisticas?.totalTurnos || 0) + 1;
 
-        // Si "Vía" es "No tiene vía", eliminar el contador de cambio de vía
-        if (data.via === 'no_tiene_via') {
-            updates['cambioVia'] = null;
-        }
-        // Si "Tiempo de vía" es una opción "Nueva" (no "Sin cambios"), iniciar o reiniciar contador de 72h
-        else if (data.tiempoVia && data.tiempoVia !== 'sin_cambios') {
-            const ahora = Date.now();
-            const vencimiento = ahora + (72 * 60 * 60 * 1000);
-            updates['cambioVia'] = {
-                activo: true,
-                fechaInicio: ahora,
-                fechaVencimiento: vencimiento,
-                turnoIdOrigen: turnoId
-            };
-            const venceEn = new Date(vencimiento);
-            console.log('[Cambio de vía] Contador de 72h iniciado. Vence:', venceEn.toLocaleString('es-ES'));
-        }
-
-        // Si "Sonda" es "No tiene sonda", eliminar el contador de cambio de sonda
-        if (data.sonda === 'no_tiene_sonda') {
-            updates['cambioSonda'] = null;
-        }
-        // Si "Tiempo de sonda" es una opción "Nueva" (no "Sin cambios"), iniciar o reiniciar contador de 72h
-        else if (data.tiempoSonda && data.tiempoSonda !== 'sin_cambios') {
-            const ahoraSonda = Date.now();
-            const vencimientoSonda = ahoraSonda + (72 * 60 * 60 * 1000);
-            updates['cambioSonda'] = {
-                activo: true,
-                fechaInicio: ahoraSonda,
-                fechaVencimiento: vencimientoSonda,
-                turnoIdOrigen: turnoId
-            };
-            console.log('[Cambio de sonda] Contador de 72h iniciado. Vence:', new Date(vencimientoSonda).toLocaleString('es-ES'));
-        }
+        this._aplicarContadoresViaSondaEnUpdates(updates, data, turnoId);
 
         // Agregar a auditoría (nombre de quien registró: con código o sesión)
         const auditEntry = {
@@ -4505,16 +4612,7 @@ class InternamientoModule {
         // Actualizar mapa local con cambioVia y cambioSonda para que el panel lo muestre de inmediato
         const internamiento = this.internamientos.get(this.currentInternamientoId);
         if (internamiento) {
-            if (data.via === 'no_tiene_via') {
-                delete internamiento.cambioVia;
-            } else if (data.tiempoVia && data.tiempoVia !== 'sin_cambios' && updates['cambioVia']) {
-                internamiento.cambioVia = updates['cambioVia'];
-            }
-            if (data.sonda === 'no_tiene_sonda') {
-                delete internamiento.cambioSonda;
-            } else if (data.tiempoSonda && data.tiempoSonda !== 'sin_cambios' && updates['cambioSonda']) {
-                internamiento.cambioSonda = updates['cambioSonda'];
-            }
+            this._sincronizarCambioViaSondaLocal(internamiento, updates);
             this.internamientos.set(this.currentInternamientoId, internamiento);
         }
         
@@ -4623,8 +4721,10 @@ class InternamientoModule {
         setVal('turnoMucosas', pv.mucosas || 'rosadas');
         setVal('turnoVia', pv.via || '');
         setVal('turnoTiempoVia', pv.tiempoVia || '');
-        setVal('turnoSonda', pv.sonda || '');
-        setVal('turnoTiempoSonda', pv.tiempoSonda || '');
+        setVal('turnoSondaEsofagica', pv.sondaEsofagica || pv.sonda || '');
+        setVal('turnoTiempoSondaEsofagica', pv.tiempoSondaEsofagica || pv.tiempoSonda || '');
+        setVal('turnoSondaUrinaria', pv.sondaUrinaria || '');
+        setVal('turnoTiempoSondaUrinaria', pv.tiempoSondaUrinaria || '');
         setVal('turnoParametrosPulmonares', pv.parametrosPulmonares);
         setVal('turnoEstadoMental', eg.estadoMental || 'alerta');
         setVal('turnoNivelDolor', eg.nivelDolor || 'sin_dolor');
@@ -4684,8 +4784,10 @@ class InternamientoModule {
                 mucosas: data.mucosas,
                 via: data.via || '',
                 tiempoVia: data.tiempoVia || '',
-                sonda: data.sonda || '',
-                tiempoSonda: data.tiempoSonda || '',
+                sondaEsofagica: data.sondaEsofagica || '',
+                tiempoSondaEsofagica: data.tiempoSondaEsofagica || '',
+                sondaUrinaria: data.sondaUrinaria || '',
+                tiempoSondaUrinaria: data.tiempoSondaUrinaria || '',
                 parametrosPulmonares: data.parametrosPulmonares || '',
                 presionArterial: data.presionArterial,
                 po2: data.po2
@@ -4726,12 +4828,15 @@ class InternamientoModule {
         updates[`turnos/${turnoId}`] = turnoData;
         updates['metadata/fechaUltimaActualizacion'] = Date.now();
 
+        this._aplicarContadoresViaSondaEnUpdates(updates, data, turnoId);
+
         const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
         await internamientoRef.update(updates);
 
         if (internamiento) {
             if (!internamiento.turnos) internamiento.turnos = {};
             internamiento.turnos[turnoId] = turnoData;
+            this._sincronizarCambioViaSondaLocal(internamiento, updates);
             this.internamientos.set(this.currentInternamientoId, internamiento);
         }
 
@@ -5057,7 +5162,7 @@ class InternamientoModule {
             'Otra': { icon: 'fa-prescription-bottle', color: '#757575', label: 'Otra' }
         };
 
-        const activosAdministrar = activos.filter(m => !m.puestoPorConsultaExterna && this.puedeAdministrarAhora(m));
+        const activosAdministrar = activos.filter(m => this.puedeAdministrarAhora(m));
         const vistaTabla = this.getMedicacionVista ? this.getMedicacionVista() === 'tabla' : true;
 
         container.innerHTML = `
@@ -5101,7 +5206,7 @@ class InternamientoModule {
                         const esc = (s) => (s || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
                         
                         const medIdSafe = (med.medicamentoId || '').replace(/'/g, "\\'");
-                        const puedeSeleccionar = !med.puestoPorConsultaExterna && puedeAdministrar;
+                        const puedeSeleccionar = puedeAdministrar;
                         const seleccionado = this._medicamentosSeleccionados?.has?.(med.medicamentoId);
                         
                         return `
@@ -5128,11 +5233,9 @@ class InternamientoModule {
                                         <button class="med-btn-accion med-btn-editar" onclick="window.internamientoModule.showEditarMedicamentoForm('${med.medicamentoId}')" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </button>
-                                        ${med.puestoPorConsultaExterna
-                                            ? `<button class="med-btn-accion" disabled title="No se puede administrar: puesto por consulta externa" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
-                                            : puedeAdministrar
-                                                ? `<button class="med-btn-accion med-btn-admin" onclick="window.internamientoModule.administrarMedicamento('${med.medicamentoId}')" title="Administrar dosis"><i class="fas fa-syringe"></i></button>`
-                                                : `<button class="med-btn-accion" disabled title="Espere a que llegue la hora" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
+                                        ${puedeAdministrar
+                                            ? `<button class="med-btn-accion med-btn-admin" onclick="window.internamientoModule.administrarMedicamento('${med.medicamentoId}')" title="Administrar dosis"><i class="fas fa-syringe"></i></button>`
+                                            : `<button class="med-btn-accion" disabled title="Espere a que llegue la hora" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
                                         }
                                         <button class="med-btn-accion med-btn-suspender" onclick="window.internamientoModule.suspenderMedicamento('${med.medicamentoId}')" title="Suspender">
                                             <i class="fas fa-pause"></i>
@@ -5169,6 +5272,15 @@ class InternamientoModule {
                                 </div>
                                 ` : ''}
                                 ${this.renderBannerOrigenItem(med)}
+                                ${med.puestoPorConsultaExterna ? `
+                                <div style="margin-bottom: 14px;">
+                                    <button type="button" class="btn btn-success btn-sm" style="width: 100%;"
+                                        onclick="window.internamientoModule.marcarMedicamentoAplicadoDia('${medIdSafe}', '${this._formatDiaKey(new Date())}')"
+                                        title="Registrar que el medicamento fue aplicado hoy">
+                                        <i class="fas fa-check"></i> Aplicado hoy
+                                    </button>
+                                </div>
+                                ` : ''}
                                 ${med.pedidoPermisoEmergencia && med.encargadaContactada ? `
                                 <div style="background: #fef3c7; border-left: 3px solid #d97706; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
                                     <span style="font-size: 0.8rem; color: #92400e; font-weight: 600;">
@@ -5303,11 +5415,9 @@ class InternamientoModule {
                 <td>${proximaDosis}</td>
                 <td>
                     <div class="med-acciones-btns">
-                        ${medicamento.puestoPorConsultaExterna
-                            ? `<button class="med-btn-accion" disabled title="No se puede administrar: puesto por consulta externa" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
-                            : puedeAdministrar
-                                ? `<button class="med-btn-accion med-btn-admin" onclick="window.internamientoModule.administrarMedicamento('${medicamento.medicamentoId}')" title="Administrar"><i class="fas fa-syringe"></i></button>`
-                                : `<button class="med-btn-accion" disabled title="Espere a que llegue la hora" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
+                        ${puedeAdministrar
+                            ? `<button class="med-btn-accion med-btn-admin" onclick="window.internamientoModule.administrarMedicamento('${medicamento.medicamentoId}')" title="Administrar"><i class="fas fa-syringe"></i></button>`
+                            : `<button class="med-btn-accion" disabled title="Espere a que llegue la hora" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
                         }
                         <button class="med-btn-accion med-btn-suspender" onclick="window.internamientoModule.suspenderMedicamento('${medicamento.medicamentoId}')" title="Suspender">
                             <i class="fas fa-pause"></i>
@@ -5479,6 +5589,7 @@ class InternamientoModule {
     /** Indica si se puede administrar una dosis ahora (contador en cero o primera dosis pendiente). */
     puedeAdministrarAhora(medicamento) {
         if (!medicamento) return false;
+        if (medicamento.puestoPorConsultaExterna) return true;
         const texto = this.calcularProximaDosis(medicamento);
         return texto.includes('AHORA') || texto.includes('Pendiente primera dosis');
     }
@@ -5669,12 +5780,12 @@ class InternamientoModule {
                     <label><i class="fas fa-syringe" style="color: #ef4444; margin-right: 6px;"></i>Vía de Administración *</label>
                     <select id="medVia" required>
                         <option value="">Seleccionar vía...</option>
-                        <option value="IV" ${esEdicion && medParaEditar.viaAdministracion === 'IV' ? 'selected' : ''}>ðŸ’‰ Intravenosa (IV)</option>
-                        <option value="IM" ${esEdicion && medParaEditar.viaAdministracion === 'IM' ? 'selected' : ''}>ðŸ’‰ Intramuscular (IM)</option>
-                        <option value="SC" ${esEdicion && medParaEditar.viaAdministracion === 'SC' ? 'selected' : ''}>ðŸ’‰ Subcutánea (SC)</option>
-                        <option value="VO" ${esEdicion && medParaEditar.viaAdministracion === 'VO' ? 'selected' : ''}>ðŸ’Š Vía Oral (VO)</option>
-                        <option value="Topica" ${esEdicion && medParaEditar.viaAdministracion === 'Topica' ? 'selected' : ''}>ðŸ§´ Tópica</option>
-                        <option value="Otra" ${esEdicion && medParaEditar.viaAdministracion === 'Otra' ? 'selected' : ''}>ðŸ“‹ Otra</option>
+                        <option value="IV" ${esEdicion && medParaEditar.viaAdministracion === 'IV' ? 'selected' : ''}>\u{1F489} Intravenosa (IV)</option>
+                        <option value="IM" ${esEdicion && medParaEditar.viaAdministracion === 'IM' ? 'selected' : ''}>\u{1F489} Intramuscular (IM)</option>
+                        <option value="SC" ${esEdicion && medParaEditar.viaAdministracion === 'SC' ? 'selected' : ''}>\u{1F489} Subcutánea (SC)</option>
+                        <option value="VO" ${esEdicion && medParaEditar.viaAdministracion === 'VO' ? 'selected' : ''}>\u{1F48A} Vía Oral (VO)</option>
+                        <option value="Topica" ${esEdicion && medParaEditar.viaAdministracion === 'Topica' ? 'selected' : ''}>\u{1F9F4} Tópica</option>
+                        <option value="Otra" ${esEdicion && medParaEditar.viaAdministracion === 'Otra' ? 'selected' : ''}>\u{1F4CB} Otra</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -5705,6 +5816,18 @@ class InternamientoModule {
                     </label>
                 </div>
                 ` : ''}
+                ${(!esEdicion && this.agregarMedicamentoContexto === 'admision' && sessionStorage.getItem('userRole') === 'consulta_externa') ? `
+                <div class="form-group" style="margin-top: 16px;">
+                    <button type="button" id="btnMedAplicadoConsultaExterna" class="med-btn-aplicado-consulta-ext"
+                        onclick="window.internamientoModule.toggleMedAplicadoConsultaExterna()">
+                        <i class="fas fa-check-circle"></i> Ya fue aplicado en consulta externa
+                    </button>
+                    <input type="hidden" id="medAplicadoConsultaExterna" value="false">
+                    <small style="display: block; color: #6c757d; font-size: 0.8rem; margin-top: 8px;">
+                        Al activar esta opción, las dosis del día de ingreso aparecerán registradas en la tabla de medicación de internamiento.
+                    </small>
+                </div>
+                ` : ''}
                 <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
                     <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i> Cancelar
@@ -5715,6 +5838,15 @@ class InternamientoModule {
                 </div>
             </form>
         `;
+    }
+
+    toggleMedAplicadoConsultaExterna() {
+        const hidden = document.getElementById('medAplicadoConsultaExterna');
+        const btn = document.getElementById('btnMedAplicadoConsultaExterna');
+        if (!hidden || !btn) return;
+        const activo = hidden.value === 'true';
+        hidden.value = activo ? 'false' : 'true';
+        btn.classList.toggle('active', !activo);
     }
 
     /** Abre solo el historial de ediciones del medicamento (panel). No activa modo edición desde desplegable. */
@@ -5933,6 +6065,9 @@ class InternamientoModule {
         const pedidoPermisoEmergencia = document.getElementById('medPedidoPermisoEmergencia')?.checked || false;
         const origenFlags = esAdmision ? this.getOrigenAdmisionFlagsDesdeForm() : { puestoPorConsultaExterna: false, puestoPorInternos: false };
         const esDosisUnica = document.getElementById('medDosisUnica')?.checked || false;
+        const aplicadoEnConsultaExterna = esAdmision && sessionStorage.getItem('userRole') === 'consulta_externa'
+            ? (document.getElementById('medAplicadoConsultaExterna')?.value === 'true')
+            : false;
         const medicamentoData = {
             nombreComercial: this.normalizeNombreMedicamento(document.getElementById('medNombreComercial')?.value),
             dosis: document.getElementById('medDosis')?.value.trim() || '',
@@ -5945,7 +6080,8 @@ class InternamientoModule {
             puestoPorConsultaExterna: esAdmision ? origenFlags.puestoPorConsultaExterna : false,
             puestoPorInternos: esAdmision ? origenFlags.puestoPorInternos : false,
             pedidoPermisoEmergencia: pedidoPermisoEmergencia,
-            encargadaContactada: pedidoPermisoEmergencia ? 'Alejandra Cardona' : null
+            encargadaContactada: pedidoPermisoEmergencia ? 'Alejandra Cardona' : null,
+            aplicadoEnConsultaExterna: aplicadoEnConsultaExterna
         };
 
         if (!esDosisUnica && !medicamentoData.frecuenciaHoras && horariosExactos.length === 0) {
@@ -5965,7 +6101,7 @@ class InternamientoModule {
         if (esAdmision) {
             const horariosCalculados = (medicamentoData.horariosExactos && medicamentoData.horariosExactos.length > 0)
                 ? medicamentoData.horariosExactos
-                : this.calcularHorarios(medicamentoData.frecuenciaHoras || 0);
+                : this.calcularHorarios(medicamentoData.frecuenciaHoras || 0, esDosisUnica);
             const medId = 'med_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             this.medicamentosAdmision = this.medicamentosAdmision || [];
             this.medicamentosAdmision.push({
@@ -5975,13 +6111,15 @@ class InternamientoModule {
                 unidadMedida: medicamentoData.unidadMedida || '',
                 viaAdministracion: medicamentoData.viaAdministracion,
                 frecuenciaHoras: medicamentoData.frecuenciaHoras || null,
+                dosisUnica: esDosisUnica,
                 horariosExactos: medicamentoData.horariosExactos || [],
                 horariosCalculados: horariosCalculados,
                 observaciones: medicamentoData.observaciones,
                 puestoPorConsultaExterna: medicamentoData.puestoPorConsultaExterna || false,
                 puestoPorInternos: medicamentoData.puestoPorInternos || false,
                 pedidoPermisoEmergencia: medicamentoData.pedidoPermisoEmergencia || false,
-                encargadaContactada: medicamentoData.encargadaContactada || null
+                encargadaContactada: medicamentoData.encargadaContactada || null,
+                aplicadoEnConsultaExterna: medicamentoData.aplicadoEnConsultaExterna || false
             });
             this._agregandoMedicamentoAdmision = false;
             this.renderListaMedicamentosAdmision();
@@ -6319,6 +6457,53 @@ class InternamientoModule {
         return horarios;
     }
 
+    buildAdministracionesAplicadoConsultaExterna(med, adminPor, adminNombre, fechaRef) {
+        const refDate = fechaRef instanceof Date ? fechaRef : new Date(fechaRef || Date.now());
+        const diaKey = typeof this._formatDiaKey === 'function'
+            ? this._formatDiaKey(refDate)
+            : `${refDate.getFullYear()}-${String(refDate.getMonth() + 1).padStart(2, '0')}-${String(refDate.getDate()).padStart(2, '0')}`;
+        const medForHorarios = {
+            horariosExactos: med.horariosExactos,
+            horariosCalculados: med.horariosCalculados,
+            frecuenciaHoras: med.frecuenciaHoras,
+            dosisUnica: med.dosisUnica
+        };
+        let horarios = typeof this.obtenerHorariosMedicamento === 'function'
+            ? this.obtenerHorariosMedicamento(medForHorarios)
+            : ((med.horariosExactos && med.horariosExactos.length) ? med.horariosExactos : (med.horariosCalculados || []));
+        if (horarios.length === 0) {
+            const h = String(refDate.getHours()).padStart(2, '0');
+            const m = String(refDate.getMinutes()).padStart(2, '0');
+            horarios = [`${h}:${m}`];
+        }
+        if (med.dosisUnica) {
+            horarios = [horarios[0]];
+        }
+        const adminSlotId = typeof this._adminSlotId === 'function'
+            ? (dk, hs) => this._adminSlotId(dk, hs)
+            : (dk, hs) => `slot_${dk.replace(/-/g, '')}_${hs.replace(':', '')}`;
+        const administraciones = {};
+        horarios.forEach(horaSlot => {
+            const adminId = adminSlotId(diaKey, horaSlot);
+            const [y, mo, d] = diaKey.split('-').map(Number);
+            const [ph, pm] = horaSlot.split(':').map(Number);
+            const fechaHoraProgramada = new Date(y, mo - 1, d, ph, pm, 0, 0).getTime();
+            administraciones[adminId] = {
+                fechaHoraProgramada,
+                fechaHoraReal: fechaHoraProgramada,
+                estado: 'administrado',
+                administradoPor: adminPor || '',
+                administradoNombre: adminNombre || '',
+                observaciones: 'Aplicado en consulta externa',
+                slotDia: diaKey,
+                slotHora: horaSlot,
+                aplicadoEnConsultaExterna: true,
+                codigoVerificado: false
+            };
+        });
+        return administraciones;
+    }
+
     /**
      * Valida que las horas exactas estén separadas exactamente por frecuenciaHoras (en un ciclo de 24h).
      * Si solo se indica frecuencia o solo horas exactas, no hay conflicto (válido).
@@ -6397,10 +6582,6 @@ class InternamientoModule {
         const medicamento = internamiento.planTerapeutico?.medicamentos?.[medicamentoId];
         if (!medicamento) {
             this.showAlert('Medicamento no encontrado', 'Error', 'error');
-            return;
-        }
-        if (medicamento.puestoPorConsultaExterna) {
-            this.showAlert('No se puede administrar dosis en medicamentos puestos por consulta externa.', 'Acción bloqueada', 'warning');
             return;
         }
         if (!this.puedeAdministrarAhora(medicamento)) {
@@ -6825,8 +7006,10 @@ class InternamientoModule {
 
         // Recopilar todos los internamientos activos
         const activos = [];
-        this.internamientos.forEach((internamiento) => {
+        this.internamientos.forEach((internamiento, mapKey) => {
             if (['egresado', 'alta', 'defuncion'].includes(internamiento.estado?.actual)) return;
+            const internamientoId = internamiento.metadata?.internamientoId || mapKey;
+            if (!this.esRegistroInternamientoReal(internamientoId)) return;
             const medicamentos = Object.values(internamiento.planTerapeutico?.medicamentos || {})
                 .filter(m => m.estadoMedicamento === 'activo' && !m.puestoPorConsultaExterna && !m.dosisUnica);
 
@@ -6835,6 +7018,7 @@ class InternamientoModule {
                 if (proxima === null) return;
                 activos.push({
                     internamiento,
+                    internamientoId,
                     med,
                     proxima,
                     diferencia: proxima - ahora
@@ -6849,50 +7033,54 @@ class InternamientoModule {
         const proximo30 = activos.filter(x => x.diferencia > 0 && x.diferencia <= VENTANA_PRONTO_MS);
         const resto = activos.filter(x => x.diferencia > VENTANA_PRONTO_MS);
 
-        const renderItem = (item, urgencia) => {
-            const { internamiento, med, diferencia } = item;
+        const renderItem = (item) => {
+            const { internamiento, internamientoId, med, diferencia } = item;
             const nombre = (internamiento.referencias?.nombreMascota || 'Paciente').replace(/</g, '&lt;');
             const expediente = internamiento.referencias?.expediente || '';
             const medNombre = (med.nombreComercial || '').replace(/</g, '&lt;');
             const dosis = this.formatDosisUnidad(med);
+            const idSafe = (internamientoId || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
             let tiempoStr = '';
-            let color = '';
+            let urgenciaClass = 'programado';
             if (diferencia <= 0) {
                 tiempoStr = 'AHORA';
-                color = '#c62828';
+                urgenciaClass = 'vencido';
             } else {
                 const min = Math.floor(diferencia / 60000);
-                tiempoStr = min < 60 ? `${min} min` : `${Math.floor(min/60)}h ${min%60}min`;
-                color = diferencia <= 10 * 60000 ? '#e65100' : '#1565c0';
+                tiempoStr = min < 60 ? `${min} min` : `${Math.floor(min / 60)}h ${min % 60}min`;
+                urgenciaClass = diferencia <= 10 * 60000 ? 'proximo' : 'programado';
             }
             return `
-            <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #eee;background:${diferencia <= 0 ? '#fff8f8' : 'white'};">
-                <div style="min-width:90px;text-align:center;">
-                    <div style="font-size:1.1rem;font-weight:700;color:${color};">${tiempoStr}</div>
-                    ${diferencia <= 0 ? '<div style="font-size:0.7rem;color:#c62828;text-transform:uppercase;font-weight:700;">VENCIDO</div>' : ''}
+            <div class="med-pendientes-card med-pendientes-card-${urgenciaClass}">
+                <div class="med-pendientes-card-tiempo">${tiempoStr}</div>
+                ${diferencia <= 0 ? '<div class="med-pendientes-card-badge">Vencido</div>' : ''}
+                <div class="med-pendientes-card-paciente">${nombre}</div>
+                ${expediente ? `<div class="med-pendientes-card-exp">${expediente}</div>` : ''}
+                <div class="med-pendientes-card-med">
+                    <i class="fas fa-pills"></i>
+                    <span>${medNombre}</span>
                 </div>
-                <div style="flex:1;">
-                    <div style="font-weight:700;color:#1a1a1a;">${nombre} <span style="font-size:0.8rem;color:#888;font-weight:normal;">${expediente}</span></div>
-                    <div style="font-size:0.9rem;color:#333;"><i class="fas fa-pills" style="color:#1565c0;margin-right:4px;"></i>${medNombre} · ${dosis} · ${med.viaAdministracion || '—'}</div>
-                </div>
-                <button class="btn btn-sm btn-success" onclick="window.internamientoModule._irAPaciente('${(internamiento.id || '').replace(/'/g,'\\\'')}')" style="white-space:nowrap;">
+                <div class="med-pendientes-card-dosis">${dosis} · ${med.viaAdministracion || '—'}</div>
+                <button type="button" class="btn btn-sm btn-success med-pendientes-card-btn" onclick="window.internamientoModule._irAPaciente('${idSafe}')">
                     <i class="fas fa-arrow-right"></i> Ir al paciente
                 </button>
             </div>`;
         };
 
-        const seccion = (titulo, items, color, icono) => {
-            if (items.length === 0) return '';
-            return `
-            <div style="margin-bottom:20px;">
-                <div style="background:${color};color:white;padding:10px 16px;border-radius:8px 8px 0 0;font-weight:700;font-size:0.95rem;">
-                    <i class="fas ${icono}" style="margin-right:8px;"></i>${titulo} (${items.length})
+        const renderColumna = (titulo, items, tipo, icono) => `
+            <div class="med-pendientes-col med-pendientes-col-${tipo}">
+                <div class="med-pendientes-col-header">
+                    <i class="fas ${icono}"></i>
+                    <span>${titulo}</span>
+                    <span class="med-pendientes-col-count">${items.length}</span>
                 </div>
-                <div style="background:white;border:1px solid ${color};border-top:none;border-radius:0 0 8px 8px;overflow:hidden;">
-                    ${items.map(i => renderItem(i)).join('')}
+                <div class="med-pendientes-col-body">
+                    ${items.length === 0
+                        ? `<div class="med-pendientes-col-empty"><i class="fas fa-check"></i> Sin registros</div>`
+                        : items.map(i => renderItem(i)).join('')}
                 </div>
-            </div>`;
-        };
+            </div>
+        `;
 
         container.innerHTML = `
             <div class="section-header">
@@ -6910,9 +7098,11 @@ class InternamientoModule {
             ${vencidos.length === 0 && proximo30.length === 0 && resto.length === 0 ? `
                 <div class="empty-state"><i class="fas fa-check-circle" style="color:#2e7d32;"></i><p>No hay medicaciones pendientes en este momento</p></div>
             ` : `
-                ${seccion('VENCIDOS — Administrar ahora', vencidos, '#c62828', 'fa-exclamation-circle')}
-                ${seccion('Proximos 30 minutos', proximo30, '#e65100', 'fa-clock')}
-                ${seccion('Medicaciones programadas', resto, '#1565c0', 'fa-calendar-check')}
+                <div class="med-pendientes-columnas">
+                    ${renderColumna('Vencidos — Ahora', vencidos, 'vencidos', 'fa-exclamation-circle')}
+                    ${renderColumna('Próximos 30 min', proximo30, 'proximos', 'fa-clock')}
+                    ${renderColumna('Programados', resto, 'programados', 'fa-calendar-check')}
+                </div>
             `}
         `;
 
@@ -6930,8 +7120,22 @@ class InternamientoModule {
 
     _irAPaciente(internamientoId) {
         if (!internamientoId) return;
-        this.currentInternamientoId = internamientoId;
-        this.showPanelPrincipal(internamientoId);
+        let id = internamientoId;
+        if (!this.internamientos.has(id)) {
+            for (const [mapKey, int] of this.internamientos.entries()) {
+                if (mapKey === internamientoId || int.metadata?.internamientoId === internamientoId) {
+                    id = mapKey;
+                    break;
+                }
+            }
+        }
+        if (!this.internamientos.has(id)) {
+            this.showAlert('No se encontró el expediente del paciente.', 'Paciente no encontrado', 'warning');
+            return;
+        }
+        clearInterval(this._pendientesRefreshTimer);
+        this.currentInternamientoId = id;
+        this.showPanelPrincipal(id);
     }
 
     // ================================================================
@@ -9487,7 +9691,7 @@ class InternamientoModule {
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 ${transfusionesList.map(t => {
                     const tipoTransfusion = t.tipoTransfusion || '';
-                    const tipoIcono = tipoTransfusion === 'plasma' ? 'ðŸ’§' : tipoTransfusion === 'sangre' ? 'ðŸ©¸' : '';
+                    const tipoIcono = tipoTransfusion === 'plasma' ? '\u{1F4A7}' : tipoTransfusion === 'sangre' ? '\u{1FA78}' : '';
                     const tipoTexto = tipoTransfusion === 'plasma' ? 'Plasma' : tipoTransfusion === 'sangre' ? 'Sangre Completa' : '';
                     return `
                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid #c62828; border-radius: 10px; padding: 14px; background: #fff5f5;">

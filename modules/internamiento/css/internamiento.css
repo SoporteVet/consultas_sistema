@@ -824,6 +824,181 @@
     margin-right: 5px;
 }
 
+/* Turno card — vista Turnos y panel últimos turnos */
+.turno-card {
+    background: #f8f9fa;
+    border: 1px solid #e8e8e8;
+    border-left: 4px solid #5c6bc0;
+    padding: 14px;
+    border-radius: 8px;
+    margin-bottom: 10px;
+    transition: all 0.3s ease;
+}
+
+.turno-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.turno-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.turno-card-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.turno-card-badge {
+    background: linear-gradient(135deg, #5c6bc0, #3f51b5);
+    padding: 5px 12px;
+    border-radius: 15px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: white;
+}
+
+.turno-card-responsable {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.turno-card-responsable i {
+    margin-right: 4px;
+    color: #5c6bc0;
+}
+
+.turno-card-editado {
+    font-size: 0.75rem;
+    color: #856404;
+    background: #fff3cd;
+    padding: 2px 8px;
+    border-radius: 8px;
+}
+
+.turno-card-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.turno-card-fecha {
+    font-size: 0.8rem;
+    color: #888;
+    background: white;
+    padding: 4px 10px;
+    border-radius: 10px;
+    border: 1px solid #e0e0e0;
+    white-space: nowrap;
+}
+
+.turno-card-fecha i {
+    margin-right: 4px;
+}
+
+.turno-card-campos-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+}
+
+.turno-card-campo {
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    min-height: 64px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.turno-card-campo-alerta {
+    border-color: #f44336;
+    background: #fff5f5;
+}
+
+.turno-card-campo-alerta .turno-card-campo-valor {
+    color: #c62828;
+}
+
+.turno-card-campo-multiline .turno-card-campo-valor {
+    font-size: 0.78rem;
+    line-height: 1.35;
+    word-break: break-word;
+}
+
+.turno-card-campo-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    color: #888;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.turno-card-campo-label i {
+    color: #5c6bc0;
+    font-size: 0.72rem;
+}
+
+.turno-card-campo-valor {
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #333;
+    line-height: 1.3;
+}
+
+.turno-card-observaciones {
+    margin-top: 12px;
+    padding-top: 10px;
+    border-top: 1px solid #e8e8e8;
+}
+
+.turno-card-observaciones p {
+    font-size: 0.85rem;
+    color: #666;
+    font-style: italic;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.turno-card-observaciones i {
+    margin-right: 6px;
+    color: #5c6bc0;
+}
+
+@media (max-width: 1200px) {
+    .turno-card-campos-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .turno-card-campos-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    .turno-card-header-actions {
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .turno-card-campos-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Cards de medicación */
 #panelMedicaciones > div:not(:first-child) {
     background: #e8f5e9 !important;
@@ -2730,6 +2905,73 @@
     box-shadow: var(--internamiento-shadow);
 }
 
+.med-control-dias-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding: 10px 14px;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 8px;
+}
+
+.med-control-dias-toolbar-grupo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.med-control-dia-btn {
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+.med-control-dia-btn-quitar {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    background: #fff;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    color: #64748b;
+    cursor: pointer;
+}
+
+.med-control-dia-btn-quitar:hover {
+    background: #fef2f2;
+    border-color: #fca5a5;
+    color: #b91c1c;
+}
+
+.med-control-rango {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4338ca;
+    text-align: center;
+    flex: 1;
+    min-width: 140px;
+}
+
+.med-dia-header-anterior,
+.med-dia-anterior {
+    background: #fffbeb !important;
+}
+
+.med-dia-header-posterior,
+.med-dia-posterior {
+    background: #eff6ff !important;
+}
+
+.med-dia-header-anterior {
+    border-bottom-color: #fcd34d !important;
+}
+
+.med-dia-header-posterior {
+    border-bottom-color: #93c5fd !important;
+}
+
 .med-control-leyenda {
     display: flex;
     flex-wrap: wrap;
@@ -2844,9 +3086,58 @@ thead .med-col-fija {
 }
 
 .med-slot-hora {
-    font-size: 0.65rem;
+    font-size: 0.62rem;
     color: #888;
     font-weight: 600;
+    white-space: nowrap;
+}
+
+.med-btn-aplicado-dia {
+    display: block;
+    width: 100%;
+    margin-bottom: 6px;
+    padding: 3px 6px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    color: #1b5e20;
+    background: #e8f5e9;
+    border: 1px solid #81c784;
+    border-radius: 4px;
+    cursor: pointer;
+    line-height: 1.2;
+}
+
+.med-btn-aplicado-dia:hover {
+    background: #c8e6c9;
+    border-color: #4caf50;
+}
+
+.med-btn-aplicado-consulta-ext {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid #0d9488;
+    background: #ecfdf5;
+    color: #0f766e;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.med-btn-aplicado-consulta-ext:hover {
+    background: #d1fae5;
+    border-color: #0f766e;
+}
+
+.med-btn-aplicado-consulta-ext.active {
+    background: #0d9488;
+    color: #fff;
+    border-color: #0f766e;
 }
 
 .med-horas-grid {
@@ -2966,4 +3257,570 @@ thead .med-col-fija {
 
 .med-control-row:hover .med-dia-celda {
     background: #fafafa;
+}
+
+/* --- Presupuestos y Facturas (Firebase Storage) --- */
+.pf-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.pf-summary-card {
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+    border: 1px solid var(--internamiento-border, #e0e0e0);
+}
+
+.pf-summary-pending { background: #fff3e0; border-color: #ffcc80; }
+.pf-summary-paid { background: #e8f5e9; border-color: #a5d6a7; }
+.pf-summary-total { background: #e3f2fd; border-color: #90caf9; }
+.pf-summary-docs { background: #f3e5f5; border-color: #ce93d8; }
+
+.pf-summary-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--internamiento-text, #202124);
+}
+
+.pf-summary-label {
+    font-size: 0.88rem;
+    color: var(--internamiento-text-secondary, #5f6368);
+    margin-top: 4px;
+}
+
+.pf-filtros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.pf-filtro-btn {
+    padding: 8px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 20px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 0.85rem;
+    transition: var(--internamiento-transition, all 0.2s ease);
+}
+
+.pf-filtro-btn:hover { background: #f1f5f9; }
+.pf-filtro-btn.active {
+    background: #1565c0;
+    color: #fff;
+    border-color: #1565c0;
+}
+
+.pf-docs-table-wrap {
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: var(--internamiento-shadow, 0 2px 8px rgba(0,0,0,0.08));
+    overflow: hidden;
+}
+
+.pf-docs-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.pf-docs-table thead tr {
+    background: #0d9488;
+    color: #fff;
+}
+
+.pf-docs-table th,
+.pf-docs-table td {
+    padding: 12px 14px;
+    text-align: left;
+    vertical-align: middle;
+}
+
+.pf-tipo-badge {
+    display: inline-block;
+    color: #fff;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.pf-estado-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.pf-obs { font-size: 0.8rem; color: #64748b; margin-top: 3px; }
+.pf-legacy-tag { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
+.pf-monto { font-weight: 700; color: #1565c0; text-align: right; }
+.pf-fecha { font-size: 0.85rem; color: #64748b; }
+.pf-archivo-cell { white-space: nowrap; }
+.pf-actions-cell { white-space: nowrap; }
+
+.pf-btn-preview,
+.pf-btn-download {
+    margin-right: 4px;
+    background: #e3f2fd;
+    color: #1565c0;
+    border: none;
+}
+
+.pf-form-modal .pf-input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    box-sizing: border-box;
+}
+
+.pf-hint { color: #64748b; font-size: 0.82rem; display: block; margin-top: 6px; }
+
+.pf-compress-status {
+    padding: 10px 12px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    margin-bottom: 12px;
+}
+
+.pf-compress-status.hidden { display: none; }
+
+.pf-preview-wrap {
+    margin-top: 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.pf-preview-wrap.hidden { display: none; }
+
+.pf-preview-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    font-size: 0.88rem;
+    font-weight: 600;
+}
+
+.pf-size-info { color: #64748b; font-weight: 500; }
+
+.pf-preview-content {
+    min-height: 200px;
+    max-height: 360px;
+    background: #525659;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pf-preview-content iframe {
+    width: 100%;
+    height: 360px;
+    border: none;
+}
+
+.pf-preview-content img {
+    max-width: 100%;
+    max-height: 360px;
+    object-fit: contain;
+}
+
+.pf-form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: 18px;
+}
+
+.pf-preview-modal-body { padding: 0; }
+
+.pf-preview-iframe-full {
+    width: 100%;
+    min-height: 480px;
+    border: none;
+    background: #525659;
+}
+
+.pf-preview-img-full {
+    max-width: 100%;
+    max-height: 70vh;
+    display: block;
+    margin: 0 auto;
+}
+
+.pf-preview-modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    padding: 16px;
+    background: #f8fafc;
+    border-top: 1px solid #e2e8f0;
+}
+
+@media (max-width: 768px) {
+    .pf-docs-table-wrap { overflow-x: auto; }
+    .pf-docs-table { min-width: 640px; }
+    .pf-archivo-duo { grid-template-columns: 1fr; }
+}
+
+.pf-seccion-documentos {
+    margin-bottom: 28px;
+}
+
+.pf-seccion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.pf-seccion-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #334155;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.pf-seccion-presupuesto .pf-seccion-header h3 { color: #0d9488; }
+.pf-seccion-factura .pf-seccion-header h3 { color: #1565c0; }
+
+.pf-seccion-count {
+    font-size: 0.85rem;
+    color: #64748b;
+    background: #f1f5f9;
+    padding: 4px 12px;
+    border-radius: 12px;
+}
+
+.pf-seccion-empty {
+    text-align: center;
+    padding: 28px 16px;
+    color: #94a3b8;
+    background: #f8fafc;
+    border-radius: 10px;
+    border: 1px dashed #cbd5e1;
+}
+
+.pf-seccion-empty i {
+    font-size: 2rem;
+    margin-bottom: 8px;
+    display: block;
+}
+
+.pf-archivo-duo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+.pf-archivo-duo-single {
+    grid-template-columns: 1fr;
+}
+
+.pf-archivo-slot {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    background: #f8fafc;
+}
+
+.pf-archivo-slot-presupuesto label { color: #0d9488; font-weight: 600; }
+.pf-archivo-slot-factura label { color: #1565c0; font-weight: 600; }
+
+.pf-archivo-slot label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: 0.95rem;
+}
+
+.pf-file-input {
+    width: 100%;
+    font-size: 0.88rem;
+}
+
+.pf-archivo-status {
+    margin-top: 8px;
+    font-size: 0.82rem;
+    color: #64748b;
+}
+
+.pf-archivo-status.hidden { display: none; }
+
+.pf-preview-wrap-sm .pf-preview-content {
+    min-height: 140px;
+    max-height: 200px;
+}
+
+.pf-preview-wrap-sm .pf-preview-content iframe {
+    height: 200px;
+}
+
+.pf-archivo-slot-full {
+    grid-column: 1 / -1;
+}
+
+.pf-tipo-destino-label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 10px;
+    color: #334155;
+}
+
+.pf-tipo-destino-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.pf-tipo-destino-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 16px 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 12px;
+    cursor: pointer;
+    background: #f8fafc;
+    transition: all 0.2s ease;
+}
+
+.pf-tipo-destino-option input {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.pf-tipo-destino-option:has(input:checked) {
+    border-color: #1565c0;
+    background: #eff6ff;
+    box-shadow: 0 0 0 1px #1565c0;
+}
+
+.pf-tipo-destino-presupuesto:has(input:checked) {
+    border-color: #0d9488;
+    background: #f0fdfa;
+    box-shadow: 0 0 0 1px #0d9488;
+}
+
+.pf-tipo-destino-icon {
+    font-size: 1.6rem;
+    margin-bottom: 8px;
+    color: #64748b;
+}
+
+.pf-tipo-destino-presupuesto:has(input:checked) .pf-tipo-destino-icon { color: #0d9488; }
+.pf-tipo-destino-factura:has(input:checked) .pf-tipo-destino-icon { color: #1565c0; }
+
+.pf-tipo-destino-title {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #1e293b;
+}
+
+.pf-tipo-destino-hint {
+    font-size: 0.78rem;
+    color: #64748b;
+    margin-top: 4px;
+}
+
+/* Medicaciones pendientes — vista en columnas */
+.med-pendientes-columnas {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    align-items: start;
+    margin-top: 8px;
+}
+
+.med-pendientes-col {
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    overflow: hidden;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    max-height: calc(100vh - 220px);
+}
+
+.med-pendientes-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 14px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.med-pendientes-col-header i {
+    font-size: 1rem;
+    opacity: 0.95;
+}
+
+.med-pendientes-col-count {
+    margin-left: auto;
+    background: rgba(255, 255, 255, 0.25);
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-size: 0.82rem;
+    min-width: 28px;
+    text-align: center;
+}
+
+.med-pendientes-col-vencidos .med-pendientes-col-header {
+    background: linear-gradient(135deg, #c62828, #b71c1c);
+}
+
+.med-pendientes-col-proximos .med-pendientes-col-header {
+    background: linear-gradient(135deg, #e65100, #bf360c);
+}
+
+.med-pendientes-col-programados .med-pendientes-col-header {
+    background: linear-gradient(135deg, #1565c0, #0d47a1);
+}
+
+.med-pendientes-col-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.med-pendientes-col-empty {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #94a3b8;
+    font-size: 0.88rem;
+    padding: 32px 16px;
+    text-align: center;
+}
+
+.med-pendientes-col-empty i {
+    font-size: 1.5rem;
+    color: #cbd5e1;
+}
+
+.med-pendientes-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.med-pendientes-card-vencido {
+    border-left: 4px solid #c62828;
+    background: #fffbfb;
+}
+
+.med-pendientes-card-proximo {
+    border-left: 4px solid #e65100;
+}
+
+.med-pendientes-card-programado {
+    border-left: 4px solid #1565c0;
+}
+
+.med-pendientes-card-tiempo {
+    font-size: 1.15rem;
+    font-weight: 800;
+    line-height: 1.2;
+}
+
+.med-pendientes-card-vencido .med-pendientes-card-tiempo { color: #c62828; }
+.med-pendientes-card-proximo .med-pendientes-card-tiempo { color: #e65100; }
+.med-pendientes-card-programado .med-pendientes-card-tiempo { color: #1565c0; }
+
+.med-pendientes-card-badge {
+    display: inline-block;
+    align-self: flex-start;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #c62828;
+    background: #ffebee;
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
+.med-pendientes-card-paciente {
+    font-weight: 700;
+    font-size: 0.95rem;
+    color: #1a1a1a;
+    line-height: 1.3;
+}
+
+.med-pendientes-card-exp {
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+.med-pendientes-card-med {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    font-size: 0.85rem;
+    color: #334155;
+    line-height: 1.35;
+}
+
+.med-pendientes-card-med i {
+    color: #1565c0;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.med-pendientes-card-dosis {
+    font-size: 0.8rem;
+    color: #64748b;
+}
+
+.med-pendientes-card-btn {
+    width: 100%;
+    margin-top: 4px;
+    justify-content: center;
+}
+
+@media (max-width: 1100px) {
+    .med-pendientes-columnas {
+        grid-template-columns: 1fr;
+    }
+
+    .med-pendientes-col {
+        max-height: none;
+        min-height: 0;
+    }
+
+    .med-pendientes-col-body {
+        max-height: 360px;
+    }
 }

@@ -498,12 +498,16 @@ InternamientoModule.prototype.renderTurnoDetalleModal = function(turno) {
     const v = (val) => (val !== undefined && val !== null && val !== '') ? val : '—';
     const vb = (val) => (val === true || val === 'true') ? 'Sí' : (val === false || val === 'false') ? 'No' : v(val);
 
-    const parametrosVitalesKeys = ['peso', 'fc', 'fr', 'temperatura', 'tllc', 'deshidratacion', 'mucosas', 'via', 'tiempoVia', 'sonda', 'tiempoSonda', 'parametrosPulmonares', 'presionArterial', 'po2'];
+    const parametrosVitalesKeys = ['peso', 'fc', 'fr', 'temperatura', 'tllc', 'deshidratacion', 'mucosas', 'via', 'tiempoVia', 'sondaEsofagica', 'tiempoSondaEsofagica', 'sondaUrinaria', 'tiempoSondaUrinaria', 'sonda', 'tiempoSonda', 'parametrosPulmonares', 'presionArterial', 'po2'];
     const estadoGeneralKeys = ['estadoMental', 'nivelDolor', 'glasgowPuntaje', 'ingestaAgua', 'cantidadAgua', 'apetito', 'alimentoCantidad', 'alimentoTipo', 'glucosa', 'defecacion', 'defecacionNotas', 'miccion', 'miccionColor', 'miccionFrecuencia', 'miccionVolumen', 'miccionNotas', 'vomitos', 'descripcionVomitos'];
 
     const parametrosHTML = parametrosVitalesKeys.map(key => {
         const val = pv[key];
-        const display = key === 'mucosas' ? (this.formatearMucosas(val) || '—') : (key === 'via' ? (this.formatearVia(val) || '—') : (key === 'sonda' ? (this.formatearSonda(val) || '—') : v(val)));
+        const display = key === 'mucosas' ? (this.formatearMucosas(val) || '—')
+            : (key === 'via' ? (this.formatearVia(val) || '—')
+            : (key === 'sondaEsofagica' || key === 'sondaUrinaria' || key === 'sonda' ? (this.formatearSonda(val) || '—')
+            : (key === 'tiempoVia' || key === 'tiempoSondaEsofagica' || key === 'tiempoSondaUrinaria' || key === 'tiempoSonda' ? (this.formatearTiempoViaSonda(val) || '—')
+            : v(val))));
         return `<div class="parametro-item"><span class="parametro-label">${this.traducirParametro(key)}</span><span class="parametro-valor">${display}</span></div>`;
     }).join('');
 
@@ -579,32 +583,91 @@ InternamientoModule.prototype.formatearMucosas = function(val) {
 };
 InternamientoModule.prototype.formatearVia = function(val) {
     if (val === undefined || val === null || val === '') return '';
-    const map = { no_tiene_via: 'No tiene vía', ev_periferica: 'EV periférica', ev_yugular: 'EV yugular', ev_cefalica: 'EV cefálica', sin_cambios: 'Sin cambios', nueva: 'Nueva' };
+    const map = {
+        permeable: 'Permeable',
+        no_tiene_via: 'No tiene vía',
+        ev_periferica: 'EV periférica',
+        ev_yugular: 'EV yugular',
+        ev_cefalica: 'EV cefálica',
+        sin_cambios: 'Sin cambios',
+        nueva: 'Nueva'
+    };
     return map[val] || val;
 };
 InternamientoModule.prototype.formatearSonda = function(val) {
     if (val === undefined || val === null || val === '') return '';
-    const map = { no_tiene_sonda: 'No tiene sonda', sonda_vesical: 'Sonda vesical', sonda_esofagica: 'Sonda esofágica', sin_cambios: 'Sin cambios', nueva: 'Nueva' };
+    const map = {
+        permeable: 'Permeable',
+        no_tiene_sonda: 'No tiene sonda',
+        no_tiene_via: 'No tiene vía',
+        sonda_vesical: 'Sonda vesical',
+        sonda_esofagica: 'Sonda esofágica',
+        sin_cambios: 'Sin cambios',
+        nueva: 'Nueva'
+    };
+    return map[val] || val;
+};
+
+InternamientoModule.prototype.formatearTiempoViaSonda = function(val) {
+    if (val === undefined || val === null || val === '') return '';
+    const map = {
+        sin_cambios: 'Sin cambios',
+        nueva_primera_vez: 'Nueva - Primera vez (internamiento)',
+        nueva_desde_consulta: 'Nueva - Desde consulta externa',
+        nueva_por_cambio: 'Nueva - Por cambio (safó o arrancó)',
+        nueva: 'Nueva'
+    };
     return map[val] || val;
 };
 InternamientoModule.prototype.formatearDefecacion = function(val) {
     if (val === undefined || val === null || val === '') return '';
-    const map = { bristol_1: 'Tipo 1 (Bolas duras)', bristol_2: 'Tipo 2', bristol_3: 'Tipo 3', bristol_4: 'Tipo 4 (Normal)', bristol_5: 'Tipo 5', bristol_6: 'Tipo 6', bristol_7: 'Tipo 7 (Acuosa)', no_defeco: 'No defecó' };
+    const map = {
+        tipo1: 'Tipo 1 (Muy duras)',
+        tipo2: 'Tipo 2 (Duras formadas)',
+        tipo3: 'Tipo 3 (Normal)',
+        tipo4: 'Tipo 4 (Blandas)',
+        tipo5: 'Tipo 5 (Pastosas)',
+        tipo6: 'Tipo 6 (Líquidas)',
+        tipo7: 'Tipo 7 (Acuosas)',
+        bristol_1: 'Tipo 1 (Bolas duras)',
+        bristol_2: 'Tipo 2',
+        bristol_3: 'Tipo 3',
+        bristol_4: 'Tipo 4 (Normal)',
+        bristol_5: 'Tipo 5',
+        bristol_6: 'Tipo 6',
+        bristol_7: 'Tipo 7 (Acuosa)',
+        no_defeco: 'No defecó'
+    };
     return map[val] || val;
 };
 InternamientoModule.prototype.formatearMiccionColor = function(val) {
     if (val === undefined || val === null || val === '') return '';
-    const map = { amarillo_claro: 'Amarillo claro', amarillo: 'Amarillo', amarillo_oscuro: 'Amarillo oscuro', marron: 'Marrón', rojo: 'Rojo (hematuria)' };
+    const map = {
+        amarillo_claro: 'Amarillo claro',
+        amarillo: 'Amarillo',
+        ambar: 'Ámbar',
+        oscuro: 'Oscuro',
+        con_sangre: 'Con sangre',
+        turbia: 'Turbia',
+        amarillo_oscuro: 'Amarillo oscuro',
+        marron: 'Marrón',
+        rojo: 'Rojo (hematuria)'
+    };
     return map[val] || val;
 };
 InternamientoModule.prototype.formatearMiccionFrecuencia = function(val) {
     if (val === undefined || val === null || val === '') return '';
-    const map = { normal: 'Normal', aumentada: 'Aumentada (poliuria)', disminuida: 'Disminuida' };
+    const map = {
+        normal: 'Normal',
+        aumentada: 'Aumentada (poliuria)',
+        disminuida: 'Disminuida (oliguria)',
+        ausente: 'Ausente (anuria)'
+    };
     return map[val] || val;
 };
 InternamientoModule.prototype.formatearNivelDolor = function(val) {
     if (val === undefined || val === null || val === '') return '';
-    const map = { sin_dolor: 'Sin dolor', leve: 'Leve', moderado: 'Moderado', severo: 'Severo' };
+    const map = { sin_dolor: 'Sin dolor', leve: 'Leve', moderado: 'Moderado', fuerte: 'Fuerte', severo: 'Severo' };
     return map[val] || val;
 };
 InternamientoModule.prototype.formatearEstadoMental = function(val) {
@@ -614,8 +677,95 @@ InternamientoModule.prototype.formatearEstadoMental = function(val) {
 };
 InternamientoModule.prototype.formatearFluidoTipo = function(val) {
     if (val === undefined || val === null || val === '') return '';
-    const map = { ringer_lactato: 'Ringer Lactato', solucion_salina: 'Solución Salina', dextrosa_5: 'Dextrosa 5%', otro: 'Otro' };
+    const map = {
+        ringer_lactato: 'Ringer Lactato',
+        solucion_salina: 'Solución Salina 0.9%',
+        dextrosa_5: 'Dextrosa 5%',
+        hartmann: 'Hartmann',
+        otro: 'Otro'
+    };
     return map[val] || val;
+};
+
+InternamientoModule.prototype._escTurnoCard = function(str) {
+    return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+};
+
+InternamientoModule.prototype._formatearFluidoterapiaCard = function(flu) {
+    if (!flu?.administrada) return 'No administrada';
+    const tipo = this.formatearFluidoTipo(flu.tipo);
+    const freq = (flu.frecuencia || '').trim();
+    if (tipo && freq) return `${tipo} · ${freq}`;
+    return tipo || freq || 'Sí';
+};
+
+InternamientoModule.prototype._formatearAlimentacionCard = function(eg) {
+    if (!eg?.apetito) return 'Sin apetito';
+    const parts = [eg.alimentoTipo, eg.alimentoCantidad].filter(v => v != null && String(v).trim() !== '');
+    return parts.length ? parts.join(' · ') : 'Con apetito';
+};
+
+InternamientoModule.prototype._formatearHidratacionCard = function(eg) {
+    if (!eg?.ingestaAgua) return 'No';
+    if (eg.cantidadAgua) return `${eg.cantidadAgua} ml`;
+    return 'Sí';
+};
+
+InternamientoModule.prototype._formatearMiccionCard = function(eg) {
+    if (!eg?.miccion) return 'No orinó';
+    const color = this.formatearMiccionColor(eg.miccionColor);
+    const parts = [color, (eg.miccionNotas || '').trim()].filter(Boolean);
+    return parts.length ? parts.join(' · ') : 'Sí';
+};
+
+InternamientoModule.prototype._formatearDeposicionesCard = function(eg) {
+    const bristol = this.formatearDefecacion(eg?.defecacion);
+    const parts = [bristol, (eg?.defecacionNotas || '').trim()].filter(Boolean);
+    return parts.length ? parts.join(' · ') : 'No observado';
+};
+
+InternamientoModule.prototype.renderTurnoCardCamposGrid = function(turno) {
+    const pv = turno.parametrosVitales || {};
+    const eg = turno.estadoGeneral || {};
+    const flu = turno.fluidoterapia || {};
+    const esc = (s) => this._escTurnoCard(s);
+    const temp = pv.temperatura;
+    const tempAlerta = temp != null && temp !== '' && (temp < 37 || temp > 39.5);
+    const parametrosPulmonares = (pv.parametrosPulmonares || '').trim();
+
+    const campos = [
+        { label: 'Vía', icon: 'fa-syringe', value: this.formatearVia(pv.via) || '—' },
+        { label: 'Terapia de fluidos', icon: 'fa-tint', value: this._formatearFluidoterapiaCard(flu) },
+        { label: 'Estado', icon: 'fa-brain', value: this.formatearEstadoMental(eg.estadoMental) || '—' },
+        { label: 'Dolor', icon: 'fa-heart-crack', value: this.formatearNivelDolor(eg.nivelDolor) || '—' },
+        {
+            label: 'Temperatura',
+            icon: 'fa-thermometer-half',
+            value: temp != null && temp !== '' ? `${temp}°C` : '—',
+            alerta: tempAlerta
+        },
+        {
+            label: 'Parámetros',
+            icon: 'fa-lungs',
+            value: parametrosPulmonares || '—',
+            multiline: true
+        },
+        { label: 'Alimentación', icon: 'fa-utensils', value: this._formatearAlimentacionCard(eg) },
+        { label: 'Toma agua', icon: 'fa-glass-water', value: this._formatearHidratacionCard(eg) },
+        { label: 'Micción (color y olor)', icon: 'fa-droplet', value: this._formatearMiccionCard(eg), multiline: true },
+        { label: 'Deposiciones (heces)', icon: 'fa-poop', value: this._formatearDeposicionesCard(eg), multiline: true }
+    ];
+
+    return `
+        <div class="turno-card-campos-grid">
+            ${campos.map(c => `
+                <div class="turno-card-campo${c.alerta ? ' turno-card-campo-alerta' : ''}${c.multiline ? ' turno-card-campo-multiline' : ''}">
+                    <span class="turno-card-campo-label"><i class="fas ${c.icon}"></i>${esc(c.label)}</span>
+                    <span class="turno-card-campo-valor">${esc(c.value)}</span>
+                </div>
+            `).join('')}
+        </div>
+    `;
 };
 
 InternamientoModule.prototype.traducirParametro = function(key) {
@@ -629,8 +779,12 @@ InternamientoModule.prototype.traducirParametro = function(key) {
         'mucosas': 'Mucosas',
         'via': 'Vía',
         'tiempoVia': 'Tiempo de vía',
-        'sonda': 'Sonda',
-        'tiempoSonda': 'Tiempo de sonda',
+        'sondaEsofagica': 'Sonda esofágica',
+        'tiempoSondaEsofagica': 'Tiempo sonda esofágica',
+        'sondaUrinaria': 'Sonda urinaria',
+        'tiempoSondaUrinaria': 'Tiempo sonda urinaria',
+        'sonda': 'Sonda (legacy)',
+        'tiempoSonda': 'Tiempo de sonda (legacy)',
         'parametrosPulmonares': 'Parámetros pulmonares',
         'presionArterial': 'Presión Arterial (mmHg)',
         'po2': 'PO2 (mmHg)'

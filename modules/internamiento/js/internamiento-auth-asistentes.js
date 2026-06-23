@@ -395,6 +395,12 @@ InternamientoModule.prototype.getCodigoAsistenteFormHTML = function(accion) {
         'guardar_glucosa': 'guardar esta medición de glucosa',
         'configurar_horarios_glucosa': 'configurar los horarios de toma de glucosa',
         'imagenologia': 'registrar este estudio de imagenología',
+        'crear_presupuesto': 'registrar este presupuesto con archivo',
+        'crear_factura_archivo': 'registrar esta factura con archivo',
+        'aprobar_presupuesto': 'aprobar este presupuesto',
+        'agregar_factura': 'registrar esta factura',
+        'factura_pago': 'marcar este cobro como pagado',
+        'anular_factura': 'anular esta factura o documento',
         'edicion_ingreso_consulta_externa': 'guardar los cambios de ingreso (consulta externa)',
         'editar_turno': 'editar este turno',
         'medicacion_lote': 'administrar varios medicamentos seleccionados'
@@ -1104,10 +1110,6 @@ InternamientoModule.prototype.administrarMedicamentoConCodigo = async function(m
         this.showAlert('Medicamento no encontrado', 'Error', 'error');
         return;
     }
-    if (medicamento.puestoPorConsultaExterna) {
-        this.showAlert('No se puede administrar dosis en medicamentos puestos por consulta externa.', 'Acción bloqueada', 'warning');
-        return;
-    }
     if (!this.puedeAdministrarAhora(medicamento)) {
         this.showAlert('Solo se puede administrar cuando corresponda la próxima dosis (contador en cero). Espere a que el tiempo indicado llegue a cero.', 'Próxima dosis no correspondiente', 'warning');
         return;
@@ -1155,7 +1157,6 @@ InternamientoModule.prototype.administrarMedicamentosSeleccionados = async funct
     for (const id of ids) {
         const med = internamiento.planTerapeutico?.medicamentos?.[id];
         if (!med) continue;
-        if (med.puestoPorConsultaExterna) continue;
         if (!this.puedeAdministrarAhora(med)) continue;
         medicamentos.push({ id, med });
     }

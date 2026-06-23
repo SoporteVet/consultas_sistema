@@ -12,6 +12,55 @@ InternamientoModule.prototype.getMedicacionVista = function() {
     return this._medicacionVista === 'tarjetas' ? 'tarjetas' : 'tabla';
 };
 
+InternamientoModule.prototype.getMedControlExtraDias = function() {
+    const id = this.currentInternamientoId;
+    if (!id) return { antes: 0, despues: 0 };
+    if (!this._medControlExtraPorInternamiento) this._medControlExtraPorInternamiento = {};
+    if (!this._medControlExtraPorInternamiento[id]) {
+        this._medControlExtraPorInternamiento[id] = { antes: 0, despues: 0 };
+    }
+    return this._medControlExtraPorInternamiento[id];
+};
+
+InternamientoModule.prototype.agregarColumnaDiaAnteriorMedicacion = function() {
+    const extra = this.getMedControlExtraDias();
+    extra.antes = (extra.antes || 0) + 1;
+    this.loadMedicacionView();
+};
+
+InternamientoModule.prototype.agregarColumnaDiaPosteriorMedicacion = function() {
+    const extra = this.getMedControlExtraDias();
+    extra.despues = (extra.despues || 0) + 1;
+    this.loadMedicacionView();
+};
+
+InternamientoModule.prototype.quitarColumnaDiaAnteriorMedicacion = function() {
+    const extra = this.getMedControlExtraDias();
+    if ((extra.antes || 0) > 0) {
+        extra.antes -= 1;
+        this.loadMedicacionView();
+    }
+};
+
+InternamientoModule.prototype.quitarColumnaDiaPosteriorMedicacion = function() {
+    const extra = this.getMedControlExtraDias();
+    if ((extra.despues || 0) > 0) {
+        extra.despues -= 1;
+        this.loadMedicacionView();
+    }
+};
+
+InternamientoModule.prototype._obtenerRangoBaseControlMedicacion = function(internamiento) {
+    const ingresoTs = internamiento.datosIngreso?.fechaIngreso
+        || internamiento.metadata?.fechaCreacion
+        || Date.now();
+    const inicio = new Date(ingresoTs);
+    inicio.setHours(0, 0, 0, 0);
+    const hoy = new Date();
+    hoy.setHours(0, 0, 0, 0);
+    return { inicio, hoy };
+};
+
 InternamientoModule.prototype._formatDiaKey = function(date) {
     const d = date instanceof Date ? date : new Date(date);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -56,22 +105,30 @@ InternamientoModule.prototype.obtenerHorariosPorBloque = function(horarios) {
 };
 
 InternamientoModule.prototype.obtenerDiasControlMedicacion = function(internamiento) {
-    const ingresoTs = internamiento.datosIngreso?.fechaIngreso
-        || internamiento.metadata?.fechaCreacion
-        || Date.now();
-    const inicio = new Date(ingresoTs);
-    inicio.setHours(0, 0, 0, 0);
-    const hoy = new Date();
-    hoy.setHours(0, 0, 0, 0);
+    const { inicio, hoy } = this._obtenerRangoBaseControlMedicacion(internamiento);
+    const extra = this.getMedControlExtraDias ? this.getMedControlExtraDias() : { antes: 0, despues: 0 };
+    const extraAntes = extra.antes || 0;
+    const extraDespues = extra.despues || 0;
+
+    const cursorInicio = new Date(inicio);
+    cursorInicio.setDate(cursorInicio.getDate() - extraAntes);
+    const cursorFin = new Date(hoy);
+    cursorFin.setDate(cursorFin.getDate() + extraDespues);
+
     const dias = [];
-    const cursor = new Date(inicio);
-    while (cursor <= hoy) {
+    const cursor = new Date(cursorInicio);
+    while (cursor <= cursorFin) {
+        const ts = cursor.getTime();
+        let tipo = 'internamiento';
+        if (ts < inicio.getTime()) tipo = 'anterior';
+        else if (ts > hoy.getTime()) tipo = 'posterior';
         dias.push({
             key: this._formatDiaKey(cursor),
             dia: cursor.getDate(),
             mes: cursor.getMonth(),
             anio: cursor.getFullYear(),
-            ts: cursor.getTime()
+            ts,
+            tipo
         });
         cursor.setDate(cursor.getDate() + 1);
     }
@@ -81,7 +138,8 @@ InternamientoModule.prototype.obtenerDiasControlMedicacion = function(internamie
             dia: hoy.getDate(),
             mes: hoy.getMonth(),
             anio: hoy.getFullYear(),
-            ts: hoy.getTime()
+            ts: hoy.getTime(),
+            tipo: 'internamiento'
         });
     }
     return dias;
@@ -166,10 +224,9 @@ InternamientoModule.prototype._hora24a12 = function(horaStr) {
     if (!horaStr) return horaStr;
     const m = String(horaStr).match(/^(\d{1,2}):(\d{2})$/);
     if (!m) {
-        // Solo número de hora (ej "17") → convertir
         const h24 = parseInt(horaStr, 10);
         if (!isNaN(h24)) {
-            const ampm = h24 >= 12 ? 'pm' : 'am';
+            const ampm = h24 >= 12 ? ' PM' : ' AM';
             const h12 = h24 % 12 || 12;
             return `${h12}${ampm}`;
         }
@@ -177,7 +234,7 @@ InternamientoModule.prototype._hora24a12 = function(horaStr) {
     }
     let h = parseInt(m[1], 10);
     const min = m[2];
-    const ampm = h >= 12 ? 'pm' : 'am';
+    const ampm = h >= 12 ? ' PM' : ' AM';
     h = h % 12 || 12;
     return min === '00' ? `${h}${ampm}` : `${h}:${min}${ampm}`;
 };
@@ -220,7 +277,7 @@ InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, 
     const estado = admin
         ? (admin.estado === 'omitido' || admin.estado === 'no_administrado' ? 'omitido' : 'administrado')
         : null;
-    const titleParts = [`${medicamento.nombreComercial || 'Medicamento'}`, `Día ${diaKey.split('-')[2]}`, horaSlot];
+    const titleParts = [`${medicamento.nombreComercial || 'Medicamento'}`, `Día ${diaKey.split('-')[2]}`, this._hora24a12(horaSlot)];
     if (admin?.observaciones) titleParts.push(admin.observaciones);
     if (admin?.administradoNombre) titleParts.push(`Por: ${admin.administradoNombre}`);
     if (admin?.fechaHoraReal) {
@@ -248,20 +305,28 @@ InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, 
 InternamientoModule.prototype.renderTablaControlMedicacion = function(internamiento, medicamentos) {
     const esc = (s) => (s == null ? '' : String(s)).replace(/</g, '&lt;').replace(/"/g, '&quot;');
     const dias = this.obtenerDiasControlMedicacion(internamiento);
+    const extra = this.getMedControlExtraDias();
     const viaCorto = { IV: 'IV', IM: 'IM', SC: 'SC', VO: 'PO', Topica: 'Tópica', Otra: 'Otra' };
     const mesesCortos = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const mostrarMesEnHeader = dias.length > 7 || new Set(dias.map(d => `${d.mes}-${d.anio}`)).size > 1;
 
     const filas = medicamentos.map(med => {
         const horarios = this.obtenerHorariosMedicamento(med);
         const celdasDias = dias.map(d => {
             if (!horarios.length) {
-                return `<td class="med-dia-celda med-dia-sin-horario" colspan="1"><span class="med-sin-horario">—</span></td>`;
+                return `<td class="med-dia-celda med-dia-sin-horario med-dia-${d.tipo || 'internamiento'}" colspan="1"><span class="med-sin-horario">—</span></td>`;
             }
             const slots = horarios.map(h => {
                 const admin = this.obtenerAdminCeldaMedicacion(med, d.key, h);
-                return `<div class="med-slot-wrap"><span class="med-slot-hora">${h.replace(':00', '').replace(/^0/, '')}</span>${this.renderCeldaMedicacionHTML(med, d.key, h, admin)}</div>`;
+                return `<div class="med-slot-wrap"><span class="med-slot-hora">${this._hora24a12(h)}</span>${this.renderCeldaMedicacionHTML(med, d.key, h, admin)}</div>`;
             }).join('');
-            return `<td class="med-dia-celda"><div class="med-dia-slots">${slots}</div></td>`;
+            const medIdSafe = (med.medicamentoId || '').replace(/'/g, "\\'");
+            const btnDiaConsulta = med.puestoPorConsultaExterna ? `
+                <button type="button" class="med-btn-aplicado-dia" title="Marcar todas las dosis de este día como aplicadas"
+                    onclick="window.internamientoModule.marcarMedicamentoAplicadoDia('${medIdSafe}', '${d.key}')">
+                    <i class="fas fa-check"></i> Aplicado
+                </button>` : '';
+            return `<td class="med-dia-celda med-dia-${d.tipo || 'internamiento'}"><div class="med-dia-slots">${btnDiaConsulta}${slots}</div></td>`;
         }).join('');
 
         return `
@@ -280,13 +345,40 @@ InternamientoModule.prototype.renderTablaControlMedicacion = function(internamie
     }).join('');
 
     const headerDias = dias.map(d => {
-        const label = `DÍA: ${d.dia}`;
-        const mesLabel = dias.length > 7 ? ` ${mesesCortos[d.mes]}` : '';
-        return `<th class="med-dia-header">DÍA: ${d.dia}${mesLabel}</th>`;
+        const mesLabel = mostrarMesEnHeader ? ` ${mesesCortos[d.mes]}` : '';
+        const tipoLabel = d.tipo === 'anterior' ? ' · ant.' : (d.tipo === 'posterior' ? ' · sig.' : '');
+        return `<th class="med-dia-header med-dia-header-${d.tipo || 'internamiento'}" title="${d.tipo === 'anterior' ? 'Día anterior al internamiento' : (d.tipo === 'posterior' ? 'Día posterior a hoy' : 'Día de internamiento')}">DÍA: ${d.dia}${mesLabel}${tipoLabel}</th>`;
     }).join('');
+
+    const primerDia = dias[0];
+    const ultimoDia = dias[dias.length - 1];
+    const rangoTexto = primerDia && ultimoDia
+        ? `${primerDia.dia} ${mesesCortos[primerDia.mes]} – ${ultimoDia.dia} ${mesesCortos[ultimoDia.mes]} (${dias.length} días)`
+        : '';
 
     return `
         <div class="med-control-wrapper">
+            <div class="med-control-dias-toolbar">
+                <div class="med-control-dias-toolbar-grupo">
+                    <button type="button" class="btn btn-sm btn-secondary med-control-dia-btn" onclick="window.internamientoModule.agregarColumnaDiaAnteriorMedicacion()" title="Agregar una columna con el día anterior">
+                        <i class="fas fa-chevron-left"></i> Día anterior
+                    </button>
+                    ${extra.antes > 0 ? `
+                    <button type="button" class="btn btn-sm med-control-dia-btn-quitar" onclick="window.internamientoModule.quitarColumnaDiaAnteriorMedicacion()" title="Quitar la columna más antigua">
+                        <i class="fas fa-minus"></i>
+                    </button>` : ''}
+                </div>
+                <span class="med-control-rango">${rangoTexto}</span>
+                <div class="med-control-dias-toolbar-grupo">
+                    ${extra.despues > 0 ? `
+                    <button type="button" class="btn btn-sm med-control-dia-btn-quitar" onclick="window.internamientoModule.quitarColumnaDiaPosteriorMedicacion()" title="Quitar la columna más futura">
+                        <i class="fas fa-minus"></i>
+                    </button>` : ''}
+                    <button type="button" class="btn btn-sm btn-secondary med-control-dia-btn" onclick="window.internamientoModule.agregarColumnaDiaPosteriorMedicacion()" title="Agregar una columna con el día siguiente">
+                        Día posterior <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+            </div>
             <div class="med-control-leyenda">
                 <span><span class="med-celda-x med-leyenda-icon">X</span> Administrado</span>
                 <span><span class="med-celda-omitido med-leyenda-icon"></span> No administrado</span>
@@ -340,7 +432,7 @@ InternamientoModule.prototype.abrirModalCeldaMedicacion = function(medicamentoId
             <div style="margin-bottom: 14px; padding: 12px; background: #f8f9fa; border-radius: 8px;">
                 <strong>${esc(med.nombreComercial)}</strong>
                 <div style="font-size: 0.9rem; color: #666; margin-top: 4px;">
-                    Día ${diaNum} · Horario ${horaSlot} · ${this.formatDosisUnidad(med)}
+                    Día ${diaNum} · Horario ${this._hora24a12(horaSlot)} · ${this.formatDosisUnidad(med)}
                 </div>
             </div>
             <div class="form-group" style="margin-bottom: 14px;">
@@ -396,61 +488,19 @@ InternamientoModule.prototype.guardarCeldaMedicacion = async function(medicament
     const med = internamiento?.planTerapeutico?.medicamentos?.[medicamentoId];
     if (!internamiento || !med) return;
 
-    if (med.puestoPorConsultaExterna && estado === 'administrado') {
-        this.showAlert('No se puede marcar como administrado un medicamento puesto por consulta externa.', 'Acción bloqueada', 'warning');
-        return;
-    }
-
-    const adminId = this._adminSlotId(diaKey, horaSlot);
-    const refPath = `planTerapeutico/medicamentos/${medicamentoId}/administraciones/${adminId}`;
     const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
 
     try {
-        if (estado === 'pendiente') {
-            await internamientoRef.child(refPath).remove();
-            if (med.administraciones) delete med.administraciones[adminId];
-        } else {
-            let codigoData = null;
-            if (estado === 'administrado' && typeof this.verificarCodigoAsistente === 'function') {
-                codigoData = await this.verificarCodigoAsistente('medicacion');
-                if (!codigoData || !codigoData.valido || codigoData.cancelado) {
-                    this.showNotification('Registro cancelado', 'info');
-                    return;
-                }
-            }
-
-            const [y, mo, d] = diaKey.split('-').map(Number);
-            const [hh, mm] = (horaReal || horaSlot).split(':').map(Number);
-            const fechaHoraReal = new Date(y, mo - 1, d, hh, mm, 0, 0).getTime();
-            const [ph, pm] = horaSlot.split(':').map(Number);
-            const fechaHoraProgramada = new Date(y, mo - 1, d, ph, pm, 0, 0).getTime();
-
-            const userId = sessionStorage.getItem('userId') || '';
-            const userName = sessionStorage.getItem('userName') || '';
-
-            const administracionData = {
-                fechaHoraProgramada,
-                fechaHoraReal,
-                estado: estado === 'omitido' ? 'omitido' : 'administrado',
-                administradoPor: codigoData?.assistantId || userId,
-                administradoNombre: codigoData?.nombre || userName,
-                observaciones,
-                slotDia: diaKey,
-                slotHora: horaSlot,
-                codigoVerificado: estado === 'administrado' && !!codigoData?.valido,
-                codigoAsistente: codigoData?.codigo ? '****' + codigoData.codigo.slice(-2) : null
-            };
-
-            await internamientoRef.child(refPath).set(administracionData);
-            if (!med.administraciones) med.administraciones = {};
-            const eraAdministrado = med.administraciones[adminId]?.estado === 'administrado';
-            med.administraciones[adminId] = administracionData;
-
-            if (estado === 'administrado' && !eraAdministrado) {
-                await internamientoRef.child('estadisticas/totalMedicaciones').transaction(current => (current || 0) + 1);
+        let codigoData = null;
+        if (estado === 'administrado' && typeof this.verificarCodigoAsistente === 'function') {
+            codigoData = await this.verificarCodigoAsistente('medicacion');
+            if (!codigoData || !codigoData.valido || codigoData.cancelado) {
+                this.showNotification('Registro cancelado', 'info');
+                return;
             }
         }
 
+        await this._persistirCeldaMedicacion(medicamentoId, diaKey, horaSlot, estado, horaReal, observaciones, codigoData);
         await internamientoRef.child('metadata/fechaUltimaActualizacion').set(Date.now());
         document.querySelector('.modal-overlay')?.remove();
         this.showNotification('Registro guardado', 'success');
@@ -458,5 +508,104 @@ InternamientoModule.prototype.guardarCeldaMedicacion = async function(medicament
     } catch (err) {
         console.error('Error guardando celda medicación:', err);
         this.showAlert('Error al guardar: ' + (err.message || err), 'Error', 'error');
+    }
+};
+
+InternamientoModule.prototype.marcarMedicamentoAplicadoDia = async function(medicamentoId, diaKey) {
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    if (!internamiento) return;
+    if (['alta', 'egresado'].includes(internamiento.estado?.actual)) {
+        this.showAlert('No se puede modificar medicación: el paciente está en alta o egresado.', 'Acción bloqueada', 'warning');
+        return;
+    }
+    const med = internamiento.planTerapeutico?.medicamentos?.[medicamentoId];
+    if (!med) return;
+
+    const horarios = this.obtenerHorariosMedicamento(med);
+    if (!horarios.length) {
+        this.showAlert('Este medicamento no tiene horarios definidos.', 'Sin horarios', 'warning');
+        return;
+    }
+
+    const pendientes = horarios.filter(h => this.obtenerEstadoCeldaMedicacion(med, diaKey, h) !== 'administrado');
+    if (pendientes.length === 0) {
+        this.showNotification('Todas las dosis de este día ya están registradas', 'info');
+        return;
+    }
+
+    const diaNum = diaKey.split('-')[2];
+    const confirmar = await this.showConfirm(
+        `¿Registrar como aplicado el medicamento "${med.nombreComercial || 'Sin nombre'}" para el día ${diaNum}?\n\nSe marcarán ${pendientes.length} dosis pendiente(s).`,
+        'Confirmar aplicación del día',
+        { confirmText: 'Marcar aplicado', cancelText: 'Cancelar', icon: 'fa-check', iconColor: '#27ae60' }
+    );
+    if (!confirmar) return;
+
+    let codigoData = null;
+    if (typeof this.verificarCodigoAsistente === 'function') {
+        codigoData = await this.verificarCodigoAsistente('medicacion');
+        if (!codigoData || !codigoData.valido || codigoData.cancelado) {
+            this.showNotification('Registro cancelado', 'info');
+            return;
+        }
+    }
+
+    try {
+        for (const horaSlot of pendientes) {
+            await this._persistirCeldaMedicacion(medicamentoId, diaKey, horaSlot, 'administrado', horaSlot, '', codigoData);
+        }
+        await this.internamientosRef.child(this.currentInternamientoId).child('metadata/fechaUltimaActualizacion').set(Date.now());
+        this.showNotification('Medicamento registrado como aplicado en el día', 'success');
+        this.loadMedicacionView();
+    } catch (err) {
+        console.error('Error marcando aplicación del día:', err);
+        this.showAlert('Error al registrar: ' + (err.message || err), 'Error', 'error');
+    }
+};
+
+InternamientoModule.prototype._persistirCeldaMedicacion = async function(medicamentoId, diaKey, horaSlot, estado, horaReal, observaciones, codigoData) {
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    const med = internamiento?.planTerapeutico?.medicamentos?.[medicamentoId];
+    if (!internamiento || !med) return;
+
+    const adminId = this._adminSlotId(diaKey, horaSlot);
+    const refPath = `planTerapeutico/medicamentos/${medicamentoId}/administraciones/${adminId}`;
+    const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
+
+    if (estado === 'pendiente') {
+        await internamientoRef.child(refPath).remove();
+        if (med.administraciones) delete med.administraciones[adminId];
+        return;
+    }
+
+    const [y, mo, d] = diaKey.split('-').map(Number);
+    const [hh, mm] = (horaReal || horaSlot).split(':').map(Number);
+    const fechaHoraReal = new Date(y, mo - 1, d, hh, mm, 0, 0).getTime();
+    const [ph, pm] = horaSlot.split(':').map(Number);
+    const fechaHoraProgramada = new Date(y, mo - 1, d, ph, pm, 0, 0).getTime();
+
+    const userId = sessionStorage.getItem('userId') || '';
+    const userName = sessionStorage.getItem('userName') || '';
+
+    const administracionData = {
+        fechaHoraProgramada,
+        fechaHoraReal,
+        estado: estado === 'omitido' ? 'omitido' : 'administrado',
+        administradoPor: codigoData?.assistantId || userId,
+        administradoNombre: codigoData?.nombre || userName,
+        observaciones,
+        slotDia: diaKey,
+        slotHora: horaSlot,
+        codigoVerificado: estado === 'administrado' && !!codigoData?.valido,
+        codigoAsistente: codigoData?.codigo ? '****' + codigoData.codigo.slice(-2) : null
+    };
+
+    await internamientoRef.child(refPath).set(administracionData);
+    if (!med.administraciones) med.administraciones = {};
+    const eraAdministrado = med.administraciones[adminId]?.estado === 'administrado';
+    med.administraciones[adminId] = administracionData;
+
+    if (estado === 'administrado' && !eraAdministrado) {
+        await internamientoRef.child('estadisticas/totalMedicaciones').transaction(current => (current || 0) + 1);
     }
 };
