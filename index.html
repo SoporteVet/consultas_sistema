@@ -2364,6 +2364,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-storage-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   
   <!-- Scripts críticos para inicio -->
   <script src="modules/core/js/vaccine-autocomplete-manager.js"></script>
@@ -3159,16 +3162,36 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label for="turnoSonda">Sonda</label>
-            <select id="turnoSonda">
+            <label for="turnoSondaEsofagica">Sonda esofágica</label>
+            <select id="turnoSondaEsofagica">
               <option value="">Seleccionar...</option>
               <option value="permeable">Permeable</option>
               <option value="no_tiene_sonda">No tiene sonda</option>
             </select>
           </div>
           <div class="form-group">
-            <label for="turnoTiempoSonda">Tiempo de sonda</label>
-            <select id="turnoTiempoSonda">
+            <label for="turnoTiempoSondaEsofagica">Tiempo de sonda esofágica</label>
+            <select id="turnoTiempoSondaEsofagica">
+              <option value="">Seleccionar...</option>
+              <option value="sin_cambios">Sin cambios</option>
+              <option value="nueva_primera_vez">Nueva - Primera vez (la pusieron en internamiento)</option>
+              <option value="nueva_desde_consulta">Nueva - Ya traía sonda desde consulta externa</option>
+              <option value="nueva_por_cambio">Nueva - Se tuvo que cambiar (se safó o se la arrancó el paciente)</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="turnoSondaUrinaria">Sonda urinaria</label>
+            <select id="turnoSondaUrinaria">
+              <option value="">Seleccionar...</option>
+              <option value="permeable">Permeable</option>
+              <option value="no_tiene_sonda">No tiene sonda</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="turnoTiempoSondaUrinaria">Tiempo de sonda urinaria</label>
+            <select id="turnoTiempoSondaUrinaria">
               <option value="">Seleccionar...</option>
               <option value="sin_cambios">Sin cambios</option>
               <option value="nueva_primera_vez">Nueva - Primera vez (la pusieron en internamiento)</option>
@@ -3408,8 +3431,13 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- Se llena dinámicamente por JS -->
   </div>
 
-  <!-- Vista de Facturas -->
+  <!-- Vista de Facturas (legacy — redirige a presupuestos_facturas) -->
   <div id="internamiento-facturas" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <!-- Presupuestos y Facturas con archivos en Firebase Storage -->
+  <div id="internamiento-presupuestos_facturas" class="hidden">
     <!-- Se llena dinámicamente por JS -->
   </div>
 
@@ -3522,7 +3550,8 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="modules/internamiento/js/internamiento-glasgow.js"></script>
 <script src="modules/internamiento/js/internamiento-llamadas.js"></script>
 <script src="modules/internamiento/js/internamiento-auth-asistentes.js"></script>
+<script src="modules/internamiento/js/internamiento-documento-compress.js"></script>
+<script src="modules/internamiento/js/internamiento-presupuestos-facturas.js"></script>
 
 </body>
-</html>
 </html>
