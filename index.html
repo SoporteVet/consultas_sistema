@@ -2574,9 +2574,14 @@ document.addEventListener('DOMContentLoaded', function() {
   <div id="internamiento-lista">
     <div class="section-header">
       <h2><i class="fas fa-bed"></i> Internamientos</h2>
-      <button id="btnNuevoInternamiento" class="btn btn-primary">
-        <i class="fas fa-plus"></i> Nuevo Internamiento
-      </button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+        <button id="btnVerMedicacionesPendientes" class="btn" style="background:#e65100;color:white;" onclick="window.internamientoModule.showMedicacionesPendientesView()">
+          <i class="fas fa-pills"></i> Medicaciones pendientes
+        </button>
+        <button id="btnNuevoInternamiento" class="btn btn-primary">
+          <i class="fas fa-plus"></i> Nuevo Internamiento
+        </button>
+      </div>
     </div>
 
     <!-- Búsqueda -->
@@ -3089,11 +3094,11 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="form-group">
             <label for="turnoDeshidratacion">% Deshidratación</label>
             <select id="turnoDeshidratacion">
-              <option value="0">0% - Normal</option>
-              <option value="5">5% - Leve</option>
-              <option value="7">7% - Moderada</option>
-              <option value="10">10% - Severa</option>
-              <option value="12">12% - Crítica</option>
+              <option value="5">5% - Hidratado</option>
+              <option value="6">6% - Leve</option>
+              <option value="7">7% - Moderado</option>
+              <option value="8">8% - Deshidratado</option>
+              <option value="9">9% - Deshidratación alta</option>
             </select>
           </div>
         </div>
@@ -3124,6 +3129,9 @@ document.addEventListener('DOMContentLoaded', function() {
             <label for="turnoMucosas">Mucosas</label>
             <select id="turnoMucosas">
               <option value="rosadas">Rosadas (Normal)</option>
+              <option value="rosado">Rosado</option>
+              <option value="rosado_palido">Rosado pálido</option>
+              <option value="palido">Pálido</option>
               <option value="palidas">Pálidas</option>
               <option value="ictericas">Ictéricas</option>
               <option value="cianoticas">Cianóticas</option>
@@ -3227,6 +3235,19 @@ document.addEventListener('DOMContentLoaded', function() {
             </label>
             <input type="text" id="turnoAlimentoCantidad" placeholder="Cantidad comida" style="margin-top: 8px;">
             <input type="text" id="turnoAlimentoTipo" placeholder="Tipo de alimento" style="margin-top: 8px;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="turnoGlucosa">
+              <i class="fas fa-tint" style="color: #e74c3c;"></i>
+              Glucosa (mg/dL)
+              <span style="color: #6c757d; font-weight: normal; font-size: 0.85rem;">(Opcional)</span>
+            </label>
+            <input type="number" id="turnoGlucosa" min="0" max="1000" step="1" placeholder="Ej: 95">
+            <small style="color: #6c757d; font-size: 0.8rem; display: block; margin-top: 3px;">
+              Normal perros: 60-120 mg/dL · Normal gatos: 64-170 mg/dL
+            </small>
           </div>
         </div>
         
@@ -3384,6 +3405,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <!-- Vista de Procedimientos -->
   <div id="internamiento-procedimientos" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <!-- Vista de Facturas -->
+  <div id="internamiento-facturas" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <!-- Vista de Medicaciones Pendientes (todos los pacientes) -->
+  <div id="internamiento-medicaciones_pendientes" class="hidden">
     <!-- Se llena dinámicamente por JS -->
   </div>
 
