@@ -2587,13 +2587,25 @@ document.addEventListener('DOMContentLoaded', function() {
       </div>
     </div>
 
-    <!-- Búsqueda -->
-    <div style="margin-bottom: 24px;">
-      <div style="position: relative;">
-        <input type="text" id="buscarInternamiento" placeholder="Buscar por nombre de mascota, propietario o expediente...">
-        <i class="fas fa-search" style="position: absolute; left: 20px; top: 50%; transform: translateY(-50%); color: #64748b; font-size: 1rem;"></i>
+    <!-- Búsqueda y filtro por mes -->
+    <div style="margin-bottom: 24px; display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-end;">
+      <div style="flex: 0 0 auto;">
+        <label for="internamientoFilterMonth" style="display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 6px; font-weight: 600;">
+          <i class="fas fa-calendar-alt"></i> Mes
+        </label>
+        <input type="month" id="internamientoFilterMonth" style="padding: 10px 14px; border: 1px solid #e0e0e0; border-radius: 8px; font-size: 0.95rem;">
+      </div>
+      <div style="flex: 1; min-width: 240px; position: relative;">
+        <label for="buscarInternamiento" style="display: block; font-size: 0.85rem; color: #64748b; margin-bottom: 6px; font-weight: 600;">
+          <i class="fas fa-search"></i> Buscar en el mes
+        </label>
+        <input type="text" id="buscarInternamiento" placeholder="Nombre, propietario o expediente..." style="width: 100%; padding: 10px 14px 10px 42px; border: 1px solid #e0e0e0; border-radius: 8px;">
+        <i class="fas fa-search" style="position: absolute; left: 14px; bottom: 12px; color: #64748b; font-size: 0.95rem;"></i>
       </div>
     </div>
+    <p style="margin: -12px 0 20px 0; font-size: 0.8rem; color: #64748b;">
+      Se muestran internamientos del mes seleccionado y de la semana anterior a ese mes.
+    </p>
 
     <div class="filters-container">
       <button class="filter-btn active" data-filter="activos">
@@ -2607,9 +2619,6 @@ document.addEventListener('DOMContentLoaded', function() {
       </button>
       <button class="filter-btn" data-filter="defuncion">
         <i class="fas fa-cross"></i> Defunción
-      </button>
-      <button class="filter-btn" data-filter="todos">
-        <i class="fas fa-list"></i> Todos
       </button>
     </div>
 
