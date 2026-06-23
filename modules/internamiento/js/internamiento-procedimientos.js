@@ -6,6 +6,30 @@
 // VISTA DE PROCEDIMIENTOS
 // ================================================================
 
+InternamientoModule.prototype.isPendientesAgregarBloqueado = function(internamiento) {
+    const estado = internamiento?.estado?.actual;
+    return ['egresado', 'defuncion', 'alta'].includes(estado);
+};
+
+InternamientoModule.prototype.getPendientesAgregarBloqueado = function() {
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    return internamiento ? this.isPendientesAgregarBloqueado(internamiento) : false;
+};
+
+InternamientoModule.prototype.getMensajePendientesSoloLectura = function(internamiento) {
+    const estado = internamiento?.estado?.actual;
+    if (estado === 'defuncion') {
+        return 'El paciente falleció: no se pueden agregar pendientes, pero sí puede marcar los existentes como completados.';
+    }
+    if (estado === 'egresado') {
+        return 'El internamiento está egresado: no se pueden agregar pendientes, pero sí puede marcar los existentes como completados.';
+    }
+    if (estado === 'alta') {
+        return 'El paciente tiene alta médica: no se pueden agregar pendientes, pero sí puede marcar los existentes como completados.';
+    }
+    return 'No se pueden agregar pendientes en este estado.';
+};
+
 InternamientoModule.prototype.loadProcedimientosView = function(bloqueado = false) {
     const container = document.getElementById('internamiento-procedimientos');
     if (!container) {
@@ -51,8 +75,8 @@ InternamientoModule.prototype.loadProcedimientosView = function(bloqueado = fals
 
         ${bloqueado ? `
             <div class="alert-box warning">
-                <i class="fas fa-lock"></i>
-                <div><strong>Solo Lectura</strong> - El internamiento está egresado, no se pueden agregar pendientes.</div>
+                <i class="fas fa-info-circle"></i>
+                <div><strong>Agregar pendientes deshabilitado</strong> - ${this.getMensajePendientesSoloLectura(internamiento)}</div>
             </div>
         ` : ''}
 
@@ -137,7 +161,7 @@ InternamientoModule.prototype.filtrarProcedimientos = function(tipo) {
     // Renderizar lista filtrada
     const container = document.getElementById('listaProcedimientos');
     if (container) {
-        const bloqueado = internamiento.estado?.actual === 'egresado';
+        const bloqueado = this.isPendientesAgregarBloqueado(internamiento);
         container.innerHTML = this.renderListaProcedimientos(filtrados, tipo, bloqueado);
     }
 };
@@ -190,10 +214,10 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
                     <input type="checkbox" 
                            class="procedimiento-checkbox"
                            ${completado ? 'checked' : ''} 
-                           ${bloqueado || completado ? 'disabled' : ''}
+                           ${completado ? 'disabled' : ''}
                            onchange="window.internamientoModule.toggleProcedimiento('${proc.procedimientoId}')"
                            title="${completado ? 'Completado (no se puede desmarcar)' : 'Marcar como completado'}"
-                           style="width: 20px; height: 20px; cursor: ${bloqueado || completado ? 'not-allowed' : 'pointer'};">
+                           style="width: 20px; height: 20px; cursor: ${completado ? 'not-allowed' : 'pointer'};">
                     <label style="font-size: 0.75rem; color: #6c757d; white-space: nowrap;">Completado</label>
                 </div>
 
@@ -346,6 +370,69 @@ InternamientoModule.prototype.traducirTipoPendiente = function(tipoPendiente) {
     return { label: 'Pendiente procedimiento', color: '#1565c0', bg: '#e3f2fd', icon: 'fa-tasks' };
 };
 
+/** Personal permitido en «Asignar a» del módulo de pendientes (internamiento). */
+InternamientoModule.prototype.PENDIENTES_ASIGNABLES = [
+    'Alejandra Cardona',
+    'Dra. Nicole Sibaja',
+    'Tec. Maria Fernanda',
+    'Tec. Daniela Fonseca',
+    'Tec. Axel Coleman',
+    'Tec. Delmarck Palmer',
+    'Tec. Nicole Gamboa',
+    'Tec. Andrés Santana',
+    'Tec. Yovanel Valle',
+    'Tec. Yancy Picado',
+    'Tec. Camila Castro'
+];
+
+InternamientoModule.prototype._normalizarNombreAsignable = function(nombre) {
+    return String(nombre || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/^(tec\.|dra\.|dr\.)\s*/gi, '')
+        .trim()
+        .toLowerCase();
+};
+
+InternamientoModule.prototype.buildOpcionesAsignadosPendientes = async function() {
+    let opciones = '<option value="">— Sin asignar —</option>';
+    const whitelist = this.PENDIENTES_ASIGNABLES || [];
+    const personas = [];
+
+    try {
+        const [snapAss, snapDoc] = await Promise.all([
+            window.database.ref('assistants').once('value'),
+            window.database.ref('doctors').once('value')
+        ]);
+        const asistentes = snapAss.val() || {};
+        const doctores = snapDoc.val() || {};
+
+        Object.entries(asistentes).forEach(([id, data]) => {
+            const nombre = typeof data === 'string' ? data : (data.nombre || data.name || id);
+            const rol = typeof data === 'object' && data ? (data.role || data.rol || data.userRole || '') : '';
+            if (String(rol).toLowerCase() === 'consulta_externa') return;
+            personas.push({ id, nombre: String(nombre || id).trim() });
+        });
+        Object.entries(doctores).forEach(([id, data]) => {
+            const nombre = typeof data === 'string' ? data : (data.name || data.nombre || id);
+            if (nombre) personas.push({ id, nombre: String(nombre).trim() });
+        });
+    } catch (e) {
+        /* continuar con lista fija si falla Firebase */
+    }
+
+    whitelist.forEach((label) => {
+        const key = this._normalizarNombreAsignable(label);
+        const match = personas.find((p) => this._normalizarNombreAsignable(p.nombre) === key);
+        const id = match ? match.id : key.replace(/\s+/g, '_');
+        const labelEsc = label.replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const idEsc = String(id).replace(/"/g, '&quot;');
+        opciones += `<option value="${idEsc}|${labelEsc}">${labelEsc}</option>`;
+    });
+
+    return opciones;
+};
+
 // ================================================================
 // AGREGAR PROCEDIMIENTO
 // ================================================================
@@ -354,24 +441,7 @@ InternamientoModule.prototype.agregarProcedimiento = async function() {
     // Solo mostrar "Es para FERNANDA" cuando se agrega desde un internamiento ya creado, no en Nuevo internamiento
     const mostrarOpcionFernanda = !!this.currentInternamientoId;
 
-    // Cargar lista de asistentes para asignar
-    let opcionesAsistentes = '<option value="">— Sin asignar —</option>';
-    try {
-        const [snapAss, snapDoc] = await Promise.all([
-            window.database.ref('assistants').once('value'),
-            window.database.ref('doctors').once('value')
-        ]);
-        const asistentes = snapAss.val() || {};
-        const doctores = snapDoc.val() || {};
-        Object.entries(asistentes).forEach(([id, data]) => {
-            const nombre = typeof data === 'string' ? data : (data.nombre || data.name || id);
-            opcionesAsistentes += `<option value="${id}|${nombre.replace(/"/g,'&quot;')}">${nombre}</option>`;
-        });
-        Object.entries(doctores).forEach(([id, data]) => {
-            const nombre = typeof data === 'string' ? data : (data.name || data.nombre || id);
-            if (nombre) opcionesAsistentes += `<option value="${id}|${nombre.replace(/"/g,'&quot;')}">${nombre} (Dr.)</option>`;
-        });
-    } catch(e) { /* sin lista */ }
+    const opcionesAsistentes = await this.buildOpcionesAsignadosPendientes();
 
     const modalContent = `
         <form id="formAgregarProcedimiento">
@@ -522,7 +592,7 @@ InternamientoModule.prototype.handleAgregarProcedimiento = async function(e) {
         await this.guardarProcedimiento(procData, resultadoCodigo);
         this.showNotification('Tarea agregada por ' + resultadoCodigo.nombre, 'success');
         document.querySelector('.modal-overlay')?.remove();
-        this.loadProcedimientosView();
+        this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
     } catch (error) {
         console.error('Error agregando procedimiento:', error);
         this.showAlert('Error al agregar procedimiento: ' + error.message, 'Error', 'error');
@@ -613,7 +683,7 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
         { confirmText: 'Sí, marcar completado', cancelText: 'Cancelar', icon: 'fa-check-circle', iconColor: '#27ae60' }
     );
     if (!confirmar) {
-        this.loadProcedimientosView(internamiento.estado?.actual === 'egresado');
+        this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
         return;
     }
 
@@ -623,7 +693,7 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
     {
         const resultadoCodigo = await this.verificarCodigoAsistente('completar_procedimiento');
         if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
-            this.loadProcedimientosView(internamiento.estado?.actual === 'egresado');
+            this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
             return;
         }
         completadoPorId = resultadoCodigo.assistantId;
@@ -654,6 +724,25 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
         const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
         await internamientoRef.update(updates);
 
+        const procLocal = internamiento.procedimientos?.[procedimientoId];
+        if (procLocal) {
+            procLocal.estado = nuevoEstado;
+            if (nuevoEstado === 'completado') {
+                procLocal.fechaCompletado = updates[`procedimientos/${procedimientoId}/fechaCompletado`];
+                procLocal.completadoPor = completadoPorId;
+                procLocal.completadoNombre = completadoPorNombre;
+            } else {
+                procLocal.fechaCompletado = null;
+                procLocal.completadoPor = null;
+                procLocal.completadoNombre = null;
+            }
+            if (updates['estadisticas/totalProcedimientos'] != null) {
+                internamiento.estadisticas = internamiento.estadisticas || {};
+                internamiento.estadisticas.totalProcedimientos = updates['estadisticas/totalProcedimientos'];
+            }
+            this.internamientos.set(this.currentInternamientoId, { ...internamiento });
+        }
+
         const nombreAuditoria = nuevoEstado === 'completado' ? completadoPorNombre : userName;
         const idAuditoria = nuevoEstado === 'completado' ? completadoPorId : userId;
         await internamientoRef.child('auditoria/historialCambios').push({
@@ -668,7 +757,10 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
             }
         });
 
-        this.loadProcedimientosView(internamiento.estado?.actual === 'egresado');
+        this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
+        if (typeof this.renderProcedimientosRecientes === 'function') {
+            this.renderProcedimientosRecientes(this.internamientos.get(this.currentInternamientoId));
+        }
         if (nuevoEstado === 'completado') this.showNotification('Completado por ' + completadoPorNombre, 'success');
     } catch (error) {
         console.error('Error actualizando procedimiento:', error);
@@ -802,7 +894,7 @@ InternamientoModule.prototype.guardarEdicionProcedimiento = async function(proce
 
         this.showNotification('Procedimiento actualizado', 'success');
         document.querySelector('.modal-overlay')?.remove();
-        this.loadProcedimientosView();
+        this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
     } catch (error) {
         console.error('Error editando procedimiento:', error);
         this.showAlert('Error al editar procedimiento: ' + error.message, 'Error', 'error');
@@ -831,7 +923,7 @@ InternamientoModule.prototype.eliminarProcedimiento = async function(procedimien
         await internamientoRef.update(updates);
 
         this.showNotification('Procedimiento eliminado', 'success');
-        this.loadProcedimientosView();
+        this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
     } catch (error) {
         console.error('Error eliminando procedimiento:', error);
         this.showAlert('Error al eliminar procedimiento: ' + error.message, 'Error', 'error');

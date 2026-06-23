@@ -38,6 +38,7 @@ class InternamientoModule {
         this.medicamentosAdmision = [];
         // Edición de ingreso desde consulta externa (desplegable en formulario de admisión)
         this.edicionIngresoConsultaId = null;
+        this.currentFilter = 'activos';
         this.edicionConsultaVerificado = null; // Quién hizo los cambios (solo al editar desde el desplegable)
         // Contador en "Ahora" hasta que se registre una nueva toma (no se reinicia al cambiar paciente ni refrescar)
         this._rerCountdownVencidoPorId = {};
@@ -503,6 +504,159 @@ class InternamientoModule {
             });
         }
 
+        const monthInput = document.getElementById('internamientoFilterMonth');
+        if (monthInput) {
+            monthInput.addEventListener('change', () => {
+                const query = document.getElementById('buscarInternamiento')?.value?.trim();
+                if (query) this.buscarInternamientos(query);
+                else this.filterInternamientos(this.currentFilter || 'activos');
+            });
+        }
+
+    }
+
+    getInternamientoFilterMonthValue() {
+        const el = document.getElementById('internamientoFilterMonth');
+        if (el && el.value) return el.value;
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    initInternamientoFilterMonth() {
+        const el = document.getElementById('internamientoFilterMonth');
+        if (!el) return;
+        if (!el.value) {
+            const now = new Date();
+            el.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        }
+    }
+
+    resetInternamientosListFilters() {
+        this.currentFilter = 'activos';
+        const buscarInput = document.getElementById('buscarInternamiento');
+        if (buscarInput) buscarInput.value = '';
+        document.querySelectorAll('#internamientosSection .filter-btn').forEach((btn) => {
+            btn.classList.toggle('active', btn.getAttribute('data-filter') === 'activos');
+        });
+    }
+
+    getInternamientoMonthRangeMs(ym) {
+        const parts = (ym || '').split('-').map(Number);
+        let y = parts[0];
+        let m = parts[1];
+        if (!y || !m || m < 1 || m > 12) {
+            const now = new Date();
+            y = now.getFullYear();
+            m = now.getMonth() + 1;
+        }
+        const inicioMes = new Date(y, m - 1, 1, 0, 0, 0, 0);
+        const finMes = new Date(y, m, 0, 23, 59, 59, 999);
+        const inicioConSemana = new Date(inicioMes);
+        inicioConSemana.setDate(inicioConSemana.getDate() - 7);
+        return { startMs: inicioConSemana.getTime(), endMs: finMes.getTime() };
+    }
+
+    getInternamientoFechaReferencia(internamiento, filter) {
+        const estado = internamiento?.estado?.actual || 'activo';
+        if (filter === 'dados_alta' || estado === 'egresado') {
+            return internamiento?.estado?.fechaAlta
+                || internamiento?.estado?.fechaCambio
+                || internamiento?.datosIngreso?.fechaIngreso
+                || internamiento?.metadata?.fechaCreacion
+                || 0;
+        }
+        if (filter === 'defuncion' || estado === 'defuncion') {
+            const defunciones = Object.values(internamiento?.defunciones || {});
+            if (defunciones.length) {
+                const ultima = defunciones.sort((a, b) => (b.fechaHoraTs || 0) - (a.fechaHoraTs || 0))[0];
+                if (ultima?.fechaHoraTs) return ultima.fechaHoraTs;
+            }
+            return internamiento?.estado?.fechaCambio
+                || internamiento?.datosIngreso?.fechaIngreso
+                || internamiento?.metadata?.fechaCreacion
+                || 0;
+        }
+        return internamiento?.datosIngreso?.fechaIngreso
+            || internamiento?.metadata?.fechaCreacion
+            || 0;
+    }
+
+    internamientoEnRangoMes(internamiento, ym, filter) {
+        const { startMs, endMs } = this.getInternamientoMonthRangeMs(ym);
+        const ts = this.getInternamientoFechaReferencia(internamiento, filter);
+        return ts >= startMs && ts <= endMs;
+    }
+
+    ordenarInternamientosLista(lista, filter) {
+        const porFechaEstado = filter === 'dados_alta' || filter === 'defuncion';
+        return [...lista].sort((a, b) => {
+            const tsA = porFechaEstado
+                ? this.getInternamientoFechaReferencia(a, filter)
+                : (a.metadata?.fechaCreacion || a.datosIngreso?.fechaIngreso || 0);
+            const tsB = porFechaEstado
+                ? this.getInternamientoFechaReferencia(b, filter)
+                : (b.metadata?.fechaCreacion || b.datosIngreso?.fechaIngreso || 0);
+            return tsB - tsA;
+        });
+    }
+
+    aplicarFiltroMesInternamientos(lista, filter) {
+        const ym = this.getInternamientoFilterMonthValue();
+        return lista.filter((int) => this.internamientoEnRangoMes(int, ym, filter));
+    }
+
+    renderInternamientosEnContainer(container, lista, filter) {
+        if (!lista.length) {
+            const ym = this.getInternamientoFilterMonthValue();
+            container.innerHTML = `
+                <div class="empty-state">
+                    <i class="fas fa-bed"></i>
+                    <p>No hay internamientos en este estado para ${ym.replace('-', '/')}</p>
+                </div>
+            `;
+            return;
+        }
+        container.innerHTML = this.ordenarInternamientosLista(lista, filter)
+            .map((int) => this.renderInternamientoCard(int))
+            .join('');
+    }
+
+    async toggleExpedienteSubidoSistema(internamientoId, subido) {
+        if (!internamientoId || !this.internamientosRef) return;
+        const internamiento = this.internamientos.get(internamientoId);
+        if (!internamiento) return;
+
+        const userId = sessionStorage.getItem('userId') || '';
+        const userName = sessionStorage.getItem('userName') || '';
+        const payload = {
+            expedienteSubidoSistema: !!subido,
+            expedienteSubidoEn: subido ? Date.now() : null,
+            expedienteSubidoPor: subido ? userId : null,
+            expedienteSubidoNombre: subido ? userName : null
+        };
+
+        try {
+            await this.internamientosRef.child(internamientoId).update({
+                'metadata/expedienteSubidoSistema': payload.expedienteSubidoSistema,
+                'metadata/expedienteSubidoEn': payload.expedienteSubidoEn,
+                'metadata/expedienteSubidoPor': payload.expedienteSubidoPor,
+                'metadata/expedienteSubidoNombre': payload.expedienteSubidoNombre,
+                'metadata/fechaUltimaActualizacion': Date.now()
+            });
+            internamiento.metadata = {
+                ...(internamiento.metadata || {}),
+                ...payload
+            };
+            this.internamientos.set(internamientoId, internamiento);
+
+            const query = document.getElementById('buscarInternamiento')?.value?.trim();
+            if (query) this.buscarInternamientos(query);
+            else this.filterInternamientos(this.currentFilter || 'activos');
+            this.showNotification(subido ? 'Marcado: expediente subido al sistema' : 'Marcación de expediente subido quitada', 'success');
+        } catch (e) {
+            console.error('Error actualizando expediente subido:', e);
+            this.showAlert('Error al guardar: ' + (e.message || e), 'Error', 'error');
+        }
     }
 
     filterInternamientos(filter) {
@@ -531,33 +685,18 @@ class InternamientoModule {
             case 'defuncion':
                 filtered = filtered.filter(int => estadoActual(int) === 'defuncion');
                 break;
-            case 'todos':
-                filtered = filtered.filter(int => ['activo', 'critico', 'alta'].includes(estadoActual(int)));
-                break;
             default:
-                filtered = filtered.filter(int => ['activo', 'critico', 'alta'].includes(estadoActual(int)));
+                filtered = filtered.filter(int => estadoActual(int) === 'activo');
         }
 
-        // Ordenar: más recientes arriba
-        filtered.sort((a, b) => (b.metadata?.fechaCreacion || b.datosIngreso?.fechaIngreso || 0) - (a.metadata?.fechaCreacion || a.datosIngreso?.fechaIngreso || 0));
-
-        // Renderizar
-        if (filtered.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-bed"></i>
-                    <p>No hay internamientos en este estado</p>
-                </div>
-            `;
-            return;
-        }
-
-        container.innerHTML = filtered.map(int => this.renderInternamientoCard(int)).join('');
+        filtered = this.aplicarFiltroMesInternamientos(filtered, filter);
+        this.renderInternamientosEnContainer(container, filtered, filter);
     }
 
     buscarInternamientos(query) {
+        const filter = this.currentFilter || 'activos';
         if (!query || query.trim() === '') {
-            this.filterInternamientos(this.currentFilter || 'activos');
+            this.filterInternamientos(filter);
             return;
         }
 
@@ -565,7 +704,8 @@ class InternamientoModule {
         if (!container) return;
 
         const queryLower = query.toLowerCase().trim();
-        
+        const estadoActual = (int) => int.estado?.actual || 'activo';
+
         let filtered = Array.from(this.internamientos.entries())
             .filter(([id]) => this.esRegistroInternamientoReal(id))
             .map(([, int]) => int)
@@ -579,19 +719,39 @@ class InternamientoModule {
                    propietario.includes(queryLower);
         });
 
+        switch (filter) {
+            case 'activos':
+                filtered = filtered.filter(int => estadoActual(int) === 'activo');
+                break;
+            case 'criticos':
+                filtered = filtered.filter(int => estadoActual(int) === 'critico');
+                break;
+            case 'alta':
+                filtered = filtered.filter(int => estadoActual(int) === 'alta');
+                break;
+            case 'dados_alta':
+                filtered = filtered.filter(int => estadoActual(int) === 'egresado');
+                break;
+            case 'defuncion':
+                filtered = filtered.filter(int => estadoActual(int) === 'defuncion');
+                break;
+            default:
+                filtered = filtered.filter(int => estadoActual(int) === 'activo');
+        }
+
+        filtered = this.aplicarFiltroMesInternamientos(filtered, filter);
+
         if (filtered.length === 0) {
             container.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-search"></i>
-                    <p>No se encontraron internamientos que coincidan con: <strong>"${query}"</strong></p>
+                    <p>No se encontraron internamientos que coincidan con: <strong>"${query.replace(/</g, '&lt;')}"</strong></p>
                 </div>
             `;
             return;
         }
 
-        // Más recientes arriba
-        filtered.sort((a, b) => (b.metadata?.fechaCreacion || b.datosIngreso?.fechaIngreso || 0) - (a.metadata?.fechaCreacion || a.datosIngreso?.fechaIngreso || 0));
-        container.innerHTML = filtered.map(int => this.renderInternamientoCard(int)).join('');
+        this.renderInternamientosEnContainer(container, filtered, filter);
     }
 
     // ================================================================
@@ -633,7 +793,9 @@ class InternamientoModule {
 
             const listo = await this.onModuleEnter();
             if (!listo) return;
-            this.refreshInternamientosList();
+            this.resetInternamientosListFilters();
+            this.initInternamientoFilterMonth();
+            this.filterInternamientos('activos');
             
             // Establecer botón activo en sidebar
             if (typeof setActiveSubmenuButtonHTML === 'function') {
@@ -1092,6 +1254,14 @@ class InternamientoModule {
         return internamientoId && internamientoId !== '_visitas_sin_vincular';
     }
 
+    resolveInternamientoId(internamiento) {
+        if (internamiento?.metadata?.internamientoId) return internamiento.metadata.internamientoId;
+        for (const [key, val] of this.internamientos.entries()) {
+            if (val === internamiento) return key;
+        }
+        return '';
+    }
+
     initVisitaNombrePacienteInput(modalEl, lista) {
         const input = modalEl.querySelector('#visitaNombrePaciente');
         const hiddenId = modalEl.querySelector('#visitaPacienteId');
@@ -1330,32 +1500,12 @@ class InternamientoModule {
     // ================================================================
     
     refreshInternamientosList() {
-        const container = document.getElementById('internamientosActivosContainer');
-        if (!container) return;
-
-        // Filtrar internamientos activos (si falta estado.actual se considera activo para no ocultar registros)
-        const estadoActual = (int) => int.estado?.actual || 'activo';
-        const activos = Array.from(this.internamientos.entries())
-            .filter(([id]) => this.esRegistroInternamientoReal(id))
-            .map(([, int]) => int)
-            .filter(int => ['activo', 'critico', 'alta'].includes(estadoActual(int)));
-
-        if (activos.length === 0) {
-            container.innerHTML = `
-                <div class="empty-state">
-                    <i class="fas fa-bed"></i>
-                    <p>No hay pacientes internados actualmente</p>
-                    <button class="btn btn-primary" onclick="window.internamientoModule.showAdmisionForm()">
-                        <i class="fas fa-plus"></i> Nuevo Internamiento
-                    </button>
-                </div>
-            `;
+        if (document.getElementById('internamiento-lista') && !document.getElementById('internamiento-lista').classList.contains('hidden')) {
+            this.filterInternamientos(this.currentFilter || 'activos');
             return;
         }
-
-        // Más recientes arriba
-        activos.sort((a, b) => (b.metadata?.fechaCreacion || b.datosIngreso?.fechaIngreso || 0) - (a.metadata?.fechaCreacion || a.datosIngreso?.fechaIngreso || 0));
-        container.innerHTML = activos.map(int => this.renderInternamientoCard(int)).join('');
+        this.initInternamientoFilterMonth();
+        this.filterInternamientos(this.currentFilter || 'activos');
     }
 
     /**
@@ -1383,16 +1533,38 @@ class InternamientoModule {
         const iconMascota = tipoMascota === 'gato' ? 'fa-cat' : tipoMascota === 'ave' ? 'fa-dove' : 'fa-dog';
         const diagnostico = internamiento.datosIngreso?.diagnosticoPresuntivo || '';
         const tieneCirugiaProgramada = this.hasCirugiaProgramada(internamiento);
-        const idRaw = internamiento.metadata?.internamientoId || '';
+        const idRaw = this.resolveInternamientoId(internamiento);
         const idInt = idRaw.replace(/"/g, '&quot;');
         const idForClick = idRaw.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        const expedienteSubido = !!internamiento.metadata?.expedienteSubidoSistema;
+        const mostrarCheckExpediente = ['egresado', 'defuncion'].includes(estado);
+        const fechaRefEstado = (estado === 'egresado' || estado === 'defuncion')
+            ? this.getInternamientoFechaReferencia(internamiento, estado === 'egresado' ? 'dados_alta' : 'defuncion')
+            : null;
+        const fechaRefEstadoStr = fechaRefEstado
+            ? new Date(fechaRefEstado).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
+            : '';
 
         const cardAttrs = soloLectura
-            ? `data-id="${idInt}" data-estado="${estado}" style="cursor: default; pointer-events: none;"`
-            : `data-id="${idInt}" data-estado="${estado}" onclick="window.internamientoModule.showPanelPrincipal('${idForClick}')"`;
+            ? `data-id="${idInt}" data-estado="${estado}" class="internamiento-card fade-in-up${expedienteSubido ? ' internamiento-card--expediente-subido' : ''}" style="cursor: default; pointer-events: none;"`
+            : `data-id="${idInt}" data-estado="${estado}" class="internamiento-card fade-in-up${expedienteSubido ? ' internamiento-card--expediente-subido' : ''}" onclick="window.internamientoModule.showPanelPrincipal('${idForClick}')"`;
 
         return `
-            <div class="internamiento-card fade-in-up" ${cardAttrs}>
+            <div ${cardAttrs}>
+                ${mostrarCheckExpediente ? `
+                <div class="int-card-expediente-subido" onclick="event.stopPropagation();">
+                    <label class="int-expediente-subido-label" title="Marcar cuando el expediente ya fue cargado al sistema externo">
+                        <input type="checkbox"
+                            ${expedienteSubido ? 'checked' : ''}
+                            onchange="window.internamientoModule.toggleExpedienteSubidoSistema('${idForClick}', this.checked)">
+                        <span class="int-expediente-subido-text">
+                            <i class="fas fa-cloud-upload-alt"></i>
+                            Expediente subido al sistema
+                        </span>
+                        ${expedienteSubido ? '<span class="int-expediente-subido-ok"><i class="fas fa-check-circle"></i></span>' : ''}
+                    </label>
+                </div>
+                ` : ''}
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;">
                     <div style="flex: 1;">
                         <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap;">
@@ -1425,7 +1597,9 @@ class InternamientoModule {
                         <div class="card-info" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
                             <div>
                                 <i class="fas fa-calendar-day" style="color: #5c6bc0; margin-right: 6px;"></i>
-                                <strong>${diasInternado}</strong>
+                                <strong>${estado === 'egresado' || estado === 'defuncion' ? fechaRefEstadoStr : diasInternado}</strong>
+                                ${estado === 'egresado' ? '<span style="font-size:0.78rem;color:#666;margin-left:4px;">(fecha de alta)</span>' : ''}
+                                ${estado === 'defuncion' ? '<span style="font-size:0.78rem;color:#666;margin-left:4px;">(fecha defunción)</span>' : ''}
                             </div>
                             <div>
                                 <i class="fas fa-user" style="color: #26a69a; margin-right: 6px;"></i>
@@ -3132,6 +3306,67 @@ class InternamientoModule {
         }
     }
 
+    getAlimentacionDisplay(internamiento) {
+        const texto = (internamiento?.metadata?.alimentacion?.texto || '').trim();
+        if (!texto) return '--';
+        const esc = texto.replace(/</g, '&lt;');
+        return texto.length > 28 ? esc.slice(0, 28) + '…' : esc;
+    }
+
+    showModalActualizarAlimentacion() {
+        if (!this.currentInternamientoId) return;
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        const valorActual = (internamiento?.metadata?.alimentacion?.texto || '').trim();
+        const valorEsc = valorActual.replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const contenido = `
+            <div style="max-width: 420px; padding: 10px;">
+                <p style="margin: 0 0 16px 0; color: #64748b; font-size: 0.9rem;">Indique la alimentación del paciente (tipo de dieta, restricciones, horarios, etc.).</p>
+                <form id="formAlimentacion" style="width: 100%;">
+                    <div class="form-group" style="margin-bottom: 18px;">
+                        <label for="inputAlimentacion">Alimentación</label>
+                        <input type="text" id="inputAlimentacion" maxlength="120" placeholder="Ej: Hills i/d, NPO, barf 100g c/8h" value="${valorEsc}" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                    </div>
+                    <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+                        <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                        <button type="submit" class="btn btn-primary" style="background: #15803d; border-color: #15803d;"><i class="fas fa-save"></i> Guardar</button>
+                    </div>
+                </form>
+            </div>
+        `;
+        const modal = this.createModal('Alimentación', contenido, 'fa-utensils');
+        document.body.appendChild(modal);
+        const form = document.getElementById('formAlimentacion');
+        if (form) form.onsubmit = (e) => { e.preventDefault(); this.handleGuardarAlimentacion(); };
+    }
+
+    async handleGuardarAlimentacion() {
+        const id = this.currentInternamientoId;
+        if (!id) return;
+        const input = document.getElementById('inputAlimentacion');
+        const texto = (input?.value || '').trim();
+        const alimentacion = {
+            texto: texto || '',
+            fechaUltimaActualizacion: Date.now()
+        };
+        try {
+            await this.internamientosRef.child(id).update({
+                'metadata/alimentacion': alimentacion,
+                'metadata/fechaUltimaActualizacion': Date.now()
+            });
+            const internamiento = this.internamientos.get(id);
+            if (internamiento) {
+                const meta = { ...(internamiento.metadata || {}), alimentacion };
+                this.internamientos.set(id, { ...internamiento, metadata: meta });
+            }
+            document.querySelector('.modal-overlay')?.remove();
+            this.renderPanelHeader(this.internamientos.get(id));
+            this.showNotification('Alimentación guardada', 'success');
+        } catch (e) {
+            console.error('Error guardando alimentación:', e);
+            this.showAlert('Error al guardar: ' + (e.message || e), 'Error', 'error');
+        }
+    }
+
     showFormularioAutorizarAlta() {
         if (!this.currentInternamientoId) {
             this.showAlert('No hay internamiento seleccionado', 'Error', 'error');
@@ -3471,11 +3706,16 @@ class InternamientoModule {
                                 <i class="fas fa-weight"></i>
                                 <span>Peso ingreso: <strong>${internamiento.datosIngreso?.pesoIngreso || '--'} kg</strong></span>
                             </div>
-                            <div class="patient-info-item" style="margin-top: 8px;">
+                            <div class="patient-info-item" style="margin-top: 8px; display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
                                 <span class="peso-hoy-tab" onclick="window.internamientoModule.showModalActualizarPesoHoy()" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f0f4ff; border: 1px solid #5c6bc0; border-radius: 8px; font-size: 0.85rem; cursor: pointer; color: #334155;">
                                     <i class="fas fa-weight-hanging"></i>
                                     <span>Peso de hoy: <strong>${this.getPesoHoyDisplay(internamiento)}</strong></span>
                                     <span style="color: #5c6bc0; font-weight: 600;">Actualizar</span>
+                                </span>
+                                <span class="alimentacion-tab" onclick="window.internamientoModule.showModalActualizarAlimentacion()" style="display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; background: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; font-size: 0.85rem; cursor: pointer; color: #334155; max-width: 100%;">
+                                    <i class="fas fa-utensils"></i>
+                                    <span>Alimentación: <strong>${this.getAlimentacionDisplay(internamiento)}</strong></span>
+                                    <span style="color: #15803d; font-weight: 600;">Actualizar</span>
                                 </span>
                             </div>
                         </div>
@@ -4075,7 +4315,9 @@ class InternamientoModule {
         const total = procedimientos.length;
         const porcentaje = total > 0 ? Math.round((completados.length / total) * 100) : 0;
 
-        const bloqueado = ['egresado'].includes(internamiento.estado?.actual);
+        const bloqueado = typeof this.isPendientesAgregarBloqueado === 'function'
+            ? this.isPendientesAgregarBloqueado(internamiento)
+            : ['egresado', 'defuncion', 'alta'].includes(internamiento.estado?.actual);
 
         if (procedimientos.length === 0) {
             container.innerHTML = `
@@ -4131,11 +4373,10 @@ class InternamientoModule {
                         return `
                             <div style="display: flex; align-items: center; gap: 12px; padding: 12px; background: ${completado ? '#f5f5f5' : prioridad.bg}; border: 1px solid ${completado ? '#e0e0e0' : prioridad.border}; border-radius: 8px; margin-bottom: 8px; transition: all 0.3s ease; ${completado ? 'opacity: 0.6;' : ''}">
                                 <input type="checkbox" 
-                                       ${completado ? 'checked' : ''} 
-                                       ${bloqueado ? 'disabled' : ''}
+                                       ${completado ? 'checked disabled' : ''}
                                        onchange="window.internamientoModule.toggleProcedimiento('${proc.procedimientoId}')"
                                        class="procedimiento-checkbox"
-                                       style="cursor: ${bloqueado ? 'not-allowed' : 'pointer'};">
+                                       style="cursor: ${completado ? 'not-allowed' : 'pointer'};">
                                 <div style="flex: 1;">
                                     <div style="font-size: 0.9rem; font-weight: 500; color: ${completado ? '#999' : '#333'}; ${completado ? 'text-decoration: line-through;' : ''}">
                                         ${proc.descripcion}
@@ -11388,9 +11629,10 @@ class InternamientoModule {
         }
 
         if (typeof this.loadProcedimientosView === 'function') {
-            // Función extendida cargada
             const internamiento = this.internamientos.get(this.currentInternamientoId);
-            const bloqueado = internamiento ? ['egresado'].includes(internamiento.estado?.actual) : false;
+            const bloqueado = internamiento && typeof this.isPendientesAgregarBloqueado === 'function'
+                ? this.isPendientesAgregarBloqueado(internamiento)
+                : ['egresado', 'defuncion', 'alta'].includes(internamiento?.estado?.actual);
             
             this.showInternamientoView('procedimientos');
             
