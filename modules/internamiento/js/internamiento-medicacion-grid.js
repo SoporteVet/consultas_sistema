@@ -162,15 +162,53 @@ InternamientoModule.prototype.renderMedicacionViewToggle = function() {
     `;
 };
 
-InternamientoModule.prototype.renderHorasMedicamentoHTML = function(horarios) {
-    if (!horarios.length) return '<span class="med-sin-horario">Sin horario</span>';
+InternamientoModule.prototype._hora24a12 = function(horaStr) {
+    if (!horaStr) return horaStr;
+    const m = String(horaStr).match(/^(\d{1,2}):(\d{2})$/);
+    if (!m) {
+        // Solo número de hora (ej "17") → convertir
+        const h24 = parseInt(horaStr, 10);
+        if (!isNaN(h24)) {
+            const ampm = h24 >= 12 ? 'pm' : 'am';
+            const h12 = h24 % 12 || 12;
+            return `${h12}${ampm}`;
+        }
+        return horaStr;
+    }
+    let h = parseInt(m[1], 10);
+    const min = m[2];
+    const ampm = h >= 12 ? 'pm' : 'am';
+    h = h % 12 || 12;
+    return min === '00' ? `${h}${ampm}` : `${h}:${min}${ampm}`;
+};
+
+InternamientoModule.prototype.renderHorasMedicamentoHTML = function(horarios, medicamento) {
+    if (!horarios.length) {
+        if (medicamento?.dosisUnica) return '<span class="med-sin-horario">Dosis única</span>';
+        if (medicamento?.frecuenciaHoras) return `<span class="med-sin-horario">c/${medicamento.frecuenciaHoras}h</span>`;
+        return '<span class="med-sin-horario">Sin horario</span>';
+    }
+
+    // Si hay demasiadas horas (≥8), mostrar de forma compacta en lugar de la grilla completa
+    if (horarios.length >= 8) {
+        const frec = medicamento?.frecuenciaHoras;
+        const texto = frec ? `c/${frec}h` : `${horarios.length}x/día`;
+        const primera = this._hora24a12(horarios[0]);
+        const ultima = this._hora24a12(horarios[horarios.length - 1]);
+        return `
+            <div style="font-size:0.82rem;color:#2e7d32;background:#e8f5e9;border-radius:6px;padding:6px 10px;text-align:center;">
+                <div style="font-weight:700;font-size:0.95rem;">${texto}</div>
+                <div style="font-size:0.75rem;opacity:0.8;">${primera} – ${ultima}</div>
+            </div>`;
+    }
+
     const bloques = this.obtenerHorariosPorBloque(horarios);
     return `
         <div class="med-horas-grid">
             ${bloques.map(b => `
                 <div class="med-horas-bloque">
                     <span class="med-horas-bloque-label">${b.label}</span>
-                    <span class="med-horas-bloque-valores">${b.horas.length ? b.horas.map(h => h.replace(':00', '').replace(/^0/, '')).join(', ') : '—'}</span>
+                    <span class="med-horas-bloque-valores">${b.horas.length ? b.horas.map(h => this._hora24a12(h)).join(', ') : '—'}</span>
                 </div>
             `).join('')}
         </div>
@@ -187,7 +225,7 @@ InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, 
     if (admin?.administradoNombre) titleParts.push(`Por: ${admin.administradoNombre}`);
     if (admin?.fechaHoraReal) {
         const d = new Date(this._administracionToTs(admin));
-        if (!isNaN(d.getTime())) titleParts.push(`Hora real: ${d.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })}`);
+        if (!isNaN(d.getTime())) titleParts.push(`Hora real: ${d.toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true })}`);
     }
     const title = titleParts.join(' · ');
     let contenido = '';
@@ -235,7 +273,7 @@ InternamientoModule.prototype.renderTablaControlMedicacion = function(internamie
                 </td>
                 <td class="med-col-fija med-col-dosis">${esc(this.formatDosisUnidad(med))}</td>
                 <td class="med-col-fija med-col-via">${esc(viaCorto[med.viaAdministracion] || med.viaAdministracion || '—')}</td>
-                <td class="med-col-fija med-col-horas">${this.renderHorasMedicamentoHTML(horarios)}</td>
+                <td class="med-col-fija med-col-horas">${this.renderHorasMedicamentoHTML(horarios, med)}</td>
                 ${celdasDias}
             </tr>
         `;

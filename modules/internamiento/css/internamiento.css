@@ -2465,6 +2465,198 @@
     }
 }
 
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(120px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes slideOutRight {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(120px);
+    }
+}
+
+/* Pop-outs de medicacion */
+.med-popout-toast {
+    animation: slideInRight 0.45s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* ============================================================
+   BOTONES DE ACCIONES DE MEDICAMENTO (responsive)
+   ============================================================ */
+
+.med-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.med-acciones-btns {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    flex-shrink: 0;
+    align-items: center;
+}
+
+.med-btn-accion {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: white;
+    transition: opacity 0.2s, transform 0.15s;
+    flex-shrink: 0;
+}
+
+.med-btn-accion:hover:not(:disabled) {
+    opacity: 0.85;
+    transform: scale(1.08);
+}
+
+.med-btn-accion:disabled {
+    cursor: not-allowed;
+}
+
+.med-btn-historial  { background: #6c757d; }
+.med-btn-editar     { background: #0ea5e9; }
+.med-btn-admin      { background: #16a34a; }
+.med-btn-suspender  { background: #f59e0b; }
+
+/* En pantallas pequeñas, los botones se hacen aún más compactos */
+@media (max-width: 640px) {
+    .med-btn-accion {
+        width: 32px;
+        height: 32px;
+        font-size: 0.82rem;
+        border-radius: 6px;
+    }
+    .med-acciones-btns {
+        gap: 4px;
+    }
+    .med-card-header {
+        gap: 8px;
+    }
+}
+
+@media (max-width: 420px) {
+    .med-btn-accion {
+        width: 30px;
+        height: 30px;
+        font-size: 0.78rem;
+    }
+}
+
+/* Botones de frecuencia en formulario de medicamentos (no usar .btn: el modal fuerza color blanco) */
+.med-freq-btns {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.med-freq-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: background 0.15s, transform 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.med-freq-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.18);
+}
+
+.med-freq-btn:active {
+    transform: scale(0.97);
+}
+
+.med-freq-btn--corto {
+    background: #1976d2;
+    color: #fff;
+    border-color: #1565c0;
+}
+
+.med-freq-btn--corto:hover {
+    background: #1565c0;
+}
+
+.med-freq-btn--largo {
+    background: #388e3c;
+    color: #fff;
+    border-color: #2e7d32;
+}
+
+.med-freq-btn--largo:hover {
+    background: #2e7d32;
+}
+
+.med-freq-dosis-unica {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 14px;
+    background: #fff3e0;
+    border: 2px solid #f57c00;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #e65100;
+    transition: background 0.15s, color 0.15s, box-shadow 0.15s;
+    box-shadow: 0 1px 3px rgba(245, 124, 0, 0.2);
+}
+
+.med-freq-dosis-unica:hover {
+    background: #ffe0b2;
+}
+
+.med-freq-dosis-unica input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: #f57c00;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.med-freq-dosis-unica:has(input:checked) {
+    background: #f57c00;
+    color: #fff;
+    border-color: #e65100;
+}
+
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50%       { opacity: 0.7; transform: scale(1.15); }
+}
+
 /* Sección bloqueada */
 .section-locked {
     position: relative;

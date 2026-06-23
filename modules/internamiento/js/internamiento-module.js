@@ -1,5 +1,5 @@
-// ====================================================================
-// MÓDULO DE INTERNAMIENTO - SISTEMA VETERINARIO
+﻿// ====================================================================
+// MÃ“DULO DE INTERNAMIENTO - SISTEMA VETERINARIO
 // ====================================================================
 // Versión: 1.0.0 BETA
 // Este módulo es completamente independiente y no modifica otros módulos
@@ -54,7 +54,7 @@ class InternamientoModule {
     }
 
     // ================================================================
-    // INICIALIZACIÓN (solo al abrir Internamientos, no al cargar la app)
+    // INICIALIZACIÃ“N (solo al abrir Internamientos, no al cargar la app)
     // ================================================================
     
     async init() {
@@ -92,6 +92,7 @@ class InternamientoModule {
             this.showAlert('No tienes permisos para acceder a Internamientos', 'Acceso Denegado', 'error');
             return false;
         }
+        this._iniciarPopOutsMedicacion();
         const ok = await this.ensureInitialized(maxWaitMs);
         if (!ok) {
             this.showAlert(
@@ -594,7 +595,7 @@ class InternamientoModule {
     }
 
     // ================================================================
-    // NAVEGACIÓN Y VISTAS
+    // NAVEGACIÃ“N Y VISTAS
     // ================================================================
     
     async showInternamientosSection() {
@@ -626,7 +627,7 @@ class InternamientoModule {
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-spinner fa-spin"></i>
-                        <p>Cargando internamientos…</p>
+                        <p>Cargando internamientos"¦</p>
                     </div>`;
             }
 
@@ -666,7 +667,7 @@ class InternamientoModule {
             visitasContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-spinner fa-spin"></i>
-                    <p>Cargando visitas…</p>
+                    <p>Cargando visitas"¦</p>
                 </div>`;
         }
 
@@ -730,7 +731,7 @@ class InternamientoModule {
             const visitas = int.visitas && typeof int.visitas === 'object' ? int.visitas : {};
             const nombreMascota = int.referencias?.nombreMascota || 'Sin nombre';
             const propietario = this.getNombrePropietario(int) || '';
-            const pacienteLabel = propietario ? `${nombreMascota} — ${propietario}` : nombreMascota;
+            const pacienteLabel = propietario ? `${nombreMascota} "” ${propietario}` : nombreMascota;
             Object.entries(visitas).forEach(([visitaId, v]) => {
                 const nombreMascotaVisita = v.nombrePaciente || nombreMascota;
                 const pacienteLabelVisita = v.nombrePaciente
@@ -788,7 +789,7 @@ class InternamientoModule {
         // Ordenar días (más recientes primero)
         const diasOrdenados = Object.keys(visitasPorDia).sort((a, b) => b.localeCompare(a));
         
-        const v = (s) => (s == null || s === '') ? '—' : String(s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const v = (s) => (s == null || s === '') ? '"”' : String(s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
         const estados = ['En espera', 'En curso', 'Finalizada'];
         
         // Generar HTML de las tarjetas agrupadas por día
@@ -1125,7 +1126,7 @@ class InternamientoModule {
             const nombreMascota = int.referencias?.nombreMascota || '';
             if (!nombreMascota) return '';
             const propietario = this.getNombrePropietario(int) || '';
-            const label = propietario ? `${nombreMascota} — ${propietario}` : nombreMascota;
+            const label = propietario ? `${nombreMascota} "” ${propietario}` : nombreMascota;
             return `<option value="${esc(nombreMascota)}">${esc(label)}</option>`;
         }).join('');
 
@@ -1302,7 +1303,7 @@ class InternamientoModule {
             this._clearGlucosaCountdownInterval();
         }
         // Ocultar todas las vistas de internamiento
-        const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas'];
+        const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas', 'facturas', 'medicaciones_pendientes'];
         views.forEach(view => {
             const element = document.getElementById(`internamiento-${view}`);
             if (element) {
@@ -1368,10 +1369,10 @@ class InternamientoModule {
         const estado = internamiento.estado?.actual || 'activo';
         const estadoConfig = {
             'activo': { icon: 'fa-heartbeat', label: 'ACTIVO' },
-            'critico': { icon: 'fa-exclamation-triangle', label: 'CRÍTICO' },
+            'critico': { icon: 'fa-exclamation-triangle', label: 'CRÃTICO' },
             'alta': { icon: 'fa-check-circle', label: 'ALTA MÉDICA' },
             'egresado': { icon: 'fa-home', label: 'DADO DE ALTA' },
-            'defuncion': { icon: 'fa-cross', label: 'DEFUNCIÓN' }
+            'defuncion': { icon: 'fa-cross', label: 'DEFUNCIÃ“N' }
         };
 
         const config = estadoConfig[estado] || estadoConfig.activo;
@@ -1513,7 +1514,7 @@ class InternamientoModule {
     }
 
     // ================================================================
-    // ADMISIÓN - FORMULARIO
+    // ADMISIÃ“N - FORMULARIO
     // ================================================================
     
     async showAdmisionForm(ticketData = null) {
@@ -1543,7 +1544,7 @@ class InternamientoModule {
                 loading.style.margin = '20px';
                 loading.innerHTML = `
                     <i class="fas fa-spinner fa-spin"></i>
-                    <p>Cargando formulario de admisión…</p>`;
+                    <p>Cargando formulario de admisión"¦</p>`;
                 admisionView.prepend(loading);
             }
 
@@ -1691,7 +1692,7 @@ class InternamientoModule {
         const firstOpt = select.querySelector('option[value=""]') || document.createElement('option');
         if (!firstOpt.value) {
             firstOpt.value = '';
-            firstOpt.textContent = '— Seleccione un paciente para editar datos de ingreso —';
+            firstOpt.textContent = '"” Seleccione un paciente para editar datos de ingreso "”';
         }
         select.innerHTML = '';
         select.appendChild(firstOpt);
@@ -1701,7 +1702,7 @@ class InternamientoModule {
             const expediente = int.metadata?.expedienteNumero || id;
             const opt = document.createElement('option');
             opt.value = id;
-            opt.textContent = `${nombreMascota} — #${expediente}`;
+            opt.textContent = `${nombreMascota} "” #${expediente}`;
             select.appendChild(opt);
         });
     }
@@ -2297,7 +2298,7 @@ class InternamientoModule {
                                 <strong>${(m.nombreComercial || '').replace(/</g, '&lt;')}</strong>
                                 ${this.renderChipOrigenItem(m)}
                                 <span style="color: #6c757d; font-size: 0.8rem;"> ${this.formatDosisUnidad(m)} · ${viaLabel[m.viaAdministracion] || m.viaAdministracion || ''}</span>
-                                ${(m.horariosCalculados && m.horariosCalculados.length) ? ` <span style="color: #0ea5e9; font-size: 0.8rem;">${(m.horariosCalculados || []).join(', ')}</span>` : (m.frecuenciaHoras ? ` <span style="font-size: 0.8rem;">Cada ${m.frecuenciaHoras}h</span>` : '')}
+                                ${(() => { const t = this._formatHorariosCompacto(m); return t && t !== '--' ? ` <span style="color: #0ea5e9; font-size: 0.8rem;">${t}</span>` : ''; })()}
                             </span>
                             <div style="display: flex; gap: 6px;">
                                 ${enEdicionDropdown && m.medicamentoId ? `<button type="button" class="btn btn-sm" style="background: #17a2b8; color: white; padding: 4px 8px;" onclick="window.internamientoModule.showEditarMedicamentoFormDesdeConsultaExterna('${m.medicamentoId}')" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
@@ -2510,7 +2511,7 @@ class InternamientoModule {
             console.error('Error creando internamiento:', error);
             this.showAlert('Error al crear internamiento: ' + error.message, 'Error', 'error');
         } finally {
-            // RESTAURAR BOTÓN
+            // RESTAURAR BOTÃ“N
             this.submittingAdmision = false;
             if (submitBtn) {
                 submitBtn.disabled = false;
@@ -2566,7 +2567,7 @@ class InternamientoModule {
     }
 
     validateAdmisionData(data) {
-        // CAMPOS OBLIGATORIOS MÍNIMOS
+        // CAMPOS OBLIGATORIOS MÃNIMOS
         if (!data.cedula) {
             this.showAlert('La cédula del propietario es obligatoria', 'Campo Requerido', 'warning');
             return false;
@@ -2785,7 +2786,7 @@ class InternamientoModule {
                 pendientes.forEach((p, idx) => {
                     const procedimientoId = 'proc_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substr(2, 9);
                     const marcarCompletado = !!p.marcarCompletado;
-                    // Pendiente no marcado → aparece como pendiente normal en expediente; marcado → en completados
+                    // Pendiente no marcado â†’ aparece como pendiente normal en expediente; marcado â†’ en completados
                     procs[procedimientoId] = {
                         procedimientoId,
                         tipo: p.tipo || '',
@@ -3290,7 +3291,7 @@ class InternamientoModule {
             return;
         }
 
-        this.showNotification('Generando expediente PDF, por favor espere…', 'info');
+        this.showNotification('Generando expediente PDF, por favor espere"¦', 'info');
 
         window.InternamientoExpedientePDF.generar(internamiento)
             .then(fileName => {
@@ -3350,17 +3351,17 @@ class InternamientoModule {
         const estado = internamiento.estado?.actual || 'activo';
         const estadoConfig = {
             'activo': { icon: 'fa-heartbeat', label: 'ACTIVO' },
-            'critico': { icon: 'fa-exclamation-triangle', label: 'CRÍTICO' },
+            'critico': { icon: 'fa-exclamation-triangle', label: 'CRÃTICO' },
             'alta': { icon: 'fa-check-circle', label: 'ALTA MÉDICA' },
             'egresado': { icon: 'fa-home', label: 'EGRESADO' },
-            'defuncion': { icon: 'fa-cross', label: 'DEFUNCIÓN' }
+            'defuncion': { icon: 'fa-cross', label: 'DEFUNCIÃ“N' }
         };
 
         const config = estadoConfig[estado] || estadoConfig.activo;
         const nombreMascota = internamiento.referencias?.nombreMascota || 'Sin nombre';
         const expediente = internamiento.metadata?.expedienteNumero || 'N/A';
         const fechaIngresoTs = internamiento.datosIngreso?.fechaIngreso;
-        const fechaIngresoStr = fechaIngresoTs ? (() => { const d = new Date(fechaIngresoTs); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '—';
+        const fechaIngresoStr = fechaIngresoTs ? (() => { const d = new Date(fechaIngresoTs); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '"”';
         const tipoMascota = internamiento.referencias?.tipoMascota || 'perro';
         const iconMascota = tipoMascota === 'gato' ? 'fa-cat' : tipoMascota === 'ave' ? 'fa-dove' : 'fa-dog';
 
@@ -3379,7 +3380,7 @@ class InternamientoModule {
         const tipoAlta = internamiento.estado?.tipoAlta || '';
         const observacionesAlta = (internamiento.estado?.observacionesAlta || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
         const fechaAltaTs = internamiento.estado?.fechaAlta;
-        const fechaAltaStr = fechaAltaTs ? (() => { const d = new Date(fechaAltaTs); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })() : '—';
+        const fechaAltaStr = fechaAltaTs ? (() => { const d = new Date(fechaAltaTs); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '"”';
         const infoAltaHTML = (estado === 'egresado' && (tipoAlta || observacionesAlta || fechaAltaTs)) ? `
                 <div style="margin-top: 16px; padding: 16px 20px; background: #e8f5e9; border: 1px solid #81c784; border-radius: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
@@ -3397,7 +3398,7 @@ class InternamientoModule {
         const defuncionesList = Object.values(defuncionesObj).sort((a, b) => (b.fechaHoraTs || 0) - (a.fechaHoraTs || 0));
         const ultimaDefuncion = defuncionesList.length > 0 ? defuncionesList[0] : null;
         const destinoCuerpoLabels = { entierro: 'Entierro', cremacion: 'Cremación', entrega_directa: 'Entrega directa del cuerpo' };
-        const fechaDefuncionStr = ultimaDefuncion?.fechaHoraTs ? (() => { const d = new Date(ultimaDefuncion.fechaHoraTs); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })() : '—';
+        const fechaDefuncionStr = ultimaDefuncion?.fechaHoraTs ? (() => { const d = new Date(ultimaDefuncion.fechaHoraTs); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '"”';
         const motivoDefuncion = (ultimaDefuncion?.motivoFallecimiento || ultimaDefuncion?.causa || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
         const observacionesDefuncion = (ultimaDefuncion?.observaciones || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
         const turnoDefuncion = ultimaDefuncion?.turno || '';
@@ -3409,7 +3410,7 @@ class InternamientoModule {
                         <i class="fas fa-cross" style="color: #5c5c5c; font-size: 1.2rem;"></i>
                         <strong style="color: #424242; font-size: 1rem;">Registro de defunción</strong>
                     </div>
-                    ${fechaDefuncionStr !== '—' ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Hora de muerte:</span> <strong>${fechaDefuncionStr}</strong></div>` : ''}
+                    ${fechaDefuncionStr !== '"”' ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Hora de muerte:</span> <strong>${fechaDefuncionStr}</strong></div>` : ''}
                     ${turnoDefuncion ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Turno:</span> <strong>${turnoDefuncion.replace(/</g, '&lt;')}</strong></div>` : ''}
                     ${motivoDefuncion ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Motivo de fallecimiento:</span><div style="margin-top: 4px; color: #333; white-space: pre-wrap;">${motivoDefuncion}</div></div>` : ''}
                     ${destinoCuerpoLabel ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Destino del cuerpo:</span> <strong>${destinoCuerpoLabel.replace(/</g, '&lt;')}</strong></div>` : ''}
@@ -3436,7 +3437,7 @@ class InternamientoModule {
                             </div>
                             <div class="patient-info-item">
                                 <i class="fas fa-user-md"></i>
-                                <span>Médico consulta externa: <strong>${(internamiento.datosIngreso?.medicoNombre || '—').replace(/</g, '&lt;')}</strong></span>
+                                <span>Médico consulta externa: <strong>${(internamiento.datosIngreso?.medicoNombre || '"”').replace(/</g, '&lt;')}</strong></span>
                             </div>
                             <div class="patient-info-item">
                                 <i class="fas fa-user"></i>
@@ -3503,7 +3504,7 @@ class InternamientoModule {
                 <div id="rer-countdown-box" data-rer-target-ts="${rerTargetTs}" data-rer-label="${(rerLabel || '').replace(/"/g, '&quot;')}" style="margin-top: 16px; padding: 12px 18px; background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); border: 1px solid #f59e0b; border-radius: 10px;">
                     <span style="font-weight: 600; color: #b45309;"><i class="fas fa-syringe" style="margin-right: 8px;"></i>Próxima toma RER:</span>
                     <span style="color: #92400e; font-weight: 700; margin-left: 6px;">${rerLabel}</span>
-                    <span style="font-size: 0.9rem; color: #78350f; margin-left: 8px;">— <span id="rer-countdown-text">${rerTexto}</span></span>
+                    <span style="font-size: 0.9rem; color: #78350f; margin-left: 8px;">"” <span id="rer-countdown-text">${rerTexto}</span></span>
                 </div>`;
                 })()}
                 ${estado !== 'egresado' && (() => {
@@ -3550,7 +3551,7 @@ class InternamientoModule {
                 <div class="cambio-via-vencido" style="margin-top: 16px; padding: 16px 20px; background: #ffebee; border: 2px solid #e53935; border-radius: 10px;">
                     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <span style="background: #c62828; color: white; padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 0.95rem;">
-                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>CAMBIO DE VÍA PENDIENTE
+                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>CAMBIO DE VÃA PENDIENTE
                         </span>
                         <span style="color: #b71c1c; font-weight: 600;">El paciente ya le toca cambio de vía (pasaron 72h desde el último registro).</span>
                     </div>
@@ -3606,7 +3607,10 @@ class InternamientoModule {
                             <i class="fas fa-pills"></i> Medicación
                         </button>
                         <button class="btn btn-procedimientos" onclick="window.internamientoModule.showProcedimientosView()">
-                            <i class="fas fa-tasks"></i> Procedimientos
+                            <i class="fas fa-clipboard-list"></i> Pendientes
+                        </button>
+                        <button class="btn" style="background:#1565c0;color:white;" onclick="window.internamientoModule.showFacturasView()">
+                            <i class="fas fa-file-invoice-dollar"></i> Facturas
                         </button>
                         <button class="btn btn-transfusion" onclick="window.internamientoModule.showTransfusionesView()">
                             <i class="fas fa-tint"></i> Transfusión
@@ -3874,7 +3878,7 @@ class InternamientoModule {
 
     renderTurnoCard(turno, esUltimo = false) {
         const fecha = new Date(turno.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
-        const hora = new Date(turno.fecha).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+        const hora = new Date(turno.fecha).toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true });
         const temp = turno.parametrosVitales?.temperatura;
         const tempAlerta = temp && (temp < 37 || temp > 39.5);
         const fc = turno.parametrosVitales?.fc;
@@ -3968,7 +3972,7 @@ class InternamientoModule {
                 ${medicamentos.map(med => {
                     const via = viaIcons[med.viaAdministracion] || viaIcons.Otra;
                     const proximaDosis = this.calcularProximaDosis(med);
-                    const horariosTexto = (med.horariosExactos && med.horariosExactos.length) ? med.horariosExactos.join(', ') : (med.horariosCalculados && med.horariosCalculados.length) ? med.horariosCalculados.join(', ') : (med.frecuenciaHoras ? 'c/' + med.frecuenciaHoras + 'h' : '--');
+                    const horariosTexto = this._formatHorariosCompacto(med);
                     return `
                         <div style="background: #e8f5e9; border: 1px solid #c8e6c9; border-left: 4px solid #4caf50; padding: 14px; border-radius: 8px; margin-bottom: 10px;">
                             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -3981,7 +3985,7 @@ class InternamientoModule {
                                         <div style="font-size: 0.8rem; color: #666; margin-top: 2px;">${via.label} · Dosis: ${this.formatDosisUnidad(med)}</div>
                                     </div>
                                 </div>
-                                <span style="background: #4caf50; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600;">
+                                <span style="background: #4caf50; color: white; padding: 3px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; white-space: nowrap;">
                                     ${horariosTexto}
                                 </span>
                             </div>
@@ -4031,12 +4035,12 @@ class InternamientoModule {
 
         if (procedimientos.length === 0) {
             container.innerHTML = `
-                <h3><i class="fas fa-tasks"></i> Procedimientos</h3>
+                <h3><i class="fas fa-clipboard-list"></i> Pendientes</h3>
                 <div class="empty-state" style="padding: 40px 20px;">
                     <i class="fas fa-clipboard-list" style="font-size: 48px;"></i>
-                    <p style="font-size: 0.95rem;">No hay tareas registradas</p>
+                    <p style="font-size: 0.95rem;">No hay pendientes registrados</p>
                     <button class="btn btn-primary btn-sm" onclick="window.internamientoModule.showProcedimientosView()">
-                        <i class="fas fa-plus"></i> Agregar Tarea
+                        <i class="fas fa-plus"></i> Agregar Pendiente
                     </button>
                 </div>
             `;
@@ -4053,7 +4057,7 @@ class InternamientoModule {
             .slice(0, 5);
 
         container.innerHTML = `
-            <h3><i class="fas fa-tasks"></i> Procedimientos</h3>
+            <h3><i class="fas fa-clipboard-list"></i> Pendientes</h3>
             <div style="padding: 20px;">
                 <!-- Barra de progreso -->
                 <div style="margin-bottom: 18px;">
@@ -4109,7 +4113,7 @@ class InternamientoModule {
                 </div>
                 
                 <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 15px;" onclick="window.internamientoModule.showProcedimientosView()">
-                    <i class="fas fa-list"></i> Ver Todos (${total})
+                    <i class="fas fa-list"></i> Ver Todos los Pendientes (${total})
                 </button>
             </div>
         `;
@@ -4309,6 +4313,7 @@ class InternamientoModule {
             apetito: document.getElementById('turnoApetito')?.checked || false,
             alimentoCantidad: document.getElementById('turnoAlimentoCantidad')?.value?.trim() || '',
             alimentoTipo: document.getElementById('turnoAlimentoTipo')?.value?.trim() || '',
+            glucosa: parseFloat(document.getElementById('turnoGlucosa')?.value) || null,
             
             // Defecación (Escala de Bristol)
             defecacion: document.getElementById('turnoDefecacion')?.value || '',
@@ -4409,6 +4414,7 @@ class InternamientoModule {
                 apetito: data.apetito,
                 alimentoCantidad: data.alimentoCantidad,
                 alimentoTipo: data.alimentoTipo,
+                glucosa: data.glucosa || null,
                 // Defecación (Escala de Bristol)
                 defecacion: data.defecacion,
                 defecacionNotas: data.defecacionNotas,
@@ -4542,22 +4548,14 @@ class InternamientoModule {
     }
 
     async verificarPuedeEditarTurno(turno) {
+        // Si el turno no tiene registros de administración (primer ingreso no completado), cualquier autorizado puede editar
         const sesion = typeof this.getSesionCodigoActiva === 'function'
             ? this.getSesionCodigoActiva(this.currentInternamientoId)
             : null;
-        if (sesion && this._personaCoincideConResponsableTurno(sesion, turno)) {
+        if (sesion) {
             return { valido: true, ...sesion, desdeSesion: true };
         }
         const resultado = await this.verificarCodigoAsistente('editar_turno');
-        if (!resultado.valido || resultado.cancelado) return resultado;
-        if (!this._personaCoincideConResponsableTurno(resultado, turno)) {
-            this.showAlert(
-                'Solo la persona que registró este turno puede editarlo.\n\nResponsable del turno: ' + (turno.responsableNombre || 'N/A'),
-                'Edición no permitida',
-                'error'
-            );
-            return { valido: false, cancelado: true };
-        }
         return resultado;
     }
 
@@ -4636,6 +4634,7 @@ class InternamientoModule {
         setChk('turnoApetito', eg.apetito);
         setVal('turnoAlimentoCantidad', eg.alimentoCantidad);
         setVal('turnoAlimentoTipo', eg.alimentoTipo);
+        setVal('turnoGlucosa', eg.glucosa);
         setVal('turnoDefecacion', eg.defecacion);
         setVal('turnoDefecacionNotas', eg.defecacionNotas);
         setChk('turnoMiccion', eg.miccion);
@@ -4701,6 +4700,7 @@ class InternamientoModule {
                 apetito: data.apetito,
                 alimentoCantidad: data.alimentoCantidad,
                 alimentoTipo: data.alimentoTipo,
+                glucosa: data.glucosa || null,
                 defecacion: data.defecacion,
                 defecacionNotas: data.defecacionNotas,
                 miccion: data.miccion,
@@ -4915,11 +4915,11 @@ class InternamientoModule {
         }
 
         // Mucosas
-        if (['palidas', 'cianoticas', 'ictericas'].includes(data.mucosas)) {
+        if (['palidas', 'palido', 'cianoticas', 'ictericas'].includes(data.mucosas)) {
             alertas.push('mucosas_anormales');
         }
 
-        // PRESIÓN ARTERIAL
+        // PRESIÃ“N ARTERIAL
         if (data.presionArterial) {
             const match = data.presionArterial.match(/(\d+)\/(\d+)/);
             if (match) {
@@ -4951,7 +4951,7 @@ class InternamientoModule {
             alertas.push('sin_apetito');
         }
 
-        // DEFECACIÓN - Escala de Bristol
+        // DEFECACIÃ“N - Escala de Bristol
         if (data.defeco && data.bristolEscala) {
             if (data.bristolEscala === 1) {
                 alertas.push('estrenimiento_severo');
@@ -4962,7 +4962,7 @@ class InternamientoModule {
             }
         }
 
-        // DEFECACIÓN - Escala de Bristol
+        // DEFECACIÃ“N - Escala de Bristol
         if (data.defecacion) {
             if (data.defecacion === 'tipo1') {
                 alertas.push('estrenimiento_severo'); // Heces muy duras
@@ -4973,7 +4973,7 @@ class InternamientoModule {
             }
         }
 
-        // MICCIÓN
+        // MICCIÃ“N
         if (data.miccion) {
             // Alerta si hay sangre u orina oscura
             if (data.miccionColor === 'con_sangre') {
@@ -4998,7 +4998,7 @@ class InternamientoModule {
     }
 
     // ================================================================
-    // PLAN DE MEDICACIÓN
+    // PLAN DE MEDICACIÃ“N
     // ================================================================
     
     showMedicacionView() {
@@ -5097,7 +5097,7 @@ class InternamientoModule {
                         const puedeAdministrar = this.puedeAdministrarAhora(med);
                         const admins = Object.values(med.administraciones || {});
                         const ultimaAdmin = admins.filter(a => a.estado === 'administrado').sort((a, b) => (b.fechaHoraReal || 0) - (a.fechaHoraReal || 0))[0];
-                        const ultimaAdminNombre = ultimaAdmin ? (ultimaAdmin.administradoNombre || '—') : null;
+                        const ultimaAdminNombre = ultimaAdmin ? (ultimaAdmin.administradoNombre || '"”') : null;
                         const esc = (s) => (s || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
                         
                         const medIdSafe = (med.medicamentoId || '').replace(/'/g, "\\'");
@@ -5106,8 +5106,8 @@ class InternamientoModule {
                         
                         return `
                             <div style="background: white; border: 1px solid ${esAhora ? '#f44336' : seleccionado ? '#2196f3' : '#e0e0e0'}; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.3s ease; ${esAhora ? 'animation: pulse-critico 2s ease-in-out infinite;' : ''}" onmouseenter="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)';" onmouseleave="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';">
-                                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
-                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                <div class="med-card-header">
+                                    <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
                                         ${puedeSeleccionar ? `
                                         <label style="display:flex;align-items:center;cursor:pointer;margin:0;" title="Seleccionar para administración múltiple">
                                             <input type="checkbox" class="chk-med-lote" data-med-id="${medIdSafe}" ${seleccionado ? 'checked' : ''} onchange="window.internamientoModule.toggleSeleccionMedicamento('${medIdSafe}', this.checked)" style="width:18px;height:18px;cursor:pointer;">
@@ -5121,20 +5121,20 @@ class InternamientoModule {
                                             <span style="font-size: 0.85rem; color: ${via.color};">${via.label}</span>
                                         </div>
                                     </div>
-                                    <div style="display: flex; gap: 6px;">
-                                        <button class="btn btn-sm" style="background: #6c757d; color: white; padding: 8px 12px;" onclick="window.internamientoModule.mostrarHistorialMedicamentoPanel('${med.medicamentoId}')" title="Historial de cambios">
+                                    <div class="med-acciones-btns">
+                                        <button class="med-btn-accion med-btn-historial" onclick="window.internamientoModule.mostrarHistorialMedicamentoPanel('${med.medicamentoId}')" title="Historial de cambios">
                                             <i class="fas fa-history"></i>
                                         </button>
-                                        <button class="btn btn-sm" style="background: #0ea5e9; color: white; padding: 8px 12px;" onclick="window.internamientoModule.showEditarMedicamentoForm('${med.medicamentoId}')" title="Editar">
+                                        <button class="med-btn-accion med-btn-editar" onclick="window.internamientoModule.showEditarMedicamentoForm('${med.medicamentoId}')" title="Editar">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         ${med.puestoPorConsultaExterna
-                                            ? `<button class="btn btn-sm" disabled title="No se puede administrar dosis: medicamento puesto por consulta externa" style="padding: 8px 12px; background: #9ca3af; color: #fff; cursor: not-allowed; opacity: 0.8;"><i class="fas fa-syringe"></i></button>`
+                                            ? `<button class="med-btn-accion" disabled title="No se puede administrar: puesto por consulta externa" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
                                             : puedeAdministrar
-                                                ? `<button class="btn btn-sm btn-success" onclick="window.internamientoModule.administrarMedicamento('${med.medicamentoId}')" title="Administrar dosis" style="padding: 8px 12px;"><i class="fas fa-syringe"></i></button>`
-                                                : `<button class="btn btn-sm" disabled title="Solo se puede administrar cuando el contador llegue a cero (próxima dosis correspondiente)" style="padding: 8px 12px; background: #9ca3af; color: #fff; cursor: not-allowed; opacity: 0.8;"><i class="fas fa-syringe"></i></button>`
+                                                ? `<button class="med-btn-accion med-btn-admin" onclick="window.internamientoModule.administrarMedicamento('${med.medicamentoId}')" title="Administrar dosis"><i class="fas fa-syringe"></i></button>`
+                                                : `<button class="med-btn-accion" disabled title="Espere a que llegue la hora" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
                                         }
-                                        <button class="btn btn-sm btn-warning" onclick="window.internamientoModule.suspenderMedicamento('${med.medicamentoId}')" title="Suspender" style="padding: 8px 12px;">
+                                        <button class="med-btn-accion med-btn-suspender" onclick="window.internamientoModule.suspenderMedicamento('${med.medicamentoId}')" title="Suspender">
                                             <i class="fas fa-pause"></i>
                                         </button>
                                     </div>
@@ -5151,11 +5151,15 @@ class InternamientoModule {
                                     </div>
                                     <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
                                         <span style="display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 3px;">Frecuencia</span>
-                                        <span style="font-size: 0.95rem; font-weight: 600; color: #333;">${med.frecuenciaHoras ? 'Cada ' + med.frecuenciaHoras + 'h' : '--'}</span>
+                                        <span style="font-size: 0.95rem; font-weight: 600; color: #333;">${med.dosisUnica ? 'Dosis única' : (med.frecuenciaHoras ? 'Cada ' + med.frecuenciaHoras + 'h' : '--')}</span>
+                                    </div>
+                                    <div style="background: #e8f5e9; border-radius: 8px; padding: 12px; border: 1px solid #c8e6c9;">
+                                        <span style="display: block; font-size: 0.75rem; color: #2e7d32; text-transform: uppercase; margin-bottom: 3px;">Días en tratamiento</span>
+                                        <span style="font-size: 1.1rem; font-weight: 700; color: #1b5e20;">${this.calcularDiasMedicamento(med)} día${this.calcularDiasMedicamento(med) !== 1 ? 's' : ''}</span>
                                     </div>
                                     <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
-                                        <span style="display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 3px;">Horas exactas</span>
-                                        <span style="font-size: 0.9rem; font-weight: 600; color: #333;">${(med.horariosExactos && med.horariosExactos.length) ? med.horariosExactos.join(', ') : (med.horariosCalculados && med.horariosCalculados.length) ? med.horariosCalculados.join(', ') : '--'}</span>
+                                        <span style="display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 3px;">Horario</span>
+                                        <span style="font-size: 0.9rem; font-weight: 600; color: #333;">${this._formatHorariosCompacto(med)}</span>
                                     </div>
                                 </div>
                                 ${med.observaciones ? `
@@ -5168,7 +5172,7 @@ class InternamientoModule {
                                 ${med.pedidoPermisoEmergencia && med.encargadaContactada ? `
                                 <div style="background: #fef3c7; border-left: 3px solid #d97706; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
                                     <span style="font-size: 0.8rem; color: #92400e; font-weight: 600;">
-                                        <i class="fas fa-phone-alt" style="margin-right: 6px;"></i>Permiso de emergencia — Contactada: ${esc(med.encargadaContactada)}
+                                        <i class="fas fa-phone-alt" style="margin-right: 6px;"></i>Permiso de emergencia "” Contactada: ${esc(med.encargadaContactada)}
                                     </span>
                                 </div>
                                 ` : ''}
@@ -5188,7 +5192,7 @@ class InternamientoModule {
                                         ${med.editadoNombre ? `
                                         <span style="font-size: 0.8rem; color: #5c6bc0;">
                                             <i class="fas fa-edit" style="margin-right: 4px;"></i>
-                                            Última edición: ${esc(med.editadoNombre)}${med.motivoUltimoCambio ? ' — ' + esc(med.motivoUltimoCambio) : ''}
+                                            Última edición: ${esc(med.editadoNombre)}${med.motivoUltimoCambio ? ' "” ' + esc(med.motivoUltimoCambio) : ''}
                                         </span>
                                         ` : ''}
                                         <button type="button" class="btn btn-sm" style="margin-top: 8px; font-size: 0.8rem; background: transparent; color: #0ea5e9; border: 1px solid #0ea5e9; padding: 4px 10px;" onclick="window.internamientoModule.mostrarHistorialAdministracionesMedicamento('${med.medicamentoId}')" title="Ver todas las administraciones">
@@ -5214,21 +5218,26 @@ class InternamientoModule {
                         </div>
                         <div>
                             <h3 style="margin: 0; color: #5d4037; font-size: 1.1rem;">Medicamentos suspendidos</h3>
-                            <p style="margin: 4px 0 0 0; color: #8d6e63; font-size: 0.9rem;">${suspendidos.length} medicamento${suspendidos.length !== 1 ? 's' : ''} suspendido${suspendidos.length !== 1 ? 's' : ''} (solo consulta, no editable)</p>
+                            <p style="margin: 4px 0 0 0; color: #8d6e63; font-size: 0.9rem;">${suspendidos.length} medicamento${suspendidos.length !== 1 ? 's' : ''} suspendido${suspendidos.length !== 1 ? 's' : ''}</p>
                         </div>
                     </div>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px;">
                         ${suspendidos.map(med => {
                             const esc = (s) => (s || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-                            const fechaFinStr = med.fechaFin ? (() => { const d = new Date(med.fechaFin); return isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })() : '';
+                            const fechaFinStr = med.fechaFin ? (() => { const d = new Date(med.fechaFin); return isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '';
+                            const histTotal = Array.isArray(med.historialSuspensiones) ? med.historialSuspensiones.length : 0;
                             return `
                             <div style="background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.06);">
                                 <div style="font-weight: 600; color: #424242; font-size: 1rem; margin-bottom: 10px;">${esc(med.nombreComercial || 'Sin nombre')}</div>
-                                <div style="display: flex; flex-direction: column; gap: 6px;">
+                                <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;">
                                     ${med.suspendidoNombre ? `<div style="font-size: 0.9rem; color: #555;"><i class="fas fa-user-nurse" style="margin-right: 6px; color: #78909c;"></i><strong>Suspendido por:</strong> ${esc(med.suspendidoNombre)}</div>` : ''}
                                     ${med.motivoSuspension ? `<div style="font-size: 0.9rem; color: #555;"><i class="fas fa-comment-alt" style="margin-right: 6px; color: #f39c12;"></i><strong>Motivo:</strong> ${esc(med.motivoSuspension)}</div>` : ''}
                                     ${fechaFinStr ? `<div style="font-size: 0.85rem; color: #888;"><i class="fas fa-calendar-times" style="margin-right: 6px;"></i>${fechaFinStr}</div>` : ''}
+                                    ${histTotal > 0 ? `<div style="font-size:0.8rem;color:#e65100;"><i class="fas fa-history"></i> ${histTotal} suspensión(es) anteriores</div>` : ''}
                                 </div>
+                                <button class="btn btn-sm btn-success" style="width:100%;padding:6px;" onclick="window.internamientoModule.reactivarMedicamento('${esc(med.medicamentoId)}')">
+                                    <i class="fas fa-play-circle"></i> Reactivar medicamento
+                                </button>
                             </div>
                             `;
                         }).join('')}
@@ -5279,27 +5288,31 @@ class InternamientoModule {
             'Otra': 'Otra'
         };
 
-        const horariosStr = (medicamento.horariosExactos && medicamento.horariosExactos.length) ? medicamento.horariosExactos.join(', ') : (medicamento.horariosCalculados && medicamento.horariosCalculados.length) ? medicamento.horariosCalculados.join(', ') : (medicamento.frecuenciaHoras ? 'Cada ' + medicamento.frecuenciaHoras + 'h' : '--');
+        const horariosStr = this._formatHorariosCompacto(medicamento);
+        const diasTratamiento = this.calcularDiasMedicamento(medicamento);
         return `
             <tr>
                 <td>
                     <strong>${medicamento.nombreComercial || 'Sin nombre'}</strong>${this.renderChipOrigenItem(medicamento)}
                     ${medicamento.observaciones ? `<div style="font-size: 0.8rem; color: #666; margin-top: 2px;"><i class="fas fa-comment"></i> ${medicamento.observaciones}</div>` : ''}
+                    <div style="font-size:0.78rem;color:#2e7d32;margin-top:4px;font-weight:600;"><i class="fas fa-calendar-check"></i> ${diasTratamiento} día${diasTratamiento !== 1 ? 's' : ''} de tratamiento</div>
                 </td>
                 <td>${this.formatDosisUnidad(medicamento)}</td>
                 <td>${viaLabels[medicamento.viaAdministracion] || medicamento.viaAdministracion}</td>
                 <td>${horariosStr}</td>
                 <td>${proximaDosis}</td>
                 <td>
-                    ${medicamento.puestoPorConsultaExterna
-                        ? `<button class="btn btn-sm" disabled title="No se puede administrar: puesto por consulta externa" style="background: #9ca3af; color: #fff; cursor: not-allowed;"><i class="fas fa-syringe"></i></button>`
-                        : puedeAdministrar
-                            ? `<button class="btn btn-sm btn-success" onclick="window.internamientoModule.administrarMedicamento('${medicamento.medicamentoId}')" title="Administrar"><i class="fas fa-syringe"></i></button>`
-                            : `<button class="btn btn-sm" disabled title="Solo cuando el contador llegue a cero" style="background: #9ca3af; color: #fff; cursor: not-allowed;"><i class="fas fa-syringe"></i></button>`
-                    }
-                    <button class="btn btn-sm btn-warning" onclick="window.internamientoModule.suspenderMedicamento('${medicamento.medicamentoId}')" title="Suspender">
-                        <i class="fas fa-pause"></i>
-                    </button>
+                    <div class="med-acciones-btns">
+                        ${medicamento.puestoPorConsultaExterna
+                            ? `<button class="med-btn-accion" disabled title="No se puede administrar: puesto por consulta externa" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
+                            : puedeAdministrar
+                                ? `<button class="med-btn-accion med-btn-admin" onclick="window.internamientoModule.administrarMedicamento('${medicamento.medicamentoId}')" title="Administrar"><i class="fas fa-syringe"></i></button>`
+                                : `<button class="med-btn-accion" disabled title="Espere a que llegue la hora" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
+                        }
+                        <button class="med-btn-accion med-btn-suspender" onclick="window.internamientoModule.suspenderMedicamento('${medicamento.medicamentoId}')" title="Suspender">
+                            <i class="fas fa-pause"></i>
+                        </button>
+                    </div>
                 </td>
             </tr>
         `;
@@ -5490,7 +5503,7 @@ class InternamientoModule {
         return String(valor || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     }
 
-    /** Primera letra mayúscula, resto minúscula (p. ej. MELOXICAM → Meloxicam). */
+    /** Primera letra mayúscula, resto minúscula (p. ej. MELOXICAM â†’ Meloxicam). */
     normalizeNombreMedicamento(nombre) {
         const trimmed = (nombre || '').trim();
         if (!trimmed) return '';
@@ -5597,7 +5610,7 @@ class InternamientoModule {
                     <div class="form-group">
                         <label><i class="fas fa-weight" style="color: #8b5cf6; margin-right: 6px;"></i>Unidad de medida</label>
                         <select id="medUnidadMedida" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
-                            <option value="">—</option>
+                            <option value="">"”</option>
                             <option value="mg" ${esEdicion && medParaEditar.unidadMedida === 'mg' ? 'selected' : ''}>mg</option>
                             <option value="ml" ${esEdicion && medParaEditar.unidadMedida === 'ml' ? 'selected' : ''}>ml</option>
                             <option value="g" ${esEdicion && medParaEditar.unidadMedida === 'g' ? 'selected' : ''}>g</option>
@@ -5612,8 +5625,20 @@ class InternamientoModule {
                     </div>
                 </div>
                 <div class="form-group">
-                    <label><i class="fas fa-clock" style="color: #f59e0b; margin-right: 6px;"></i>Frecuencia (cada X horas)</label>
-                    <input type="number" id="medFrecuencia" min="1" placeholder="Ej: 8" value="${esEdicion && medParaEditar.frecuenciaHoras != null ? medParaEditar.frecuenciaHoras : ''}">
+                    <label><i class="fas fa-clock" style="color: #f59e0b; margin-right: 6px;"></i>Frecuencia de administración</label>
+                    <div class="med-freq-btns">
+                        <button type="button" class="med-freq-btn med-freq-btn--corto" onclick="document.getElementById('medFrecuencia').value='6';document.getElementById('medDosisUnica').checked=false;">c/6h</button>
+                        <button type="button" class="med-freq-btn med-freq-btn--corto" onclick="document.getElementById('medFrecuencia').value='8';document.getElementById('medDosisUnica').checked=false;">c/8h</button>
+                        <button type="button" class="med-freq-btn med-freq-btn--corto" onclick="document.getElementById('medFrecuencia').value='12';document.getElementById('medDosisUnica').checked=false;">c/12h</button>
+                        <button type="button" class="med-freq-btn med-freq-btn--largo" onclick="document.getElementById('medFrecuencia').value='24';document.getElementById('medDosisUnica').checked=false;">c/24h</button>
+                        <button type="button" class="med-freq-btn med-freq-btn--largo" onclick="document.getElementById('medFrecuencia').value='48';document.getElementById('medDosisUnica').checked=false;">c/48h</button>
+                        <label class="med-freq-dosis-unica">
+                            <input type="checkbox" id="medDosisUnica" ${esEdicion && medParaEditar.dosisUnica ? 'checked' : ''} onchange="if(this.checked){document.getElementById('medFrecuencia').value='';}">
+                            Dosis única
+                        </label>
+                    </div>
+                    <input type="number" id="medFrecuencia" min="1" placeholder="Ej: 8 (horas)" value="${esEdicion && medParaEditar.frecuenciaHoras != null ? medParaEditar.frecuenciaHoras : ''}">
+                    <small style="color:#6c757d;font-size:0.8rem;">Ingresar número de horas entre dosis, o marcar "Dosis única"</small>
                 </div>
                 <div class="form-group">
                     <label><i class="fas fa-list-ol" style="color: #0ea5e9; margin-right: 6px;"></i>Horas exactas (opcional)</label>
@@ -5644,12 +5669,12 @@ class InternamientoModule {
                     <label><i class="fas fa-syringe" style="color: #ef4444; margin-right: 6px;"></i>Vía de Administración *</label>
                     <select id="medVia" required>
                         <option value="">Seleccionar vía...</option>
-                        <option value="IV" ${esEdicion && medParaEditar.viaAdministracion === 'IV' ? 'selected' : ''}>💉 Intravenosa (IV)</option>
-                        <option value="IM" ${esEdicion && medParaEditar.viaAdministracion === 'IM' ? 'selected' : ''}>💉 Intramuscular (IM)</option>
-                        <option value="SC" ${esEdicion && medParaEditar.viaAdministracion === 'SC' ? 'selected' : ''}>💉 Subcutánea (SC)</option>
-                        <option value="VO" ${esEdicion && medParaEditar.viaAdministracion === 'VO' ? 'selected' : ''}>💊 Vía Oral (VO)</option>
-                        <option value="Topica" ${esEdicion && medParaEditar.viaAdministracion === 'Topica' ? 'selected' : ''}>🧴 Tópica</option>
-                        <option value="Otra" ${esEdicion && medParaEditar.viaAdministracion === 'Otra' ? 'selected' : ''}>📋 Otra</option>
+                        <option value="IV" ${esEdicion && medParaEditar.viaAdministracion === 'IV' ? 'selected' : ''}>ðŸ’‰ Intravenosa (IV)</option>
+                        <option value="IM" ${esEdicion && medParaEditar.viaAdministracion === 'IM' ? 'selected' : ''}>ðŸ’‰ Intramuscular (IM)</option>
+                        <option value="SC" ${esEdicion && medParaEditar.viaAdministracion === 'SC' ? 'selected' : ''}>ðŸ’‰ Subcutánea (SC)</option>
+                        <option value="VO" ${esEdicion && medParaEditar.viaAdministracion === 'VO' ? 'selected' : ''}>ðŸ’Š Vía Oral (VO)</option>
+                        <option value="Topica" ${esEdicion && medParaEditar.viaAdministracion === 'Topica' ? 'selected' : ''}>ðŸ§´ Tópica</option>
+                        <option value="Otra" ${esEdicion && medParaEditar.viaAdministracion === 'Otra' ? 'selected' : ''}>ðŸ“‹ Otra</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -5740,10 +5765,10 @@ class InternamientoModule {
         if (historial.length > 0) {
             historial.forEach((entry, idx) => {
                 const fecha = entry.fecha || entry.timestamp;
-                const fechaStr = fecha ? new Date(fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—';
-                const nombre = (entry.editadoNombre || entry.usuarioNombre || '—').replace(/</g, '&lt;');
-                const motivo = (entry.motivoCambio || '—').replace(/</g, '&lt;');
-                let datosAnt = '—';
+                const fechaStr = fecha ? new Date(fecha).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '"”';
+                const nombre = (entry.editadoNombre || entry.usuarioNombre || '"”').replace(/</g, '&lt;');
+                const motivo = (entry.motivoCambio || '"”').replace(/</g, '&lt;');
+                let datosAnt = '"”';
                 if (entry.datosAnteriores) {
                     const d = entry.datosAnteriores;
                     const parts = [];
@@ -5751,7 +5776,7 @@ class InternamientoModule {
                     if (d.dosis != null) parts.push('Dosis: ' + String(d.dosis).replace(/</g, '&lt;'));
                     if (d.viaAdministracion) parts.push('Vía: ' + String(d.viaAdministracion).replace(/</g, '&lt;'));
                     if (d.frecuenciaHoras) parts.push('Cada ' + d.frecuenciaHoras + 'h');
-                    datosAnt = parts.length ? parts.join(' · ') : '—';
+                    datosAnt = parts.length ? parts.join(' · ') : '"”';
                 }
                 filas.push(`
                     <tr>
@@ -5763,12 +5788,12 @@ class InternamientoModule {
                 `);
             });
         } else if (med.editadoNombre || med.motivoUltimoCambio) {
-            const fechaStr = med.fechaUltimaEdicion ? new Date(med.fechaUltimaEdicion).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+            const fechaStr = med.fechaUltimaEdicion ? new Date(med.fechaUltimaEdicion).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '"”';
             filas.push(`
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(med.editadoNombre || '—').replace(/</g, '&lt;')}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(med.motivoUltimoCambio || '—').replace(/</g, '&lt;')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(med.editadoNombre || '"”').replace(/</g, '&lt;')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(med.motivoUltimoCambio || '"”').replace(/</g, '&lt;')}</td>
                 </tr>
             `);
         }
@@ -5907,12 +5932,14 @@ class InternamientoModule {
 
         const pedidoPermisoEmergencia = document.getElementById('medPedidoPermisoEmergencia')?.checked || false;
         const origenFlags = esAdmision ? this.getOrigenAdmisionFlagsDesdeForm() : { puestoPorConsultaExterna: false, puestoPorInternos: false };
+        const esDosisUnica = document.getElementById('medDosisUnica')?.checked || false;
         const medicamentoData = {
             nombreComercial: this.normalizeNombreMedicamento(document.getElementById('medNombreComercial')?.value),
             dosis: document.getElementById('medDosis')?.value.trim() || '',
             unidadMedida: document.getElementById('medUnidadMedida')?.value?.trim() || '',
             viaAdministracion: document.getElementById('medVia')?.value || '',
-            frecuenciaHoras: parseInt(document.getElementById('medFrecuencia')?.value) || 0,
+            frecuenciaHoras: esDosisUnica ? null : (parseInt(document.getElementById('medFrecuencia')?.value) || 0),
+            dosisUnica: esDosisUnica,
             horariosExactos: horariosExactos,
             observaciones: document.getElementById('medObservaciones')?.value.trim() || '',
             puestoPorConsultaExterna: esAdmision ? origenFlags.puestoPorConsultaExterna : false,
@@ -5921,8 +5948,8 @@ class InternamientoModule {
             encargadaContactada: pedidoPermisoEmergencia ? 'Alejandra Cardona' : null
         };
 
-        if (!medicamentoData.frecuenciaHoras && horariosExactos.length === 0) {
-            this.showAlert('Indique la frecuencia (cada X horas) o las horas exactas de administración.', 'Datos requeridos', 'warning');
+        if (!esDosisUnica && !medicamentoData.frecuenciaHoras && horariosExactos.length === 0) {
+            this.showAlert('Indique la frecuencia (cada X horas), las horas exactas de administración, o marque "Dosis única".', 'Datos requeridos', 'warning');
             if (esAdmision) { this._agregandoMedicamentoAdmision = false; if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-plus"></i> Agregar Medicamento'; } }
             return;
         }
@@ -5995,7 +6022,7 @@ class InternamientoModule {
 
         const horariosCalculados = (data.horariosExactos && data.horariosExactos.length > 0)
             ? data.horariosExactos
-            : this.calcularHorarios(data.frecuenciaHoras || 0);
+            : this.calcularHorarios(data.frecuenciaHoras || 0, !!data.dosisUnica);
 
         const medicamentoData = {
             medicamentoId: medicamentoId,
@@ -6003,7 +6030,8 @@ class InternamientoModule {
             dosis: data.dosis,
             unidadMedida: data.unidadMedida || '',
             viaAdministracion: data.viaAdministracion,
-            frecuenciaHoras: data.frecuenciaHoras || null,
+            frecuenciaHoras: data.dosisUnica ? null : (data.frecuenciaHoras || null),
+            dosisUnica: !!data.dosisUnica,
             horariosExactos: data.horariosExactos || [],
             horariosCalculados: horariosCalculados,
             fechaInicio: Date.now(),
@@ -6013,7 +6041,6 @@ class InternamientoModule {
             prescritoNombre: userName,
             prescritoCodigoVerificado: !!codigoResult,
             observaciones: data.observaciones,
-            // Medicamentos agregados desde este flujo (panel de internamiento) nunca son de consulta externa
             puestoPorConsultaExterna: false,
             pedidoPermisoEmergencia: data.pedidoPermisoEmergencia || false,
             encargadaContactada: data.encargadaContactada || null,
@@ -6064,18 +6091,20 @@ class InternamientoModule {
         const puestoPorConsultaExterna = elConsultaExterna
             ? (elConsultaExterna.type === 'checkbox' ? elConsultaExterna.checked : elConsultaExterna.value === 'true')
             : false;
+        const esDosisUnicaEdit = document.getElementById('medDosisUnica')?.checked || false;
         const data = {
             nombreComercial: this.normalizeNombreMedicamento(document.getElementById('medNombreComercial')?.value),
             dosis: document.getElementById('medDosis')?.value.trim() || '',
             unidadMedida: document.getElementById('medUnidadMedida')?.value?.trim() || '',
             viaAdministracion: document.getElementById('medVia')?.value || '',
-            frecuenciaHoras: parseInt(document.getElementById('medFrecuencia')?.value) || 0,
+            frecuenciaHoras: esDosisUnicaEdit ? null : (parseInt(document.getElementById('medFrecuencia')?.value) || 0),
+            dosisUnica: esDosisUnicaEdit,
             horariosExactos: horariosExactos,
             observaciones: document.getElementById('medObservaciones')?.value.trim() || '',
             puestoPorConsultaExterna: puestoPorConsultaExterna
         };
-        if (!data.frecuenciaHoras && horariosExactos.length === 0) {
-            this.showAlert('Indique la frecuencia (cada X horas) o las horas exactas de administración.', 'Datos requeridos', 'warning');
+        if (!esDosisUnicaEdit && !data.frecuenciaHoras && horariosExactos.length === 0) {
+            this.showAlert('Indique la frecuencia (cada X horas), las horas exactas de administración, o marque "Dosis única".', 'Datos requeridos', 'warning');
             return;
         }
         if (data.frecuenciaHoras && horariosExactos.length > 0) {
@@ -6201,7 +6230,82 @@ class InternamientoModule {
         return [...new Set(resultado)].sort();
     }
 
-    calcularHorarios(frecuenciaHoras) {
+    /**
+     * Convierte "HH:mm" (24h) a "h:mm AM/PM" (12h).
+     */
+    formatHora12(horaStr) {
+        if (!horaStr) return horaStr;
+        const m = String(horaStr).match(/^(\d{1,2}):(\d{2})$/);
+        if (!m) return horaStr;
+        let h = parseInt(m[1], 10);
+        const min = m[2];
+        const ampm = h >= 12 ? 'pm' : 'am';
+        h = h % 12 || 12;
+        return `${h}:${min} ${ampm}`;
+    }
+
+    /**
+     * Formatea un timestamp (ms) a fecha+hora en formato 12h.
+     */
+    formatFechaHora12(ts, incluirFecha = true) {
+        if (!ts) return '"”';
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) return '"”';
+        const opciones = { hour12: true };
+        if (incluirFecha) {
+            opciones.dateStyle = 'short';
+            opciones.timeStyle = 'short';
+        } else {
+            opciones.hour = 'numeric';
+            opciones.minute = '2-digit';
+        }
+        return d.toLocaleString('es-PE', opciones);
+    }
+
+    /**
+     * Devuelve una representación compacta y legible de los horarios de un medicamento.
+     * - Dosis única → "Dosis única"
+     * - Si hay muchas horas (≥5) → muestra la frecuencia "c/Xh" o "N veces/día"
+     * - Si hay pocas horas (≤4) → las muestra en formato 12h separadas por ·
+     */
+    _formatHorariosCompacto(med) {
+        if (!med) return '--';
+        if (med.dosisUnica) return 'Dosis única';
+
+        const horarios = (med.horariosExactos && med.horariosExactos.length)
+            ? med.horariosExactos
+            : (med.horariosCalculados && med.horariosCalculados.length)
+                ? med.horariosCalculados
+                : [];
+
+        if (med.frecuenciaHoras && horarios.length === 0) {
+            return `c/${med.frecuenciaHoras}h`;
+        }
+
+        if (horarios.length === 0) return '--';
+
+        // Si hay 5 o más horarios, muestra "c/Xh" o "N veces/día"
+        if (horarios.length >= 5) {
+            if (med.frecuenciaHoras) return `c/${med.frecuenciaHoras}h`;
+            return `${horarios.length}x/día`;
+        }
+
+        // Pocos horarios: mostrar en 12h
+        return horarios.map(h => this._hora24a12(h) || h).join(' · ');
+    }
+
+    calcularDiasMedicamento(medicamento) {
+        if (!medicamento?.fechaInicio) return 1;
+        const inicio = new Date(medicamento.fechaInicio);
+        inicio.setHours(0, 0, 0, 0);
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        const dias = Math.floor((hoy - inicio) / (24 * 60 * 60 * 1000)) + 1;
+        return Math.max(1, dias);
+    }
+
+    calcularHorarios(frecuenciaHoras, dosisUnica = false) {
+        if (dosisUnica) return [];
         if (!frecuenciaHoras || frecuenciaHoras < 1) return [];
         const horarios = [];
         const horasDelDia = 24;
@@ -6275,7 +6379,7 @@ class InternamientoModule {
     }
 
     async administrarMedicamento(medicamentoId) {
-        // REDIRIGIR A FUNCIÓN CON CÓDIGO DE ASISTENTE
+        // REDIRIGIR A FUNCIÃ“N CON CÃ“DIGO DE ASISTENTE
         if (typeof this.administrarMedicamentoConCodigo === 'function') {
             return this.administrarMedicamentoConCodigo(medicamentoId);
         }
@@ -6392,8 +6496,8 @@ class InternamientoModule {
             tableBody = '<tr><td colspan="3" style="padding: 24px; text-align: center; color: #888;">Aún no hay registros para este medicamento.</td></tr>';
         } else {
             tableBody = administraciones.map(a => {
-                const fechaStr = a.fechaHoraReal ? (() => { const d = new Date(a.fechaHoraReal); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })() : '—';
-                const quien = esc(a.administradoNombre || '—');
+                const fechaStr = a.fechaHoraReal ? (() => { const d = new Date(a.fechaHoraReal); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '"”';
+                const quien = esc(a.administradoNombre || '"”');
                 const codigoOk = a.codigoVerificado ? ' <span style="color: #2e7d32; font-size: 0.75rem;" title="Código verificado"><i class="fas fa-check-circle"></i></span>' : '';
                 const esOmitido = a.estado === 'omitido' || a.estado === 'no_administrado';
                 const estadoLabel = esOmitido
@@ -6491,8 +6595,561 @@ class InternamientoModule {
         }
     }
 
+    async reactivarMedicamento(medicamentoId) {
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        const medicamento = internamiento?.planTerapeutico?.medicamentos?.[medicamentoId];
+        if (!internamiento || !medicamento) {
+            this.showAlert('Medicamento no encontrado', 'Error', 'error');
+            return;
+        }
+        if (medicamento.estadoMedicamento !== 'suspendido') {
+            this.showAlert('Este medicamento no está suspendido', 'Aviso', 'info');
+            return;
+        }
+
+        const confirmar = await this.showConfirm(
+            `¿Reactivar "${medicamento.nombreComercial}"?\n\nEl historial de suspensión se mantendrá registrado.`,
+            'Reactivar Medicamento',
+            { confirmText: 'Sí, reactivar', cancelText: 'Cancelar', icon: 'fa-play-circle', iconColor: '#2e7d32' }
+        );
+        if (!confirmar) return;
+
+        const resultadoCodigo = await this.verificarCodigoAsistente('reactivar_medicamento');
+        if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
+            this.showNotification('Reactivación cancelada', 'info');
+            return;
+        }
+
+        try {
+            const ahora = Date.now();
+            // Guardar suspensión actual en historial antes de reactivar
+            const entradaHistorial = {
+                suspendidoPor: medicamento.suspendidoPor || null,
+                suspendidoNombre: medicamento.suspendidoNombre || '',
+                motivoSuspension: medicamento.motivoSuspension || '',
+                fechaSuspension: medicamento.fechaFin || ahora,
+                reactivadoPor: resultadoCodigo.assistantId || null,
+                reactivadoNombre: resultadoCodigo.nombre,
+                fechaReactivacion: ahora
+            };
+            const histPrev = Array.isArray(medicamento.historialSuspensiones) ? medicamento.historialSuspensiones : [];
+
+            const updates = {};
+            updates[`planTerapeutico/medicamentos/${medicamentoId}/estadoMedicamento`] = 'activo';
+            updates[`planTerapeutico/medicamentos/${medicamentoId}/fechaFin`] = null;
+            updates[`planTerapeutico/medicamentos/${medicamentoId}/motivoSuspension`] = null;
+            updates[`planTerapeutico/medicamentos/${medicamentoId}/suspendidoPor`] = null;
+            updates[`planTerapeutico/medicamentos/${medicamentoId}/suspendidoNombre`] = null;
+            updates[`planTerapeutico/medicamentos/${medicamentoId}/suspendidoCodigoVerificado`] = null;
+            updates[`planTerapeutico/medicamentos/${medicamentoId}/historialSuspensiones`] = [...histPrev, entradaHistorial];
+            updates[`planTerapeutico/medicamentos/${medicamentoId}/fechaReactivacion`] = ahora;
+            updates[`planTerapeutico/medicamentos/${medicamentoId}/reactivadoPorNombre`] = resultadoCodigo.nombre;
+            updates['metadata/fechaUltimaActualizacion'] = ahora;
+
+            const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
+            await internamientoRef.update(updates);
+            await internamientoRef.child('auditoria/historialCambios').push({
+                timestamp: ahora,
+                userId: resultadoCodigo.assistantId,
+                usuarioNombre: resultadoCodigo.nombre,
+                accion: 'reactivar_medicamento',
+                codigoVerificado: true,
+                detalles: { medicamentoId, nombre: medicamento.nombreComercial }
+            });
+
+            this.showNotification(`"${medicamento.nombreComercial}" reactivado por ${resultadoCodigo.nombre}`, 'success');
+            this.loadMedicacionView();
+        } catch (error) {
+            console.error('Error reactivando medicamento:', error);
+            this.showAlert('Error al reactivar medicamento: ' + error.message, 'Error', 'error');
+        }
+    }
+
     // ================================================================
-    // EVOLUCIÓN (PLACEHOLDER)
+    // FACTURAS POR EXPEDIENTE
+    // ================================================================
+
+    showFacturasView() {
+        if (!this.currentInternamientoId) return;
+        this.showInternamientoView('facturas');
+        setTimeout(() => this.loadFacturasView(), 100);
+    }
+
+    loadFacturasView() {
+        const container = document.getElementById('internamiento-facturas');
+        if (!container) return;
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        if (!internamiento) return;
+        const bloqueado = internamiento.estado?.actual === 'egresado';
+        const facturas = Object.values(internamiento.facturas || {}).sort((a, b) => (b.fechaCreacion || 0) - (a.fechaCreacion || 0));
+        const totalPendiente = facturas.filter(f => f.estado === 'pendiente').reduce((s, f) => s + (parseFloat(f.monto) || 0), 0);
+        const totalPagado = facturas.filter(f => f.estado === 'pagado').reduce((s, f) => s + (parseFloat(f.monto) || 0), 0);
+        const fmtMoney = n => '&#8353;' + n.toLocaleString('es-PE', { minimumFractionDigits: 2 });
+
+        container.innerHTML = `
+            <div class="section-header">
+                <h2><i class="fas fa-file-invoice-dollar"></i> Facturas del Expediente</h2>
+                <div>
+                    ${!bloqueado ? `<button class="btn btn-primary" onclick="window.internamientoModule.agregarFactura()"><i class="fas fa-plus"></i> Nueva Factura</button>` : ''}
+                    <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal('${this.currentInternamientoId}')" style="margin-left:10px;"><i class="fas fa-arrow-left"></i> Volver al Panel</button>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;">
+                <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:16px;text-align:center;">
+                    <div style="font-size:1.5rem;font-weight:700;color:#e65100;">${fmtMoney(totalPendiente)}</div>
+                    <div style="font-size:0.9rem;color:#bf360c;"><i class="fas fa-clock"></i> Pendiente de cobro</div>
+                </div>
+                <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:16px;text-align:center;">
+                    <div style="font-size:1.5rem;font-weight:700;color:#2e7d32;">${fmtMoney(totalPagado)}</div>
+                    <div style="font-size:0.9rem;color:#1b5e20;"><i class="fas fa-check-circle"></i> Pagado</div>
+                </div>
+                <div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;padding:16px;text-align:center;">
+                    <div style="font-size:1.5rem;font-weight:700;color:#1565c0;">${fmtMoney(totalPendiente + totalPagado)}</div>
+                    <div style="font-size:0.9rem;color:#0d47a1;"><i class="fas fa-calculator"></i> Total general</div>
+                </div>
+            </div>
+
+            ${facturas.length === 0 ? `
+                <div class="empty-state"><i class="fas fa-file-invoice"></i><p>No hay facturas registradas</p></div>
+            ` : `
+                <div style="background:white;border-radius:12px;box-shadow:0 2px 8px rgba(0,0,0,0.08);overflow:hidden;">
+                    <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                        <thead><tr style="background:#1565c0;color:white;">
+                            <th style="padding:12px 16px;text-align:left;">Descripcion</th>
+                            <th style="padding:12px 16px;text-align:right;">Monto</th>
+                            <th style="padding:12px 16px;text-align:center;">Estado</th>
+                            <th style="padding:12px 16px;text-align:left;">Fecha</th>
+                            <th style="padding:12px 16px;text-align:left;">Creado por</th>
+                            ${!bloqueado ? '<th style="padding:12px 16px;">Acciones</th>' : ''}
+                        </tr></thead>
+                        <tbody>
+                            ${facturas.map((f, i) => {
+                                const fecha = f.fechaCreacion ? this.formatFechaHora12(f.fechaCreacion) : '—';
+                                const estadoColor = f.estado === 'pagado' ? '#2e7d32' : (f.estado === 'anulado' ? '#c62828' : '#e65100');
+                                const estadoBg = f.estado === 'pagado' ? '#e8f5e9' : (f.estado === 'anulado' ? '#ffebee' : '#fff3e0');
+                                const fId = (f.facturaId || '').replace(/'/g, "\\'");
+                                return `<tr style="background:${i%2===0?'white':'#f9f9f9'};border-bottom:1px solid #eee;">
+                                    <td style="padding:12px 16px;"><strong>${(f.descripcion||'').replace(/</g,'&lt;')}</strong>${f.observaciones?`<div style="font-size:0.8rem;color:#666;margin-top:3px;">${(f.observaciones||'').replace(/</g,'&lt;')}</div>`:''}
+                                    </td>
+                                    <td style="padding:12px 16px;text-align:right;font-weight:700;color:#1565c0;">${fmtMoney(parseFloat(f.monto)||0)}</td>
+                                    <td style="padding:12px 16px;text-align:center;"><span style="background:${estadoBg};color:${estadoColor};padding:3px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;">${(f.estado||'pendiente').toUpperCase()}</span></td>
+                                    <td style="padding:12px 16px;font-size:0.85rem;color:#555;">${fecha}</td>
+                                    <td style="padding:12px 16px;font-size:0.85rem;color:#555;">${(f.creadoNombre||'').replace(/</g,'&lt;')}</td>
+                                    ${!bloqueado ? `<td style="padding:8px 16px;white-space:nowrap;">
+                                        ${f.estado==='pendiente'?`<button class="btn btn-sm btn-success" onclick="window.internamientoModule.marcarFacturaPagada('${fId}')" style="margin-right:4px;"><i class="fas fa-check"></i> Pagado</button>`:''}
+                                        ${f.estado!=='anulado'?`<button class="btn btn-sm" style="background:#c62828;color:white;" onclick="window.internamientoModule.anularFactura('${fId}')"><i class="fas fa-ban"></i></button>`:''}
+                                    </td>` : ''}
+                                </tr>`;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `}
+        `;
+    }
+
+    async agregarFactura() {
+        const resultadoCodigo = await this.verificarCodigoAsistente('agregar_factura');
+        if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
+            this.showNotification('Operacion cancelada', 'info');
+            return;
+        }
+        const html = `
+            <form id="formFactura" style="min-width:340px;">
+                <div class="form-group">
+                    <label>Descripcion del cobro *</label>
+                    <input type="text" id="factDescripcion" required placeholder="Ej: Medicamentos dia 3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                </div>
+                <div class="form-group">
+                    <label>Monto *</label>
+                    <input type="number" id="factMonto" required min="0" step="0.01" placeholder="0.00" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                </div>
+                <div class="form-group">
+                    <label>Estado</label>
+                    <select id="factEstado" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+                        <option value="pendiente">Pendiente</option>
+                        <option value="pagado">Pagado</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Observaciones</label>
+                    <textarea id="factObservaciones" rows="2" placeholder="Notas adicionales..." style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;"></textarea>
+                </div>
+                <div style="text-align:right;margin-top:18px;">
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="margin-left:8px;"><i class="fas fa-save"></i> Guardar</button>
+                </div>
+            </form>`;
+        const modal = this.createModal('Nueva Factura', html, 'fa-file-invoice-dollar');
+        document.body.appendChild(modal);
+        document.getElementById('formFactura').onsubmit = async (e) => {
+            e.preventDefault();
+            const desc = document.getElementById('factDescripcion').value.trim();
+            const monto = parseFloat(document.getElementById('factMonto').value) || 0;
+            const estado = document.getElementById('factEstado').value;
+            const obs = document.getElementById('factObservaciones').value.trim();
+            if (!desc) return;
+            const facturaId = 'factura_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            try {
+                await this.internamientosRef.child(this.currentInternamientoId).child(`facturas/${facturaId}`).set({
+                    facturaId, descripcion: desc, monto, estado, observaciones: obs,
+                    fechaCreacion: Date.now(),
+                    creadoPor: resultadoCodigo.assistantId || null,
+                    creadoNombre: resultadoCodigo.nombre
+                });
+                this.showNotification('Factura registrada por ' + resultadoCodigo.nombre, 'success');
+                document.querySelector('.modal-overlay')?.remove();
+                this.loadFacturasView();
+            } catch(err) {
+                this.showAlert('Error guardando factura: ' + err.message, 'Error', 'error');
+            }
+        };
+    }
+
+    // ================================================================
+    // PANTALLA DE MEDICACIONES PENDIENTES (TODOS LOS PACIENTES)
+    // ================================================================
+
+    showMedicacionesPendientesView() {
+        this.showInternamientoView('medicaciones_pendientes');
+        setTimeout(() => this.loadMedicacionesPendientesView(), 100);
+    }
+
+    loadMedicacionesPendientesView() {
+        const container = document.getElementById('internamiento-medicaciones_pendientes');
+        if (!container) return;
+
+        const ahora = Date.now();
+        const VENTANA_PRONTO_MS = 30 * 60 * 1000; // 30 minutos
+
+        // Recopilar todos los internamientos activos
+        const activos = [];
+        this.internamientos.forEach((internamiento) => {
+            if (['egresado', 'alta', 'defuncion'].includes(internamiento.estado?.actual)) return;
+            const medicamentos = Object.values(internamiento.planTerapeutico?.medicamentos || {})
+                .filter(m => m.estadoMedicamento === 'activo' && !m.puestoPorConsultaExterna && !m.dosisUnica);
+
+            medicamentos.forEach(med => {
+                const proxima = this._calcularProximaDosisTiempo(med);
+                if (proxima === null) return;
+                activos.push({
+                    internamiento,
+                    med,
+                    proxima,
+                    diferencia: proxima - ahora
+                });
+            });
+        });
+
+        // Ordenar: más urgentes primero
+        activos.sort((a, b) => a.diferencia - b.diferencia);
+
+        const vencidos = activos.filter(x => x.diferencia <= 0);
+        const proximo30 = activos.filter(x => x.diferencia > 0 && x.diferencia <= VENTANA_PRONTO_MS);
+        const resto = activos.filter(x => x.diferencia > VENTANA_PRONTO_MS);
+
+        const renderItem = (item, urgencia) => {
+            const { internamiento, med, diferencia } = item;
+            const nombre = (internamiento.referencias?.nombreMascota || 'Paciente').replace(/</g, '&lt;');
+            const expediente = internamiento.referencias?.expediente || '';
+            const medNombre = (med.nombreComercial || '').replace(/</g, '&lt;');
+            const dosis = this.formatDosisUnidad(med);
+            let tiempoStr = '';
+            let color = '';
+            if (diferencia <= 0) {
+                tiempoStr = 'AHORA';
+                color = '#c62828';
+            } else {
+                const min = Math.floor(diferencia / 60000);
+                tiempoStr = min < 60 ? `${min} min` : `${Math.floor(min/60)}h ${min%60}min`;
+                color = diferencia <= 10 * 60000 ? '#e65100' : '#1565c0';
+            }
+            return `
+            <div style="display:flex;align-items:center;gap:14px;padding:12px 16px;border-bottom:1px solid #eee;background:${diferencia <= 0 ? '#fff8f8' : 'white'};">
+                <div style="min-width:90px;text-align:center;">
+                    <div style="font-size:1.1rem;font-weight:700;color:${color};">${tiempoStr}</div>
+                    ${diferencia <= 0 ? '<div style="font-size:0.7rem;color:#c62828;text-transform:uppercase;font-weight:700;">VENCIDO</div>' : ''}
+                </div>
+                <div style="flex:1;">
+                    <div style="font-weight:700;color:#1a1a1a;">${nombre} <span style="font-size:0.8rem;color:#888;font-weight:normal;">${expediente}</span></div>
+                    <div style="font-size:0.9rem;color:#333;"><i class="fas fa-pills" style="color:#1565c0;margin-right:4px;"></i>${medNombre} · ${dosis} · ${med.viaAdministracion || '—'}</div>
+                </div>
+                <button class="btn btn-sm btn-success" onclick="window.internamientoModule._irAPaciente('${(internamiento.id || '').replace(/'/g,'\\\'')}')" style="white-space:nowrap;">
+                    <i class="fas fa-arrow-right"></i> Ir al paciente
+                </button>
+            </div>`;
+        };
+
+        const seccion = (titulo, items, color, icono) => {
+            if (items.length === 0) return '';
+            return `
+            <div style="margin-bottom:20px;">
+                <div style="background:${color};color:white;padding:10px 16px;border-radius:8px 8px 0 0;font-weight:700;font-size:0.95rem;">
+                    <i class="fas ${icono}" style="margin-right:8px;"></i>${titulo} (${items.length})
+                </div>
+                <div style="background:white;border:1px solid ${color};border-top:none;border-radius:0 0 8px 8px;overflow:hidden;">
+                    ${items.map(i => renderItem(i)).join('')}
+                </div>
+            </div>`;
+        };
+
+        container.innerHTML = `
+            <div class="section-header">
+                <h2><i class="fas fa-pills"></i> Medicaciones Pendientes — Todos los Pacientes</h2>
+                <div>
+                    <button class="btn btn-secondary" onclick="window.internamientoModule.loadMedicacionesPendientesView()" style="margin-right:10px;">
+                        <i class="fas fa-sync"></i> Actualizar
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.internamientoModule.showInternamientoView('lista')">
+                        <i class="fas fa-arrow-left"></i> Volver
+                    </button>
+                </div>
+            </div>
+
+            ${vencidos.length === 0 && proximo30.length === 0 && resto.length === 0 ? `
+                <div class="empty-state"><i class="fas fa-check-circle" style="color:#2e7d32;"></i><p>No hay medicaciones pendientes en este momento</p></div>
+            ` : `
+                ${seccion('VENCIDOS — Administrar ahora', vencidos, '#c62828', 'fa-exclamation-circle')}
+                ${seccion('Proximos 30 minutos', proximo30, '#e65100', 'fa-clock')}
+                ${seccion('Medicaciones programadas', resto, '#1565c0', 'fa-calendar-check')}
+            `}
+        `;
+
+        // Auto-refrescar cada 60 segundos mientras la vista esté activa
+        clearInterval(this._pendientesRefreshTimer);
+        this._pendientesRefreshTimer = setInterval(() => {
+            const c = document.getElementById('internamiento-medicaciones_pendientes');
+            if (!c || c.classList.contains('hidden')) {
+                clearInterval(this._pendientesRefreshTimer);
+                return;
+            }
+            this.loadMedicacionesPendientesView();
+        }, 60000);
+    }
+
+    _irAPaciente(internamientoId) {
+        if (!internamientoId) return;
+        this.currentInternamientoId = internamientoId;
+        this.showPanelPrincipal(internamientoId);
+    }
+
+    // ================================================================
+    // POP-OUTS DE MEDICACION (solo dentro del modulo)
+    // ================================================================
+
+    _estaEnModuloInternamiento() {
+        const section = document.getElementById('internamientosSection');
+        return section && !section.classList.contains('hidden') && section.style.display !== 'none';
+    }
+
+    _iniciarPopOutsMedicacion() {
+        if (this._popOutMedInterval) return; // ya iniciado
+        this._popOutMedNotificados = this._popOutMedNotificados || new Set();
+        this._popOutMedInterval = setInterval(() => this._verificarPopOutsMedicacion(), 30 * 60 * 1000); // c/30min
+        // Primera verificación al entrar al módulo
+        setTimeout(() => this._verificarPopOutsMedicacion(), 5000);
+    }
+
+    _detenerPopOutsMedicacion() {
+        clearInterval(this._popOutMedInterval);
+        this._popOutMedInterval = null;
+    }
+
+    _verificarPopOutsMedicacion() {
+        if (!this._estaEnModuloInternamiento()) return;
+
+        const ahora = Date.now();
+        const VENTANA_MS = 30 * 60 * 1000;
+        const notificados = this._popOutMedNotificados || (this._popOutMedNotificados = new Set());
+        const cola = [];
+
+        this.internamientos.forEach((internamiento, internamientoId) => {
+            if (['egresado', 'alta', 'defuncion'].includes(internamiento.estado?.actual)) return;
+            const medicamentos = Object.values(internamiento.planTerapeutico?.medicamentos || {})
+                .filter(m => m.estadoMedicamento === 'activo' && !m.puestoPorConsultaExterna && !m.dosisUnica);
+
+            medicamentos.forEach(med => {
+                const proxima = this._calcularProximaDosisTiempo(med);
+                if (proxima === null) return;
+                const diff = proxima - ahora;
+                if (diff > VENTANA_MS || diff < -60 * 60 * 1000) return;
+
+                const key = `${internamientoId}_${med.medicamentoId}_${Math.floor(proxima / (30 * 60 * 1000))}`; // ventana 30min
+                if (notificados.has(key)) return;
+                notificados.add(key);
+
+                if (notificados.size > 200) {
+                    const arr = [...notificados];
+                    notificados.clear();
+                    arr.slice(-100).forEach(k => notificados.add(k));
+                }
+
+                const nombre = (internamiento.referencias?.nombreMascota || 'Paciente').replace(/</g, '&lt;');
+                const medNombre = (med.nombreComercial || '').replace(/</g, '&lt;');
+                const dosis = this.formatDosisUnidad(med);
+                const esAhora = diff <= 0;
+                const minRestantes = Math.max(0, Math.floor(diff / 60000));
+                const msg = esAhora
+                    ? `<strong>${nombre}</strong>: ${medNombre} (${dosis}) — ADMINISTRAR AHORA`
+                    : `<strong>${nombre}</strong>: ${medNombre} (${dosis}) en ${minRestantes} min`;
+
+                // Urgentes primero en la cola
+                cola.push({ msg, internamientoId, esAhora, diff });
+            });
+        });
+
+        if (cola.length === 0) return;
+
+        // Ordenar: urgentes (diff <= 0) primero, luego por tiempo restante
+        cola.sort((a, b) => a.diff - b.diff);
+
+        // Mostrar uno a uno con 3 segundos de separación
+        cola.forEach((item, idx) => {
+            setTimeout(() => {
+                if (!this._estaEnModuloInternamiento()) return;
+                this._mostrarPopOutMedicacion(item.msg, item.internamientoId, item.esAhora);
+            }, idx * 3000);
+        });
+    }
+
+    _mostrarPopOutMedicacion(mensaje, internamientoId, urgente = false) {
+        if (!this._estaEnModuloInternamiento()) return;
+
+        // Si ya hay un toast visible, esperar a que haya espacio
+        const toastsActivos = document.querySelectorAll('.med-popout-toast');
+        const MAX_VISIBLES = 1; // solo uno a la vez
+        if (toastsActivos.length >= MAX_VISIBLES) {
+            // Encolar para mostrar cuando se libere espacio
+            if (!this._popOutPendingQueue) this._popOutPendingQueue = [];
+            this._popOutPendingQueue.push({ mensaje, internamientoId, urgente });
+            return;
+        }
+
+        const toast = document.createElement('div');
+        const bgColor = urgente
+            ? 'linear-gradient(135deg,#c62828,#b71c1c)'
+            : 'linear-gradient(135deg,#e65100,#bf360c)';
+        toast.style.cssText = `
+            position:fixed;bottom:20px;right:20px;
+            min-width:320px;max-width:420px;padding:14px 18px;border-radius:10px;
+            box-shadow:0 6px 24px rgba(0,0,0,0.35);z-index:10100;display:flex;align-items:center;
+            gap:12px;font-family:'Segoe UI',sans-serif;font-size:0.9rem;color:white;
+            background:${bgColor};animation:slideInRight 0.45s cubic-bezier(0.34,1.56,0.64,1);`;
+        toast.className = 'med-popout-toast';
+
+        const idSafe = (internamientoId || '').replace(/'/g, "\\'");
+        toast.innerHTML = `
+            <i class="fas fa-pills" style="font-size:1.4rem;flex-shrink:0;${urgente ? 'animation:pulse 1s infinite;' : ''}"></i>
+            <div style="flex:1;line-height:1.4;">${mensaje}</div>
+            <div style="display:flex;flex-direction:column;gap:4px;flex-shrink:0;">
+                <button onclick="window.internamientoModule._irAPaciente('${idSafe}');this.closest('.med-popout-toast').remove();window.internamientoModule._siguientePopOut();"
+                    style="background:rgba(255,255,255,0.25);border:1px solid rgba(255,255,255,0.5);color:white;border-radius:5px;padding:5px 10px;cursor:pointer;font-size:0.82rem;font-weight:700;">
+                    Ir
+                </button>
+                <button onclick="this.closest('.med-popout-toast').remove();window.internamientoModule._siguientePopOut();"
+                    style="background:transparent;border:none;color:rgba(255,255,255,0.75);cursor:pointer;font-size:1rem;line-height:1;">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>`;
+        document.body.appendChild(toast);
+
+        // Auto-cerrar en 8 segundos y mostrar el siguiente
+        const AUTO_CLOSE_MS = 8000;
+        const timer = setTimeout(() => {
+            if (toast.parentNode) {
+                toast.style.animation = 'slideOutRight 0.35s ease forwards';
+                setTimeout(() => {
+                    toast.remove();
+                    this._siguientePopOut();
+                }, 350);
+            }
+        }, AUTO_CLOSE_MS);
+
+        toast._autoCloseTimer = timer;
+    }
+
+    /** Muestra el siguiente pop-out de la cola pendiente. */
+    _siguientePopOut() {
+        if (!this._popOutPendingQueue || this._popOutPendingQueue.length === 0) return;
+        // Pequeña pausa para que la animación de salida termine bien
+        setTimeout(() => {
+            const next = this._popOutPendingQueue.shift();
+            if (next) this._mostrarPopOutMedicacion(next.mensaje, next.internamientoId, next.urgente);
+        }, 400);
+    }
+
+    _calcularProximaDosisTiempo(medicamento) {
+        if (!medicamento?.frecuenciaHoras && !(medicamento?.horariosCalculados?.length) && !(medicamento?.horariosExactos?.length)) return null;
+        const horarios = this.obtenerHorariosMedicamento(medicamento);
+        if (horarios.length === 0 && !medicamento.frecuenciaHoras) return null;
+
+        const admins = Object.values(medicamento.administraciones || {})
+            .filter(a => a.estado === 'administrado')
+            .sort((a, b) => (b.fechaHoraReal || 0) - (a.fechaHoraReal || 0));
+        const ultimaTs = admins[0]?.fechaHoraReal || null;
+        const ahora = Date.now();
+
+        if (medicamento.frecuenciaHoras && medicamento.frecuenciaHoras > 0) {
+            if (!ultimaTs) return ahora; // nunca administrado = ahora
+            const proxima = ultimaTs + (medicamento.frecuenciaHoras * 3600000);
+            return proxima;
+        }
+
+        // Horarios exactos: buscar próximo
+        if (horarios.length > 0) {
+            const ahoraDate = new Date(ahora);
+            const ahoraMin = ahoraDate.getHours() * 60 + ahoraDate.getMinutes();
+            for (const h of horarios) {
+                const [hh, mm] = h.split(':').map(Number);
+                const slotMin = hh * 60 + mm;
+                if (slotMin >= ahoraMin) {
+                    const prox = new Date(ahoraDate);
+                    prox.setHours(hh, mm, 0, 0);
+                    return prox.getTime();
+                }
+            }
+            // Próximo es mañana (primer horario)
+            const [hh, mm] = horarios[0].split(':').map(Number);
+            const manana = new Date(ahoraDate);
+            manana.setDate(manana.getDate() + 1);
+            manana.setHours(hh, mm, 0, 0);
+            return manana.getTime();
+        }
+
+        return null;
+    }
+
+    async marcarFacturaPagada(facturaId) {
+        const ok = await this.showConfirm('Marcar esta factura como pagada?', 'Confirmar pago', { confirmText: 'Si, pagado', cancelText: 'Cancelar', icon: 'fa-check-circle', iconColor: '#2e7d32' });
+        if (!ok) return;
+        const resultadoCodigo = await this.verificarCodigoAsistente('factura_pago');
+        if (!resultadoCodigo.valido || resultadoCodigo.cancelado) return;
+        try {
+            await this.internamientosRef.child(this.currentInternamientoId).child(`facturas/${facturaId}`).update({
+                estado: 'pagado', fechaPago: Date.now(), pagadoPorNombre: resultadoCodigo.nombre
+            });
+            this.showNotification('Factura marcada como pagada', 'success');
+            this.loadFacturasView();
+        } catch(e) { this.showAlert('Error: ' + e.message, 'Error', 'error'); }
+    }
+
+    async anularFactura(facturaId) {
+        const ok = await this.showConfirm('Anular esta factura?', 'Anular Factura', { confirmText: 'Anular', cancelText: 'Cancelar', icon: 'fa-ban', iconColor: '#c62828' });
+        if (!ok) return;
+        const resultadoCodigo = await this.verificarCodigoAsistente('anular_factura');
+        if (!resultadoCodigo.valido || resultadoCodigo.cancelado) return;
+        try {
+            await this.internamientosRef.child(this.currentInternamientoId).child(`facturas/${facturaId}`).update({
+                estado: 'anulado', fechaAnulacion: Date.now(), anuladoPorNombre: resultadoCodigo.nombre
+            });
+            this.showNotification('Factura anulada', 'success');
+            this.loadFacturasView();
+        } catch(e) { this.showAlert('Error: ' + e.message, 'Error', 'error'); }
+    }
+
+    // ================================================================
+    // EVOLUCIÃ“N (PLACEHOLDER)
     // ================================================================
     
     showEvolucionView() {
@@ -6671,7 +7328,7 @@ class InternamientoModule {
         const controles = internamiento?.datosIngreso?.controlesRapidos || {};
         const imagenologiaRegistros = internamiento?.imagenologia && typeof internamiento.imagenologia === 'object' ? internamiento.imagenologia : {};
         const listaRegistros = Object.entries(imagenologiaRegistros).sort((a, b) => (b[1].fechaRegistro || 0) - (a[1].fechaRegistro || 0));
-        const esc = (s) => (s != null && s !== '' ? String(s) : '—').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+        const esc = (s) => (s != null && s !== '' ? String(s) : '"”').replace(/</g, '&lt;').replace(/\n/g, '<br>');
         const rayosX = !!controles.rayosX;
         const ultrasonido = !!controles.ultrasonido;
         const doctorRayosX = esc(controles.doctorRayosX);
@@ -6680,7 +7337,7 @@ class InternamientoModule {
         const reporteUltrasonido = esc(controles.reporteUltrasonido);
         const htmlRegistros = listaRegistros.length > 0 ? listaRegistros.map(([regId, reg]) => {
             const tipoLabel = reg.tipo === 'rayosx' ? 'Rayos X' : 'Ultrasonido';
-            const fechaStr = reg.fechaRegistro ? (() => { const d = new Date(reg.fechaRegistro); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })() : '—';
+            const fechaStr = reg.fechaRegistro ? (() => { const d = new Date(reg.fechaRegistro); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '"”';
             return `
                 <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; padding: 16px 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
@@ -6715,7 +7372,7 @@ class InternamientoModule {
                         <div style="display: grid; gap: 12px;">
                             <div><span style="color: #64748b;">Realizado:</span> <strong>${rayosX ? 'Sí' : 'No'}</strong></div>
                             ${rayosX ? `<div><span style="color: #64748b;">Doctor/Técnico:</span> <strong>${doctorRayosX}</strong></div>` : ''}
-                            ${rayosX && reporteRayosX !== '—' ? `<div><span style="color: #64748b;">Reporte:</span> ${reporteRayosX}</div>` : ''}
+                            ${rayosX && reporteRayosX !== '"”' ? `<div><span style="color: #64748b;">Reporte:</span> ${reporteRayosX}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -6727,7 +7384,7 @@ class InternamientoModule {
                         <div style="display: grid; gap: 12px;">
                             <div><span style="color: #64748b;">Realizado:</span> <strong>${ultrasonido ? 'Sí' : 'No'}</strong></div>
                             ${ultrasonido ? `<div><span style="color: #64748b;">Doctor:</span> <strong>${doctorUltrasonido}</strong></div>` : ''}
-                            ${ultrasonido && reporteUltrasonido !== '—' ? `<div><span style="color: #64748b;">Reporte:</span> ${reporteUltrasonido}</div>` : ''}
+                            ${ultrasonido && reporteUltrasonido !== '"”' ? `<div><span style="color: #64748b;">Reporte:</span> ${reporteUltrasonido}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -6939,7 +7596,7 @@ class InternamientoModule {
                     const label = `Día ${data.numero != null ? data.numero : idx + 1} (${numTomas}/${MIN_TOMAS_POR_DIA})`;
                     return `
                     <button class="tab-btn rer-tab ${idx === 0 ? 'active' : ''}" data-rer-dia="${diaKey}" onclick="window.internamientoModule.showTabRer('${diaKey}')" title="${completo ? 'Día completo' : `Faltan ${MIN_TOMAS_POR_DIA - numTomas} tomas`}">
-                        ${label}${completo ? ' ✓' : ''}
+                        ${label}${completo ? ' âœ“' : ''}
                     </button>
                 `;
                 }).join('')}
@@ -6957,7 +7614,7 @@ class InternamientoModule {
                     return oa !== ob ? oa - ob : (a.fechaRegistro || 0) - (b.fechaRegistro || 0);
                 });
                 const isActive = idx === 0;
-                const fechaHoraStr = data.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })(data.fechaHora) : '';
+                const fechaHoraStr = data.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })(data.fechaHora) : '';
                 const obsStr = (data.observaciones || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
                 const preescritoPorStr = (data.preescritoPor || '').replace(/</g, '&lt;');
                 const infoDiaHTML = (fechaHoraStr || obsStr || preescritoPorStr) ? `
@@ -6983,9 +7640,9 @@ class InternamientoModule {
                             ${tomasList.length > 0
                                 ? `<div style="display: flex; flex-direction: column; gap: 10px;">${tomasList.map(t => {
                                     const horaLabels = { '8am': '8:00 AM', '12md': '12:00 MD', '4pm': '4:00 PM', '8pm': '8:00 PM', '12mn': '12:00 MN' };
-                                    const hora = (t.hora ? (horaLabels[t.hora] || t.hora) : '—').replace(/</g, '&lt;');
-                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '—';
-                                    const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '—';
+                                    const hora = (t.hora ? (horaLabels[t.hora] || t.hora) : '"”').replace(/</g, '&lt;');
+                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '"”';
+                                    const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '"”';
                                     const registradoPor = (t.registradoPorNombre || '').replace(/</g, '&lt;');
                                     return `
                                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid var(--internamiento-primary); border-radius: 8px; padding: 12px; background: #f8fafc;">
@@ -7062,7 +7719,7 @@ class InternamientoModule {
         const rerDosisSectionHTML = `
             <div id="rer-dosis-section" style="margin-top: 20px; margin-bottom: 24px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; padding: 16px 20px; box-shadow: 0 4px 14px rgba(217,119,6,0.4); border: none;">
                 <h3 style="margin: 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);"><i class="fas fa-syringe"></i> RER dosis</h3>
-                ${hasDias ? `<p style="margin: 10px 0 0 0; font-size: 1.25rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">(30 × peso actual) + 70 = <strong>${ml(rerDosisResultado)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 1 (25%): <strong>${ml(fase1Resultado)}</strong> · Dosis por toma: <strong>${ml(fase1PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 2 (50%): <strong>${ml(fase2Resultado)}</strong> · Dosis por toma: <strong>${ml(fase2PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 3 (75%): <strong>${ml(fase3Resultado)}</strong> · Dosis por toma: <strong>${ml(fase3PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 4 (100%): <strong>${ml(fase4Resultado)}</strong> · Dosis por toma: <strong>${ml(fase4PorToma)}</strong></p>${anunciosHTML}` : '<p style="margin: 10px 0 0 0; font-size: 1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Sin días agregados</p>'}
+                ${hasDias ? `<p style="margin: 10px 0 0 0; font-size: 1.25rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">(30 Ã— peso actual) + 70 = <strong>${ml(rerDosisResultado)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 1 (25%): <strong>${ml(fase1Resultado)}</strong> · Dosis por toma: <strong>${ml(fase1PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 2 (50%): <strong>${ml(fase2Resultado)}</strong> · Dosis por toma: <strong>${ml(fase2PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 3 (75%): <strong>${ml(fase3Resultado)}</strong> · Dosis por toma: <strong>${ml(fase3PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 4 (100%): <strong>${ml(fase4Resultado)}</strong> · Dosis por toma: <strong>${ml(fase4PorToma)}</strong></p>${anunciosHTML}` : '<p style="margin: 10px 0 0 0; font-size: 1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Sin días agregados</p>'}
             </div>
         `;
 
@@ -7419,7 +8076,7 @@ class InternamientoModule {
                     const label = `Día ${data.numero != null ? data.numero : idx + 1} (${numTomas}/${MIN_TOMAS_POR_DIA})`;
                     return `
                     <button class="tab-btn aa-tab ${idx === 0 ? 'active' : ''}" data-aa-dia="${diaKey}" onclick="window.internamientoModule.showTabAlimentacionAsistida('${diaKey}')" title="${completo ? 'Día completo' : `Faltan ${MIN_TOMAS_POR_DIA - numTomas} tomas`}">
-                        ${label}${completo ? ' ✓' : ''}
+                        ${label}${completo ? ' âœ“' : ''}
                     </button>
                 `;
                 }).join('')}
@@ -7432,7 +8089,7 @@ class InternamientoModule {
                 const tomas = data.tomas && typeof data.tomas === 'object' ? data.tomas : {};
                 const tomasList = Object.values(tomas).sort((a, b) => (a.horaRegistro || 0) - (b.horaRegistro || 0));
                 const isActive = idx === 0;
-                const fechaHoraStr = data.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })(data.fechaHora) : '';
+                const fechaHoraStr = data.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })(data.fechaHora) : '';
                 const dosisStr = (data.dosis || '').replace(/</g, '&lt;');
                 const obsStr = (data.observaciones || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
                 const freqTipo = data.frecuenciaTipo === 'minutos' ? 'minutos' : (data.frecuenciaTipo === 'horas' ? 'horas' : '');
@@ -7463,9 +8120,9 @@ class InternamientoModule {
                         <div style="padding: 20px;">
                             ${tomasList.length > 0
                                 ? `<div style="display: flex; flex-direction: column; gap: 10px;">${tomasList.map(t => {
-                                    const horaReg = t.horaRegistro ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { timeStyle: 'short' }); })(t.horaRegistro) : '—';
-                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '—';
-                                    const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '—';
+                                    const horaReg = t.horaRegistro ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { timeStyle: 'short' }); })(t.horaRegistro) : '"”';
+                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '"”';
+                                    const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '"”';
                                     const registradoPor = (t.registradoPorNombre || '').replace(/</g, '&lt;');
                                     return `
                                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid #2e7d32; border-radius: 8px; padding: 12px; background: #f8fafc;">
@@ -7793,9 +8450,9 @@ class InternamientoModule {
                 </div>
                 <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
                     ${registros.map((r, idx) => {
-                        const fechaHora = r.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })(r.fechaHora) : '—';
-                        const tipo = (r.tipo || '—').replace(/</g, '&lt;');
-                        const volumen = r.volumen != null && r.volumen !== '' ? r.volumen + ' ml' : '—';
+                        const fechaHora = r.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })(r.fechaHora) : '"”';
+                        const tipo = (r.tipo || '"”').replace(/</g, '&lt;');
+                        const volumen = r.volumen != null && r.volumen !== '' ? r.volumen + ' ml' : '"”';
                         const obs = (r.observaciones || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
                         const registradoPor = (r.registradoPorNombre || '').replace(/</g, '&lt;');
                         return `
@@ -7897,7 +8554,7 @@ class InternamientoModule {
                 const nuevo = {
                     id: registroId,
                     fechaHora: new Date().toISOString(),
-                    tipo: tipo || '—',
+                    tipo: tipo || '"”',
                     volumen: volumen ? parseInt(volumen, 10) : null,
                     observaciones: observaciones || '',
                     registradoPorNombre: this._hidratacionRegistradoPor || ''
@@ -8265,8 +8922,8 @@ class InternamientoModule {
                 </div>
                 <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
                     ${mediciones.map((r) => {
-                        const fechaHora = r.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' }); })(r.fechaHora) : '—';
-                        const valor = r.valor != null && r.valor !== '' ? r.valor + ' mg/dL' : '—';
+                        const fechaHora = r.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })(r.fechaHora) : '"”';
+                        const valor = r.valor != null && r.valor !== '' ? r.valor + ' mg/dL' : '"”';
                         const obs = (r.observaciones || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
                         const insulina = r.insulinaAplicada && (r.cantidadInsulina != null || r.tipoInsulina) ? (r.cantidadInsulina != null ? r.cantidadInsulina + ' UI' : '') + (r.tipoInsulina ? (r.cantidadInsulina != null ? ' ' : '') + (r.tipoInsulina || '').replace(/</g, '&lt;') : '') : '';
                         const registradoPor = (r.registradoPorNombre || '').replace(/</g, '&lt;');
@@ -8779,7 +9436,7 @@ class InternamientoModule {
                 </div>
                 <div style="padding: 20px;">
                     <div style="font-size: 1rem; color: #334155;">
-                        <strong>Clasificación registrada:</strong> ${(reticulocitosTexto || '—').replace(/</g, '&lt;')}
+                        <strong>Clasificación registrada:</strong> ${(reticulocitosTexto || '"”').replace(/</g, '&lt;')}
                     </div>
                     ${!reticulocitosDesdeIngreso && reticulocitosTiene ? `
                     <div style="margin-top: 12px; padding: 12px 14px; background: #f1f5f9; border: 1px solid #94a3b8; border-left: 4px solid #64748b; border-radius: 8px; color: #475569; font-size: 0.9rem;">
@@ -8818,11 +9475,11 @@ class InternamientoModule {
         `;
 
         const formatFechaHora = (ts) => {
-            if (ts == null) return '—';
+            if (ts == null) return '"”';
             const d = new Date(ts);
-            return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+            return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true });
         };
-        const fmt = (v) => (v != null && v !== '') ? v : '—';
+        const fmt = (v) => (v != null && v !== '') ? v : '"”';
 
         // Panel 1 (anclado): solo Registro de transfusiones
         const registroHTML = transfusionesList.length > 0
@@ -8830,7 +9487,7 @@ class InternamientoModule {
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 ${transfusionesList.map(t => {
                     const tipoTransfusion = t.tipoTransfusion || '';
-                    const tipoIcono = tipoTransfusion === 'plasma' ? '💧' : tipoTransfusion === 'sangre' ? '🩸' : '';
+                    const tipoIcono = tipoTransfusion === 'plasma' ? 'ðŸ’§' : tipoTransfusion === 'sangre' ? 'ðŸ©¸' : '';
                     const tipoTexto = tipoTransfusion === 'plasma' ? 'Plasma' : tipoTransfusion === 'sangre' ? 'Sangre Completa' : '';
                     return `
                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid #c62828; border-radius: 10px; padding: 14px; background: #fff5f5;">
@@ -8838,9 +9495,9 @@ class InternamientoModule {
                             <i class="fas fa-clock"></i> ${formatFechaHora(t.fechaHoraInicio || t.fecha)}
                             ${tipoIcono && tipoTexto ? `<span style="margin-left: auto; font-size: 0.9rem; color: #c62828; font-weight: 500;">${tipoIcono} ${tipoTexto}</span>` : ''}
                         </div>
-                        ${t.receptor ? `<div style="font-size: 0.9rem; color: #555;">Receptor: ${t.receptor.peso || '—'} kg, HT ${t.receptor.htActual || '—'} → ${t.receptor.htDeseado || '—'}%</div>` : ''}
+                        ${t.receptor ? `<div style="font-size: 0.9rem; color: #555;">Receptor: ${t.receptor.peso || '"”'} kg, HT ${t.receptor.htActual || '"”'} â†’ ${t.receptor.htDeseado || '"”'}%</div>` : ''}
                         ${t.calculo?.volumenCalculado != null ? `<div style="font-size: 0.9rem; color: #c62828;"><strong>Volumen:</strong> ${t.calculo.volumenCalculado} ml</div>` : ''}
-                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(t.registradoNombre || t.responsableNombre || '—').replace(/</g, '&lt;')}</div>
+                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(t.registradoNombre || t.responsableNombre || '"”').replace(/</g, '&lt;')}</div>
                     </div>
                 `;
                 }).join('')}
@@ -8859,7 +9516,7 @@ class InternamientoModule {
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 ${parametrosList.map(p => `
                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid #c2185b; border-radius: 10px; padding: 14px; background: #fdf2f8;">
-                        <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-calendar-day"></i> ${(p.dia || '—').replace(/</g, '&lt;')} · ${(p.hora || '—').replace(/</g, '&lt;')}</div>
+                        <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-calendar-day"></i> ${(p.dia || '"”').replace(/</g, '&lt;')} · ${(p.hora || '"”').replace(/</g, '&lt;')}</div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; font-size: 0.9rem; color: #555;">
                             <span><strong>Temp:</strong> ${fmt(p.temp)} °C</span>
                             <span><strong>FC:</strong> ${fmt(p.fc)}</span>
@@ -8868,7 +9525,7 @@ class InternamientoModule {
                             <span><strong>PAM:</strong> ${fmt(p.pam)}</span>
                             ${p.anafilaxis ? '<span style="color:#c2185b;"><strong>Anafilaxis: Sí</strong></span>' : ''}
                         </div>
-                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(p.registradoNombre || '—').replace(/</g, '&lt;')}</div>
+                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(p.registradoNombre || '"”').replace(/</g, '&lt;')}</div>
                     </div>
                 `).join('')}
             </div>
@@ -8886,11 +9543,11 @@ class InternamientoModule {
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 ${bolosList.map(b => `
                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid #722f37; border-radius: 10px; padding: 14px; background: #fdf8f8;">
-                        <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-clock"></i> ${formatFechaHora(b.fechaHoraInicio)}${b.fechaHoraFin ? ' → ' + formatFechaHora(b.fechaHoraFin) : ''}</div>
+                        <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-clock"></i> ${formatFechaHora(b.fechaHoraInicio)}${b.fechaHoraFin ? ' â†’ ' + formatFechaHora(b.fechaHoraFin) : ''}</div>
                         ${b.velocidadInfusion != null ? `<div style="font-size: 0.9rem; color: #555;"><strong>Velocidad:</strong> ${b.velocidadInfusion} ml/h</div>` : ''}
                         ${b.reaccionAdversa ? `<div style="font-size: 0.9rem; color: #c62828;"><strong>Reacción adversa:</strong> ${(b.descripcionReaccion || 'Sí').replace(/</g, '&lt;')}</div>` : ''}
                         ${b.observaciones ? `<div style="font-size: 0.9rem; color: #555; margin-top: 4px;">${(b.observaciones || '').replace(/</g, '&lt;')}</div>` : ''}
-                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Responsable: ${(b.responsableNombre || '—').replace(/</g, '&lt;')}</div>
+                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Responsable: ${(b.responsableNombre || '"”').replace(/</g, '&lt;')}</div>
                     </div>
                 `).join('')}
             </div>
@@ -9027,9 +9684,9 @@ class InternamientoModule {
         const defuncionesList = Object.values(defuncionesObj).sort((a, b) => (b.fechaHoraTs || 0) - (a.fechaHoraTs || 0));
 
         const formatFechaHora = (val) => {
-            if (val == null) return '—';
+            if (val == null) return '"”';
             const d = new Date(typeof val === 'number' ? val : val);
-            return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+            return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true });
         };
 
         const listHTML = defuncionesList.length > 0
@@ -9040,10 +9697,10 @@ class InternamientoModule {
                     ${defuncionesList.map(d => `
                         <div style="border: 1px solid #e2e8f0; border-left: 4px solid #5c5c5c; border-radius: 10px; padding: 14px; background: #f8fafc;">
                             <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-clock"></i> Hora de muerte: ${formatFechaHora(d.fechaHoraTs || d.fechaHora)}</div>
-                            ${d.turno ? `<div style="color: #475569; font-size: 0.9rem; margin-bottom: 4px;"><strong>Turno:</strong> ${(d.turno || '').replace(/</g, '&lt;')}${d.responsableTurno ? ' — ' + (d.responsableTurno || '').replace(/</g, '&lt;') : ''}</div>` : ''}
+                            ${d.turno ? `<div style="color: #475569; font-size: 0.9rem; margin-bottom: 4px;"><strong>Turno:</strong> ${(d.turno || '').replace(/</g, '&lt;')}${d.responsableTurno ? ' "” ' + (d.responsableTurno || '').replace(/</g, '&lt;') : ''}</div>` : ''}
                             ${(d.motivoFallecimiento || d.causa) ? `<div style="color: #334155; font-size: 0.95rem; margin-bottom: 4px; white-space: pre-wrap;"><strong>Motivo de fallecimiento:</strong><br>${(d.motivoFallecimiento || d.causa || '').replace(/</g, '&lt;')}</div>` : ''}
                             ${d.observaciones ? `<div style="color: #64748b; font-size: 0.9rem; white-space: pre-wrap;">${(d.observaciones || '').replace(/</g, '&lt;')}</div>` : ''}
-                            <div style="margin-top: 8px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(d.registradoNombre || '—').replace(/</g, '&lt;')}</div>
+                            <div style="margin-top: 8px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(d.registradoNombre || '"”').replace(/</g, '&lt;')}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -9295,12 +9952,12 @@ class InternamientoModule {
         const cirugiasList = Object.values(cirugiasObj).sort((a, b) => (a.fechaHoraTs || 0) - (b.fechaHoraTs || 0));
 
         const formatFechaHora = (val) => {
-            if (!val) return '—';
+            if (!val) return '"”';
             const d = new Date(val);
-            return isNaN(d.getTime()) ? val : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short' });
+            return isNaN(d.getTime()) ? val : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true });
         };
         const formatHora12 = (hhmm) => {
-            if (!hhmm || !hhmm.match(/^\d{1,2}:\d{2}$/)) return hhmm || '—';
+            if (!hhmm || !hhmm.match(/^\d{1,2}:\d{2}$/)) return hhmm || '"”';
             if (typeof window.formatTime12Hour === 'function') return window.formatTime12Hour(hhmm);
             return hhmm;
         };
@@ -9317,8 +9974,8 @@ class InternamientoModule {
                                     <strong style="color: #795548;"><i class="fas fa-clock"></i> ${formatFechaHora(c.fechaHora)}</strong>
                                     ${c.horaSalida ? `<div style="margin-top: 4px; color: #64748b; font-size: 0.85rem;"><i class="fas fa-sign-out-alt"></i> Salida: ${formatHora12(c.horaSalida)}</div>` : '<div style="margin-top: 4px; color: #b45309; font-size: 0.85rem;"><i class="fas fa-exclamation-triangle"></i> Aún no se ha registrado la salida</div>'}
                                     ${c.recomendacionesSalida ? `<div style="margin-top: 6px; color: #475569; font-size: 0.9rem;"><strong>Recomendaciones al salir:</strong> ${(c.recomendacionesSalida || '').replace(/</g, '&lt;')}</div>` : ''}
-                                    <div style="margin-top: 6px; color: #475569; font-size: 0.9rem;">${(c.motivo || '—').replace(/</g, '&lt;')}</div>
-                                    <div style="margin-top: 4px; color: #64748b; font-size: 0.85rem;"><i class="fas fa-user-md"></i> ${(c.doctor || '—').replace(/</g, '&lt;')}</div>
+                                    <div style="margin-top: 6px; color: #475569; font-size: 0.9rem;">${(c.motivo || '"”').replace(/</g, '&lt;')}</div>
+                                    <div style="margin-top: 4px; color: #64748b; font-size: 0.85rem;"><i class="fas fa-user-md"></i> ${(c.doctor || '"”').replace(/</g, '&lt;')}</div>
                                     ${c.creadoNombre ? `<div style="margin-top: 4px; color: #64748b; font-size: 0.85rem;"><i class="fas fa-user-edit"></i> Registrado por: ${(c.creadoNombre || '').replace(/</g, '&lt;')}</div>` : ''}
                                     ${c.cirugiaAgendadaConDoctor ? '<div style="margin-top: 6px;"><span style="display: inline-flex; align-items: center; gap: 4px; background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;"><i class="fas fa-calendar-check"></i> Agendada con el doctor</span></div>' : ''}
                                 </div>
@@ -9406,7 +10063,7 @@ class InternamientoModule {
                         <label>Hora de salida</label>
                         <div style="display: flex; align-items: center; gap: 6px;">
                             <select id="cirugiaSalidaH" title="Hora (1-12) o en blanco" style="min-width: 52px; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd;">
-                                <option value="">—</option>
+                                <option value="">"”</option>
                                 ${Array.from({ length: 12 }, (_, i) => i + 1).map(n => `<option value="${n}">${n}</option>`).join('')}
                             </select>
                             <span style="font-weight: bold;">:</span>
@@ -9552,9 +10209,9 @@ class InternamientoModule {
         if (historial.length > 0) {
             historial.forEach((entry) => {
                 const fecha = entry.fecha || entry.timestamp;
-                const fechaStr = fecha ? new Date(fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—';
-                const nombre = (entry.editadoNombre || entry.usuarioNombre || '—').replace(/</g, '&lt;');
-                const motivo = (entry.motivoCambio || '—').replace(/</g, '&lt;');
+                const fechaStr = fecha ? new Date(fecha).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '"”';
+                const nombre = (entry.editadoNombre || entry.usuarioNombre || '"”').replace(/</g, '&lt;');
+                const motivo = (entry.motivoCambio || '"”').replace(/</g, '&lt;');
                 filas.push(`
                     <tr>
                         <td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}</td>
@@ -9564,12 +10221,12 @@ class InternamientoModule {
                 `);
             });
         } else if (c.editadoNombre || c.motivoUltimoCambio) {
-            const fechaStr = c.fechaUltimaEdicion ? new Date(c.fechaUltimaEdicion).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—';
+            const fechaStr = c.fechaUltimaEdicion ? new Date(c.fechaUltimaEdicion).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '"”';
             filas.push(`
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(c.editadoNombre || '—').replace(/</g, '&lt;')}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(c.motivoUltimoCambio || '—').replace(/</g, '&lt;')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(c.editadoNombre || '"”').replace(/</g, '&lt;')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(c.motivoUltimoCambio || '"”').replace(/</g, '&lt;')}</td>
                 </tr>
             `);
         }
@@ -9696,7 +10353,7 @@ class InternamientoModule {
                         <label>Hora de salida</label>
                         <div style="display: flex; align-items: center; gap: 6px;">
                             <select id="cirugiaSalidaH" title="Hora (1-12) o en blanco" style="min-width: 52px; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd;">
-                                <option value="" ${!c.horaSalida ? 'selected' : ''}>—</option>
+                                <option value="" ${!c.horaSalida ? 'selected' : ''}>"”</option>
                                 ${Array.from({ length: 12 }, (_, i) => i + 1).map(n => `<option value="${n}" ${c.horaSalida && n === salida12.h ? 'selected' : ''}>${n}</option>`).join('')}
                             </select>
                             <span style="font-weight: bold;">:</span>
@@ -9731,7 +10388,7 @@ class InternamientoModule {
         e.preventDefault();
         const pending = this._edicionCirugiaPending;
         if (!pending || pending.cirugiaId === undefined) {
-            this.showAlert('Debe verificar su código e indicar el motivo de edición antes de guardar. Cierre y pulse de nuevo "Editar" → "Realizar nueva edición".', 'Verificación requerida', 'warning');
+            this.showAlert('Debe verificar su código e indicar el motivo de edición antes de guardar. Cierre y pulse de nuevo "Editar" â†’ "Realizar nueva edición".', 'Verificación requerida', 'warning');
             return;
         }
         const cirugiaId = pending.cirugiaId;
@@ -9916,7 +10573,7 @@ class InternamientoModule {
     }
 
     // ================================================================
-    // REVISAR / EDITAR INFORMACIÓN DE INGRESO
+    // REVISAR / EDITAR INFORMACIÃ“N DE INGRESO
     // ================================================================
 
     async showRevisarDatosIngreso() {
@@ -9942,7 +10599,7 @@ class InternamientoModule {
             this.showAlert('Internamiento no encontrado', 'Error', 'error');
             return;
         }
-        const v = (s) => (s == null || s === '') ? '—' : String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const v = (s) => (s == null || s === '') ? '"”' : String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const ref = internamiento.referencias || {};
         const datosIngreso = internamiento.datosIngreso || {};
         const controles = datosIngreso.controlesRapidos || {};
@@ -9953,7 +10610,7 @@ class InternamientoModule {
         const procedimientos = internamiento.procedimientos && typeof internamiento.procedimientos === 'object' ? Object.values(internamiento.procedimientos) : [];
         const datosProp = this.getDatosPropietario(internamiento);
         const fechaIngresoTs = datosIngreso.fechaIngreso;
-        const fechaIngresoStr = fechaIngresoTs ? (() => { const d = new Date(fechaIngresoTs); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '—';
+        const fechaIngresoStr = fechaIngresoTs ? (() => { const d = new Date(fechaIngresoTs); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '"”';
 
         const htmlProp = `
             <div class="ingreso-detalle-section">
@@ -9972,7 +10629,7 @@ class InternamientoModule {
             </div>`;
         const edicionConsultaExterna = !!datosIngreso.ultimaEdicionPorConsultaExterna;
         const fechaEdicionExt = datosIngreso.fechaEdicionConsultaExterna ? (() => { const d = new Date(datosIngreso.fechaEdicionConsultaExterna); return isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '';
-        const quienEdito = (datosIngreso.edicionConsultaExternaPorNombre || '').trim() || '—';
+        const quienEdito = (datosIngreso.edicionConsultaExternaPorNombre || '').trim() || '"”';
         const htmlConsultaExterna = edicionConsultaExterna ? `
             <div class="ingreso-detalle-section" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
                 <h4 class="ingreso-detalle-section-title" style="color: #92400e;"><i class="fas fa-external-link-alt"></i> Cambios realizados por consulta externa</h4>
@@ -9993,8 +10650,8 @@ class InternamientoModule {
                 <div class="ingreso-detalle-fila" style="margin-top: 14px;"><span class="label">Diagnóstico presuntivo</span><span class="value">${v(datosIngreso.diagnosticoPresuntivo)}</span></div>
                 <div style="font-size: 0.85rem; color: var(--internamiento-text-secondary); margin: 14px 0 6px 0;">Padecimientos previos</div>
                 <div class="ingreso-detalle-texto">${v(datosIngreso.padecimientosPrevios)}</div>
-                <div class="ingreso-detalle-fila" style="margin-top: 14px;"><span class="label">Peso de ingreso</span><span class="value">${datosIngreso.pesoIngreso != null ? datosIngreso.pesoIngreso + ' kg' : '—'}</span></div>
-                <div class="ingreso-detalle-fila"><span class="label">Temperatura de ingreso</span><span class="value">${datosIngreso.temperaturaIngreso != null ? datosIngreso.temperaturaIngreso + ' °C' : '—'}</span></div>
+                <div class="ingreso-detalle-fila" style="margin-top: 14px;"><span class="label">Peso de ingreso</span><span class="value">${datosIngreso.pesoIngreso != null ? datosIngreso.pesoIngreso + ' kg' : '"”'}</span></div>
+                <div class="ingreso-detalle-fila"><span class="label">Temperatura de ingreso</span><span class="value">${datosIngreso.temperaturaIngreso != null ? datosIngreso.temperaturaIngreso + ' °C' : '"”'}</span></div>
                 <div style="font-size: 0.85rem; color: var(--internamiento-text-secondary); margin: 14px 0 6px 0;">Necesidades especiales</div>
                 <div class="ingreso-detalle-texto">${v(datosIngreso.necesidadesEspeciales)}</div>
             </div>`;
@@ -10002,7 +10659,7 @@ class InternamientoModule {
             <div class="ingreso-detalle-section">
                 <h4 class="ingreso-detalle-section-title"><i class="fas fa-clipboard-list"></i> Controles rápidos</h4>
                 <div class="ingreso-detalle-controles">
-                    <div class="item"><span>Toma de muestras</span><strong>${controles.tomaronMuestras ? 'Sí' : 'No'}${controles.tipoMuestra ? ' — ' + v(controles.tipoMuestra) : ''}</strong></div>
+                    <div class="item"><span>Toma de muestras</span><strong>${controles.tomaronMuestras ? 'Sí' : 'No'}${controles.tipoMuestra ? ' "” ' + v(controles.tipoMuestra) : ''}</strong></div>
                     <div class="item"><span>Ultrasonido</span><strong>${controles.ultrasonido ? 'Sí' : 'No'}</strong></div>
                     <div class="item"><span>Rayos X</span><strong>${controles.rayosX ? 'Sí' : 'No'}</strong></div>
                     <div class="item"><span>Castrado</span><strong>${controles.castrado ? 'Sí' : 'No'}</strong></div>
@@ -10022,7 +10679,7 @@ class InternamientoModule {
                 <div>
                     ${medicamentos.map(m => `
                         <div class="ingreso-detalle-med-item">
-                            <strong>${v(m.nombreComercial)}</strong> — ${v(this.formatDosisUnidad(m))} · ${v(m.viaAdministracion)}${m.frecuenciaHoras ? ' cada ' + m.frecuenciaHoras + ' h' : ''}${(m.horariosExactos && m.horariosExactos.length) ? ' · Horarios: ' + (m.horariosExactos || []).join(', ') : ''}
+                            <strong>${v(m.nombreComercial)}</strong> "” ${v(this.formatDosisUnidad(m))} · ${v(m.viaAdministracion)}${m.frecuenciaHoras ? ' cada ' + m.frecuenciaHoras + ' h' : ''}${(m.horariosExactos && m.horariosExactos.length) ? ' · Horarios: ' + (m.horariosExactos || []).join(', ') : ''}
                             ${m.observaciones ? '<div style="margin-top: 6px; color: #64748b; font-size: 0.85rem;">' + v(m.observaciones) + '</div>' : ''}
                         </div>
                     `).join('')}
@@ -10034,14 +10691,14 @@ class InternamientoModule {
                 <div>
                     ${procedimientos.map(p => `
                         <div class="ingreso-detalle-proc-item">
-                            <strong>${v(p.tipo)}</strong> — ${v(p.descripcion)}${p.prioridad ? ' · Prioridad: ' + v(p.prioridad) : ''} · Estado: ${v(p.estado)}
+                            <strong>${v(p.tipo)}</strong> "” ${v(p.descripcion)}${p.prioridad ? ' · Prioridad: ' + v(p.prioridad) : ''} · Estado: ${v(p.estado)}
                             ${p.observaciones ? '<div style="margin-top: 6px; color: #64748b; font-size: 0.85rem;">' + v(p.observaciones) + '</div>' : ''}
                         </div>
                     `).join('')}
                 </div>
             </div>` : '';
 
-        const nombreMascota = v(ref.nombreMascota) !== '—' ? v(ref.nombreMascota) : 'Paciente';
+        const nombreMascota = v(ref.nombreMascota) !== '"”' ? v(ref.nombreMascota) : 'Paciente';
         const contenido = `
             <div class="ingreso-detalle-modal">
                 <div class="ingreso-detalle-header">
@@ -10542,7 +11199,7 @@ class InternamientoModule {
     }
 
     // ================================================================
-    // ACTUALIZACIÓN DE ESTADÍSTICAS
+    // ACTUALIZACIÃ“N DE ESTADÃSTICAS
     // ================================================================
     
     async actualizarEstadisticasInternamiento(internamientoId) {
@@ -10608,7 +11265,7 @@ class InternamientoModule {
 }
 
 // ====================================================================
-// INICIALIZACIÓN GLOBAL
+// INICIALIZACIÃ“N GLOBAL
 // ====================================================================
 
 // Crear instancia global
@@ -10632,4 +11289,6 @@ if (document.readyState === 'loading') {
     // DOM ya está listo, inicializar inmediatamente
     initInternamientoModule();
 }
+
+
 

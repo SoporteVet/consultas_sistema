@@ -29,16 +29,18 @@ InternamientoModule.prototype.loadProcedimientosView = function(bloqueado = fals
     const procedimientos = Object.values(internamiento.procedimientos || {});
     const pendientes = procedimientos.filter(p => p.estado === 'pendiente');
     const completados = procedimientos.filter(p => p.estado === 'completado');
+    const pendientesCobro = pendientes.filter(p => p.tipoPendiente === 'cobro');
+    const pendientesProcedimiento = pendientes.filter(p => p.tipoPendiente !== 'cobro');
     const totalProcedimientos = procedimientos.length;
     const porcentajeCompletado = totalProcedimientos > 0 ? Math.round((completados.length / totalProcedimientos) * 100) : 0;
 
     container.innerHTML = `
         <div class="section-header">
-            <h2><i class="fas fa-tasks"></i> Procedimientos y Tareas</h2>
+            <h2><i class="fas fa-clipboard-list"></i> Pendientes</h2>
             <div>
                 ${!bloqueado ? `
                     <button class="btn btn-primary" onclick="window.internamientoModule.agregarProcedimiento()">
-                        <i class="fas fa-plus"></i> Nueva Tarea
+                        <i class="fas fa-plus"></i> Nuevo Pendiente
                     </button>
                 ` : ''}
                 <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal('${this.currentInternamientoId}')" style="margin-left: 10px;">
@@ -50,28 +52,40 @@ InternamientoModule.prototype.loadProcedimientosView = function(bloqueado = fals
         ${bloqueado ? `
             <div class="alert-box warning">
                 <i class="fas fa-lock"></i>
-                <div><strong>Solo Lectura</strong> - El internamiento está egresado, no se pueden agregar procedimientos.</div>
+                <div><strong>Solo Lectura</strong> - El internamiento está egresado, no se pueden agregar pendientes.</div>
             </div>
         ` : ''}
 
+        <!-- Resumen rápido por tipo -->
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:20px;">
+            <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:16px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:700;color:#e65100;">${pendientesCobro.length}</div>
+                <div style="font-size:0.9rem;color:#bf360c;"><i class="fas fa-dollar-sign"></i> Pendientes de cobro</div>
+            </div>
+            <div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;padding:16px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:700;color:#1565c0;">${pendientesProcedimiento.length}</div>
+                <div style="font-size:0.9rem;color:#0d47a1;"><i class="fas fa-tasks"></i> Pendientes de procedimiento</div>
+            </div>
+            <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:16px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:700;color:#2e7d32;">${completados.length}</div>
+                <div style="font-size:0.9rem;color:#1b5e20;"><i class="fas fa-check-circle"></i> Completados</div>
+            </div>
+        </div>
+
         <!-- Barra de progreso general -->
-        <div style="background: white; padding: 25px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                <h3 style="margin: 0; color: var(--internamiento-primary);">
+        <div style="background: white; padding: 20px; border-radius: 12px; margin-bottom: 25px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="margin: 0; color: var(--internamiento-primary); font-size:1rem;">
                     <i class="fas fa-chart-line"></i> Progreso General
                 </h3>
-                <span style="font-size: 1.5rem; font-weight: 700; color: var(--internamiento-secondary);">
+                <span style="font-size: 1.4rem; font-weight: 700; color: var(--internamiento-secondary);">
                     ${porcentajeCompletado}%
                 </span>
             </div>
-            <div class="progress-bar" style="height: 20px; margin-bottom: 10px;">
-                <div class="progress-fill" style="width: ${porcentajeCompletado}%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.85rem; font-weight: 600;">
+            <div class="progress-bar" style="height: 16px; margin-bottom: 8px;">
+                <div class="progress-fill" style="width: ${porcentajeCompletado}%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; font-weight: 600;">
                     ${porcentajeCompletado > 10 ? `${completados.length} / ${totalProcedimientos}` : ''}
                 </div>
-            </div>
-            <div style="display: flex; justify-content: space-between; font-size: 0.9rem; color: #6c757d;">
-                <span><i class="fas fa-check-circle" style="color: var(--internamiento-success);"></i> ${completados.length} completados</span>
-                <span><i class="fas fa-clock" style="color: var(--internamiento-warning);"></i> ${pendientes.length} pendientes</span>
             </div>
         </div>
 
@@ -88,7 +102,7 @@ InternamientoModule.prototype.loadProcedimientosView = function(bloqueado = fals
             </button>
         </div>
 
-        <!-- Lista de procedimientos -->
+        <!-- Lista de pendientes -->
         <div id="listaProcedimientos">
             ${this.renderListaProcedimientos(pendientes, 'pendientes', bloqueado)}
         </div>
@@ -132,8 +146,8 @@ InternamientoModule.prototype.renderListaProcedimientos = function(procedimiento
     if (procedimientos.length === 0) {
         return `
             <div class="empty-state">
-                <i class="fas fa-tasks"></i>
-                <p>No hay procedimientos ${tipo !== 'todos' ? tipo : 'registrados'}</p>
+                <i class="fas fa-clipboard-list"></i>
+                <p>No hay pendientes ${tipo !== 'todos' ? tipo : 'registrados'}</p>
             </div>
         `;
     }
@@ -158,13 +172,15 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
     const completado = proc.estado === 'completado';
     const urgente = proc.prioridad === 'alta';
     const paraFernanda = !!proc.paraFernanda;
+    const tipoPendiente = this.traducirTipoPendiente(proc.tipoPendiente || 'procedimiento');
     const fechaCreacion = new Date(proc.fechaCreacion).toLocaleDateString('es-ES', { 
         day: '2-digit', 
         month: 'short',
         hour: '2-digit',
         minute: '2-digit'
     });
-    const bgStyle = paraFernanda ? 'background: #fce4ec; border-left: 4px solid #ec407a;' : '';
+    const bgStyle = paraFernanda ? 'background: #fce4ec; border-left: 4px solid #ec407a;'
+        : (proc.tipoPendiente === 'cobro' ? 'border-left: 4px solid #e65100;' : 'border-left: 4px solid #1565c0;');
 
     return `
         <li class="procedimiento-item ${completado ? 'completado' : ''} ${paraFernanda ? 'procedimiento-para-fernanda' : ''}" style="padding: 18px; border-bottom: 1px solid #e0e0e0; transition: all 0.3s ease; ${bgStyle}">
@@ -185,14 +201,23 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
                 <div style="flex: 1;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap;">
                         <span style="font-size: 1.05rem; font-weight: 600; color: ${completado ? '#95a5a6' : 'var(--internamiento-primary)'}; ${completado ? 'text-decoration: line-through;' : ''}">
-                            ${proc.descripcion}
+                            ${(proc.descripcion || '').replace(/</g, '&lt;')}
+                        </span>
+                        <span style="background:${tipoPendiente.bg};color:${tipoPendiente.color};font-size:0.78rem;font-weight:600;padding:2px 8px;border-radius:20px;border:1px solid ${tipoPendiente.color}30;">
+                            <i class="fas ${tipoPendiente.icon}"></i> ${tipoPendiente.label}
                         </span>
                         ${this.renderChipOrigenItem(proc)}
                         ${paraFernanda ? `<span class="chip" style="background: #f8bbd0; color: #c2185b; font-size: 0.8rem;"><i class="fas fa-user-check"></i> FERNANDA</span>` : ''}
                         ${urgente && !completado ? `<span class="priority-tag priority-alta"><i class="fas fa-exclamation-circle"></i> Urgente</span>` : ''}
-                        ${proc.tipo ? `<span class="chip" style="background: #e3f2fd; color: #1976d2; font-size: 0.8rem;">${this.traducirTipoProcedimiento(proc.tipo)}</span>` : ''}
+                        ${proc.tipo ? `<span class="chip" style="background: #f3e5f5; color: #6a1b9a; font-size: 0.8rem;">${this.traducirTipoProcedimiento(proc.tipo)}</span>` : ''}
                     </div>
                     
+                    ${proc.asignadoANombre ? `
+                    <div style="font-size:0.85rem;color:#1565c0;margin-bottom:8px;background:#e3f2fd;padding:4px 10px;border-radius:6px;display:inline-block;">
+                        <i class="fas fa-user-nurse"></i> Asignado a: <strong>${(proc.asignadoANombre || '').replace(/</g, '&lt;')}</strong>
+                    </div>
+                    ` : ''}
+
                     <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 8px;">
                         <i class="fas fa-calendar"></i> Creado: ${fechaCreacion}
                         ${proc.creadoNombre ? ` por <strong>${(proc.creadoNombre || '').replace(/</g, '&lt;')}</strong>` : ''}
@@ -309,37 +334,87 @@ InternamientoModule.prototype.traducirTipoProcedimiento = function(tipo) {
         'imagen': 'Imagen',
         'cirugia': 'Cirugía',
         'terapia': 'Terapia',
-        'otro': 'Otro'
+        'otro': 'Otro',
+        'cobro': 'Pendiente cobro',
+        'procedimiento': 'Pendiente procedimiento'
     };
     return tipos[tipo] || tipo;
+};
+
+InternamientoModule.prototype.traducirTipoPendiente = function(tipoPendiente) {
+    if (tipoPendiente === 'cobro') return { label: 'Pendiente cobro', color: '#e65100', bg: '#fff3e0', icon: 'fa-dollar-sign' };
+    return { label: 'Pendiente procedimiento', color: '#1565c0', bg: '#e3f2fd', icon: 'fa-tasks' };
 };
 
 // ================================================================
 // AGREGAR PROCEDIMIENTO
 // ================================================================
 
-InternamientoModule.prototype.agregarProcedimiento = function() {
-    // Solo mostrar "Es para FERNANDA" cuando se agrega desde un internamiento ya creado (Procedimientos y tareas), no en Nuevo internamiento
+InternamientoModule.prototype.agregarProcedimiento = async function() {
+    // Solo mostrar "Es para FERNANDA" cuando se agrega desde un internamiento ya creado, no en Nuevo internamiento
     const mostrarOpcionFernanda = !!this.currentInternamientoId;
+
+    // Cargar lista de asistentes para asignar
+    let opcionesAsistentes = '<option value="">— Sin asignar —</option>';
+    try {
+        const [snapAss, snapDoc] = await Promise.all([
+            window.database.ref('assistants').once('value'),
+            window.database.ref('doctors').once('value')
+        ]);
+        const asistentes = snapAss.val() || {};
+        const doctores = snapDoc.val() || {};
+        Object.entries(asistentes).forEach(([id, data]) => {
+            const nombre = typeof data === 'string' ? data : (data.nombre || data.name || id);
+            opcionesAsistentes += `<option value="${id}|${nombre.replace(/"/g,'&quot;')}">${nombre}</option>`;
+        });
+        Object.entries(doctores).forEach(([id, data]) => {
+            const nombre = typeof data === 'string' ? data : (data.name || data.nombre || id);
+            if (nombre) opcionesAsistentes += `<option value="${id}|${nombre.replace(/"/g,'&quot;')}">${nombre} (Dr.)</option>`;
+        });
+    } catch(e) { /* sin lista */ }
 
     const modalContent = `
         <form id="formAgregarProcedimiento">
+            <!-- Tipo de pendiente (nuevo campo principal) -->
             <div class="form-group">
-                <label>Tipo de Procedimiento *</label>
-                <select id="procTipo" required>
+                <label style="font-weight:700;"><i class="fas fa-tag"></i> Tipo de Pendiente *</label>
+                <div style="display:flex;gap:12px;margin-top:6px;">
+                    <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #90caf9;border-radius:8px;cursor:pointer;background:#e3f2fd;" id="lblTipoProcedimiento">
+                        <input type="radio" name="procTipoPendiente" id="tipoProcedimiento" value="procedimiento" checked onchange="document.getElementById('lblTipoProcedimiento').style.borderColor='#1565c0';document.getElementById('lblTipoCobro').style.borderColor='#90caf9';">
+                        <i class="fas fa-tasks" style="color:#1565c0;"></i>
+                        <strong style="color:#1565c0;">Pendiente procedimiento</strong>
+                    </label>
+                    <label style="flex:1;display:flex;align-items:center;gap:8px;padding:12px;border:2px solid #ffcc80;border-radius:8px;cursor:pointer;background:#fff3e0;" id="lblTipoCobro">
+                        <input type="radio" name="procTipoPendiente" id="tipoCobro" value="cobro" onchange="document.getElementById('lblTipoCobro').style.borderColor='#e65100';document.getElementById('lblTipoProcedimiento').style.borderColor='#90caf9';">
+                        <i class="fas fa-dollar-sign" style="color:#e65100;"></i>
+                        <strong style="color:#e65100;">Pendiente cobro</strong>
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Categoría del procedimiento</label>
+                <select id="procTipo">
                     <option value="">Seleccionar...</option>
-                    <option value="examen"><i class="fas fa-microscope"></i> Examen de Laboratorio</option>
-                    <option value="imagen"><i class="fas fa-x-ray"></i> Estudio de Imagen (Rx, Eco, etc.)</option>
-                    <option value="curacion"><i class="fas fa-band-aid"></i> Curación / Tratamiento de Heridas</option>
-                    <option value="terapia"><i class="fas fa-tint"></i> Terapia / Tratamiento Especial</option>
-                    <option value="cirugia"><i class="fas fa-cut"></i> Procedimiento Quirúrgico</option>
-                    <option value="otro"><i class="fas fa-clipboard-list"></i> Otro</option>
+                    <option value="examen">Examen de Laboratorio</option>
+                    <option value="imagen">Estudio de Imagen (Rx, Eco, etc.)</option>
+                    <option value="curacion">Curación / Tratamiento de Heridas</option>
+                    <option value="terapia">Terapia / Tratamiento Especial</option>
+                    <option value="cirugia">Procedimiento Quirúrgico</option>
+                    <option value="otro">Otro</option>
                 </select>
             </div>
 
             <div class="form-group">
-                <label>Descripción del Procedimiento *</label>
+                <label>Descripción *</label>
                 <input type="text" id="procDescripcion" required placeholder="Ej: Hemograma completo">
+            </div>
+
+            <div class="form-group">
+                <label><i class="fas fa-user-nurse"></i> Asignar a</label>
+                <select id="procAsignadoA">
+                    ${opcionesAsistentes}
+                </select>
             </div>
 
             <div class="form-group">
@@ -379,13 +454,13 @@ InternamientoModule.prototype.agregarProcedimiento = function() {
                     Cancelar
                 </button>
                 <button type="submit" class="btn btn-primary" style="margin-left: 10px;">
-                    <i class="fas fa-plus"></i> Agregar
+                    <i class="fas fa-plus"></i> Agregar Pendiente
                 </button>
             </div>
         </form>
     `;
 
-    const modal = this.createModal('Nueva Tarea / Procedimiento', modalContent);
+    const modal = this.createModal('Nuevo Pendiente', modalContent, 'fa-clipboard-list');
     document.body.appendChild(modal);
 
     // Setup form submit
@@ -406,13 +481,18 @@ InternamientoModule.prototype.handleAgregarProcedimiento = async function(e) {
         ? this.getOrigenAdmisionFlagsDesdeForm()
         : { puestoPorConsultaExterna: false, puestoPorInternos: false };
 
+    const asignadoRaw = document.getElementById('procAsignadoA')?.value || '';
+    const [asignadoAId, asignadoANombre] = asignadoRaw.includes('|') ? asignadoRaw.split('|') : [asignadoRaw, ''];
     const procData = {
+        tipoPendiente: document.querySelector('input[name="procTipoPendiente"]:checked')?.value || 'procedimiento',
         tipo: document.getElementById('procTipo')?.value || '',
         descripcion: document.getElementById('procDescripcion')?.value.trim() || '',
         prioridad: document.getElementById('procPrioridad')?.value || 'normal',
         observaciones: document.getElementById('procObservaciones')?.value.trim() || '',
         marcarCompletado: document.getElementById('procMarcarCompletado')?.checked || false,
         paraFernanda: document.getElementById('procParaFernanda')?.checked || false,
+        asignadoAId: asignadoAId || null,
+        asignadoANombre: asignadoANombre || null,
         puestoPorConsultaExterna: !!origenFlags.puestoPorConsultaExterna,
         puestoPorInternos: !!origenFlags.puestoPorInternos
     };
@@ -457,12 +537,14 @@ InternamientoModule.prototype.guardarProcedimiento = async function(data, codigo
 
     const procedimientoData = {
         procedimientoId: procedimientoId,
+        tipoPendiente: data.tipoPendiente || 'procedimiento',
         tipo: data.tipo,
         descripcion: data.descripcion,
         prioridad: data.prioridad,
         observaciones: data.observaciones,
         paraFernanda: !!data.paraFernanda,
-        // Procedimientos agregados desde este flujo (panel de internamiento) nunca son de consulta externa
+        asignadoAId: data.asignadoAId || null,
+        asignadoANombre: data.asignadoANombre || null,
         puestoPorConsultaExterna: false,
         estado: data.marcarCompletado ? 'completado' : 'pendiente',
         fechaCreacion: Date.now(),
@@ -472,7 +554,6 @@ InternamientoModule.prototype.guardarProcedimiento = async function(data, codigo
         fechaCompletado: data.marcarCompletado ? Date.now() : null,
         completadoPor: data.marcarCompletado ? userId : null,
         completadoNombre: data.marcarCompletado ? userName : null,
-        // REPORTADO
         reportado: false,
         reportadoA: null,
         fechaReportado: null,

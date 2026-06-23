@@ -499,7 +499,7 @@ InternamientoModule.prototype.renderTurnoDetalleModal = function(turno) {
     const vb = (val) => (val === true || val === 'true') ? 'Sí' : (val === false || val === 'false') ? 'No' : v(val);
 
     const parametrosVitalesKeys = ['peso', 'fc', 'fr', 'temperatura', 'tllc', 'deshidratacion', 'mucosas', 'via', 'tiempoVia', 'sonda', 'tiempoSonda', 'parametrosPulmonares', 'presionArterial', 'po2'];
-    const estadoGeneralKeys = ['estadoMental', 'nivelDolor', 'glasgowPuntaje', 'ingestaAgua', 'cantidadAgua', 'apetito', 'alimentoCantidad', 'alimentoTipo', 'defecacion', 'defecacionNotas', 'miccion', 'miccionColor', 'miccionFrecuencia', 'miccionVolumen', 'miccionNotas', 'vomitos', 'descripcionVomitos'];
+    const estadoGeneralKeys = ['estadoMental', 'nivelDolor', 'glasgowPuntaje', 'ingestaAgua', 'cantidadAgua', 'apetito', 'alimentoCantidad', 'alimentoTipo', 'glucosa', 'defecacion', 'defecacionNotas', 'miccion', 'miccionColor', 'miccionFrecuencia', 'miccionVolumen', 'miccionNotas', 'vomitos', 'descripcionVomitos'];
 
     const parametrosHTML = parametrosVitalesKeys.map(key => {
         const val = pv[key];
@@ -565,7 +565,16 @@ InternamientoModule.prototype.renderTurnoDetalleModal = function(turno) {
 
 InternamientoModule.prototype.formatearMucosas = function(val) {
     if (val === undefined || val === null || val === '') return '';
-    const map = { rosadas: 'Rosadas (Normal)', palidas: 'Pálidas', ictericas: 'Ictéricas', cianoticas: 'Cianóticas', congestivas: 'Congestivas' };
+    const map = {
+        rosadas: 'Rosadas (Normal)',
+        rosado: 'Rosado',
+        rosado_palido: 'Rosado pálido',
+        palido: 'Pálido',
+        palidas: 'Pálidas',
+        ictericas: 'Ictéricas',
+        cianoticas: 'Cianóticas',
+        congestivas: 'Congestivas'
+    };
     return map[val] || val;
 };
 InternamientoModule.prototype.formatearVia = function(val) {
@@ -639,6 +648,7 @@ InternamientoModule.prototype.traducirCampo = function(key) {
         'apetito': 'Apetito',
         'alimentoCantidad': 'Cantidad de Alimento',
         'alimentoTipo': 'Tipo de Alimento',
+        'glucosa': 'Glucosa (mg/dL)',
         'defecacion': 'Defecación (Bristol)',
         'defecacionNotas': 'Notas defecación',
         'miccion': 'Micción',

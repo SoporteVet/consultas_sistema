@@ -550,6 +550,25 @@ InternamientoModule.prototype.validarCodigoAsistente = async function(codigoIngr
             };
         }
 
+        // Estudiantes con código temporal
+        for (const [studentId, studentData] of Object.entries(students)) {
+            if (!studentData || !studentData.codigo) continue;
+            if (!this._codigoCoincide(codigoNormalizado, studentData.codigo)) continue;
+            // Verificar vencimiento
+            if (studentData.vencimiento && Date.now() > studentData.vencimiento) {
+                return { valido: false, mensaje: `Código de estudiante vencido (${new Date(studentData.vencimiento).toLocaleDateString('es-PE', { hour12: true })})` };
+            }
+            const nombre = (studentData.nombre || 'Estudiante') + ' (Estudiante)';
+            await this.registrarUsoCodigoAsistente(studentId, nombre, 'validacion_exitosa', 'estudiante');
+            return {
+                valido: true,
+                assistantId: studentId,
+                tipoPersonal: 'estudiante',
+                nombre: nombre,
+                codigo: codigoNormalizado
+            };
+        }
+
         await this.registrarUsoCodigoAsistente(null, null, 'validacion_fallida');
         return { valido: false, mensaje: 'Código incorrecto' };
     } catch (error) {
@@ -783,6 +802,14 @@ InternamientoModule.prototype.getGestionCodigosHTML = function() {
                         Los doctores con PIN en su perfil (recetas) también pueden usar ese mismo PIN al verificar en admisión.
                     </div>
                 </div>
+            </div>
+
+            <!-- Acceso rápido a estudiantes -->
+            <div style="margin-bottom: 16px; padding: 12px 16px; background: #e8f5e9; border-radius: 8px; border: 1px solid #a5d6a7; display:flex; align-items:center; justify-content:space-between;">
+                <div style="font-size:0.9rem;color:#2e7d32;"><i class="fas fa-user-graduate"></i> <strong>Estudiantes:</strong> Códigos temporales con fecha de vencimiento.</div>
+                <button class="btn btn-sm btn-success" onclick="window.internamientoModule.mostrarGestionEstudiantes()">
+                    <i class="fas fa-user-graduate"></i> Gestionar Estudiantes
+                </button>
             </div>
 
             <!-- Información sobre la lista -->
@@ -1169,6 +1196,206 @@ InternamientoModule.prototype.administrarMedicamentosSeleccionados = async funct
         this.showAlert('Error al registrar administraciones: ' + error.message, 'Error', 'error');
         this.loadMedicacionView();
     }
+};
+
+// ================================================================
+// CÓDIGOS TEMPORALES PARA ESTUDIANTES
+// ================================================================
+
+InternamientoModule.prototype.mostrarGestionEstudiantes = async function() {
+    const userRole = sessionStorage.getItem('userRole');
+    if (userRole !== 'admin') {
+        this.showAlert('Solo administradores pueden gestionar estudiantes', 'Acceso Denegado', 'error');
+        return;
+    }
+    const html = `
+        <div style="min-width: 560px; max-width: 700px;">
+            <div style="background: #e8f5e9; padding: 14px; border-radius: 8px; margin-bottom: 18px; border-left: 4px solid #4caf50;">
+                <div style="font-weight: 600; color: #2e7d32; margin-bottom: 6px;"><i class="fas fa-user-graduate"></i> Códigos Temporales para Estudiantes</div>
+                <div style="font-size: 0.88rem; color: #388e3c;">Los estudiantes reciben un código temporal con fecha de vencimiento. No tienen acceso a crear internamientos pero pueden registrar turnos y administrar medicamentos bajo supervisión.</div>
+            </div>
+
+            <div style="display:flex;gap:12px;margin-bottom:20px;">
+                <button class="btn btn-primary" onclick="window.internamientoModule.abrirFormularioEstudiante()">
+                    <i class="fas fa-plus"></i> Nuevo Estudiante
+                </button>
+                <button class="btn btn-secondary" onclick="window.internamientoModule.cargarListaEstudiantes()">
+                    <i class="fas fa-sync"></i> Actualizar
+                </button>
+            </div>
+
+            <div id="listaEstudiantes">
+                <div style="text-align:center;padding:30px;color:#999;"><i class="fas fa-spinner fa-spin"></i> Cargando...</div>
+            </div>
+
+            <div style="margin-top: 20px; text-align: right; border-top: 1px solid #eee; padding-top: 16px;">
+                <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()"><i class="fas fa-times"></i> Cerrar</button>
+            </div>
+        </div>
+    `;
+    const modal = this.createModal('Gestión de Estudiantes', html, 'fa-user-graduate');
+    document.body.appendChild(modal);
+    await this.cargarListaEstudiantes();
+};
+
+InternamientoModule.prototype.cargarListaEstudiantes = async function() {
+    const container = document.getElementById('listaEstudiantes');
+    if (!container) return;
+    try {
+        const snap = await window.database.ref('students').once('value');
+        const students = snap.val() || {};
+        const lista = Object.entries(students);
+        if (lista.length === 0) {
+            container.innerHTML = '<div style="text-align:center;padding:30px;color:#999;"><i class="fas fa-user-graduate" style="font-size:2rem;margin-bottom:10px;"></i><p>No hay estudiantes registrados</p></div>';
+            return;
+        }
+        const ahora = Date.now();
+        const filas = lista.map(([id, data]) => {
+            const nombre = (data.nombre || data.name || 'Sin nombre').replace(/</g, '&lt;');
+            const codigo = data.codigo || '—';
+            const vence = data.vencimiento ? new Date(data.vencimiento) : null;
+            const expirado = vence && vence.getTime() < ahora;
+            const venceStr = vence ? vence.toLocaleString('es-PE', { dateStyle: 'short', hour12: true }) : '—';
+            return `
+            <tr style="background:${expirado ? '#fafafa' : 'white'};">
+                <td style="padding:10px;border-bottom:1px solid #eee;">${nombre}</td>
+                <td style="padding:10px;border-bottom:1px solid #eee;font-family:monospace;letter-spacing:2px;">${codigo}</td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">
+                    <span style="color:${expirado ? '#c62828' : '#2e7d32'};font-weight:600;">${venceStr}</span>
+                    ${expirado ? '<span style="margin-left:6px;background:#ffebee;color:#c62828;font-size:0.75rem;padding:2px 6px;border-radius:8px;">Expirado</span>' : ''}
+                </td>
+                <td style="padding:10px;border-bottom:1px solid #eee;">
+                    <button class="btn btn-sm btn-warning" onclick="window.internamientoModule.renovarCodigoEstudiante('${id}')" style="margin-right:4px;"><i class="fas fa-sync"></i> Renovar</button>
+                    <button class="btn btn-sm" style="background:#c62828;color:white;" onclick="window.internamientoModule.eliminarEstudiante('${id}','${nombre.replace(/'/g,'\\\'')}')" ><i class="fas fa-trash"></i></button>
+                </td>
+            </tr>`;
+        }).join('');
+        container.innerHTML = `
+            <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                <thead><tr style="background:#f5f5f5;">
+                    <th style="padding:10px;text-align:left;">Nombre</th>
+                    <th style="padding:10px;text-align:left;">Código</th>
+                    <th style="padding:10px;text-align:left;">Vence</th>
+                    <th style="padding:10px;text-align:left;">Acciones</th>
+                </tr></thead>
+                <tbody>${filas}</tbody>
+            </table>`;
+    } catch(e) {
+        container.innerHTML = `<div style="color:#c62828;">Error cargando estudiantes: ${e.message}</div>`;
+    }
+};
+
+InternamientoModule.prototype.abrirFormularioEstudiante = function(idEditar = null) {
+    const html = `
+        <form id="formEstudiante" style="min-width:360px;">
+            <div class="form-group">
+                <label>Nombre del estudiante *</label>
+                <input type="text" id="estNombre" required placeholder="Ej: Juan Pérez" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+            </div>
+            <div class="form-group">
+                <label>Código temporal * <small style="color:#666;">(mínimo 4 caracteres)</small></label>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <input type="text" id="estCodigo" required placeholder="Ej: EST2024" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;letter-spacing:2px;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('estCodigo').value=Math.random().toString(36).toUpperCase().substr(2,6)">
+                        <i class="fas fa-random"></i> Auto
+                    </button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Vencimiento *</label>
+                <input type="date" id="estVencimiento" required style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+            </div>
+            <div class="form-group">
+                <label>Observaciones</label>
+                <input type="text" id="estObservaciones" placeholder="Ej: Rotación cardiología - 1er semestre" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+            </div>
+            <div style="text-align:right;margin-top:18px;">
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                <button type="submit" class="btn btn-success" style="margin-left:8px;"><i class="fas fa-save"></i> Guardar</button>
+            </div>
+        </form>`;
+    const modal = this.createModal('Nuevo Estudiante', html, 'fa-user-graduate');
+    document.body.appendChild(modal);
+    // Default vencimiento = 30 días desde hoy
+    const hoy = new Date();
+    hoy.setDate(hoy.getDate() + 30);
+    const el = document.getElementById('estVencimiento');
+    if (el) el.value = hoy.toISOString().split('T')[0];
+
+    document.getElementById('formEstudiante').onsubmit = async (e) => {
+        e.preventDefault();
+        const nombre = document.getElementById('estNombre').value.trim();
+        const codigo = document.getElementById('estCodigo').value.trim().toUpperCase();
+        const vencimientoStr = document.getElementById('estVencimiento').value;
+        const obs = document.getElementById('estObservaciones').value.trim();
+        if (!nombre || !codigo || !vencimientoStr) return;
+        if (codigo.length < 4) { this.showAlert('El código debe tener al menos 4 caracteres', 'Código muy corto', 'warning'); return; }
+        const vencimiento = new Date(vencimientoStr + 'T23:59:59').getTime();
+        const studentId = 'student_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        try {
+            await window.database.ref(`students/${studentId}`).set({
+                studentId, nombre, codigo, vencimiento,
+                observaciones: obs,
+                creadoEn: Date.now(),
+                creadoPor: sessionStorage.getItem('userId') || 'admin',
+                tipo: 'estudiante'
+            });
+            this.showNotification(`Estudiante "${nombre}" registrado con código ${codigo}`, 'success');
+            document.querySelector('.modal-overlay')?.remove();
+            await this.cargarListaEstudiantes();
+        } catch(err) {
+            this.showAlert('Error guardando estudiante: ' + err.message, 'Error', 'error');
+        }
+    };
+};
+
+InternamientoModule.prototype.renovarCodigoEstudiante = async function(studentId) {
+    const snap = await window.database.ref(`students/${studentId}`).once('value');
+    const data = snap.val();
+    if (!data) return;
+    const html = `
+        <div style="min-width:320px;">
+            <p>Renovar código para: <strong>${(data.nombre || '').replace(/</g,'&lt;')}</strong></p>
+            <div class="form-group">
+                <label>Nuevo código</label>
+                <div style="display:flex;gap:8px;">
+                    <input type="text" id="nuevoCodigoEst" value="${data.codigo || ''}" style="flex:1;padding:10px;border:1px solid #ddd;border-radius:6px;font-family:monospace;letter-spacing:2px;">
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('nuevoCodigoEst').value=Math.random().toString(36).toUpperCase().substr(2,6)"><i class="fas fa-random"></i></button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Nueva fecha de vencimiento</label>
+                <input type="date" id="nuevoVencEst" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
+            </div>
+            <div style="text-align:right;margin-top:16px;">
+                <button class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                <button class="btn btn-success" style="margin-left:8px;" onclick="window.internamientoModule._guardarRenovacionEstudiante('${studentId}')"><i class="fas fa-save"></i> Renovar</button>
+            </div>
+        </div>`;
+    const modal = this.createModal('Renovar Código', html, 'fa-sync');
+    document.body.appendChild(modal);
+    const hoy = new Date(); hoy.setDate(hoy.getDate() + 30);
+    const el = document.getElementById('nuevoVencEst');
+    if (el) el.value = (data.vencimiento ? new Date(data.vencimiento) : hoy).toISOString().split('T')[0];
+};
+
+InternamientoModule.prototype._guardarRenovacionEstudiante = async function(studentId) {
+    const nuevo = document.getElementById('nuevoCodigoEst')?.value.trim().toUpperCase();
+    const vencStr = document.getElementById('nuevoVencEst')?.value;
+    if (!nuevo || !vencStr) return;
+    const vencimiento = new Date(vencStr + 'T23:59:59').getTime();
+    await window.database.ref(`students/${studentId}`).update({ codigo: nuevo, vencimiento, renovadoEn: Date.now() });
+    this.showNotification('Código renovado exitosamente', 'success');
+    document.querySelector('.modal-overlay')?.remove();
+    await this.cargarListaEstudiantes();
+};
+
+InternamientoModule.prototype.eliminarEstudiante = async function(studentId, nombre) {
+    const ok = await this.showConfirm(`¿Eliminar al estudiante "${nombre}"? Su código quedará inactivo.`, 'Eliminar Estudiante', { confirmText: 'Eliminar', cancelText: 'Cancelar', icon: 'fa-trash', iconColor: '#c62828' });
+    if (!ok) return;
+    await window.database.ref(`students/${studentId}`).remove();
+    this.showNotification('Estudiante eliminado', 'success');
+    await this.cargarListaEstudiantes();
 };
 
 console.log('Sistema de Códigos de Personal Médico cargado');
