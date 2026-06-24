@@ -64,8 +64,8 @@ InternamientoModule.prototype.getTransfusionFormHTML = function(internamiento) {
                     <div class="form-group">
                         <label>Tipo de Mascota *</label>
                         <select id="transfusionTipoMascota" required style="width: 100%; padding: 10px; border-radius: 6px; color: #1e293b; background: #f8fafc;">
-                            <option value="perro" ${tipoMascota === 'perro' ? 'selected' : ''}>Perro (N = 90)</option>
-                            <option value="gato" ${tipoMascota === 'gato' ? 'selected' : ''}>Gato (N = 70)</option>
+                            <option value="perro" ${tipoMascota === 'perro' ? 'selected' : ''}>Canino (N = 90)</option>
+                            <option value="gato" ${tipoMascota === 'gato' ? 'selected' : ''}>Felino (N = 70)</option>
                         </select>
                         <small style="color: #6c757d; display: block; margin-top: 5px;">
                             N es el factor de conversión según la especie

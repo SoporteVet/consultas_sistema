@@ -209,9 +209,9 @@
                 <label for="tipoMascota">Tipo de Mascota</label>
                 <select id="tipoMascota" required>
                   <option value="por_definir" selected>Por definir</option>
-                  <option value="perro">Perro</option>
-                  <option value="gato">Gato</option>
-                  <option value="conejo">Conejo</option>
+                  <option value="perro">Canino</option>
+                  <option value="gato">Felino</option>
+                  <option value="conejo">Lagomorfo</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>
@@ -483,9 +483,9 @@
               <div class="form-group">
                 <label for="labTipoMascota">Tipo de Mascota</label>
                 <select id="labTipoMascota" required>
-                  <option value="perro">Perro</option>
-                  <option value="gato">Gato</option>
-                  <option value="conejo">Conejo</option>
+                  <option value="perro">Canino</option>
+                  <option value="gato">Felino</option>
+                  <option value="conejo">Lagomorfo</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>
@@ -1606,9 +1606,9 @@
               <div class="form-group">
                 <label for="quirofanoTipoMascota">Tipo de Mascota</label>
                 <select id="quirofanoTipoMascota" required>
-                  <option value="perro">Perro</option>
-                  <option value="gato">Gato</option>
-                  <option value="conejo">Conejo</option>
+                  <option value="perro">Canino</option>
+                  <option value="gato">Felino</option>
+                  <option value="conejo">Lagomorfo</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>
@@ -2205,6 +2205,7 @@
           <option value="recepcion">Recepción</option>
           <option value="consulta_externa">Consulta Externa</option>
           <option value="laboratorio">Laboratorio</option>
+          <option value="lab_reportes">Reportes Lab (solo reportar exámenes)</option>
           <option value="quirofano">Quirofano</option>
           <option value="internos">Internos</option>
           <option value="visitas">Visitas</option>
@@ -2523,10 +2524,10 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="form-group">
             <label for="internamientoTipoMascotaAdmision">Especie *</label>
             <select id="internamientoTipoMascotaAdmision" required>
-              <option value="perro">Perro</option>
-              <option value="gato">Gato</option>
+              <option value="perro">Canino</option>
+              <option value="gato">Felino</option>
               <option value="ave">Ave</option>
-              <option value="conejo">Conejo</option>
+              <option value="conejo">Lagomorfo</option>
               <option value="otro">Otro</option>
             </select>
           </div>
@@ -3288,6 +3289,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Cargar módulo de internamiento -->
 <!-- Rutas relativas correctas desde modules/core/pages/ hacia modules/internamiento/js/ -->
 <script src="../../internamiento/js/internamiento-module.js"></script>
+<script src="../../internamiento/js/internamiento-medicacion-grid.js"></script>
 <script src="../../internamiento/js/internamiento-notificaciones.js"></script>
 <script src="../../internamiento/js/internamiento-extended.js"></script>
 <script src="../../internamiento/js/internamiento-egreso.js"></script>

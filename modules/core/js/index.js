@@ -735,12 +735,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     // Sistema de laboratorio no disponible
                 }
                 
-                // Inicializar sistema de quirófano
-                if (typeof initQuirofanoSystem === 'function') {
+                // Inicializar sistema de quirófano (datos para consentimientos / control anestésico)
+                if (userRole === 'lab_reportes') {
+                    if (typeof initQuirofanoDataForConsentimientos === 'function') {
+                        initQuirofanoDataForConsentimientos();
+                    }
+                } else if (typeof initQuirofanoSystem === 'function') {
                     initQuirofanoSystem();
                     window.quirofanoInitialized = true;
-                } else {
-                    // Sistema de quirófano no disponible
+                } else if (typeof initQuirofanoModule === 'function') {
+                    initQuirofanoModule();
+                    window.quirofanoInitialized = true;
                 }
                 
                 // Inicializar selector de empresa para administradores
@@ -947,7 +952,7 @@ function applyRoleBasedUI(role) {
     // Control de visibilidad del botón de laboratorio basado en roles
     const laboratorioBtn = document.getElementById('laboratorioBtn');
     const laboratorioCategory = laboratorioBtn ? laboratorioBtn.closest('.nav-category') : null;
-    const allowedLabRoles = ['admin', 'consulta_externa', 'internos', 'quirofano', 'laboratorio', 'lab_reportes'];
+    const allowedLabRoles = ['admin', 'consulta_externa', 'internos', 'quirofano', 'laboratorio', 'lab_reportes', 'recepcion'];
     
     if (laboratorioCategory) {
         if (allowedLabRoles.includes(role)) {
@@ -971,7 +976,7 @@ function applyRoleBasedUI(role) {
             if (btn) btn.style.display = 'none';
         });
 
-        const hiddenNavCategories = ['consultasBtn', 'consentimientosBtn', 'quirofanoBtn', 'internamientosBtn'];
+        const hiddenNavCategories = ['consultasBtn', 'quirofanoBtn', 'internamientosBtn'];
         hiddenNavCategories.forEach((btnId) => {
             const btn = document.getElementById(btnId);
             const category = btn ? btn.closest('.nav-category') : null;
@@ -998,10 +1003,20 @@ function applyRoleBasedUI(role) {
     const consentimientosCategory = consentimientosBtn ? consentimientosBtn.closest('.nav-category') : null;
     
     if (consentimientosCategory) {
-        if (role !== 'visitas' && role !== 'lab_reportes') {
-            consentimientosCategory.style.display = 'block';
-        } else {
+        if (role === 'visitas') {
             consentimientosCategory.style.display = 'none';
+        } else {
+            consentimientosCategory.style.display = 'block';
+        }
+    }
+
+    if (role === 'lab_reportes') {
+        const crearConsentBtn = document.getElementById('crearConsentimientoBtn');
+        if (crearConsentBtn) {
+            crearConsentBtn.innerHTML = '<i class="fas fa-syringe" aria-hidden="true"></i> Control Anestésico';
+        }
+        if (typeof configureConsentimientosForRole === 'function') {
+            configureConsentimientosForRole();
         }
     }
     
@@ -3141,21 +3156,9 @@ function mostrarHorario() {
             }
         }
         
-        // Determinar el tipo de mascota
-        let tipoLabel = '';
-        switch(ticket.tipoMascota) {
-            case 'perro':
-                tipoLabel = 'Perro';
-                break;
-            case 'gato':
-                tipoLabel = 'Gato';
-                break;
-            case 'conejo':
-                tipoLabel = 'Conejo'; 
-                break;
-            default:
-                tipoLabel = 'Otro';
-        }
+        const tipoLabel = typeof getTipoMascotaLabel === 'function'
+            ? getTipoMascotaLabel(ticket.tipoMascota)
+            : (ticket.tipoMascota || 'Otro');
         
         // Clase de urgencia
         const urgenciaClass = `urgencia-${ticket.urgencia}`;
@@ -3221,16 +3224,7 @@ function exportarDia() {
     });
 }
 
-function getTipoMascotaLabel(tipo) {
-    const tipos = {
-        'perro': 'Perro',
-        'gato': 'Gato',
-        'conejo': 'Conejo',
-        'otro': 'Otro',
-        'por_definir': 'Por definir'
-    };
-    return tipos[tipo] || tipo || '';
-}
+// getTipoMascotaLabel definido en pet-type-utils.js
 function getEstadoLabel(estado) {
     const estados = {
         'espera': 'En sala de espera',
@@ -3743,9 +3737,9 @@ function editTicket(randomId) {
                         <label for="editTipoMascota">Tipo de Mascota</label>
                         <select id="editTipoMascota" required>
                             <option value="por_definir" ${safeTicket.tipoMascota === 'por_definir' ? 'selected' : ''}>Por definir</option>
-                            <option value="perro" ${safeTicket.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
-                            <option value="gato" ${safeTicket.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
-                            <option value="conejo" ${safeTicket.tipoMascota === 'conejo' ? 'selected' : ''}>Conejo</option>
+                            <option value="perro" ${safeTicket.tipoMascota === 'perro' ? 'selected' : ''}>Canino</option>
+                            <option value="gato" ${safeTicket.tipoMascota === 'gato' ? 'selected' : ''}>Felino</option>
+                            <option value="conejo" ${safeTicket.tipoMascota === 'conejo' ? 'selected' : ''}>Lagomorfo</option>
                             <option value="otro" ${safeTicket.tipoMascota === 'otro' ? 'selected' : ''}>Otro</option>
                         </select>
                     </div>
@@ -6399,7 +6393,11 @@ function navigateToConsultas() {
     navigateToSection('verTicketsSection', 'verTicketsBtn');
 }
 
-function navigateToLab(sectionId, buttonId) {
+async function navigateToLab(sectionId, buttonId) {
+    if (typeof ensureLabRecepcionCodigoAccess === 'function') {
+        const codigoOk = await ensureLabRecepcionCodigoAccess();
+        if (!codigoOk) return;
+    }
 
     if (typeof getAllowedLabSectionsForRole === 'function') {
         const allowedSections = getAllowedLabSectionsForRole();
@@ -6417,10 +6415,8 @@ function navigateToLab(sectionId, buttonId) {
     }
     
     if (typeof showLabSection === 'function') {
-        showLabSection(sectionId);
+        await showLabSection(sectionId, true);
         setActiveSubmenuButtonHTML(buttonId);
-    } else {
-
     }
 }
 
@@ -6775,8 +6771,13 @@ window.addEventListener('DOMContentLoaded', function() {
   }
   
   // Función de navegación para inyectables
-  window.navigateToInyectables = function(sectionId, buttonId) {
+  window.navigateToInyectables = async function(sectionId, buttonId) {
     console.log('navigateToInyectables llamado con:', sectionId, buttonId);
+
+    if (typeof ensureLabRecepcionCodigoAccess === 'function') {
+      const codigoOk = await ensureLabRecepcionCodigoAccess();
+      if (!codigoOk) return;
+    }
     
     // Ocultar todas las secciones
     const allSections = document.querySelectorAll('.content section');
@@ -6813,6 +6814,10 @@ window.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar el módulo de inyectables
     initializeInyectablesModule();
+
+    if (typeof actualizarBannerLabRecepcionSesion === 'function') {
+      actualizarBannerLabRecepcionSesion();
+    }
   };
   
   // Inicializar módulo de inyectables

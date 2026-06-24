@@ -176,7 +176,7 @@ window.InternamientoExpedientePDF = (() => {
     function buildPortada(int) {
         const nombre = esc(int.referencias?.nombreMascota || 'Paciente');
         const expNum = esc(int.metadata?.expedienteNumero || int.metadata?.internamientoId || 'N/A');
-        const especie = esc(int.referencias?.tipoMascota || '—');
+        const especie = esc(typeof getTipoMascotaLabel === 'function' ? getTipoMascotaLabel(int.referencias?.tipoMascota) : (int.referencias?.tipoMascota || '—'));
         const cedula = esc(int.referencias?.cedulaCliente || '—');
         const medico = esc(int.datosIngreso?.medicoNombre || '—');
         const ingreso = fts(int.datosIngreso?.fechaIngreso);
@@ -258,7 +258,7 @@ window.InternamientoExpedientePDF = (() => {
                 <div class="field"><div class="f-label">Médico responsable</div><div class="f-value">${esc(d.medicoNombre)}</div></div>
                 <div class="field"><div class="f-label">Peso al ingreso</div><div class="f-value">${d.pesoIngreso != null ? esc(d.pesoIngreso) + ' kg' : '—'}</div></div>
                 <div class="field"><div class="f-label">Temperatura al ingreso</div><div class="f-value">${d.temperaturaIngreso != null ? esc(d.temperaturaIngreso) + ' °C' : '—'}</div></div>
-                <div class="field"><div class="f-label">Especie</div><div class="f-value">${esc(int.referencias?.tipoMascota)}</div></div>
+                <div class="field"><div class="f-label">Especie</div><div class="f-value">${esc(typeof getTipoMascotaLabel === 'function' ? getTipoMascotaLabel(int.referencias?.tipoMascota) : int.referencias?.tipoMascota)}</div></div>
             </div>
             <div class="field-grid cols1">
                 <div class="field"><div class="f-label">Historia clínica / Motivo de internamiento</div><div class="f-value">${esc(d.historiaClinica)}</div></div>
@@ -714,7 +714,7 @@ window.InternamientoExpedientePDF = (() => {
                         <div>
                             <div class="subheader">Receptor</div>
                             <div class="field-grid cols1">
-                                <div class="field"><div class="f-label">Tipo de mascota</div><div class="f-value">${esc(rec.tipoMascota)}</div></div>
+                                <div class="field"><div class="f-label">Tipo de mascota</div><div class="f-value">${esc(typeof getTipoMascotaLabel === 'function' ? getTipoMascotaLabel(rec.tipoMascota) : rec.tipoMascota)}</div></div>
                                 <div class="field"><div class="f-label">Peso</div><div class="f-value">${rec.peso != null ? rec.peso + ' kg' : '—'}</div></div>
                                 <div class="field"><div class="f-label">Tipo de sangre</div><div class="f-value">${esc(rec.tipoSangre)}</div></div>
                                 <div class="field"><div class="f-label">Hematocrito actual / deseado</div><div class="f-value">${rec.htActual != null ? rec.htActual + '%' : '—'} / ${rec.htDeseado != null ? rec.htDeseado + '%' : '—'}</div></div>

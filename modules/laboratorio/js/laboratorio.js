@@ -149,9 +149,11 @@ function updateClientesDataFromSnapshot(snapshot) {
                     Nombre: ticket.nombre,
                     Identificacion: ticket.cedula || '',
                     'nombre mascota': mascotaNombre,
-                    Especie: ticket.tipoMascota === 'perro' ? 'Canino' : 
-                            ticket.tipoMascota === 'gato' ? 'Felino' : 
-                            ticket.tipoMascota === 'conejo' ? 'Conejo' : 'Otro',
+                    Especie: typeof getTipoMascotaLabel === 'function'
+                        ? getTipoMascotaLabel(ticket.tipoMascota)
+                        : (ticket.tipoMascota === 'perro' ? 'Canino' :
+                            ticket.tipoMascota === 'gato' ? 'Felino' :
+                            ticket.tipoMascota === 'conejo' ? 'Lagomorfo' : 'Otro'),
                     ultimaActualizacion: new Date().getTime(),
                     consultas: [] // Historial de consultas
                 };
@@ -651,7 +653,7 @@ function refreshLabNextTicketIdFromFirebase() {
 // Verificar si el usuario tiene acceso al módulo de laboratorio
 function hasLabAccess() {
     const userRole = sessionStorage.getItem('userRole');
-    const allowedRoles = ['admin', 'internos', 'consulta_externa', 'laboratorio', 'quirofano', 'lab_reportes'];
+    const allowedRoles = ['admin', 'internos', 'consulta_externa', 'laboratorio', 'quirofano', 'lab_reportes', 'recepcion'];
     return allowedRoles.includes(userRole);
 }
 
@@ -1101,7 +1103,7 @@ function searchClientes(query = '') {
             Id: ticket.idPaciente || '',
             Especie: ticket.tipoMascota === 'perro' ? 'Canino' : 
                      ticket.tipoMascota === 'gato' ? 'Felino' : 
-                     ticket.tipoMascota === 'conejo' ? 'Conejo' : 'Otro',
+                     ticket.tipoMascota === 'conejo' ? 'Lagomorfo' : 'Otro',
             Raza: ticket.raza || '',
             Peso: ticket.peso || '',
             Edad: ticket.edad || '',
@@ -1179,9 +1181,9 @@ function displaySearchResults(results, queryLower = '') {
                 return '';
             }
             
-            const especie = cliente.Especie === 'Canino' ? 'Perro' : 
-                           cliente.Especie === 'Felino' ? 'Gato' : 
-                           cliente.Especie === 'Conejo' ? 'Conejo' : 'Otro';
+            const especie = typeof getTipoMascotaLabel === 'function'
+                ? getTipoMascotaLabel(cliente.Especie || cliente['tipo mascota'])
+                : (cliente.Especie || 'Otro');
             
             // Escapar datos para JSON
             const clienteJson = JSON.stringify(cliente).replace(/"/g, '&quot;');
@@ -1426,7 +1428,7 @@ function selectCliente(itemElement) {
             let tipoMascota = 'otro';
             if (clienteData.Especie === 'Canino') tipoMascota = 'perro';
             else if (clienteData.Especie === 'Felino') tipoMascota = 'gato';
-            else if (clienteData.Especie === 'Conejo') tipoMascota = 'conejo';
+            else if (clienteData.Especie === 'Lagomorfo' || clienteData.Especie === 'Conejo') tipoMascota = 'conejo';
             
             tipoMascotaSelect.value = tipoMascota;
             
@@ -1480,8 +1482,13 @@ function getQuirofanoEstadoLabel(estado) {
 }
 
 // Mostrar sección de laboratorio
-function showLabSection(sectionId) {
+async function showLabSection(sectionId, skipCodigoCheck) {
     console.log(`📍 showLabSection llamado con sectionId: ${sectionId}`);
+
+    if (!skipCodigoCheck && typeof ensureLabRecepcionCodigoAccess === 'function') {
+        const codigoOk = await ensureLabRecepcionCodigoAccess();
+        if (!codigoOk) return;
+    }
 
     const allowedSections = typeof getAllowedLabSectionsForRole === 'function'
         ? getAllowedLabSectionsForRole()
@@ -1603,6 +1610,10 @@ function showLabSection(sectionId) {
                 initPendientesReportarSection();
             }, 100);
         }
+
+        if (typeof actualizarBannerLabRecepcionSesion === 'function') {
+            actualizarBannerLabRecepcionSesion();
+        }
         
     } catch (error) {
         // Error silencioso
@@ -1629,8 +1640,13 @@ function setDefaultLabDate() {
 }
 
 // Manejar envío del formulario de laboratorio
-function handleLabTicketSubmit(e) {
+async function handleLabTicketSubmit(e) {
     e.preventDefault();
+
+    if (typeof ensureLabRecepcionCodigoAccess === 'function') {
+        const codigoOk = await ensureLabRecepcionCodigoAccess();
+        if (!codigoOk) return;
+    }
     
     // Validar que se hayan seleccionado servicios
     if (selectedServices.length === 0) {
@@ -2402,9 +2418,9 @@ function editLabTicket(randomId) {
                     <div class="form-group">
                         <label>Tipo de Mascota</label>
                         <select id="editLabTipoMascota" required>
-                            <option value="perro" ${ticket.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
-                            <option value="gato" ${ticket.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
-                            <option value="conejo" ${ticket.tipoMascota === 'conejo' ? 'selected' : ''}>Conejo</option>
+                            <option value="perro" ${ticket.tipoMascota === 'perro' ? 'selected' : ''}>Canino</option>
+                            <option value="gato" ${ticket.tipoMascota === 'gato' ? 'selected' : ''}>Felino</option>
+                            <option value="conejo" ${ticket.tipoMascota === 'conejo' ? 'selected' : ''}>Lagomorfo</option>
                             <option value="otro" ${ticket.tipoMascota === 'otro' ? 'selected' : ''}>Otro</option>
                         </select>
                     </div>

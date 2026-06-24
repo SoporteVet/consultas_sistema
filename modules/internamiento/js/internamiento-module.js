@@ -11327,7 +11327,7 @@ class InternamientoModule {
             <div class="ingreso-detalle-section">
                 <h4 class="ingreso-detalle-section-title"><i class="fas fa-paw"></i> Datos del paciente</h4>
                 <div class="ingreso-detalle-fila"><span class="label">Nombre de mascota</span><span class="value">${v(ref.nombreMascota)}</span></div>
-                <div class="ingreso-detalle-fila"><span class="label">Especie</span><span class="value">${v(ref.tipoMascota)}</span></div>
+                <div class="ingreso-detalle-fila"><span class="label">Especie</span><span class="value">${typeof getTipoMascotaLabel === 'function' ? getTipoMascotaLabel(ref.tipoMascota) : v(ref.tipoMascota)}</span></div>
                 <div class="ingreso-detalle-fila"><span class="label">ID Paciente</span><span class="value">${v(ref.idPaciente)}</span></div>
             </div>`;
         const edicionConsultaExterna = !!datosIngreso.ultimaEdicionPorConsultaExterna;
@@ -11480,8 +11480,8 @@ class InternamientoModule {
                         <div class="form-group">
                             <label for="editTipoMascota">Especie</label>
                             <select id="editTipoMascota">
-                                <option value="perro" ${ref.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
-                                <option value="gato" ${ref.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
+                                <option value="perro" ${ref.tipoMascota === 'perro' ? 'selected' : ''}>Canino</option>
+                                <option value="gato" ${ref.tipoMascota === 'gato' ? 'selected' : ''}>Felino</option>
                                 <option value="otro" ${!ref.tipoMascota || (ref.tipoMascota !== 'perro' && ref.tipoMascota !== 'gato') ? 'selected' : ''}>Otro</option>
                             </select>
                         </div>

@@ -32,7 +32,7 @@ function fixLaboratorySearchIssue() {
                                     'nombre mascota': ticket.mascota || '',
                                     Especie: ticket.tipoMascota === 'perro' ? 'Canino' : 
                                             ticket.tipoMascota === 'gato' ? 'Felino' : 
-                                            ticket.tipoMascota === 'conejo' ? 'Conejo' : 'Otro',
+                                            ticket.tipoMascota === 'conejo' ? 'Lagomorfo' : 'Otro',
                                     ultimaActualizacion: new Date().getTime()
                                 });
                             }

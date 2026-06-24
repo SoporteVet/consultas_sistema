@@ -76,6 +76,10 @@ try {
   window.database = database;
   window.ticketsRef = ticketsRef;
   window.settingsRef = settingsRef;
+
+  if (firebase.storage) {
+    window.storage = firebase.storage();
+  }
   
   // Inicializar el módulo de autocompletado de vacunas
   if (window.vaccineAutocompleteManager) {

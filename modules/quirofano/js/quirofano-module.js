@@ -60,6 +60,15 @@ function initQuirofanoModule() {
     window.quirofanoModuleInitialized = true;
 }
 
+// Carga tickets de quirófano sin UI del módulo (p. ej. lab_reportes → control anestésico)
+function initQuirofanoDataForConsentimientos() {
+    if (window.quirofanoModuleInitialized || window.quirofanoTicketsDataLoaded) {
+        return;
+    }
+    loadQuirofanoTickets();
+    window.quirofanoTicketsDataLoaded = true;
+}
+
 // Función para configurar la visibilidad del filtro "Todos" para quirófano
 function setupQuirofanoFilterVisibility() {
     const userRole = sessionStorage.getItem('userRole');
@@ -907,9 +916,9 @@ function editQuirofanoTicket(randomId) {
                         <div class="form-group">
                             <label for="editQuirofanoTipoMascota">Tipo de Mascota</label>
                             <select id="editQuirofanoTipoMascota" name="tipoMascota" required>
-                                <option value="perro" ${ticket.tipoMascota === 'perro' ? 'selected' : ''}>Perro</option>
-                                <option value="gato" ${ticket.tipoMascota === 'gato' ? 'selected' : ''}>Gato</option>
-                                <option value="conejo" ${ticket.tipoMascota === 'conejo' ? 'selected' : ''}>Conejo</option>
+                                <option value="perro" ${ticket.tipoMascota === 'perro' ? 'selected' : ''}>Canino</option>
+                                <option value="gato" ${ticket.tipoMascota === 'gato' ? 'selected' : ''}>Felino</option>
+                                <option value="conejo" ${ticket.tipoMascota === 'conejo' ? 'selected' : ''}>Lagomorfo</option>
                                 <option value="otro" ${ticket.tipoMascota === 'otro' ? 'selected' : ''}>Otro</option>
                             </select>
                         </div>
@@ -1559,17 +1568,7 @@ function hideLoading() {
 // Usar la función showNotification global de index.js
 // No definir una función local para evitar recursión infinita
 
-function getTipoMascotaLabel(tipo) {
-    const tipos = {
-        'perro': 'Perro',
-        'gato': 'Gato',
-        'conejo': 'Conejo',
-        'ave': 'Ave',
-        'reptil': 'Reptil',
-        'otro': 'Otro'
-    };
-    return tipos[tipo] || tipo;
-}
+// getTipoMascotaLabel definido en pet-type-utils.js
 
 
 
@@ -1758,4 +1757,6 @@ window.addEventListener('hashchange', function() {
         initQuirofanoModule();
     }
 });
+
+window.initQuirofanoDataForConsentimientos = initQuirofanoDataForConsentimientos;
 
