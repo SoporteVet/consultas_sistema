@@ -375,7 +375,9 @@ window.InternamientoExpedientePDF = (() => {
                 ['Temperatura', pv.temperatura != null ? pv.temperatura + ' °C' : '—'],
                 ['TLLC', pv.tllc != null ? pv.tllc + ' seg' : '—'],
                 ['Deshidratación', pv.deshidratacion != null ? pv.deshidratacion + '%' : '—'],
-                ['Mucosas', mucosasLabel[pv.mucosas] || esc(pv.mucosas) || '—'],
+                ['Mucosas', (window.internamientoModule && typeof window.internamientoModule.formatearMucosas === 'function'
+                    ? window.internamientoModule.formatearMucosas(pv.mucosas)
+                    : (mucosasLabel[pv.mucosas] || esc(pv.mucosas))) || '—'],
                 ['Presión arterial', esc(pv.presionArterial) || '—'],
                 ['PO₂', pv.po2 != null ? pv.po2 + ' mmHg' : '—'],
                 ['Vía', esc(pv.via) || '—'],

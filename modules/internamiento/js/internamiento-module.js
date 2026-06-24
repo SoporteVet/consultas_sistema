@@ -4084,9 +4084,9 @@ class InternamientoModule {
         const container = document.getElementById('panelUltimosTurnos');
         if (!container) return;
 
-        const turnos = Object.values(internamiento.turnos || {})
-            .sort((a, b) => b.fecha - a.fecha)
-            .slice(0, 3);
+        const turnos = this._getTurnosListaOrdenada(internamiento)
+            .slice(0, 3)
+            .map((item) => item.turno);
 
         if (turnos.length === 0) {
             container.innerHTML = `
@@ -4113,16 +4113,31 @@ class InternamientoModule {
         `;
     }
 
-    renderTurnoCard(turno, esUltimo = false, modo = 'completo') {
+    renderTurnoCard(turno, esUltimo = false, modo = 'completo', reorderCtx = null) {
         if (modo === 'compacto') {
             return this.renderTurnoCardCompacto(turno, esUltimo);
         }
 
         const fecha = new Date(turno.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
         const hora = new Date(turno.fecha).toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true });
-        const turnoIdSafe = (turno.turnoId || '').replace(/'/g, "\\'");
+        const turnoIdSafe = (turno._firebaseKey || turno.turnoId || '').replace(/'/g, "\\'");
+        const firebaseKeySafe = (reorderCtx?.firebaseKey || turno._firebaseKey || turno.turnoId || '').replace(/'/g, "\\'");
         const camposGrid = typeof this.renderTurnoCardCamposGrid === 'function'
             ? this.renderTurnoCardCamposGrid(turno)
+            : '';
+        const adminReorder = this.esAdmin() && reorderCtx
+            ? `
+                        <button type="button" class="btn btn-sm btn-secondary" title="Mover arriba (más reciente)"
+                            onclick="window.internamientoModule.moverTurnoAdmin('${firebaseKeySafe}', 'arriba')"
+                            ${reorderCtx.index === 0 ? 'disabled' : ''} style="padding: 6px 10px;">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-secondary" title="Mover abajo (más antiguo)"
+                            onclick="window.internamientoModule.moverTurnoAdmin('${firebaseKeySafe}', 'abajo')"
+                            ${reorderCtx.index >= reorderCtx.total - 1 ? 'disabled' : ''} style="padding: 6px 10px;">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+            `
             : '';
 
         return `
@@ -4136,6 +4151,7 @@ class InternamientoModule {
                         ${turno.editadoEn ? `<span class="turno-card-editado"><i class="fas fa-edit"></i> Editado</span>` : ''}
                     </div>
                     <div class="turno-card-header-actions">
+                        ${adminReorder}
                         ${esUltimo ? `
                         <button class="btn btn-sm btn-warning" onclick="window.internamientoModule.iniciarEdicionTurno('${turnoIdSafe}')" title="Solo quien registró este turno puede editarlo">
                             <i class="fas fa-edit"></i> Editar
@@ -4167,7 +4183,7 @@ class InternamientoModule {
         const tempAlerta = temp && (temp < 37 || temp > 39.5);
         const fc = turno.parametrosVitales?.fc;
         const fcAlerta = fc && (fc < 60 || fc > 160);
-        const turnoIdSafe = (turno.turnoId || '').replace(/'/g, "\\'");
+        const turnoIdSafe = (turno._firebaseKey || turno.turnoId || '').replace(/'/g, "\\'");
 
         return `
             <div style="background: #f8f9fa; border: 1px solid #e8e8e8; border-left: 4px solid #5c6bc0; padding: 14px; border-radius: 8px; margin-bottom: 10px; transition: all 0.3s ease;" onmouseenter="this.style.boxShadow='0 2px 8px rgba(0,0,0,0.1)'" onmouseleave="this.style.boxShadow='none'">
@@ -4427,26 +4443,7 @@ class InternamientoModule {
         const form = document.getElementById('formRegistroTurno');
         if (form) form.reset();
 
-        // Pre-llenar fecha y hora actual
-        const fechaInput = document.getElementById('turnoFecha');
-        const horaInput = document.getElementById('turnoHora');
         const responsableInput = document.getElementById('turnoResponsable');
-        
-        if (fechaInput) {
-            fechaInput.value = new Date().toISOString().split('T')[0];
-        }
-        
-        if (typeof window.setTimePicker12Value === 'function') {
-            const now = new Date();
-            const h = String(now.getHours()).padStart(2, '0');
-            const m = String(now.getMinutes()).padStart(2, '0');
-            window.setTimePicker12Value('turnoHora', `${h}:${m}`);
-        } else if (horaInput) {
-            const now = new Date();
-            horaInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
-        }
-
-        // Responsable se asigna solo al ingresar el código (campo readonly)
         if (responsableInput) {
             responsableInput.value = '';
         }
@@ -4454,7 +4451,9 @@ class InternamientoModule {
         this._editandoTurnoId = null;
         this._actualizarTituloFormularioTurno(false);
 
-        // Pre-seleccionar turno actual
+        // Congelar fecha/hora al abrir el formulario (no al guardar)
+        this._congelarHoraRegistroTurno();
+        this._aplicarMucosasEnFormulario(['rosadas']);
         this.preseleccionarTurno();
 
         // Setup event listener del formulario
@@ -4464,8 +4463,82 @@ class InternamientoModule {
         }
     }
 
+    _timestampAFechaHoraLocal(ts) {
+        const d = new Date(ts);
+        return {
+            fecha: `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`,
+            hora: `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+        };
+    }
+
+    _setTurnoFechaHoraSoloLectura(soloLectura) {
+        const fechaInput = document.getElementById('turnoFecha');
+        if (fechaInput) {
+            fechaInput.readOnly = true;
+            fechaInput.style.background = '#f1f5f9';
+            fechaInput.style.cursor = 'not-allowed';
+        }
+        ['turnoHora_h', 'turnoHora_m', 'turnoHora_ampm'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) el.disabled = !!soloLectura;
+        });
+        const pickerWrapper = document.querySelector('[data-time-picker-for="turnoHora"]');
+        if (pickerWrapper) {
+            pickerWrapper.style.pointerEvents = soloLectura ? 'none' : '';
+            pickerWrapper.style.opacity = soloLectura ? '0.85' : '';
+        }
+        const horaInput = document.getElementById('turnoHora');
+        if (horaInput) {
+            horaInput.readOnly = true;
+        }
+    }
+
+    _aplicarHoraCongeladaEnFormulario(ts) {
+        const { fecha, hora } = this._timestampAFechaHoraLocal(ts);
+        const fechaInput = document.getElementById('turnoFecha');
+        if (fechaInput) fechaInput.value = fecha;
+        if (typeof window.setTimePicker12Value === 'function') {
+            window.setTimePicker12Value('turnoHora', hora);
+        } else {
+            const horaInput = document.getElementById('turnoHora');
+            if (horaInput) horaInput.value = hora;
+        }
+        this._setTurnoFechaHoraSoloLectura(true);
+    }
+
+    _congelarHoraRegistroTurno() {
+        this._turnoHoraCongelada = Date.now();
+        this._aplicarHoraCongeladaEnFormulario(this._turnoHoraCongelada);
+    }
+
+    _normalizarMucosas(val) {
+        if (val === undefined || val === null || val === '') return [];
+        if (Array.isArray(val)) return val.map((v) => String(v).trim()).filter(Boolean);
+        if (typeof val === 'string') {
+            if (val.includes(',')) {
+                return val.split(',').map((v) => v.trim()).filter(Boolean);
+            }
+            return val.trim() ? [val.trim()] : [];
+        }
+        return [];
+    }
+
+    _leerMucosasFormulario() {
+        return Array.from(document.querySelectorAll('input[name="turnoMucosas"]:checked'))
+            .map((el) => el.value)
+            .filter(Boolean);
+    }
+
+    _aplicarMucosasEnFormulario(val) {
+        const seleccionadas = this._normalizarMucosas(val);
+        document.querySelectorAll('input[name="turnoMucosas"]').forEach((el) => {
+            el.checked = seleccionadas.includes(el.value);
+        });
+    }
+
     preseleccionarTurno() {
-        const hora = new Date().getHours();
+        const ts = this._turnoHoraCongelada || Date.now();
+        const hora = new Date(ts).getHours();
         let turno = '6am-2pm'; // Default
 
         // NUEVOS HORARIOS DE 8 HORAS
@@ -4508,9 +4581,11 @@ class InternamientoModule {
             if (this._editandoTurnoId) {
                 await this.actualizarTurno(this._editandoTurnoId, turnoData, codigoResult);
                 this._editandoTurnoId = null;
+                this._turnoHoraCongelada = null;
                 this.showNotification('Turno actualizado exitosamente', 'success');
             } else {
                 await this.guardarTurno(turnoData, codigoResult);
+                this._turnoHoraCongelada = null;
                 this.showNotification('Turno registrado exitosamente', 'success');
             }
             this.showTurnosView();
@@ -4562,6 +4637,7 @@ class InternamientoModule {
 
         try {
             await this.guardarTurno(turnoData, resultadoCodigo);
+            this._turnoHoraCongelada = null;
             this.showNotification('Turno registrado por ' + resultadoCodigo.nombre, 'success');
             this.showTurnosView();
             this.loadTurnosView();
@@ -4577,9 +4653,24 @@ class InternamientoModule {
     }
 
     getTurnoFormData() {
+        let fecha = '';
+        let hora = '';
+        if (this._editandoTurnoId) {
+            fecha = document.getElementById('turnoFecha')?.value || '';
+            hora = document.getElementById('turnoHora')?.value || '';
+        } else if (this._turnoHoraCongelada) {
+            const local = this._timestampAFechaHoraLocal(this._turnoHoraCongelada);
+            fecha = local.fecha;
+            hora = local.hora;
+        } else {
+            fecha = document.getElementById('turnoFecha')?.value || '';
+            hora = document.getElementById('turnoHora')?.value || '';
+        }
+
         return {
-            fecha: document.getElementById('turnoFecha')?.value || '',
-            hora: document.getElementById('turnoHora')?.value || '',
+            fecha,
+            hora,
+            timestampCongelado: this._editandoTurnoId ? null : (this._turnoHoraCongelada || null),
             turno: document.getElementById('turnoFranja')?.value || '',
             responsable: document.getElementById('turnoResponsable')?.value.trim() || '',
             
@@ -4590,7 +4681,7 @@ class InternamientoModule {
             temperatura: parseFloat(document.getElementById('turnoTemperatura')?.value) || null,
             tllc: parseFloat(document.getElementById('turnoTLLC')?.value) || null,
             deshidratacion: parseInt(document.getElementById('turnoDeshidratacion')?.value) || 0,
-            mucosas: document.getElementById('turnoMucosas')?.value || 'rosadas',
+            mucosas: this._leerMucosasFormulario(),
             via: document.getElementById('turnoVia')?.value || '',
             tiempoVia: document.getElementById('turnoTiempoVia')?.value || '',
             sondaEsofagica: document.getElementById('turnoSondaEsofagica')?.value || '',
@@ -4751,8 +4842,8 @@ class InternamientoModule {
             : (data.responsable || userName || 'Usuario desconocido');
         const responsableId = codigoResult?.assistantId || userId;
 
-        // Combinar fecha y hora para timestamp
-        const fechaHora = new Date(`${data.fecha}T${data.hora}`).getTime();
+        const fechaHora = data.timestampCongelado
+            || new Date(`${data.fecha}T${data.hora}`).getTime();
 
         // Generar ID de turno
         const turnoId = 'turno_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -4901,29 +4992,33 @@ class InternamientoModule {
     obtenerTurnoMasRecienteId() {
         const internamiento = this.internamientos.get(this.currentInternamientoId);
         if (!internamiento?.turnos) return null;
-        const lista = Object.values(internamiento.turnos).sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
-        return lista[0]?.turnoId || null;
+        const lista = this._getTurnosListaOrdenada(internamiento);
+        return lista[0]?.firebaseKey || lista[0]?.turno?.turnoId || null;
     }
 
     async iniciarEdicionTurno(turnoId) {
         if (!this.currentInternamientoId) return;
         const internamiento = this.internamientos.get(this.currentInternamientoId);
-        const turno = internamiento?.turnos?.[turnoId];
+        const firebaseKey = this._resolverFirebaseKeyTurno(internamiento, turnoId);
+        const turno = firebaseKey ? internamiento?.turnos?.[firebaseKey] : null;
         if (!turno) {
             this.showAlert('Turno no encontrado', 'Error', 'error');
             return;
         }
-        if (this.obtenerTurnoMasRecienteId() !== turnoId) {
+        const turnoKey = firebaseKey;
+        if (this.obtenerTurnoMasRecienteId() !== turnoId && this.obtenerTurnoMasRecienteId() !== turnoKey) {
             this.showAlert('Solo se puede editar el turno más reciente.', 'Edición no permitida', 'warning');
             return;
         }
         const auth = await this.verificarPuedeEditarTurno(turno);
         if (!auth.valido || auth.cancelado) return;
 
-        this._editandoTurnoId = turnoId;
+        this._editandoTurnoId = turnoKey;
+        this._turnoHoraCongelada = null;
         this._codigoTurnoResult = auth;
         this.showInternamientoView('turno');
         this.llenarFormularioTurno(turno);
+        this._setTurnoFechaHoraSoloLectura(true);
         this._actualizarTituloFormularioTurno(true);
 
         const formElement = document.getElementById('formRegistroTurno');
@@ -4959,7 +5054,7 @@ class InternamientoModule {
         setVal('turnoDeshidratacion', pv.deshidratacion != null ? pv.deshidratacion : 0);
         setVal('turnoPresionArterial', pv.presionArterial);
         setVal('turnoPO2', pv.po2);
-        setVal('turnoMucosas', pv.mucosas || 'rosadas');
+        this._aplicarMucosasEnFormulario(pv.mucosas || ['rosadas']);
         setVal('turnoVia', pv.via || '');
         setVal('turnoTiempoVia', pv.tiempoVia || '');
         setVal('turnoSondaEsofagica', pv.sondaEsofagica || pv.sonda || '');
@@ -4993,7 +5088,8 @@ class InternamientoModule {
 
     async actualizarTurno(turnoId, data, codigoResult) {
         const internamiento = this.internamientos.get(this.currentInternamientoId);
-        const turnoExistente = internamiento?.turnos?.[turnoId];
+        const firebaseKey = this._resolverFirebaseKeyTurno(internamiento, turnoId) || turnoId;
+        const turnoExistente = internamiento?.turnos?.[firebaseKey];
         if (!turnoExistente) throw new Error('Turno no encontrado');
 
         const userId = sessionStorage.getItem('userId');
@@ -5003,7 +5099,7 @@ class InternamientoModule {
         const editorId = codigoResult?.assistantId || responsableId;
 
         const turnoData = {
-            turnoId: turnoId,
+            turnoId: turnoExistente.turnoId || firebaseKey,
             fecha: turnoExistente.fecha,
             fechaFormato: turnoExistente.fechaFormato,
             turno: data.turno,
@@ -5066,17 +5162,17 @@ class InternamientoModule {
         };
 
         const updates = {};
-        updates[`turnos/${turnoId}`] = turnoData;
+        updates[`turnos/${firebaseKey}`] = turnoData;
         updates['metadata/fechaUltimaActualizacion'] = Date.now();
 
-        this._aplicarContadoresViaSondaEnUpdates(updates, data, turnoId);
+        this._aplicarContadoresViaSondaEnUpdates(updates, data, firebaseKey);
 
         const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
         await internamientoRef.update(updates);
 
         if (internamiento) {
             if (!internamiento.turnos) internamiento.turnos = {};
-            internamiento.turnos[turnoId] = turnoData;
+            internamiento.turnos[firebaseKey] = turnoData;
             this._sincronizarCambioViaSondaLocal(internamiento, updates);
             this.internamientos.set(this.currentInternamientoId, internamiento);
         }
@@ -5261,7 +5357,9 @@ class InternamientoModule {
         }
 
         // Mucosas
-        if (['palidas', 'palido', 'cianoticas', 'ictericas'].includes(data.mucosas)) {
+        const mucosasAnormales = ['palidas', 'palido', 'cianoticas', 'ictericas'];
+        const mucosasSeleccionadas = this._normalizarMucosas(data.mucosas);
+        if (mucosasSeleccionadas.some((m) => mucosasAnormales.includes(m))) {
             alertas.push('mucosas_anormales');
         }
 
@@ -7638,8 +7736,160 @@ class InternamientoModule {
             this.showAlert('No se pueden registrar turnos. El paciente ya tiene alta médica autorizada o está egresado.', 'Acción Bloqueada', 'warning');
             return;
         }
+        this._turnoHoraCongelada = null;
         this.showInternamientoView('turnos');
         setTimeout(() => this.loadTurnosView(), 100);
+    }
+
+    _getTurnosListaOrdenada(internamiento) {
+        const turnosRaw = internamiento?.turnos && typeof internamiento.turnos === 'object'
+            ? internamiento.turnos
+            : {};
+        return Object.entries(turnosRaw)
+            .map(([firebaseKey, turno]) => ({
+                firebaseKey,
+                turno: {
+                    ...turno,
+                    turnoId: turno?.turnoId || firebaseKey,
+                    _firebaseKey: firebaseKey
+                }
+            }))
+            .sort((a, b) => {
+                const diff = (b.turno.fecha || 0) - (a.turno.fecha || 0);
+                if (diff !== 0) return diff;
+                return (b.turno.fechaRegistro || 0) - (a.turno.fechaRegistro || 0);
+            });
+    }
+
+    _resolverFirebaseKeyTurno(internamiento, id) {
+        const turnos = internamiento?.turnos || {};
+        if (turnos[id]) return id;
+        for (const [key, turno] of Object.entries(turnos)) {
+            if (turno?.turnoId === id) return key;
+        }
+        return null;
+    }
+
+    _calcularFechasReordenTurno(turnoA, turnoB, direccion) {
+        const baseA = turnoA.fecha || 0;
+        const baseB = turnoB.fecha || 0;
+
+        if (baseA === baseB) {
+            if (direccion === 'arriba') {
+                return {
+                    newFechaA: baseB + 1,
+                    newFechaB: baseA - 1,
+                    actualizarB: true
+                };
+            }
+            return {
+                newFechaA: baseB - 1,
+                newFechaB: baseA + 1,
+                actualizarB: true
+            };
+        }
+
+        return {
+            newFechaA: baseB,
+            newFechaB: baseA,
+            actualizarB: true
+        };
+    }
+
+    async moverTurnoAdmin(firebaseKeyOrTurnoId, direccion) {
+        if (!this.esAdmin() || !this.currentInternamientoId) return;
+
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        if (!internamiento?.turnos) return;
+
+        const firebaseKey = this._resolverFirebaseKeyTurno(internamiento, firebaseKeyOrTurnoId);
+        if (!firebaseKey) {
+            this.showAlert('No se encontró el turno en el sistema', 'Error', 'error');
+            return;
+        }
+
+        const lista = this._getTurnosListaOrdenada(internamiento);
+        const idx = lista.findIndex((item) => item.firebaseKey === firebaseKey);
+        if (idx < 0) return;
+
+        const otroIdx = direccion === 'arriba' ? idx - 1 : idx + 1;
+        if (otroIdx < 0 || otroIdx >= lista.length) return;
+
+        const keyA = lista[idx].firebaseKey;
+        const keyB = lista[otroIdx].firebaseKey;
+        const turnoA = lista[idx].turno;
+        const turnoB = lista[otroIdx].turno;
+        const { newFechaA, newFechaB, actualizarB } = this._calcularFechasReordenTurno(turnoA, turnoB, direccion);
+
+        const turnosSimulados = JSON.parse(JSON.stringify(internamiento.turnos));
+        turnosSimulados[keyA] = { ...turnosSimulados[keyA], fecha: newFechaA };
+        if (actualizarB) {
+            turnosSimulados[keyB] = { ...turnosSimulados[keyB], fecha: newFechaB };
+        }
+        const nuevoIdx = this._getTurnosListaOrdenada({ turnos: turnosSimulados })
+            .findIndex((item) => item.firebaseKey === keyA);
+        if (nuevoIdx === idx) {
+            this.showAlert(
+                'No se pudo cambiar el orden de este turno. Puede tener la misma fecha/hora que el vecino.',
+                'Sin cambios',
+                'warning'
+            );
+            return;
+        }
+
+        const userId = sessionStorage.getItem('userId');
+        const userName = sessionStorage.getItem('userName') || 'Admin';
+
+        const updates = {
+            [`turnos/${keyA}/fecha`]: newFechaA,
+            [`turnos/${keyA}/fechaFormato`]: this._timestampAFechaHoraLocal(newFechaA).fecha,
+            'metadata/fechaUltimaActualizacion': Date.now()
+        };
+        if (actualizarB) {
+            updates[`turnos/${keyB}/fecha`] = newFechaB;
+            updates[`turnos/${keyB}/fechaFormato`] = this._timestampAFechaHoraLocal(newFechaB).fecha;
+        }
+
+        try {
+            const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
+            await internamientoRef.update(updates);
+
+            if (internamiento.turnos[keyA]) {
+                internamiento.turnos[keyA].fecha = newFechaA;
+                internamiento.turnos[keyA].fechaFormato = updates[`turnos/${keyA}/fechaFormato`];
+            }
+            if (actualizarB && internamiento.turnos[keyB]) {
+                internamiento.turnos[keyB].fecha = newFechaB;
+                internamiento.turnos[keyB].fechaFormato = updates[`turnos/${keyB}/fechaFormato`];
+            }
+            this.internamientos.set(this.currentInternamientoId, internamiento);
+
+            await internamientoRef.child('auditoria/historialCambios').push({
+                timestamp: Date.now(),
+                userId,
+                usuarioNombre: userName,
+                accion: 'reordenar_turno',
+                detalles: {
+                    turnoId: turnoA.turnoId || keyA,
+                    firebaseKey: keyA,
+                    intercambiadoCon: turnoB.turnoId || keyB,
+                    firebaseKeyVecino: keyB,
+                    direccion,
+                    fechaAnterior: turnoA.fecha,
+                    fechaNueva: newFechaA
+                }
+            });
+
+            this.showNotification('Orden de turnos actualizado', 'success');
+            this.loadTurnosView();
+            if (this.currentInternamientoId) {
+                const int = this.internamientos.get(this.currentInternamientoId);
+                if (int) this.renderPanelHeader(int);
+            }
+        } catch (error) {
+            console.error('Error reordenando turno:', error);
+            this.showAlert('Error al mover turno: ' + error.message, 'Error', 'error');
+        }
     }
 
     loadTurnosView() {
@@ -7648,15 +7898,18 @@ class InternamientoModule {
         const id = this.currentInternamientoId;
         const internamiento = this.internamientos.get(id);
         if (!internamiento) return;
-        const turnosRaw = internamiento?.turnos && typeof internamiento.turnos === 'object' ? internamiento.turnos : {};
-        const turnosList = Object.values(turnosRaw).sort((a, b) => (b.fecha || 0) - (a.fecha || 0));
+        const turnosList = this._getTurnosListaOrdenada(internamiento);
 
         const listHTML = turnosList.length > 0
             ? `
             <div style="background: white; padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
                 <h3 style="margin: 0 0 16px 0; color: #333; font-size: 1rem;"><i class="fas fa-list"></i> Turnos registrados (${turnosList.length})</h3>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                    ${turnosList.map((t, i) => this.renderTurnoCard(t, i === 0)).join('')}
+                    ${turnosList.map((item, i) => this.renderTurnoCard(item.turno, i === 0, 'completo', {
+                        index: i,
+                        total: turnosList.length,
+                        firebaseKey: item.firebaseKey
+                    })).join('')}
                 </div>
             </div>
             `
@@ -7679,6 +7932,11 @@ class InternamientoModule {
                     </button>
                 </div>
             </div>
+            ${this.esAdmin() ? `
+            <p style="margin: 12px 0 0; color: #6c757d; font-size: 0.9rem;">
+                <i class="fas fa-arrows-alt-v"></i> Como administrador puede reordenar turnos con las flechas arriba/abajo en cada tarjeta.
+            </p>
+            ` : ''}
             ${listHTML}
         `;
     }

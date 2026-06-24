@@ -479,7 +479,10 @@ InternamientoModule.prototype.verTurnoDetalle = function(turnoId) {
     const internamiento = this.internamientos.get(this.currentInternamientoId);
     if (!internamiento) return;
 
-    const turno = internamiento.turnos?.[turnoId];
+    const firebaseKey = typeof this._resolverFirebaseKeyTurno === 'function'
+        ? this._resolverFirebaseKeyTurno(internamiento, turnoId)
+        : turnoId;
+    const turno = firebaseKey ? internamiento.turnos?.[firebaseKey] : null;
     if (!turno) {
         this.showAlert('Turno no encontrado', 'Error', 'error');
         return;
@@ -568,7 +571,11 @@ InternamientoModule.prototype.renderTurnoDetalleModal = function(turno) {
 };
 
 InternamientoModule.prototype.formatearMucosas = function(val) {
-    if (val === undefined || val === null || val === '') return '';
+    const arr = typeof this._normalizarMucosas === 'function'
+        ? this._normalizarMucosas(val)
+        : (val ? [val] : []);
+    if (!arr.length) return '';
+
     const map = {
         rosadas: 'Rosadas (Normal)',
         rosado: 'Rosado',
@@ -579,7 +586,10 @@ InternamientoModule.prototype.formatearMucosas = function(val) {
         cianoticas: 'Cianóticas',
         congestivas: 'Congestivas'
     };
-    return map[val] || val;
+    const labels = arr.map((v) => map[v] || v);
+    if (labels.length === 1) return labels[0];
+    if (labels.length === 2) return `${labels[0]} y ${labels[1]}`;
+    return `${labels.slice(0, -1).join(', ')} y ${labels[labels.length - 1]}`;
 };
 InternamientoModule.prototype.formatearVia = function(val) {
     if (val === undefined || val === null || val === '') return '';

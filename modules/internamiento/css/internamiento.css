@@ -970,6 +970,48 @@
     margin-right: 4px;
 }
 
+.turno-mucosas-group {
+    grid-column: 1 / -1;
+}
+
+.turno-mucosas-opciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px 12px;
+}
+
+.turno-mucosa-check {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    background: #fff;
+    font-size: 0.88rem;
+    color: #333;
+    cursor: pointer;
+    user-select: none;
+}
+
+.turno-mucosa-check:hover {
+    border-color: #5c6bc0;
+    background: #f8f9ff;
+}
+
+.turno-mucosa-check input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    cursor: pointer;
+}
+
+.turno-mucosa-check:has(input:checked) {
+    border-color: #5c6bc0;
+    background: #eef0fb;
+    font-weight: 600;
+}
+
 .turno-card-campos-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
