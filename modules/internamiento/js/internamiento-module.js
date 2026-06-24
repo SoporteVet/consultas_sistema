@@ -1003,6 +1003,14 @@ class InternamientoModule {
                 const estadoIcono = visita.estado === 'En espera' ? 'clock' 
                     : visita.estado === 'En curso' ? 'user-check' 
                     : 'check-circle';
+                const intIdClick = String(visita.internamientoId || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const visitaIdClick = String(visita.visitaId || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+                const tipoSalidaVisita = typeof this.resolveTipoSalidaVisita === 'function'
+                    ? this.resolveTipoSalidaVisita(visita)
+                    : (visita.tipoSalida || (visita.tieneSalida ? 'salida' : ''));
+                const labelSalidaVisita = tipoSalidaVisita && typeof this.getTipoSalidaVisitaLabel === 'function'
+                    ? this.getTipoSalidaVisitaLabel(tipoSalidaVisita)
+                    : (visita.razonSalida || '');
                 
                 return `
                     <div class="visita-card" data-estado="${v(visita.estado)}">
@@ -1051,12 +1059,27 @@ class InternamientoModule {
                             </div>
                             <div class="visita-card-motivo-text">${v(visita.motivo)}</div>
                         </div>
+                        ${tipoSalidaVisita ? `
+                        <div class="visita-card-motivo" style="border-color: #fecaca; background: #fef2f2;">
+                            <div class="visita-card-motivo-label" style="color: #b91c1c;">
+                                <i class="fas fa-sign-out-alt"></i>
+                                Salida programada
+                            </div>
+                            <div class="visita-card-motivo-text">${v(labelSalidaVisita)}</div>
+                        </div>
+                        ` : ''}
                         
-                        <div class="visita-card-footer">
+                        <div class="visita-card-footer" style="flex-wrap: wrap; gap: 10px;">
+                            <div style="flex: 1; min-width: 180px;">
                             <label class="visita-card-estado-label" for="visita-estado-${v(visita.visitaId)}">Estado de la visita</label>
                             <select id="visita-estado-${v(visita.visitaId)}" class="visita-estado-select-card" data-internamiento-id="${v(visita.internamientoId)}" data-visita-id="${v(visita.visitaId)}">
                                 ${estados.map(e => `<option value="${v(e)}" ${visita.estado === e ? 'selected' : ''}>${v(e)}</option>`).join('')}
                             </select>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-secondary" style="align-self: flex-end;"
+                                onclick="window.internamientoModule.showModalEditarVisita('${intIdClick}', '${visitaIdClick}')">
+                                <i class="fas fa-edit"></i> Editar
+                            </button>
                         </div>
                     </div>
                 `;
@@ -1338,6 +1361,7 @@ class InternamientoModule {
                             <option value="Recolección de cuerpo">Recolección de cuerpo</option>
                         </select>
                     </div>
+                    ${typeof this._getVisitaSalidaFieldsHTML === 'function' ? this._getVisitaSalidaFieldsHTML({}) : ''}
                     <div class="form-group" style="margin-bottom: 16px;">
                         <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #3949ab;">
                             <i class="fas fa-clock"></i> Fecha y hora de la visita *
@@ -1368,10 +1392,31 @@ class InternamientoModule {
         const modal = this.createModal('Agregar visita', contenido, 'fa-user-plus');
         document.body.appendChild(modal);
         this.initVisitaNombrePacienteInput(modal, lista);
+        if (typeof this._bindVisitaSalidaToggle === 'function') {
+            this._bindVisitaSalidaToggle(modal);
+        }
         const form = document.getElementById('formAgregarVisita');
         if (form) {
             form.addEventListener('submit', (e) => {
                 e.preventDefault();
+                const datos = typeof this._collectVisitaFormData === 'function'
+                    ? this._collectVisitaFormData(modal)
+                    : null;
+                if (datos && typeof this._validarVisitaFormData === 'function') {
+                    if (!this._validarVisitaFormData(datos)) return;
+                    this.guardarVisita({
+                        internamientoId: datos.internamientoId,
+                        nombrePaciente: datos.nombrePaciente,
+                        nombreVisitante: datos.nombreVisitante,
+                        parentesco: datos.parentesco,
+                        motivo: datos.motivo,
+                        tipoSalida: datos.tipoSalida,
+                        tieneSalida: datos.tieneSalida,
+                        razonSalida: datos.razonSalida,
+                        fechaHoraMs: datos.fechaHoraMs
+                    });
+                    return;
+                }
                 const nombrePaciente = modal.querySelector('#visitaNombrePaciente')?.value?.trim() || '';
                 let internamientoId = modal.querySelector('#visitaPacienteId')?.value?.trim() || '';
                 if (!internamientoId) {
@@ -1436,6 +1481,13 @@ class InternamientoModule {
             nombreVisitante: datos.nombreVisitante || '',
             parentesco: datos.parentesco || '',
             motivo: datos.motivo || '',
+            tipoSalida: datos.tipoSalida || '',
+            tieneSalida: !!(datos.tipoSalida || datos.tieneSalida),
+            razonSalida: datos.tipoSalida
+                ? (typeof this.getTipoSalidaVisitaLabel === 'function'
+                    ? this.getTipoSalidaVisitaLabel(datos.tipoSalida)
+                    : (datos.razonSalida || ''))
+                : '',
             estado: 'En espera',
             fechaHora: new Date(fechaVisitaMs).toISOString(),
             timestamp: fechaVisitaMs,
@@ -1527,6 +1579,9 @@ class InternamientoModule {
 
         const config = estadoConfig[estado] || estadoConfig.activo;
         const nombreMascota = internamiento.referencias?.nombreMascota || 'Sin nombre';
+        const datosPropietarioCard = this.getDatosPropietario(internamiento);
+        const cedulaPropietario = (internamiento.referencias?.cedulaCliente || '').trim();
+        const telefonoPropietario = (datosPropietarioCard.telefono || internamiento.referencias?.telefonoPropietario || '').trim();
         const expediente = internamiento.metadata?.expedienteNumero || 'N/A';
         const diasInternado = this.calcularDiasInternado(internamiento.datosIngreso?.fechaIngreso);
         const tipoMascota = internamiento.referencias?.tipoMascota || 'perro';
@@ -1605,6 +1660,16 @@ class InternamientoModule {
                                 <i class="fas fa-user" style="color: #26a69a; margin-right: 6px;"></i>
                                 ${this.getNombrePropietario(internamiento)}
                             </div>
+                            ${estado === 'egresado' ? `
+                            <div>
+                                <i class="fas fa-id-card" style="color: #5c6bc0; margin-right: 6px;"></i>
+                                <strong>Cédula:</strong> ${cedulaPropietario || '—'}
+                            </div>
+                            <div>
+                                <i class="fas fa-phone" style="color: #00897b; margin-right: 6px;"></i>
+                                <strong>Teléfono:</strong> ${telefonoPropietario || '—'}
+                            </div>
+                            ` : ''}
                             ${diagnostico ? `
                             <div style="grid-column: 1 / -1; margin-top: 8px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
                                 <i class="fas fa-stethoscope" style="color: #7e57c2; margin-right: 6px;"></i>
@@ -5460,13 +5525,18 @@ class InternamientoModule {
         const internamiento = this.internamientos.get(this.currentInternamientoId);
         if (!internamiento) return;
 
-        // Renderizar lista de medicamentos
-        this.renderMedicamentosList(internamiento);
-        
-        // Setup event listeners
-        const btnAgregarMed = document.getElementById('btnAgregarMedicamento');
-        if (btnAgregarMed) {
-            btnAgregarMed.onclick = () => this.showAgregarMedicamentoForm();
+        const render = () => {
+            this.renderMedicamentosList(internamiento);
+            const btnAgregarMed = document.getElementById('btnAgregarMedicamento');
+            if (btnAgregarMed) {
+                btnAgregarMed.onclick = () => this.showAgregarMedicamentoForm();
+            }
+        };
+
+        if (typeof this.verificarSuspensionesVencidas === 'function') {
+            this.verificarSuspensionesVencidas(this.currentInternamientoId).then(render).catch(render);
+        } else {
+            render();
         }
     }
 
@@ -5475,8 +5545,15 @@ class InternamientoModule {
         if (!container) return;
 
         const medicamentos = Object.values(internamiento.planTerapeutico?.medicamentos || {});
-        const activos = medicamentos.filter(m => m.estadoMedicamento === 'activo');
-        const suspendidos = medicamentos.filter(m => m.estadoMedicamento === 'suspendido');
+        const activos = medicamentos.filter(m =>
+            typeof this.esMedicamentoVisibleParaAdmin === 'function'
+                ? this.esMedicamentoVisibleParaAdmin(m)
+                : m.estadoMedicamento === 'activo'
+        );
+        const suspendidos = medicamentos.filter(m =>
+            m.estadoMedicamento === 'suspendido' &&
+            (typeof this.estaMedicamentoSuspendido !== 'function' || this.estaMedicamentoSuspendido(m))
+        );
 
         if (activos.length === 0) {
             container.innerHTML = `
@@ -5683,6 +5760,7 @@ class InternamientoModule {
                                 <div style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px;">
                                     ${med.suspendidoNombre ? `<div style="font-size: 0.9rem; color: #555;"><i class="fas fa-user-nurse" style="margin-right: 6px; color: #78909c;"></i><strong>Suspendido por:</strong> ${esc(med.suspendidoNombre)}</div>` : ''}
                                     ${med.motivoSuspension ? `<div style="font-size: 0.9rem; color: #555;"><i class="fas fa-comment-alt" style="margin-right: 6px; color: #f39c12;"></i><strong>Motivo:</strong> ${esc(med.motivoSuspension)}</div>` : ''}
+                                    ${med.suspensionDesde && med.suspensionHasta ? `<div style="font-size: 0.9rem; color: #555;"><i class="fas fa-calendar-alt" style="margin-right: 6px; color: #e65100;"></i><strong>Suspendido:</strong> ${esc(med.suspensionDesde)} al ${esc(med.suspensionHasta)}</div>` : ''}
                                     ${fechaFinStr ? `<div style="font-size: 0.85rem; color: #888;"><i class="fas fa-calendar-times" style="margin-right: 6px;"></i>${fechaFinStr}</div>` : ''}
                                     ${histTotal > 0 ? `<div style="font-size:0.8rem;color:#e65100;"><i class="fas fa-history"></i> ${histTotal} suspensión(es) anteriores</div>` : ''}
                                 </div>
@@ -5928,6 +6006,10 @@ class InternamientoModule {
     /** Indica si se puede administrar una dosis ahora (contador en cero o primera dosis pendiente). */
     puedeAdministrarAhora(medicamento) {
         if (!medicamento) return false;
+        if (typeof this.estaMedicamentoSuspendido === 'function' && this.estaMedicamentoSuspendido(medicamento)) {
+            return false;
+        }
+        if (medicamento.estadoMedicamento === 'suspendido') return false;
         if (medicamento.puestoPorConsultaExterna) return true;
         const texto = this.calcularProximaDosis(medicamento);
         return texto.includes('AHORA') || texto.includes('Pendiente primera dosis');
@@ -7049,6 +7131,9 @@ class InternamientoModule {
     }
 
     async suspenderMedicamento(medicamentoId) {
+        if (typeof this.showModalSuspenderMedicamento === 'function') {
+            return this.showModalSuspenderMedicamento(medicamentoId);
+        }
         const internamiento = this.internamientos.get(this.currentInternamientoId);
         const medicamento = internamiento?.planTerapeutico?.medicamentos?.[medicamentoId];
         if (!internamiento || !medicamento) {
@@ -7350,7 +7435,13 @@ class InternamientoModule {
             const internamientoId = internamiento.metadata?.internamientoId || mapKey;
             if (!this.esRegistroInternamientoReal(internamientoId)) return;
             const medicamentos = Object.values(internamiento.planTerapeutico?.medicamentos || {})
-                .filter(m => m.estadoMedicamento === 'activo' && !m.puestoPorConsultaExterna && !m.dosisUnica);
+                .filter(m => {
+                    if (m.puestoPorConsultaExterna || m.dosisUnica) return false;
+                    if (typeof this.esMedicamentoVisibleParaAdmin === 'function') {
+                        return this.esMedicamentoVisibleParaAdmin(m);
+                    }
+                    return m.estadoMedicamento === 'activo';
+                });
 
             medicamentos.forEach(med => {
                 const proxima = this._calcularProximaDosisTiempo(med);
