@@ -219,9 +219,9 @@
                 <label for="tipoMascota">Tipo de Mascota</label>
                 <select id="tipoMascota" required>
                   <option value="por_definir" selected>Por definir</option>
-                  <option value="perro">Perro</option>
-                  <option value="gato">Gato</option>
-                  <option value="conejo">Conejo</option>
+                  <option value="perro">Canino</option>
+                  <option value="gato">Felino</option>
+                  <option value="conejo">Lagomorfo</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>
@@ -465,9 +465,9 @@
               <div class="form-group">
                 <label for="labTipoMascota">Tipo de Mascota</label>
                 <select id="labTipoMascota" required>
-                  <option value="perro">Perro</option>
-                  <option value="gato">Gato</option>
-                  <option value="conejo">Conejo</option>
+                  <option value="perro">Canino</option>
+                  <option value="gato">Felino</option>
+                  <option value="conejo">Lagomorfo</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>
@@ -1665,9 +1665,9 @@
               <div class="form-group">
                 <label for="quirofanoTipoMascota">Tipo de Mascota</label>
                 <select id="quirofanoTipoMascota" required>
-                  <option value="perro">Perro</option>
-                  <option value="gato">Gato</option>
-                  <option value="conejo">Conejo</option>
+                  <option value="perro">Canino</option>
+                  <option value="gato">Felino</option>
+                  <option value="conejo">Lagomorfo</option>
                   <option value="otro">Otro</option>
                 </select>
               </div>
@@ -2371,6 +2371,7 @@
   <!-- Scripts críticos para inicio -->
   <script src="modules/core/js/vaccine-autocomplete-manager.js"></script>
   <script src="modules/core/js/firebase-config.js"></script>
+  <script src="modules/core/js/pet-type-utils.js" defer></script>
   <script src="modules/auth/js/auth.js" defer></script>
   
   <!-- Scripts principales con defer para no bloquear render -->
@@ -2384,6 +2385,7 @@
   <script src="modules/vacunas-temp/js/vacunas-temperatura-modulo-CODIGO.js" defer></script>
   
   <!-- Módulos específicos con defer (carga diferida) -->
+  <script src="modules/laboratorio/js/laboratorio-auth-codigo.js" defer></script>
   <script src="modules/laboratorio/js/laboratorio.js" defer></script>
   <script src="modules/consentimientos/js/consentimientos-module.js" defer></script>
   <script src="modules/quirofano/js/quirofano-module.js" defer></script>
@@ -2673,10 +2675,10 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="form-group">
             <label for="internamientoTipoMascotaAdmision">Especie *</label>
             <select id="internamientoTipoMascotaAdmision" required>
-              <option value="perro">Perro</option>
-              <option value="gato">Gato</option>
+              <option value="perro">Canino</option>
+              <option value="gato">Felino</option>
               <option value="ave">Ave</option>
-              <option value="conejo">Conejo</option>
+              <option value="conejo">Lagomorfo</option>
               <option value="otro">Otro</option>
             </select>
           </div>
@@ -3047,12 +3049,12 @@ document.addEventListener('DOMContentLoaded', function() {
           <div class="form-group">
             <label for="turnoFecha">Fecha *</label>
             <input type="date" id="turnoFecha" required readonly style="background: #f1f5f9; cursor: not-allowed;">
-            <small style="color: #6c757d; font-size: 0.8rem;">Asignada por el sistema</small>
+            <small style="color: #6c757d; font-size: 0.8rem;">Se registra al abrir este formulario</small>
           </div>
           <div class="form-group">
             <label for="turnoHora">Hora *</label>
             <input type="time" id="turnoHora" required readonly style="background: #f1f5f9; cursor: not-allowed;">
-            <small style="color: #6c757d; font-size: 0.8rem;">Asignada por el sistema</small>
+            <small style="color: #6c757d; font-size: 0.8rem;">Se registra al abrir este formulario</small>
           </div>
           <div class="form-group">
             <label for="turnoFranja">Turno *</label>
@@ -3137,18 +3139,19 @@ document.addEventListener('DOMContentLoaded', function() {
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group">
-            <label for="turnoMucosas">Mucosas</label>
-            <select id="turnoMucosas">
-              <option value="rosadas">Rosadas (Normal)</option>
-              <option value="rosado">Rosado</option>
-              <option value="rosado_palido">Rosado pálido</option>
-              <option value="palido">Pálido</option>
-              <option value="palidas">Pálidas</option>
-              <option value="ictericas">Ictéricas</option>
-              <option value="cianoticas">Cianóticas</option>
-              <option value="congestivas">Congestivas</option>
-            </select>
+          <div class="form-group turno-mucosas-group">
+            <label>Mucosas</label>
+            <small style="color: #6c757d; font-size: 0.8rem; display: block; margin-bottom: 8px;">Puede seleccionar una o varias (ej: pálidas y rosadas)</small>
+            <div class="turno-mucosas-opciones">
+              <label class="turno-mucosa-check"><input type="checkbox" name="turnoMucosas" value="rosadas"> Rosadas (Normal)</label>
+              <label class="turno-mucosa-check"><input type="checkbox" name="turnoMucosas" value="rosado"> Rosado</label>
+              <label class="turno-mucosa-check"><input type="checkbox" name="turnoMucosas" value="rosado_palido"> Rosado pálido</label>
+              <label class="turno-mucosa-check"><input type="checkbox" name="turnoMucosas" value="palido"> Pálido</label>
+              <label class="turno-mucosa-check"><input type="checkbox" name="turnoMucosas" value="palidas"> Pálidas</label>
+              <label class="turno-mucosa-check"><input type="checkbox" name="turnoMucosas" value="ictericas"> Ictéricas</label>
+              <label class="turno-mucosa-check"><input type="checkbox" name="turnoMucosas" value="cianoticas"> Cianóticas</label>
+              <label class="turno-mucosa-check"><input type="checkbox" name="turnoMucosas" value="congestivas"> Congestivas</label>
+            </div>
           </div>
           <div class="form-group">
             <label for="turnoVia">Vía</label>
@@ -3550,6 +3553,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- Cargar módulo de internamiento -->
 <script src="modules/internamiento/js/internamiento-module.js"></script>
 <script src="modules/internamiento/js/internamiento-medicacion-grid.js"></script>
+<script src="modules/internamiento/js/internamiento-visitas-suspension.js"></script>
 <script src="modules/internamiento/js/internamiento-expediente-pdf.js" defer></script>
 <script src="modules/internamiento/js/internamiento-notificaciones.js"></script>
 <script src="modules/internamiento/js/internamiento-extended.js"></script>
