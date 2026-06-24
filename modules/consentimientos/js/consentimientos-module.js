@@ -83,6 +83,27 @@ const ALLOWED_TEMPLATES_BY_SOURCE = {
     internos: ['alta_voluntaria', 'anestesia', 'transfusion', 'eutanasia', 'internamiento']
 };
 
+// Plantillas permitidas por rol (restricción adicional)
+const ALLOWED_TEMPLATES_BY_ROLE = {
+    lab_reportes: ['control_anestesico']
+};
+
+function getConsentUserRole() {
+    return sessionStorage.getItem('userRole') || '';
+}
+
+function isLabReportesConsentRole() {
+    return getConsentUserRole() === 'lab_reportes';
+}
+
+function getAllowedTemplatesForRole() {
+    const role = getConsentUserRole();
+    if (ALLOWED_TEMPLATES_BY_ROLE[role]) {
+        return new Set(ALLOWED_TEMPLATES_BY_ROLE[role]);
+    }
+    return null;
+}
+
 // Mapeo de plantillas disponibles
 // Las rutas son relativas a index.html que está en la raíz del proyecto
 const CONSENT_TEMPLATES = {
@@ -152,7 +173,12 @@ function initConsentimientos() {
     }
     
     // Configurar origen por defecto y disponibilidad de plantillas
-    setConsentSource('consulta');
+    if (isLabReportesConsentRole()) {
+        applyLabReportesConsentUI();
+        setConsentSource('quirofano');
+    } else {
+        setConsentSource('consulta');
+    }
     
     // Verificar datos de quirófano inmediatamente
     console.log('Estado inicial de datos de quirófano:');
@@ -167,7 +193,26 @@ function initConsentimientos() {
     }
     
     console.log('Módulo de consentimientos inicializado correctamente');
+    configureConsentimientosForRole();
 }
+
+function configureConsentimientosForRole() {
+    if (!isLabReportesConsentRole()) return;
+
+    applyLabReportesConsentUI();
+
+    if (consentSource !== 'quirofano' && consentSource !== 'consulta') {
+        setConsentSource('quirofano');
+    } else {
+        updateTemplateAvailabilityForSource();
+    }
+
+    if (typeof initQuirofanoDataForConsentimientos === 'function') {
+        initQuirofanoDataForConsentimientos();
+    }
+}
+
+window.configureConsentimientosForRole = configureConsentimientosForRole;
 
 // Función para esperar a que los datos de quirófano estén disponibles
 function waitForQuirofanoTicketsData() {
@@ -275,12 +320,35 @@ function setConsentSource(sourceKey) {
     updateTemplateAvailabilityForSource();
 }
 
+function applyLabReportesConsentUI() {
+    const internosTab = document.getElementById('consentSourceInternos');
+    if (internosTab) internosTab.style.display = 'none';
+
+    const sectionTitle = document.querySelector('#consentimientosSection > h2');
+    if (sectionTitle) {
+        sectionTitle.innerHTML = '<i class="fas fa-syringe"></i> Control Anestésico';
+    }
+
+    const templateSectionTitle = document.querySelector('.consent-template-section h3');
+    if (templateSectionTitle) {
+        templateSectionTitle.innerHTML = '<i class="fas fa-syringe"></i> Control Anestésico y Medicamentoso';
+    }
+}
+
 function updateTemplateAvailabilityForSource() {
-    const allowed = new Set(ALLOWED_TEMPLATES_BY_SOURCE[consentSource] || []);
+    const allowedBySource = new Set(ALLOWED_TEMPLATES_BY_SOURCE[consentSource] || []);
+    const allowedByRole = getAllowedTemplatesForRole();
+
     document.querySelectorAll('.template-card').forEach(card => {
         const key = card.getAttribute('data-template');
         if (!key) return;
-        if (allowed.has(key)) {
+
+        let allowed = allowedBySource.has(key);
+        if (allowedByRole) {
+            allowed = allowed && allowedByRole.has(key);
+        }
+
+        if (allowed) {
             card.classList.remove('disabled');
             card.style.display = '';
         } else {
@@ -709,6 +777,13 @@ function enableTemplateSelection() {
 function selectTemplate(templateKey) {
     if (!CONSENT_TEMPLATES[templateKey]) {
         showConsentNotification('Plantilla no encontrada', 'error');
+        return;
+    }
+
+    const allowedBySource = new Set(ALLOWED_TEMPLATES_BY_SOURCE[consentSource] || []);
+    const allowedByRole = getAllowedTemplatesForRole();
+    if (!allowedBySource.has(templateKey) || (allowedByRole && !allowedByRole.has(templateKey))) {
+        showConsentNotification('No tiene permiso para usar esta plantilla', 'error');
         return;
     }
     
