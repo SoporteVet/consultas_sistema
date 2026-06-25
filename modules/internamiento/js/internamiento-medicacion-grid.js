@@ -284,6 +284,10 @@ InternamientoModule.prototype.renderEtiquetaEstadoAplicadoCE = function(admin) {
 
 InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, diaKey, horaSlot, admin, soloLectura = false) {
     const medId = (medicamento.medicamentoId || '').replace(/'/g, "\\'");
+    const fueraProgramacion = false;
+    if (fueraProgramacion) {
+        soloLectura = true;
+    }
     const estado = admin
         ? (admin.estado === 'omitido' || admin.estado === 'no_administrado' ? 'omitido' : 'administrado')
         : null;
@@ -294,6 +298,7 @@ InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, 
         const d = new Date(this._administracionToTs(admin));
         if (!isNaN(d.getTime())) titleParts.push(`Hora real: ${d.toLocaleTimeString('es-PE', { hour: 'numeric', minute: '2-digit', hour12: true })}`);
     }
+    if (fueraProgramacion) titleParts.push('Fuera del periodo programado');
     const title = titleParts.join(' · ');
     let contenido = '';
     if (estado === 'administrado') {
@@ -305,8 +310,8 @@ InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, 
     }
     if (soloLectura) {
         return `
-            <div class="med-celda-vista ${estado || 'pendiente'}" title="${title.replace(/"/g, '&quot;')}">
-                ${contenido}
+            <div class="med-celda-vista ${estado || 'pendiente'}${fueraProgramacion ? ' med-celda-fuera-programacion' : ''}" title="${title.replace(/"/g, '&quot;')}">
+                ${fueraProgramacion ? '<span class="med-celda-na">—</span>' : contenido}
             </div>`;
     }
     return `
@@ -336,7 +341,8 @@ InternamientoModule.prototype.renderTablaControlMedicacion = function(internamie
                 const admin = this.obtenerAdminCeldaMedicacion(med, d.key, h);
                 const esConsultaExt = !!med.puestoPorConsultaExterna;
                 const etiquetaCE = esConsultaExt ? this.renderEtiquetaEstadoAplicadoCE(admin) : '';
-                return `<div class="med-slot-wrap">${etiquetaCE}<span class="med-slot-hora">${this._hora24a12(h)}</span>${this.renderCeldaMedicacionHTML(med, d.key, h, admin, esConsultaExt)}</div>`;
+                // soloLectura siempre false: todas las celdas son clickeables
+                return `<div class="med-slot-wrap">${etiquetaCE}<span class="med-slot-hora">${this._hora24a12(h)}</span>${this.renderCeldaMedicacionHTML(med, d.key, h, admin, false)}</div>`;
             }).join('');
             return `<td class="med-dia-celda med-dia-${d.tipo || 'internamiento'}"><div class="med-dia-slots">${slots}</div></td>`;
         }).join('');
@@ -346,6 +352,10 @@ InternamientoModule.prototype.renderTablaControlMedicacion = function(internamie
                 <td class="med-col-fija med-col-med">
                     <strong>${esc(med.nombreComercial || 'Sin nombre')}</strong>
                     ${this.renderChipOrigenItem(med)}
+                    ${(() => {
+                        const prog = typeof this.formatProgramacionMedicamento === 'function' ? this.formatProgramacionMedicamento(med) : '';
+                        return prog ? `<div class="med-row-prog"><i class="fas fa-calendar-alt"></i> ${esc(prog)}</div>` : '';
+                    })()}
                     ${med.observaciones ? `<div class="med-row-obs"><i class="fas fa-comment"></i> ${esc(med.observaciones)}</div>` : ''}
                 </td>
                 <td class="med-col-fija med-col-dosis">${esc(this.formatDosisUnidad(med))}</td>

@@ -2451,7 +2451,8 @@ class InternamientoModule {
                 if (existentes && existentes[medId]) {
                     medId = 'med_' + ahora + '_' + idx + '_' + Math.random().toString(36).substr(2, 9);
                 }
-                const administraciones = m.aplicadoEnConsultaExterna
+                // puestoPorConsultaExterna siempre marca la primera dosis automáticamente
+                const administraciones = (m.puestoPorConsultaExterna || m.aplicadoEnConsultaExterna)
                     ? this.buildAdministracionesAplicadoConsultaExterna(m, creadorId, creadorNombre, ahora)
                     : {};
                 const medData = {
@@ -2466,6 +2467,10 @@ class InternamientoModule {
                     horariosCalculados: m.horariosCalculados || [],
                     fechaInicio: ahora,
                     fechaFin: null,
+                    programacionDesde: m.programacionDesde || (typeof this._fechaLocalYmd === 'function' ? this._fechaLocalYmd(new Date(ahora)) : null),
+                    programacionDesdeHora: m.programacionDesdeHora || '00:00',
+                    programacionHasta: m.programacionHasta || null,
+                    programacionHastaHora: m.programacionHastaHora || null,
                     estadoMedicamento: 'activo',
                     prescritoPor: creadorId,
                     prescritoNombre: creadorNombre,
@@ -3133,7 +3138,8 @@ class InternamientoModule {
                     // Si es puesto por consulta externa, prescrito = persona asociada al código verificado (igual que en pendientes)
                     const prescritoPor = ((m.puestoPorConsultaExterna || m.puestoPorInternos) && ingresoPorId) ? ingresoPorId : userId;
                     const prescritoNombre = ((m.puestoPorConsultaExterna || m.puestoPorInternos) && ingresoPorNombre) ? ingresoPorNombre : userName;
-                    const administraciones = m.aplicadoEnConsultaExterna
+                    // puestoPorConsultaExterna siempre marca la primera dosis automáticamente
+                    const administraciones = (m.puestoPorConsultaExterna || m.aplicadoEnConsultaExterna)
                         ? this.buildAdministracionesAplicadoConsultaExterna(m, prescritoPor, prescritoNombre, Date.now())
                         : {};
                     meds[m.medicamentoId] = {
@@ -3148,6 +3154,10 @@ class InternamientoModule {
                         horariosCalculados: m.horariosCalculados || [],
                         fechaInicio: Date.now(),
                         fechaFin: null,
+                        programacionDesde: m.programacionDesde || (typeof this._fechaLocalYmd === 'function' ? this._fechaLocalYmd() : null),
+                        programacionDesdeHora: m.programacionDesdeHora || '00:00',
+                        programacionHasta: m.programacionHasta || null,
+                        programacionHastaHora: m.programacionHastaHora || null,
                         estadoMedicamento: 'activo',
                         prescritoPor: prescritoPor,
                         prescritoNombre: prescritoNombre,
@@ -5714,6 +5724,11 @@ class InternamientoModule {
         if (!container) return;
 
         const medicamentos = Object.values(internamiento.planTerapeutico?.medicamentos || {});
+        const finalizados = medicamentos.filter(m =>
+            m.estadoMedicamento === 'activo' &&
+            typeof this.estaMedicamentoFinalizadoProgramacion === 'function' &&
+            this.estaMedicamentoFinalizadoProgramacion(m)
+        );
         const activos = medicamentos.filter(m =>
             typeof this.esMedicamentoVisibleParaAdmin === 'function'
                 ? this.esMedicamentoVisibleParaAdmin(m)
@@ -5724,7 +5739,7 @@ class InternamientoModule {
             (typeof this.estaMedicamentoSuspendido !== 'function' || this.estaMedicamentoSuspendido(m))
         );
 
-        if (activos.length === 0) {
+        if (activos.length === 0 && finalizados.length === 0) {
             container.innerHTML = `
                 ${this.renderMedicacionViewToggle ? this.renderMedicacionViewToggle() : ''}
                 <div class="empty-state" style="padding: 60px 30px;">
@@ -5754,6 +5769,7 @@ class InternamientoModule {
             ${this.renderMedicacionViewToggle ? this.renderMedicacionViewToggle() : ''}
             ${vistaTabla && this.renderTablaControlMedicacion ? this.renderTablaControlMedicacion(internamiento, activos) : ''}
             <div id="medicacionTarjetasWrap" style="${vistaTabla ? 'display:none;' : ''}">
+            ${activos.length > 0 ? `
             ${activosAdministrar.length > 0 ? `
             <div id="barraMedicamentosLote" style="display:none;margin-bottom:16px;padding:14px 18px;background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                 <span style="font-weight:600;color:#1565c0;"><i class="fas fa-check-double"></i> <span id="contadorMedicamentosSeleccionados">0</span> medicamento(s) seleccionado(s)</span>
@@ -5785,6 +5801,8 @@ class InternamientoModule {
                         const proximaDosis = this.calcularProximaDosis(med);
                         const esAhora = proximaDosis.includes('AHORA');
                         const puedeAdministrar = this.puedeAdministrarAhora(med);
+                        const pendienteInicio = typeof this.estaMedicamentoPendienteInicioProgramacion === 'function' && this.estaMedicamentoPendienteInicioProgramacion(med);
+                        const programacionTexto = typeof this.formatProgramacionMedicamento === 'function' ? this.formatProgramacionMedicamento(med) : '';
                         const admins = Object.values(med.administraciones || {});
                         const ultimaAdmin = admins.filter(a => a.estado === 'administrado').sort((a, b) => (b.fechaHoraReal || 0) - (a.fechaHoraReal || 0))[0];
                         const ultimaAdminNombre = ultimaAdmin ? (ultimaAdmin.administradoNombre || '—') : null;
@@ -5820,7 +5838,7 @@ class InternamientoModule {
                                         </button>
                                         ${puedeAdministrar
                                             ? `<button class="med-btn-accion med-btn-admin" onclick="window.internamientoModule.administrarMedicamento('${med.medicamentoId}')" title="Administrar dosis"><i class="fas fa-syringe"></i></button>`
-                                            : `<button class="med-btn-accion" disabled title="Espere a que llegue la hora" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
+                                            : `<button class="med-btn-accion" disabled title="${pendienteInicio ? 'El tratamiento aún no ha iniciado' : 'Espere a que llegue la hora o el tratamiento ya finalizó'}" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
                                         }
                                         <button class="med-btn-accion med-btn-suspender" onclick="window.internamientoModule.suspenderMedicamento('${med.medicamentoId}')" title="Suspender">
                                             <i class="fas fa-pause"></i>
@@ -5850,6 +5868,12 @@ class InternamientoModule {
                                         <span style="font-size: 0.9rem; font-weight: 600; color: #333;">${this._formatHorariosCompacto(med)}</span>
                                     </div>
                                 </div>
+                                ${programacionTexto ? `
+                                <div style="background: #eef2ff; border-left: 3px solid #6366f1; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px;">
+                                    <span style="display: block; font-size: 0.75rem; color: #4338ca; text-transform: uppercase; margin-bottom: 4px;">Programación</span>
+                                    <span style="font-size: 0.9rem; color: #312e81; font-weight: 600;"><i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>${programacionTexto}</span>
+                                </div>
+                                ` : ''}
                                 ${med.observaciones ? `
                                 <div style="background: #f0f9ff; border-left: 3px solid #0ea5e9; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px;">
                                     <span style="display: block; font-size: 0.75rem; color: #0c4a6e; text-transform: uppercase; margin-bottom: 4px;">Observaciones</span>
@@ -5906,7 +5930,37 @@ class InternamientoModule {
                     }).join('')}
                 </div>
             </div>
+            ` : ''}
             
+            ${finalizados.length > 0 ? `
+                <div style="margin-top: 36px; padding: 24px; background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 12px;">
+                    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
+                        <div style="width: 44px; height: 44px; background: #eceff1; border: 1px solid #cfd8dc; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
+                            <i class="fas fa-calendar-check" style="color: #546e7a; font-size: 1.2rem;"></i>
+                        </div>
+                        <div>
+                            <h3 style="margin: 0; color: #455a64; font-size: 1.1rem;">Tratamientos finalizados</h3>
+                            <p style="margin: 4px 0 0 0; color: #78909c; font-size: 0.9rem;">${finalizados.length} medicamento${finalizados.length !== 1 ? 's' : ''} con fecha fin cumplida — ya no se pueden administrar</p>
+                        </div>
+                    </div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px;">
+                        ${finalizados.map(med => {
+                            const esc = (s) => (s || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                            const prog = typeof this.formatProgramacionMedicamento === 'function' ? this.formatProgramacionMedicamento(med) : '';
+                            return `
+                            <div style="background: white; border: 1px solid #e0e0e0; border-radius: 10px; padding: 16px; opacity: 0.92;">
+                                <div style="font-weight: 600; color: #424242; font-size: 1rem; margin-bottom: 8px;">${esc(med.nombreComercial || 'Sin nombre')}</div>
+                                <div style="font-size: 0.9rem; color: #666; margin-bottom: 8px;">${esc(this.formatDosisUnidad(med))} · ${esc(med.viaAdministracion || '—')}</div>
+                                ${prog ? `<div style="font-size: 0.85rem; color: #78909c;"><i class="fas fa-calendar-times" style="margin-right: 6px;"></i>${esc(prog)}</div>` : ''}
+                                <button type="button" class="btn btn-sm" style="margin-top: 12px; width: 100%; background: transparent; color: #0ea5e9; border: 1px solid #0ea5e9;" onclick="window.internamientoModule.mostrarHistorialAdministracionesMedicamento('${esc(med.medicamentoId)}')">
+                                    <i class="fas fa-history"></i> Ver administraciones
+                                </button>
+                            </div>`;
+                        }).join('')}
+                    </div>
+                </div>
+            ` : ''}
+
             ${suspendidos.length > 0 ? `
                 <div style="margin-top: 36px; padding: 24px; background: #fafafa; border: 1px solid #e8e8e8; border-radius: 12px;">
                     <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 18px;">
@@ -6122,6 +6176,16 @@ class InternamientoModule {
     }
 
     calcularProximaDosis(medicamento) {
+        if (typeof this.estaMedicamentoFinalizadoProgramacion === 'function' && this.estaMedicamentoFinalizadoProgramacion(medicamento)) {
+            return 'Tratamiento finalizado';
+        }
+        if (typeof this.estaMedicamentoPendienteInicioProgramacion === 'function' && this.estaMedicamentoPendienteInicioProgramacion(medicamento)) {
+            const fmt = typeof this.formatProgramacionMedicamento === 'function'
+                ? this.formatProgramacionMedicamento(medicamento)
+                : (medicamento.programacionDesde || '');
+            return fmt ? `Inicia: ${fmt}` : 'Pendiente de inicio';
+        }
+
         const administraciones = Object.values(medicamento.administraciones || {});
         const ahora = new Date();
 
@@ -6175,6 +6239,15 @@ class InternamientoModule {
     /** Indica si se puede administrar una dosis ahora (contador en cero o primera dosis pendiente). */
     puedeAdministrarAhora(medicamento) {
         if (!medicamento) return false;
+        if (typeof this.estaMedicamentoFinalizadoProgramacion === 'function' && this.estaMedicamentoFinalizadoProgramacion(medicamento)) {
+            return false;
+        }
+        if (typeof this.estaMedicamentoPendienteInicioProgramacion === 'function' && this.estaMedicamentoPendienteInicioProgramacion(medicamento)) {
+            return false;
+        }
+        if (typeof this.estaDentroProgramacionMedicamento === 'function' && !this.estaDentroProgramacionMedicamento(medicamento)) {
+            return false;
+        }
         if (typeof this.estaMedicamentoSuspendido === 'function' && this.estaMedicamentoSuspendido(medicamento)) {
             return false;
         }
@@ -6287,6 +6360,13 @@ class InternamientoModule {
     getAgregarMedicamentoFormHTML(medParaEditar = null) {
         const esEdicion = !!medParaEditar;
         const v = (x) => (x != null && x !== undefined ? String(x).replace(/"/g, '&quot;').replace(/</g, '&lt;') : '');
+        const hoy = typeof this._fechaLocalYmd === 'function' ? this._fechaLocalYmd() : '';
+        const progDesdeVal = esEdicion
+            ? (medParaEditar.programacionDesde || (medParaEditar.fechaInicio ? this._fechaLocalYmd(new Date(medParaEditar.fechaInicio)) : hoy))
+            : hoy;
+        const progHastaVal = esEdicion ? (medParaEditar.programacionHasta || '') : '';
+        const progDesdeHoraVal = esEdicion ? (medParaEditar.programacionDesdeHora || '00:00') : '00:00';
+        const progHastaHoraVal = esEdicion ? (medParaEditar.programacionHastaHora || '23:59') : '23:59';
         const horasInicial = esEdicion && ((medParaEditar.horariosExactos && medParaEditar.horariosExactos.length) || (medParaEditar.horariosCalculados && medParaEditar.horariosCalculados.length))
             ? ((medParaEditar.horariosExactos && medParaEditar.horariosExactos.length) ? medParaEditar.horariosExactos : medParaEditar.horariosCalculados || []).join(',')
             : '';
@@ -6341,6 +6421,26 @@ class InternamientoModule {
                     <input type="number" id="medFrecuencia" min="1" placeholder="Ej: 8 (horas)" value="${esEdicion && medParaEditar.frecuenciaHoras != null ? medParaEditar.frecuenciaHoras : ''}">
                     <small style="color:#6c757d;font-size:0.8rem;">Ingresar número de horas entre dosis, o marcar "Dosis única"</small>
                 </div>
+                <div class="form-group" style="padding: 14px; background: #eef2ff; border-radius: 8px; border: 1px solid #c7d2fe;">
+                    <label style="margin-bottom: 10px; display: block;"><i class="fas fa-calendar-alt" style="color: #4f46e5; margin-right: 6px;"></i>Programación del tratamiento</label>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div>
+                            <label style="font-size: 0.85rem; color: #4338ca; margin-bottom: 4px; display: block;">Fecha inicio *</label>
+                            <input type="date" id="medProgramacionDesde" required value="${v(progDesdeVal)}" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #c7d2fe;">
+                            <label style="font-size: 0.85rem; color: #4338ca; margin: 8px 0 4px; display: block;">Hora inicio *</label>
+                            <input type="time" id="medProgramacionDesdeHora" required value="${v(progDesdeHoraVal)}" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #c7d2fe;">
+                        </div>
+                        <div>
+                            <label style="font-size: 0.85rem; color: #4338ca; margin-bottom: 4px; display: block;">Fecha fin</label>
+                            <input type="date" id="medProgramacionHasta" value="${v(progHastaVal)}" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #c7d2fe;">
+                            <label style="font-size: 0.85rem; color: #4338ca; margin: 8px 0 4px; display: block;">Hora fin</label>
+                            <input type="time" id="medProgramacionHastaHora" value="${v(progHastaHoraVal)}" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #c7d2fe;">
+                        </div>
+                    </div>
+                    <small style="display: block; color: #6366f1; font-size: 0.8rem; margin-top: 8px;">
+                        Al llegar la <strong>fecha y hora fin</strong>, el medicamento ya no podrá administrarse.
+                    </small>
+                </div>
                 <div class="form-group">
                     <label><i class="fas fa-list-ol" style="color: #0ea5e9; margin-right: 6px;"></i>Horas exactas (opcional)</label>
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
@@ -6382,7 +6482,46 @@ class InternamientoModule {
                     <label><i class="fas fa-comment-medical" style="color: #6366f1; margin-right: 6px;"></i>Observaciones</label>
                     <textarea id="medObservaciones" rows="2" placeholder="Ej: Administrar lentamente, con alimento, etc.">${esEdicion ? v(medParaEditar.observaciones || '') : ''}</textarea>
                 </div>
-                ${(!esEdicion && this.agregarMedicamentoContexto === 'admision') ? this.getOrigenAdmisionFormHTML() : (esEdicion && (medParaEditar.puestoPorConsultaExterna || medParaEditar.puestoPorInternos)) ? (() => {
+                ${(!esEdicion && this.agregarMedicamentoContexto === 'admision') ? (() => {
+                    const origen = this.getOrigenIngresoAdmision();
+                    // Si el rol fija el origen automáticamente, lo muestra como etiqueta fija
+                    if (origen.puestoPorConsultaExterna) {
+                        return `
+                        <input type="hidden" id="medPuestoPorConsultaExterna" value="true">
+                        <div class="form-group" style="margin-top: 12px; padding: 14px; background: #ecfdf5; border-radius: 8px; border: 1px solid #0d9488;">
+                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                <span style="color: #0f766e; font-weight: 600; font-size: 0.95rem;">
+                                    <i class="fas fa-stethoscope" style="margin-right: 6px;"></i>Puesto por consulta externa
+                                </span>
+                            </div>
+                            <small style="display: block; color: #0f766e; font-size: 0.8rem; margin-top: 6px;">La primera dosis se marcará automáticamente como administrada en la tabla de medicación.</small>
+                        </div>`;
+                    }
+                    if (origen.puestoPorInternos) {
+                        return `
+                        <input type="hidden" id="medPuestoPorInternos" value="true">
+                        <div class="form-group" style="margin-top: 12px; padding: 14px; background: #ede9fe; border-radius: 8px; border: 1px solid #c4b5fd;">
+                            <span style="color: #5b21b6; font-weight: 600;"><i class="fas fa-bed" style="margin-right: 6px;"></i>Puesto por internos</span>
+                        </div>`;
+                    }
+                    // Para otros roles: botón opcional para marcar como "puesto por consulta externa"
+                    return `
+                    <div class="form-group" style="margin-top: 16px;">
+                        <label style="font-weight: 600; margin-bottom: 8px; display: block; color: #374151;">
+                            <i class="fas fa-tag" style="margin-right: 6px; color: #6366f1;"></i>Origen del medicamento
+                        </label>
+                        <input type="hidden" id="medPuestoPorConsultaExterna" value="false">
+                        <input type="hidden" id="medPuestoPorInternos" value="false">
+                        <div>
+                            <button type="button" id="btnOrigenConsultaExt"
+                                onclick="window.internamientoModule._toggleOrigenAdmision('consulta_externa')"
+                                style="padding: 10px 16px; border-radius: 8px; border: 2px solid #0d9488; background: white; color: #0f766e; font-weight: 600; cursor: pointer; transition: all 0.2s; font-size: 0.9rem;">
+                                <i class="fas fa-stethoscope" style="margin-right: 6px;"></i>Puesto por consulta externa
+                            </button>
+                        </div>
+                        <small id="notaOrigenAdmision" style="display: block; color: #6c757d; font-size: 0.8rem; margin-top: 8px;">Si viene de consulta externa, la primera dosis se marcará automáticamente en la tabla de medicación.</small>
+                    </div>`;
+                })() : (esEdicion && (medParaEditar.puestoPorConsultaExterna || medParaEditar.puestoPorInternos)) ? (() => {
                     const e = this.getEtiquetaOrigenItem(medParaEditar);
                     if (!e) return '';
                     return `
@@ -6406,18 +6545,6 @@ class InternamientoModule {
                     </label>
                 </div>
                 ` : ''}
-                ${(!esEdicion && this.agregarMedicamentoContexto === 'admision' && sessionStorage.getItem('userRole') === 'consulta_externa') ? `
-                <div class="form-group" style="margin-top: 16px;">
-                    <button type="button" id="btnMedAplicadoConsultaExterna" class="med-btn-aplicado-consulta-ext"
-                        onclick="window.internamientoModule.toggleMedAplicadoConsultaExterna()">
-                        <i class="fas fa-check-circle"></i> Ya fue aplicado en consulta externa
-                    </button>
-                    <input type="hidden" id="medAplicadoConsultaExterna" value="false">
-                    <small style="display: block; color: #6c757d; font-size: 0.8rem; margin-top: 8px;">
-                        Al activar esta opción, las dosis del día de ingreso aparecerán registradas en la tabla de medicación de internamiento.
-                    </small>
-                </div>
-                ` : ''}
                 <div style="display: flex; gap: 12px; margin-top: 24px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
                     <button type="button" class="btn btn-secondary" style="flex: 1;" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i> Cancelar
@@ -6437,6 +6564,73 @@ class InternamientoModule {
         const activo = hidden.value === 'true';
         hidden.value = activo ? 'false' : 'true';
         btn.classList.toggle('active', !activo);
+    }
+
+    _toggleOrigenAdmision(tipo) {
+        const hConsulta = document.getElementById('medPuestoPorConsultaExterna');
+        const hInternos  = document.getElementById('medPuestoPorInternos');
+        const btnCE      = document.getElementById('btnOrigenConsultaExt');
+        const btnInt     = document.getElementById('btnOrigenInternos');
+        const nota       = document.getElementById('notaOrigenAdmision');
+        if (!hConsulta || !hInternos) return;
+
+        const ceActivo  = hConsulta.value === 'true';
+        const intActivo = hInternos.value === 'true';
+
+        if (tipo === 'consulta_externa') {
+            const nuevo = !ceActivo;
+            hConsulta.value = nuevo ? 'true' : 'false';
+            hInternos.value = 'false';
+            if (btnCE)  { btnCE.style.background  = nuevo ? '#0d9488' : 'white'; btnCE.style.color  = nuevo ? 'white' : '#0f766e'; }
+            if (btnInt) { btnInt.style.background = 'white'; btnInt.style.color = '#5b21b6'; }
+            if (nota && nuevo) nota.textContent = 'La primera dosis se marcará automáticamente como administrada en la tabla de medicación.';
+            else if (nota) nota.textContent = 'Si viene de consulta externa, la primera dosis se marcará automáticamente en la tabla de medicación.';
+        } else {
+            const nuevo = !intActivo;
+            hInternos.value  = nuevo ? 'true' : 'false';
+            hConsulta.value  = 'false';
+            if (btnInt) { btnInt.style.background  = nuevo ? '#7c3aed' : 'white'; btnInt.style.color  = nuevo ? 'white' : '#5b21b6'; }
+            if (btnCE)  { btnCE.style.background  = 'white'; btnCE.style.color  = '#0f766e'; }
+            if (nota) nota.textContent = 'Si viene de consulta externa, la primera dosis se marcará automáticamente en la tabla de medicación.';
+        }
+    }
+
+    _leerProgramacionMedicamentoDesdeForm() {
+        const desde = document.getElementById('medProgramacionDesde')?.value?.trim() || '';
+        const hasta = document.getElementById('medProgramacionHasta')?.value?.trim() || '';
+        const desdeHora = document.getElementById('medProgramacionDesdeHora')?.value?.trim() || '00:00';
+        const hastaHora = document.getElementById('medProgramacionHastaHora')?.value?.trim() || '23:59';
+        const hoy = typeof this._fechaLocalYmd === 'function' ? this._fechaLocalYmd() : '';
+        return {
+            programacionDesde: desde || hoy,
+            programacionDesdeHora: desdeHora,
+            programacionHasta: hasta || null,
+            programacionHastaHora: hasta ? hastaHora : null
+        };
+    }
+
+    _validarProgramacionMedicamento(prog) {
+        if (!prog?.programacionDesde) {
+            return { valido: false, mensaje: 'Indique la fecha de inicio del tratamiento.' };
+        }
+        if (!prog.programacionDesdeHora) {
+            return { valido: false, mensaje: 'Indique la hora de inicio del tratamiento.' };
+        }
+        if (prog.programacionHasta) {
+            const parseMs = typeof this._parseProgramacionDateTime === 'function'
+                ? (f, h) => this._parseProgramacionDateTime(f, h)
+                : null;
+            if (parseMs) {
+                const inicioMs = parseMs(prog.programacionDesde, prog.programacionDesdeHora);
+                const finMs = parseMs(prog.programacionHasta, prog.programacionHastaHora || '23:59');
+                if (inicioMs != null && finMs != null && finMs < inicioMs) {
+                    return { valido: false, mensaje: 'La fecha/hora fin no puede ser anterior al inicio.' };
+                }
+            } else if (prog.programacionHasta < prog.programacionDesde) {
+                return { valido: false, mensaje: 'La fecha fin no puede ser anterior a la fecha inicio.' };
+            }
+        }
+        return { valido: true };
     }
 
     /** Abre solo el historial de ediciones del medicamento (panel). No activa modo edición desde desplegable. */
@@ -6658,6 +6852,13 @@ class InternamientoModule {
         const aplicadoEnConsultaExterna = esAdmision && sessionStorage.getItem('userRole') === 'consulta_externa'
             ? (document.getElementById('medAplicadoConsultaExterna')?.value === 'true')
             : false;
+        const programacion = this._leerProgramacionMedicamentoDesdeForm();
+        const validacionProgramacion = this._validarProgramacionMedicamento(programacion);
+        if (!validacionProgramacion.valido) {
+            this.showAlert(validacionProgramacion.mensaje, 'Programación del tratamiento', 'warning');
+            if (esAdmision) { this._agregandoMedicamentoAdmision = false; if (submitBtn) { submitBtn.disabled = false; submitBtn.innerHTML = '<i class="fas fa-plus"></i> Agregar Medicamento'; } }
+            return;
+        }
         const medicamentoData = {
             nombreComercial: this.normalizeNombreMedicamento(document.getElementById('medNombreComercial')?.value),
             dosis: document.getElementById('medDosis')?.value.trim() || '',
@@ -6671,7 +6872,11 @@ class InternamientoModule {
             puestoPorInternos: esAdmision ? origenFlags.puestoPorInternos : false,
             pedidoPermisoEmergencia: pedidoPermisoEmergencia,
             encargadaContactada: pedidoPermisoEmergencia ? 'Alejandra Cardona' : null,
-            aplicadoEnConsultaExterna: aplicadoEnConsultaExterna
+            aplicadoEnConsultaExterna: aplicadoEnConsultaExterna,
+            programacionDesde: programacion.programacionDesde,
+            programacionDesdeHora: programacion.programacionDesdeHora,
+            programacionHasta: programacion.programacionHasta,
+            programacionHastaHora: programacion.programacionHastaHora
         };
 
         if (!esDosisUnica && !medicamentoData.frecuenciaHoras && horariosExactos.length === 0) {
@@ -6709,7 +6914,11 @@ class InternamientoModule {
                 puestoPorInternos: medicamentoData.puestoPorInternos || false,
                 pedidoPermisoEmergencia: medicamentoData.pedidoPermisoEmergencia || false,
                 encargadaContactada: medicamentoData.encargadaContactada || null,
-                aplicadoEnConsultaExterna: medicamentoData.aplicadoEnConsultaExterna || false
+                aplicadoEnConsultaExterna: medicamentoData.aplicadoEnConsultaExterna || false,
+                programacionDesde: medicamentoData.programacionDesde || null,
+                programacionDesdeHora: medicamentoData.programacionDesdeHora || '00:00',
+                programacionHasta: medicamentoData.programacionHasta || null,
+                programacionHastaHora: medicamentoData.programacionHastaHora || null
             });
             this._agregandoMedicamentoAdmision = false;
             this.renderListaMedicamentosAdmision();
@@ -6764,6 +6973,10 @@ class InternamientoModule {
             horariosCalculados: horariosCalculados,
             fechaInicio: Date.now(),
             fechaFin: null,
+            programacionDesde: data.programacionDesde || (typeof this._fechaLocalYmd === 'function' ? this._fechaLocalYmd() : null),
+            programacionDesdeHora: data.programacionDesdeHora || '00:00',
+            programacionHasta: data.programacionHasta || null,
+            programacionHastaHora: data.programacionHastaHora || null,
             estadoMedicamento: 'activo',
             prescritoPor: userId,
             prescritoNombre: userName,
@@ -6820,6 +7033,12 @@ class InternamientoModule {
             ? (elConsultaExterna.type === 'checkbox' ? elConsultaExterna.checked : elConsultaExterna.value === 'true')
             : false;
         const esDosisUnicaEdit = document.getElementById('medDosisUnica')?.checked || false;
+        const programacion = this._leerProgramacionMedicamentoDesdeForm();
+        const validacionProgramacion = this._validarProgramacionMedicamento(programacion);
+        if (!validacionProgramacion.valido) {
+            this.showAlert(validacionProgramacion.mensaje, 'Programación del tratamiento', 'warning');
+            return;
+        }
         const data = {
             nombreComercial: this.normalizeNombreMedicamento(document.getElementById('medNombreComercial')?.value),
             dosis: document.getElementById('medDosis')?.value.trim() || '',
@@ -6829,7 +7048,11 @@ class InternamientoModule {
             dosisUnica: esDosisUnicaEdit,
             horariosExactos: horariosExactos,
             observaciones: document.getElementById('medObservaciones')?.value.trim() || '',
-            puestoPorConsultaExterna: puestoPorConsultaExterna
+            puestoPorConsultaExterna: puestoPorConsultaExterna,
+            programacionDesde: programacion.programacionDesde,
+            programacionDesdeHora: programacion.programacionDesdeHora,
+            programacionHasta: programacion.programacionHasta,
+            programacionHastaHora: programacion.programacionHastaHora
         };
         if (!esDosisUnicaEdit && !data.frecuenciaHoras && horariosExactos.length === 0) {
             this.showAlert('Indique la frecuencia (cada X horas), las horas exactas de administración, o marque "Dosis única".', 'Datos requeridos', 'warning');
@@ -6883,6 +7106,10 @@ class InternamientoModule {
         updates[`planTerapeutico/medicamentos/${medicamentoId}/horariosCalculados`] = horariosCalculados;
         updates[`planTerapeutico/medicamentos/${medicamentoId}/observaciones`] = data.observaciones;
         updates[`planTerapeutico/medicamentos/${medicamentoId}/puestoPorConsultaExterna`] = data.puestoPorConsultaExterna || false;
+        updates[`planTerapeutico/medicamentos/${medicamentoId}/programacionDesde`] = data.programacionDesde || null;
+        updates[`planTerapeutico/medicamentos/${medicamentoId}/programacionDesdeHora`] = data.programacionDesdeHora || '00:00';
+        updates[`planTerapeutico/medicamentos/${medicamentoId}/programacionHasta`] = data.programacionHasta || null;
+        updates[`planTerapeutico/medicamentos/${medicamentoId}/programacionHastaHora`] = data.programacionHastaHora || null;
         if (edicionInfo && edicionInfo.codigoResult) {
             const cr = edicionInfo.codigoResult;
             const ahora = Date.now();
@@ -7066,31 +7293,42 @@ class InternamientoModule {
             const m = String(refDate.getMinutes()).padStart(2, '0');
             horarios = [`${h}:${m}`];
         }
-        if (med.dosisUnica) {
-            horarios = [horarios[0]];
+
+        // Solo marcar la PRIMERA dosis (la que se aplicó en consulta externa)
+        // Elegimos el slot más cercano pasado al momento del ingreso, o el primero del día si todos son futuros
+        const refMs = refDate.getTime();
+        const [dY, dM, dD] = diaKey.split('-').map(Number);
+        let slotElegido = horarios[0]; // fallback: primer slot
+        let mejorMs = -1;
+        for (const h of horarios) {
+            const [ph, pm] = h.split(':').map(Number);
+            const slotMs = new Date(dY, dM - 1, dD, ph, pm, 0, 0).getTime();
+            if (slotMs <= refMs && slotMs > mejorMs) {
+                mejorMs = slotMs;
+                slotElegido = h;
+            }
         }
+
         const adminSlotId = typeof this._adminSlotId === 'function'
             ? (dk, hs) => this._adminSlotId(dk, hs)
             : (dk, hs) => `slot_${dk.replace(/-/g, '')}_${hs.replace(':', '')}`;
+
         const administraciones = {};
-        horarios.forEach(horaSlot => {
-            const adminId = adminSlotId(diaKey, horaSlot);
-            const [y, mo, d] = diaKey.split('-').map(Number);
-            const [ph, pm] = horaSlot.split(':').map(Number);
-            const fechaHoraProgramada = new Date(y, mo - 1, d, ph, pm, 0, 0).getTime();
-            administraciones[adminId] = {
-                fechaHoraProgramada,
-                fechaHoraReal: fechaHoraProgramada,
-                estado: 'administrado',
-                administradoPor: adminPor || '',
-                administradoNombre: adminNombre || '',
-                observaciones: 'Aplicado en consulta externa',
-                slotDia: diaKey,
-                slotHora: horaSlot,
-                aplicadoEnConsultaExterna: true,
-                codigoVerificado: false
-            };
-        });
+        const [ph, pm] = slotElegido.split(':').map(Number);
+        const fechaHoraProgramada = new Date(dY, dM - 1, dD, ph, pm, 0, 0).getTime();
+        const adminId = adminSlotId(diaKey, slotElegido);
+        administraciones[adminId] = {
+            fechaHoraProgramada,
+            fechaHoraReal: fechaHoraProgramada,
+            estado: 'administrado',
+            administradoPor: adminPor || '',
+            administradoNombre: adminNombre || '',
+            observaciones: 'Aplicado en consulta externa',
+            slotDia: diaKey,
+            slotHora: slotElegido,
+            aplicadoEnConsultaExterna: true,
+            codigoVerificado: false
+        };
         return administraciones;
     }
 
@@ -7175,7 +7413,13 @@ class InternamientoModule {
             return;
         }
         if (!this.puedeAdministrarAhora(medicamento)) {
-            this.showAlert('Solo se puede administrar cuando corresponda la próxima dosis (contador en cero). Espere a que el tiempo indicado llegue a cero.', 'Próxima dosis no correspondiente', 'warning');
+            let msg = 'Solo se puede administrar cuando corresponda la próxima dosis (contador en cero). Espere a que el tiempo indicado llegue a cero.';
+            if (typeof this.estaMedicamentoFinalizadoProgramacion === 'function' && this.estaMedicamentoFinalizadoProgramacion(medicamento)) {
+                msg = 'Este medicamento ya cumplió su fecha fin programada y no puede administrarse.';
+            } else if (typeof this.estaMedicamentoPendienteInicioProgramacion === 'function' && this.estaMedicamentoPendienteInicioProgramacion(medicamento)) {
+                msg = 'Este medicamento aún no ha iniciado según su programación.';
+            }
+            this.showAlert(msg, 'Administración no permitida', 'warning');
             return;
         }
 

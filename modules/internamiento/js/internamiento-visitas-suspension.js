@@ -8,6 +8,106 @@ InternamientoModule.prototype._fechaLocalYmd = function(date) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
+// --- Medicación programada (fecha inicio / fin de tratamiento) ---
+
+InternamientoModule.prototype._parseProgramacionDateTime = function(fechaYmd, horaHm) {
+    if (!fechaYmd) return null;
+    const [y, m, d] = fechaYmd.split('-').map(Number);
+    if (!y || !m || !d) return null;
+    let h = 0;
+    let min = 0;
+    if (horaHm && /^\d{1,2}:\d{2}$/.test(String(horaHm).trim())) {
+        [h, min] = String(horaHm).trim().split(':').map(Number);
+    }
+    return new Date(y, m - 1, d, h, min, 0, 0).getTime();
+};
+
+InternamientoModule.prototype.getProgramacionInicioMs = function(medicamento) {
+    if (!medicamento?.programacionDesde) return null;
+    return this._parseProgramacionDateTime(
+        medicamento.programacionDesde,
+        medicamento.programacionDesdeHora || '00:00'
+    );
+};
+
+InternamientoModule.prototype.getProgramacionFinMs = function(medicamento) {
+    if (!medicamento?.programacionHasta) return null;
+    return this._parseProgramacionDateTime(
+        medicamento.programacionHasta,
+        medicamento.programacionHastaHora || '23:59'
+    );
+};
+
+InternamientoModule.prototype.estaDiaDentroProgramacionMedicamento = function(medicamento, diaKey) {
+    if (!medicamento || !diaKey) return true;
+    const desde = medicamento.programacionDesde || null;
+    const hasta = medicamento.programacionHasta || null;
+    if (desde && diaKey < desde) return false;
+    if (hasta && diaKey > hasta) return false;
+    return true;
+};
+
+InternamientoModule.prototype.estaSlotDentroProgramacionMedicamento = function(medicamento, diaKey, horaSlot) {
+    // Solo bloquea si el DÍA está fuera del rango (fecha inicio/fin a nivel de día)
+    if (!this.estaDiaDentroProgramacionMedicamento(medicamento, diaKey)) return false;
+    // Comprobación de hora solo para la fecha FIN (no bloquear slots dentro del día de inicio)
+    const finMs = this.getProgramacionFinMs(medicamento);
+    if (finMs != null) {
+        const slotMs = this._parseProgramacionDateTime(diaKey, horaSlot);
+        if (slotMs != null && slotMs > finMs) return false;
+    }
+    return true;
+};
+
+InternamientoModule.prototype.estaDentroProgramacionMedicamento = function(medicamento) {
+    if (!medicamento) return true;
+    if (this.estaMedicamentoPendienteInicioProgramacion(medicamento)) return false;
+    if (this.estaMedicamentoFinalizadoProgramacion(medicamento)) return false;
+    return true;
+};
+
+InternamientoModule.prototype.estaMedicamentoPendienteInicioProgramacion = function(medicamento) {
+    // Solo bloquea si la FECHA (sin hora) es futura — no bloquea por la hora dentro del mismo día
+    if (!medicamento?.programacionDesde) return false;
+    const hoy = typeof this._fechaLocalYmd === 'function' ? this._fechaLocalYmd() : '';
+    return hoy < medicamento.programacionDesde;
+};
+
+InternamientoModule.prototype.estaMedicamentoFinalizadoProgramacion = function(medicamento) {
+    const finMs = this.getProgramacionFinMs(medicamento);
+    if (finMs == null) return false;
+    return Date.now() > finMs;
+};
+
+InternamientoModule.prototype.formatProgramacionMedicamento = function(medicamento) {
+    if (!medicamento) return '';
+    const desde = medicamento.programacionDesde || null;
+    const hasta = medicamento.programacionHasta || null;
+    if (!desde && !hasta) return '';
+    const fmtFecha = (ymd) => {
+        if (!ymd) return '';
+        const [y, m, d] = ymd.split('-').map(Number);
+        if (!y || !m || !d) return ymd;
+        return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+    };
+    const fmtHora = (hm) => {
+        if (!hm) return '';
+        if (typeof window.formatTime12Hour === 'function') return window.formatTime12Hour(hm);
+        return hm;
+    };
+    const fmtDateTime = (ymd, hm) => {
+        const fecha = fmtFecha(ymd);
+        if (!fecha) return '';
+        const hora = fmtHora(hm);
+        return hora ? `${fecha} ${hora}` : fecha;
+    };
+    const desdeTxt = fmtDateTime(desde, medicamento.programacionDesdeHora || '00:00');
+    const hastaTxt = hasta ? fmtDateTime(hasta, medicamento.programacionHastaHora || '23:59') : '';
+    if (desdeTxt && hastaTxt) return `${desdeTxt} – ${hastaTxt}`;
+    if (desdeTxt) return `Desde ${desdeTxt}`;
+    return `Hasta ${hastaTxt}`;
+};
+
 // --- Medicación suspendida por rango de fechas ---
 
 InternamientoModule.prototype.estaMedicamentoSuspendido = function(medicamento, fechaYmd) {
@@ -22,7 +122,10 @@ InternamientoModule.prototype.estaMedicamentoSuspendido = function(medicamento, 
 
 InternamientoModule.prototype.esMedicamentoVisibleParaAdmin = function(medicamento) {
     if (!medicamento) return false;
-    if (medicamento.estadoMedicamento === 'activo') return true;
+    if (medicamento.estadoMedicamento === 'activo') {
+        if (this.estaMedicamentoFinalizadoProgramacion(medicamento)) return false;
+        return true;
+    }
     if (medicamento.estadoMedicamento === 'suspendido') {
         return !this.estaMedicamentoSuspendido(medicamento);
     }

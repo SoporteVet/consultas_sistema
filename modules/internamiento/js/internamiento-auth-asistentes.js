@@ -1111,7 +1111,13 @@ InternamientoModule.prototype.administrarMedicamentoConCodigo = async function(m
         return;
     }
     if (!this.puedeAdministrarAhora(medicamento)) {
-        this.showAlert('Solo se puede administrar cuando corresponda la próxima dosis (contador en cero). Espere a que el tiempo indicado llegue a cero.', 'Próxima dosis no correspondiente', 'warning');
+        let msg = 'Solo se puede administrar cuando corresponda la próxima dosis (contador en cero). Espere a que el tiempo indicado llegue a cero.';
+        if (typeof this.estaMedicamentoFinalizadoProgramacion === 'function' && this.estaMedicamentoFinalizadoProgramacion(medicamento)) {
+            msg = 'Este medicamento ya cumplió su fecha fin programada y no puede administrarse.';
+        } else if (typeof this.estaMedicamentoPendienteInicioProgramacion === 'function' && this.estaMedicamentoPendienteInicioProgramacion(medicamento)) {
+            msg = 'Este medicamento aún no ha iniciado según su programación.';
+        }
+        this.showAlert(msg, 'Administración no permitida', 'warning');
         return;
     }
 
