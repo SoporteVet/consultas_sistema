@@ -1,7 +1,7 @@
 /**
  * Módulo de generación de Expediente Clínico en PDF
  * Genera un PDF diseñado con todas las secciones del internamiento.
- * Utiliza html2pdf.js (cargado lazy desde lazyLoadLibs).
+ * Utiliza html2canvas + jsPDF (carga lazy).
  *
  * Uso: InternamientoExpedientePDF.generar(internamientoObj)
  */
@@ -46,29 +46,28 @@ window.InternamientoExpedientePDF = (() => {
         return `
         <style>
             * { box-sizing: border-box; margin: 0; padding: 0; }
-            body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 11px; color: #333; background: #fff; }
-            .page { page-break-before: always; padding: 24px 28px 20px 28px; }
-            /* Primera página: sin salto previo y altura mínima para que no quede en blanco */
-            .page-first { page-break-before: avoid !important; page-break-after: always; padding: 24px 28px 20px 28px; min-height: 270mm; }
+            body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 10px; color: #333; background: #fff; line-height: 1.35; }
+            .page { page-break-before: always; padding: 14px 16px 12px 16px; width: 720px; max-width: 720px; box-sizing: border-box; }
+            .page-first { page-break-before: avoid !important; padding: 14px 16px 12px 16px; width: 720px; max-width: 720px; box-sizing: border-box; }
 
             /* PORTADA */
-            .portada { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 200px; background: linear-gradient(135deg, #3f51b5 0%, #5c6bc0 100%); color: #fff; border-radius: 8px; padding: 36px 24px; margin-bottom: 24px; }
-            .portada .logo-circle { width: 72px; height: 72px; border-radius: 50%; border: 3px solid rgba(255,255,255,0.8); object-fit: cover; margin-bottom: 12px; }
-            .portada h1 { font-size: 18px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; text-align: center; }
-            .portada h2 { font-size: 13px; font-weight: 400; opacity: 0.88; margin-bottom: 18px; text-align: center; }
-            .portada-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 28px; margin-top: 14px; width: 100%; max-width: 480px; }
-            .portada-grid .item { background: rgba(255,255,255,0.15); border-radius: 6px; padding: 8px 12px; }
-            .portada-grid .item .label { font-size: 9px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; }
-            .portada-grid .item .value { font-size: 12px; font-weight: 600; margin-top: 2px; }
-            .portada-badge { display: inline-block; margin-top: 14px; padding: 5px 18px; border-radius: 20px; font-size: 11px; font-weight: 700; letter-spacing: 0.5px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.5); }
+            .portada { display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #3f51b5 0%, #5c6bc0 100%); color: #fff; border-radius: 6px; padding: 24px 18px; margin-bottom: 16px; }
+            .portada .logo-circle { width: 56px; height: 56px; max-width: 56px; max-height: 56px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.8); object-fit: cover; margin-bottom: 8px; flex-shrink: 0; display: block; }
+            .portada h1 { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 4px; text-align: center; }
+            .portada h2 { font-size: 11px; font-weight: 400; opacity: 0.88; margin-bottom: 12px; text-align: center; }
+            .portada-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; margin-top: 10px; width: 100%; max-width: 480px; }
+            .portada-grid .item { background: rgba(255,255,255,0.15); border-radius: 4px; padding: 6px 10px; }
+            .portada-grid .item .label { font-size: 8px; opacity: 0.75; text-transform: uppercase; letter-spacing: 0.5px; }
+            .portada-grid .item .value { font-size: 10px; font-weight: 600; margin-top: 2px; }
+            .portada-badge { display: inline-block; margin-top: 10px; padding: 4px 14px; border-radius: 20px; font-size: 10px; font-weight: 700; letter-spacing: 0.5px; background: rgba(255,255,255,0.25); border: 1px solid rgba(255,255,255,0.5); }
 
             /* SECTION HEADER */
-            .sec-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-radius: 6px; margin-bottom: 14px; color: #fff; }
-            .sec-header .sec-title { font-size: 13px; font-weight: 700; letter-spacing: 0.3px; }
-            .sec-header .sec-count { font-size: 10px; opacity: 0.85; margin-left: auto; background: rgba(255,255,255,0.2); border-radius: 12px; padding: 2px 8px; }
+            .sec-header { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 4px; margin-bottom: 10px; color: #fff; }
+            .sec-header .sec-title { font-size: 11px; font-weight: 700; letter-spacing: 0.3px; }
+            .sec-header .sec-count { font-size: 9px; opacity: 0.85; margin-left: auto; background: rgba(255,255,255,0.2); border-radius: 12px; padding: 2px 7px; }
 
             /* TABLES */
-            table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 10.5px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 9.5px; }
             thead tr { background: linear-gradient(90deg, #3f51b5, #5c6bc0); color: #fff; }
             thead.green tr { background: linear-gradient(90deg, #388e3c, #4caf50); }
             thead.indigo tr { background: linear-gradient(90deg, #4527a0, #673ab7); }
@@ -80,18 +79,18 @@ window.InternamientoExpedientePDF = (() => {
             thead.purple tr { background: linear-gradient(90deg, #6a1b9a, #9c27b0); }
             thead.bluegreen tr { background: linear-gradient(90deg, #1565c0, #42a5f5); }
             thead.bluegrey tr { background: linear-gradient(90deg, #37474f, #607d8b); }
-            th { padding: 8px 10px; text-align: left; font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
-            td { padding: 7px 10px; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
+            th { padding: 5px 7px; text-align: left; font-size: 9px; font-weight: 600; letter-spacing: 0.3px; }
+            td { padding: 4px 7px; border-bottom: 1px solid #e0e0e0; vertical-align: top; }
             tr:nth-child(even) td { background: #f5f5f5; }
             tr:last-child td { border-bottom: none; }
 
             /* FIELD GRID */
-            .field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px 20px; margin-bottom: 12px; }
+            .field-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 6px 12px; margin-bottom: 8px; align-items: start; }
             .field-grid.cols3 { grid-template-columns: repeat(3, 1fr); }
             .field-grid.cols1 { grid-template-columns: 1fr; }
-            .field { background: #f8f9fa; border-radius: 5px; padding: 8px 10px; border-left: 3px solid #e0e0e0; }
-            .field .f-label { font-size: 9px; color: #888; text-transform: uppercase; letter-spacing: 0.4px; }
-            .field .f-value { font-size: 11px; color: #222; font-weight: 500; margin-top: 2px; word-break: break-word; }
+            .field { background: #f8f9fa; border-radius: 4px; padding: 5px 8px; border-left: 2px solid #e0e0e0; align-self: start; height: auto; min-height: 0; }
+            .field .f-label { font-size: 8px; color: #888; text-transform: uppercase; letter-spacing: 0.4px; }
+            .field .f-value { font-size: 10px; color: #222; font-weight: 500; margin-top: 2px; word-break: break-word; line-height: 1.35; }
 
             /* BADGES */
             .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 9.5px; font-weight: 600; }
@@ -105,55 +104,61 @@ window.InternamientoExpedientePDF = (() => {
             .badge-bluegrey { background: #eceff1; color: #37474f; }
             .badge-important { background: #fff3e0; color: #e65100; border: 1px solid #ffcc02; }
 
+            /* Evitar cortes solo en bloques pequeños */
+            .llamada-block, .nota-block, .defuncion-block {
+                page-break-inside: avoid;
+                break-inside: avoid;
+            }
+
             /* TURNO CARD */
-            .turno-block { border: 1px solid #e0e0e0; border-radius: 6px; margin-bottom: 14px; overflow: hidden; }
-            .turno-block-header { background: linear-gradient(90deg, #5c6bc0, #7986cb); color: #fff; padding: 8px 14px; display: flex; align-items: center; gap: 12px; }
-            .turno-block-header .t-name { font-weight: 700; font-size: 11.5px; }
-            .turno-block-header .t-fecha { font-size: 10px; opacity: 0.88; margin-left: auto; }
-            .turno-block-header .t-resp { font-size: 10px; opacity: 0.88; }
-            .turno-block-body { padding: 12px 14px; }
+            .turno-block { border: 1px solid #e0e0e0; border-radius: 4px; margin-bottom: 8px; overflow: hidden; page-break-inside: auto; break-inside: auto; }
+            .turno-block-header { background: linear-gradient(90deg, #5c6bc0, #7986cb); color: #fff; padding: 5px 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+            .turno-block-header .t-name { font-weight: 700; font-size: 10px; }
+            .turno-block-header .t-fecha { font-size: 9px; opacity: 0.88; margin-left: auto; }
+            .turno-block-header .t-resp { font-size: 9px; opacity: 0.88; }
+            .turno-block-body { padding: 8px 10px; }
 
             /* CIRUGIA CARD */
-            .cirugia-block { border: 1px solid #d7ccc8; border-radius: 6px; margin-bottom: 14px; overflow: hidden; }
-            .cirugia-block-header { background: linear-gradient(90deg, #795548, #a1887f); color: #fff; padding: 8px 14px; display: flex; align-items: center; gap: 12px; }
-            .cirugia-block-header .c-name { font-weight: 700; font-size: 11.5px; }
-            .cirugia-block-header .c-fecha { font-size: 10px; opacity: 0.88; margin-left: auto; }
-            .cirugia-block-body { padding: 12px 14px; }
+            .cirugia-block { border: 1px solid #d7ccc8; border-radius: 4px; margin-bottom: 8px; overflow: hidden; page-break-inside: auto; break-inside: auto; }
+            .cirugia-block-header { background: linear-gradient(90deg, #795548, #a1887f); color: #fff; padding: 5px 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+            .cirugia-block-header .c-name { font-weight: 700; font-size: 10px; }
+            .cirugia-block-header .c-fecha { font-size: 9px; opacity: 0.88; margin-left: auto; }
+            .cirugia-block-body { padding: 8px 10px; }
 
             /* LLAMADA CARD */
-            .llamada-block { border-left: 4px solid #66bb6a; background: #f9fbe7; border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 10px; }
+            .llamada-block { border-left: 3px solid #66bb6a; background: #f9fbe7; border-radius: 0 4px 4px 0; padding: 7px 10px; margin-bottom: 7px; }
 
             /* NOTA CARD */
-            .nota-block { border-left: 4px solid #42a5f5; background: #e3f2fd22; border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 10px; }
+            .nota-block { border-left: 3px solid #42a5f5; background: #e3f2fd22; border-radius: 0 4px 4px 0; padding: 7px 10px; margin-bottom: 7px; }
 
             /* DEFUNCION CARD */
-            .defuncion-block { border-left: 4px solid #607d8b; background: #eceff1; border-radius: 0 6px 6px 0; padding: 10px 14px; margin-bottom: 10px; }
+            .defuncion-block { border-left: 3px solid #607d8b; background: #eceff1; border-radius: 0 4px 4px 0; padding: 7px 10px; margin-bottom: 7px; }
 
             /* INFORMACIÓN DE ALTA (dado de alta) */
-            .info-alta-card { background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 8px; padding: 0; margin-bottom: 20px; overflow: hidden; }
-            .info-alta-card .info-alta-header { color: #1b5e20; font-size: 14px; font-weight: 700; padding: 12px 16px; display: flex; align-items: center; gap: 8px; }
-            .info-alta-card .info-alta-body { padding: 14px 16px 18px 16px; }
-            .info-alta-card .info-alta-row { margin-bottom: 10px; font-size: 11px; }
+            .info-alta-card { background: #e8f5e9; border: 1px solid #c8e6c9; border-radius: 6px; padding: 0; margin-bottom: 12px; overflow: hidden; }
+            .info-alta-card .info-alta-header { color: #1b5e20; font-size: 12px; font-weight: 700; padding: 8px 12px; display: flex; align-items: center; gap: 6px; }
+            .info-alta-card .info-alta-body { padding: 10px 12px 12px 12px; }
+            .info-alta-card .info-alta-row { margin-bottom: 7px; font-size: 10px; }
             .info-alta-card .info-alta-row:last-child { margin-bottom: 0; }
             .info-alta-card .info-alta-label { color: #333; }
             .info-alta-card .info-alta-value { font-weight: 700; color: #1b5e20; margin-top: 2px; }
-            .info-alta-card .info-alta-sep { height: 1px; background: #c8e6c9; margin: 12px 0 10px 0; }
-            .info-alta-card .info-alta-obs-label { color: #333; font-size: 11px; margin-bottom: 4px; }
-            .info-alta-card .info-alta-obs-value { font-size: 11px; color: #333; line-height: 1.4; }
+            .info-alta-card .info-alta-sep { height: 1px; background: #c8e6c9; margin: 8px 0 7px 0; }
+            .info-alta-card .info-alta-obs-label { color: #333; font-size: 10px; margin-bottom: 3px; }
+            .info-alta-card .info-alta-obs-value { font-size: 10px; color: #333; line-height: 1.35; }
 
             /* TRANSFUSION CARD */
-            .transfusion-block { border: 1px solid #ffcdd2; border-radius: 6px; margin-bottom: 14px; overflow: hidden; }
-            .transfusion-block-header { background: linear-gradient(90deg, #ef5350, #e57373); color: #fff; padding: 8px 14px; display: flex; align-items: center; gap: 12px; }
-            .transfusion-block-body { padding: 12px 14px; }
+            .transfusion-block { border: 1px solid #ffcdd2; border-radius: 4px; margin-bottom: 8px; overflow: hidden; page-break-inside: auto; break-inside: auto; }
+            .transfusion-block-header { background: linear-gradient(90deg, #ef5350, #e57373); color: #fff; padding: 5px 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+            .transfusion-block-body { padding: 8px 10px; }
 
             /* RER / AA / HID / GLUCOSA BLOCK */
-            .dia-block { border: 1px solid #ffe0b2; border-radius: 6px; margin-bottom: 14px; overflow: hidden; }
-            .dia-block-header { background: linear-gradient(90deg, #e65100, #ff9800); color: #fff; padding: 8px 14px; display: flex; align-items: center; gap: 12px; }
+            .dia-block { border: 1px solid #ffe0b2; border-radius: 4px; margin-bottom: 8px; overflow: hidden; page-break-inside: auto; break-inside: auto; }
+            .dia-block-header { background: linear-gradient(90deg, #e65100, #ff9800); color: #fff; padding: 5px 10px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
             .dia-block.aa .dia-block-header { background: linear-gradient(90deg, #00695c, #26a69a); }
-            .dia-block-body { padding: 12px 14px; }
+            .dia-block-body { padding: 8px 10px; }
 
             /* SECTION SUBHEADER */
-            .subheader { font-size: 10.5px; font-weight: 600; color: #3f51b5; border-bottom: 1.5px solid #c5cae9; padding-bottom: 4px; margin: 10px 0 8px 0; }
+            .subheader { font-size: 9.5px; font-weight: 600; color: #3f51b5; border-bottom: 1px solid #c5cae9; padding-bottom: 3px; margin: 8px 0 6px 0; }
 
             /* EMPTY STATE */
             .empty-state { color: #9e9e9e; font-style: italic; font-size: 10.5px; padding: 10px 0; }
@@ -193,7 +198,7 @@ window.InternamientoExpedientePDF = (() => {
                 <img src="img/empresa.jpg" class="logo-circle" onerror="this.style.display='none'" />
                 <h1>Veterinaria San Martin de Porres</h1>
                 <h2>Expediente Clínico de Internamiento</h2>
-                <div style="font-size:24px; font-weight:800; letter-spacing:1px; background:rgba(255,255,255,0.2); border-radius:8px; padding:10px 28px; margin-bottom:4px;">
+                <div style="font-size:18px; font-weight:800; letter-spacing:0.5px; background:rgba(255,255,255,0.2); border-radius:6px; padding:8px 20px; margin-bottom:4px;">
                     ${nombre}
                 </div>
                 <div style="font-size:12px; opacity:0.85;">No. Expediente: <strong>${expNum}</strong></div>
@@ -353,65 +358,63 @@ window.InternamientoExpedientePDF = (() => {
     // TURNOS
     // ─────────────────────────────────────────────
 
-    function buildTurnos(int) {
-        const turnos = toList(int.turnos || {}).sort((a, b) => (a.fecha || 0) - (b.fecha || 0));
-        if (turnos.length === 0) return '';
+    const TURNO_LABELS = {
+        turnoNombre: { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche', Mañana: 'Mañana', Tarde: 'Tarde', Noche: 'Noche' },
+        estadoMental: { alerta: 'Alerta', tranquilo: 'Tranquilo', deprimido: 'Deprimido', excitado: 'Excitado', agresivo: 'Agresivo' },
+        nivelDolor: { sin_dolor: 'Sin dolor', leve: 'Leve', moderado: 'Moderado', severo: 'Severo' },
+        mucosas: { rosadas: 'Rosadas', palidas: 'Pálidas', ictericas: 'Ictéricas', cianoticas: 'Cianóticas', congestivas: 'Congestivas' }
+    };
 
-        const turnoNombreLabel = { manana: 'Mañana', tarde: 'Tarde', noche: 'Noche', Mañana: 'Mañana', Tarde: 'Tarde', Noche: 'Noche' };
-        const estadoMentalLabel = { alerta: 'Alerta', tranquilo: 'Tranquilo', deprimido: 'Deprimido', excitado: 'Excitado', agresivo: 'Agresivo' };
-        const nivelDolorLabel = { sin_dolor: 'Sin dolor', leve: 'Leve', moderado: 'Moderado', severo: 'Severo' };
-        const mucosasLabel = { rosadas: 'Rosadas', palidas: 'Pálidas', ictericas: 'Ictéricas', cianoticas: 'Cianóticas', congestivas: 'Congestivas' };
+    function buildTurnoBlock(t) {
+        const pv = t.parametrosVitales || {};
+        const eg = t.estadoGeneral || {};
+        const fl = t.fluidoterapia || {};
+        const nombre = TURNO_LABELS.turnoNombre[t.turno] || esc(t.turno) || '—';
 
-        const blocks = turnos.map(t => {
-            const pv = t.parametrosVitales || {};
-            const eg = t.estadoGeneral || {};
-            const fl = t.fluidoterapia || {};
-            const nombre = turnoNombreLabel[t.turno] || esc(t.turno) || '—';
+        const vitales = [
+            ['Peso', pv.peso != null ? pv.peso + ' kg' : '—'],
+            ['FC', pv.fc != null ? pv.fc + ' lpm' : '—'],
+            ['FR', pv.fr != null ? pv.fr + ' rpm' : '—'],
+            ['Temperatura', pv.temperatura != null ? pv.temperatura + ' °C' : '—'],
+            ['TLLC', pv.tllc != null ? pv.tllc + ' seg' : '—'],
+            ['Deshidratación', pv.deshidratacion != null ? pv.deshidratacion + '%' : '—'],
+            ['Mucosas', (window.internamientoModule && typeof window.internamientoModule.formatearMucosas === 'function'
+                ? window.internamientoModule.formatearMucosas(pv.mucosas)
+                : (TURNO_LABELS.mucosas[pv.mucosas] || esc(pv.mucosas))) || '—'],
+            ['Presión arterial', esc(pv.presionArterial) || '—'],
+            ['PO₂', pv.po2 != null ? pv.po2 + ' mmHg' : '—'],
+            ['Vía', esc(pv.via) || '—'],
+            ['Sonda esofágica', esc(pv.sondaEsofagica || pv.sonda) || '—'],
+            ['Tiempo sonda esofágica', esc(pv.tiempoSondaEsofagica || pv.tiempoSonda) || '—'],
+            ['Sonda urinaria', esc(pv.sondaUrinaria) || '—'],
+            ['Tiempo sonda urinaria', esc(pv.tiempoSondaUrinaria) || '—'],
+            ['Pulmonares', esc(pv.parametrosPulmonares) || '—']
+        ];
 
-            const vitales = [
-                ['Peso', pv.peso != null ? pv.peso + ' kg' : '—'],
-                ['FC', pv.fc != null ? pv.fc + ' lpm' : '—'],
-                ['FR', pv.fr != null ? pv.fr + ' rpm' : '—'],
-                ['Temperatura', pv.temperatura != null ? pv.temperatura + ' °C' : '—'],
-                ['TLLC', pv.tllc != null ? pv.tllc + ' seg' : '—'],
-                ['Deshidratación', pv.deshidratacion != null ? pv.deshidratacion + '%' : '—'],
-                ['Mucosas', (window.internamientoModule && typeof window.internamientoModule.formatearMucosas === 'function'
-                    ? window.internamientoModule.formatearMucosas(pv.mucosas)
-                    : (mucosasLabel[pv.mucosas] || esc(pv.mucosas))) || '—'],
-                ['Presión arterial', esc(pv.presionArterial) || '—'],
-                ['PO₂', pv.po2 != null ? pv.po2 + ' mmHg' : '—'],
-                ['Vía', esc(pv.via) || '—'],
-                ['Sonda esofágica', esc(pv.sondaEsofagica || pv.sonda) || '—'],
-                ['Tiempo sonda esofágica', esc(pv.tiempoSondaEsofagica || pv.tiempoSonda) || '—'],
-                ['Sonda urinaria', esc(pv.sondaUrinaria) || '—'],
-                ['Tiempo sonda urinaria', esc(pv.tiempoSondaUrinaria) || '—'],
-                ['Pulmonares', esc(pv.parametrosPulmonares) || '—']
-            ];
+        const vitalesRows = vitales.map(([label, val]) =>
+            `<tr><td style="font-weight:600;width:35%;">${label}</td><td>${esc(val)}</td></tr>`
+        ).join('');
 
-            const vitalesRows = vitales.map(([label, val]) =>
-                `<tr><td style="font-weight:600;width:35%;">${label}</td><td>${esc(val)}</td></tr>`
-            ).join('');
+        const generalRows = [
+            ['Estado mental', TURNO_LABELS.estadoMental[eg.estadoMental] || esc(eg.estadoMental) || '—'],
+            ['Nivel de dolor', TURNO_LABELS.nivelDolor[eg.nivelDolor] || esc(eg.nivelDolor) || '—'],
+            ['Glasgow', eg.glasgowPuntaje != null ? eg.glasgowPuntaje : '—'],
+            ['Ingesta de agua', eg.ingestaAgua ? `Sí — ${eg.cantidadAgua != null ? eg.cantidadAgua + ' ml' : ''}` : 'No'],
+            ['Apetito', eg.apetito ? `Sí — ${esc(eg.alimentoCantidad)} ${esc(eg.alimentoTipo)}` : 'No'],
+            ['Defecación', esc(eg.defecacion) || 'No defecó'],
+            ['Micción', eg.miccion ? `Sí — ${esc(eg.miccionColor)} / ${esc(eg.miccionFrecuencia)}${eg.miccionVolumen ? ' / ' + eg.miccionVolumen + ' ml' : ''}` : 'No'],
+            ['Vómitos', eg.vomitos ? `Sí — ${esc(eg.descripcionVomitos)}` : 'No']
+        ].map(([label, val]) =>
+            `<tr><td style="font-weight:600;width:35%;">${label}</td><td>${esc(String(val))}</td></tr>`
+        ).join('');
 
-            const generalRows = [
-                ['Estado mental', estadoMentalLabel[eg.estadoMental] || esc(eg.estadoMental) || '—'],
-                ['Nivel de dolor', nivelDolorLabel[eg.nivelDolor] || esc(eg.nivelDolor) || '—'],
-                ['Glasgow', eg.glasgowPuntaje != null ? eg.glasgowPuntaje : '—'],
-                ['Ingesta de agua', eg.ingestaAgua ? `Sí — ${eg.cantidadAgua != null ? eg.cantidadAgua + ' ml' : ''}` : 'No'],
-                ['Apetito', eg.apetito ? `Sí — ${esc(eg.alimentoCantidad)} ${esc(eg.alimentoTipo)}` : 'No'],
-                ['Defecación', esc(eg.defecacion) || 'No defecó'],
-                ['Micción', eg.miccion ? `Sí — ${esc(eg.miccionColor)} / ${esc(eg.miccionFrecuencia)}${eg.miccionVolumen ? ' / ' + eg.miccionVolumen + ' ml' : ''}` : 'No'],
-                ['Vómitos', eg.vomitos ? `Sí — ${esc(eg.descripcionVomitos)}` : 'No']
-            ].map(([label, val]) =>
-                `<tr><td style="font-weight:600;width:35%;">${label}</td><td>${esc(String(val))}</td></tr>`
-            ).join('');
+        const fluidoStr = fl.administrada
+            ? `Sí — Tipo: ${esc(fl.tipo)} / Velocidad: ${esc(fl.frecuencia)}`
+            : 'No se administró fluidoterapia';
 
-            const fluidoStr = fl.administrada
-                ? `Sí — Tipo: ${esc(fl.tipo)} / Velocidad: ${esc(fl.frecuencia)}`
-                : 'No se administró fluidoterapia';
+        const alertas = (t.alertasAutomaticas || []).map(a => `<span class="badge badge-orange" style="margin:2px 4px 2px 0;">${esc(a)}</span>`).join('');
 
-            const alertas = (t.alertasAutomaticas || []).map(a => `<span class="badge badge-orange" style="margin:2px 4px 2px 0;">${esc(a)}</span>`).join('');
-
-            return `
+        return `
             <div class="turno-block">
                 <div class="turno-block-header">
                     <span class="t-name">${nombre}</span>
@@ -435,7 +438,11 @@ window.InternamientoExpedientePDF = (() => {
                     ${alertas ? `<div style="margin-top:6px;">${alertas}</div>` : ''}
                 </div>
             </div>`;
-        }).join('');
+    }
+
+    function buildTurnos(int) {
+        const turnos = toList(int.turnos || {}).sort((a, b) => (a.fecha || 0) - (b.fecha || 0));
+        if (turnos.length === 0) return '';
 
         return `
         <div class="page">
@@ -443,7 +450,10 @@ window.InternamientoExpedientePDF = (() => {
                 <span class="sec-title">🩺 TURNOS</span>
                 <span class="sec-count">${turnos.length} turno(s)</span>
             </div>
-            ${blocks}
+            ${turnos.map((t, idx) => `
+                ${idx > 0 ? `<div class="subheader">Turno ${idx + 1} de ${turnos.length}</div>` : ''}
+                ${buildTurnoBlock(t)}
+            `).join('')}
             <div class="pdf-footer">
                 <span>Veterinaria San Martin de Porres — Turnos</span>
                 <span>${fdate(Date.now())}</span>
@@ -523,21 +533,15 @@ window.InternamientoExpedientePDF = (() => {
     // CIRUGÍAS
     // ─────────────────────────────────────────────
 
-    function buildCirugias(int) {
-        const cirugiasRaw = int.cirugias;
-        if (!cirugiasRaw) return '';
-        const lista = Array.isArray(cirugiasRaw) ? cirugiasRaw : Object.values(cirugiasRaw);
-        if (lista.length === 0) return '';
+    function buildCirugiaBlock(c) {
+        const historial = (c.historialEdiciones || []).map(h => `
+            <tr>
+                <td>${fts(h.fecha || h.timestamp)}</td>
+                <td>${esc(h.editadoNombre || h.usuarioNombre)}</td>
+                <td>${esc(h.motivoCambio)}</td>
+            </tr>`).join('');
 
-        const blocks = lista.sort((a, b) => (a.fechaHoraTs || 0) - (b.fechaHoraTs || 0)).map(c => {
-            const historial = (c.historialEdiciones || []).map(h => `
-                <tr>
-                    <td>${fts(h.fecha || h.timestamp)}</td>
-                    <td>${esc(h.editadoNombre || h.usuarioNombre)}</td>
-                    <td>${esc(h.motivoCambio)}</td>
-                </tr>`).join('');
-
-            return `
+        return `
             <div class="cirugia-block">
                 <div class="cirugia-block-header">
                     <span class="c-name">${esc(c.nombreProcedimiento)}</span>
@@ -559,7 +563,14 @@ window.InternamientoExpedientePDF = (() => {
                     <tbody>${historial}</tbody></table>` : ''}
                 </div>
             </div>`;
-        }).join('');
+    }
+
+    function buildCirugias(int) {
+        const cirugiasRaw = int.cirugias;
+        if (!cirugiasRaw) return '';
+        const lista = (Array.isArray(cirugiasRaw) ? cirugiasRaw : Object.values(cirugiasRaw))
+            .sort((a, b) => (a.fechaHoraTs || 0) - (b.fechaHoraTs || 0));
+        if (lista.length === 0) return '';
 
         return `
         <div class="page">
@@ -567,7 +578,10 @@ window.InternamientoExpedientePDF = (() => {
                 <span class="sec-title">🔪 CIRUGÍAS</span>
                 <span class="sec-count">${lista.length} cirugía(s)</span>
             </div>
-            ${blocks}
+            ${lista.map((c, idx) => `
+                ${idx > 0 ? `<div class="subheader">Cirugía ${idx + 1} de ${lista.length}</div>` : ''}
+                ${buildCirugiaBlock(c)}
+            `).join('')}
             <div class="pdf-footer">
                 <span>Veterinaria San Martin de Porres — Cirugías</span>
                 <span>${fdate(Date.now())}</span>
@@ -694,19 +708,15 @@ window.InternamientoExpedientePDF = (() => {
     // TRANSFUSIONES
     // ─────────────────────────────────────────────
 
-    function buildTransfusiones(int) {
-        const lista = toList(int.transfusiones || {});
-        if (lista.length === 0) return '';
-
-        const blocks = lista.sort((a, b) => (a.fecha || 0) - (b.fecha || 0)).map((t, i) => {
-            const rec = t.receptor || {};
-            const don = t.donante || {};
-            const calc = t.calculo || {};
-            const proc = t.procedimiento || {};
-            return `
+    function buildTransfusionBlock(t, index) {
+        const rec = t.receptor || {};
+        const don = t.donante || {};
+        const calc = t.calculo || {};
+        const proc = t.procedimiento || {};
+        return `
             <div class="transfusion-block">
                 <div class="transfusion-block-header">
-                    <span style="font-weight:700;">#${i + 1} — ${esc(t.tipoTransfusion === 'plasma' ? 'Plasma' : 'Sangre completa')}</span>
+                    <span style="font-weight:700;">#${index + 1} — ${esc(t.tipoTransfusion === 'plasma' ? 'Plasma' : 'Sangre completa')}</span>
                     <span style="font-size:10px;opacity:0.88;margin-left:auto;">${fts(t.fechaHoraInicio)} → ${fts(t.fechaHoraFin)}</span>
                 </div>
                 <div class="transfusion-block-body">
@@ -740,7 +750,11 @@ window.InternamientoExpedientePDF = (() => {
                     ${t.observaciones ? `<div class="field"><div class="f-label">Observaciones</div><div class="f-value">${esc(t.observaciones)}</div></div>` : ''}
                 </div>
             </div>`;
-        }).join('');
+    }
+
+    function buildTransfusiones(int) {
+        const lista = toList(int.transfusiones || {}).sort((a, b) => (a.fecha || 0) - (b.fecha || 0));
+        if (lista.length === 0) return '';
 
         return `
         <div class="page">
@@ -748,7 +762,10 @@ window.InternamientoExpedientePDF = (() => {
                 <span class="sec-title">🩸 TRANSFUSIONES</span>
                 <span class="sec-count">${lista.length} transfusión(es)</span>
             </div>
-            ${blocks}
+            ${lista.map((t, idx) => `
+                ${idx > 0 ? `<div class="subheader">Transfusión ${idx + 1} de ${lista.length}</div>` : ''}
+                ${buildTransfusionBlock(t, idx)}
+            `).join('')}
             <div class="pdf-footer">
                 <span>Veterinaria San Martin de Porres — Transfusiones</span>
                 <span>${fdate(Date.now())}</span>
@@ -760,28 +777,20 @@ window.InternamientoExpedientePDF = (() => {
     // RER
     // ─────────────────────────────────────────────
 
-    function buildRer(int) {
-        const rer = int.rer;
-        if (!rer) return '';
-        const dias = toList(rer.dias || {}).sort((a, b) => (a.numero || 0) - (b.numero || 0));
-        if (dias.length === 0) return '';
+    function buildRerDiaBlock(dia, horaLabel) {
+        const tomas = toList(dia.tomas || {}).sort((a, b) => {
+            const order = ['8am', '12md', '4pm', '8pm', '12mn'];
+            return order.indexOf(a.hora) - order.indexOf(b.hora);
+        });
+        const tomasRows = tomas.map(t => `<tr>
+            <td>${esc(horaLabel[t.hora] || t.hora)}</td>
+            <td>${t.cantidadPorToma != null ? t.cantidadPorToma + ' ml' : '—'}</td>
+            <td>${t.cantidadAgua != null ? t.cantidadAgua + ' ml' : '—'}</td>
+            <td>${esc(t.registradoPorNombre)}</td>
+            <td>${fts(t.fechaRegistro)}</td>
+        </tr>`).join('');
 
-        const horaLabel = { '8am': '8:00 am', '12md': '12:00 md', '4pm': '4:00 pm', '8pm': '8:00 pm', '12mn': '12:00 mn' };
-
-        const diaBlocks = dias.map(dia => {
-            const tomas = toList(dia.tomas || {}).sort((a, b) => {
-                const order = ['8am', '12md', '4pm', '8pm', '12mn'];
-                return order.indexOf(a.hora) - order.indexOf(b.hora);
-            });
-            const tomasRows = tomas.map(t => `<tr>
-                <td>${esc(horaLabel[t.hora] || t.hora)}</td>
-                <td>${t.cantidadPorToma != null ? t.cantidadPorToma + ' ml' : '—'}</td>
-                <td>${t.cantidadAgua != null ? t.cantidadAgua + ' ml' : '—'}</td>
-                <td>${esc(t.registradoPorNombre)}</td>
-                <td>${fts(t.fechaRegistro)}</td>
-            </tr>`).join('');
-
-            return `
+        return `
             <div class="dia-block">
                 <div class="dia-block-header">
                     <span style="font-weight:700;">Día ${dia.numero}</span>
@@ -796,16 +805,29 @@ window.InternamientoExpedientePDF = (() => {
                     <tbody>${tomasRows}</tbody></table>` : '<span class="empty-state">Sin tomas registradas</span>'}
                 </div>
             </div>`;
-        }).join('');
+    }
 
+    function buildRer(int) {
+        const rer = int.rer;
+        if (!rer) return '';
+        const dias = toList(rer.dias || {}).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+        if (dias.length === 0) return '';
+
+        const horaLabel = { '8am': '8:00 am', '12md': '12:00 md', '4pm': '4:00 pm', '8pm': '8:00 pm', '12mn': '12:00 mn' };
+        const pesoFormula = rer.pesoParaFormula != null
+            ? `<div class="field" style="margin-bottom:12px;max-width:200px;"><div class="f-label">Peso para fórmula</div><div class="f-value">${rer.pesoParaFormula} kg</div></div>`
+            : '';
         return `
         <div class="page">
             <div class="sec-header" style="background: linear-gradient(90deg, #e65100, #ff9800);">
                 <span class="sec-title">🍽️ RER — REQUERIMIENTO ENERGÉTICO EN REPOSO</span>
                 <span class="sec-count">${dias.length} día(s)</span>
             </div>
-            ${rer.pesoParaFormula != null ? `<div class="field" style="margin-bottom:12px;max-width:200px;"><div class="f-label">Peso para fórmula</div><div class="f-value">${rer.pesoParaFormula} kg</div></div>` : ''}
-            ${diaBlocks}
+            ${pesoFormula}
+            ${dias.map((dia, idx) => `
+                ${idx > 0 ? `<div class="subheader">RER — Día ${idx + 1} de ${dias.length}</div>` : ''}
+                ${buildRerDiaBlock(dia, horaLabel)}
+            `).join('')}
             <div class="pdf-footer">
                 <span>Veterinaria San Martin de Porres — RER</span>
                 <span>${fdate(Date.now())}</span>
@@ -817,22 +839,16 @@ window.InternamientoExpedientePDF = (() => {
     // ALIMENTACIÓN ASISTIDA
     // ─────────────────────────────────────────────
 
-    function buildAlimentacionAsistida(int) {
-        const aa = int.alimentacionAsistida;
-        if (!aa) return '';
-        const dias = toList(aa.dias || {}).sort((a, b) => (a.numero || 0) - (b.numero || 0));
-        if (dias.length === 0) return '';
+    function buildAaDiaBlock(dia) {
+        const tomas = toList(dia.tomas || {}).sort((a, b) => (a.horaRegistro || a.fechaRegistro || 0) - (b.horaRegistro || b.fechaRegistro || 0));
+        const tomasRows = tomas.map(t => `<tr>
+            <td>${fts(t.horaRegistro || t.fechaRegistro)}</td>
+            <td>${t.cantidadPorToma != null ? t.cantidadPorToma : '—'}</td>
+            <td>${t.cantidadAgua != null ? t.cantidadAgua + ' ml' : '—'}</td>
+            <td>${esc(t.registradoPorNombre)}</td>
+        </tr>`).join('');
 
-        const diaBlocks = dias.map(dia => {
-            const tomas = toList(dia.tomas || {}).sort((a, b) => (a.horaRegistro || a.fechaRegistro || 0) - (b.horaRegistro || b.fechaRegistro || 0));
-            const tomasRows = tomas.map(t => `<tr>
-                <td>${fts(t.horaRegistro || t.fechaRegistro)}</td>
-                <td>${t.cantidadPorToma != null ? t.cantidadPorToma : '—'}</td>
-                <td>${t.cantidadAgua != null ? t.cantidadAgua + ' ml' : '—'}</td>
-                <td>${esc(t.registradoPorNombre)}</td>
-            </tr>`).join('');
-
-            return `
+        return `
             <div class="dia-block aa">
                 <div class="dia-block-header">
                     <span style="font-weight:700;">Día ${dia.numero}</span>
@@ -850,7 +866,13 @@ window.InternamientoExpedientePDF = (() => {
                     <tbody>${tomasRows}</tbody></table>` : '<span class="empty-state">Sin tomas registradas</span>'}
                 </div>
             </div>`;
-        }).join('');
+    }
+
+    function buildAlimentacionAsistida(int) {
+        const aa = int.alimentacionAsistida;
+        if (!aa) return '';
+        const dias = toList(aa.dias || {}).sort((a, b) => (a.numero || 0) - (b.numero || 0));
+        if (dias.length === 0) return '';
 
         return `
         <div class="page">
@@ -858,7 +880,10 @@ window.InternamientoExpedientePDF = (() => {
                 <span class="sec-title">🥣 ALIMENTACIÓN ASISTIDA</span>
                 <span class="sec-count">${dias.length} día(s)</span>
             </div>
-            ${diaBlocks}
+            ${dias.map((dia, idx) => `
+                ${idx > 0 ? `<div class="subheader">Alimentación asistida — Día ${idx + 1} de ${dias.length}</div>` : ''}
+                ${buildAaDiaBlock(dia)}
+            `).join('')}
             <div class="pdf-footer">
                 <span>Veterinaria San Martin de Porres — Alimentación Asistida</span>
                 <span>${fdate(Date.now())}</span>
@@ -1044,11 +1069,173 @@ window.InternamientoExpedientePDF = (() => {
     // FUNCIÓN PRINCIPAL
     // ─────────────────────────────────────────────
 
-    async function generar(internamiento) {
-        // Cargar html2pdf si no está disponible
-        if (typeof html2pdf === 'undefined') {
-            await window.lazyLoadLibs.loadHtml2Pdf();
+    let html2canvasLoadPromise = null;
+    let jspdfLoadPromise = null;
+    let cachedLogoDataUrl = null;
+    const PDF_PAGE_WIDTH_PX = 720;
+
+    function loadExternalScript(src) {
+        return new Promise((resolve, reject) => {
+            if (document.querySelector(`script[src="${src}"]`)) {
+                resolve();
+                return;
+            }
+            const script = document.createElement('script');
+            script.src = src;
+            script.onload = resolve;
+            script.onerror = () => reject(new Error('No se pudo cargar: ' + src));
+            document.head.appendChild(script);
+        });
+    }
+
+    function getHtml2Canvas() {
+        return window.html2canvas;
+    }
+
+    async function ensurePdfRenderLibs() {
+        if (!getJsPDF()) {
+            if (window.lazyLoadLibs && typeof window.lazyLoadLibs.loadHtml2Pdf === 'function') {
+                await window.lazyLoadLibs.loadHtml2Pdf();
+            }
+            if (!getJsPDF()) {
+                if (!jspdfLoadPromise) {
+                    jspdfLoadPromise = loadExternalScript(
+                        'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js'
+                    ).finally(() => { jspdfLoadPromise = null; });
+                }
+                await jspdfLoadPromise;
+            }
         }
+
+        if (typeof getHtml2Canvas() !== 'function') {
+            if (!html2canvasLoadPromise) {
+                html2canvasLoadPromise = loadExternalScript(
+                    'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js'
+                ).finally(() => { html2canvasLoadPromise = null; });
+            }
+            await html2canvasLoadPromise;
+        }
+
+        if (typeof getHtml2Canvas() !== 'function') {
+            throw new Error('html2canvas no disponible');
+        }
+        if (!getJsPDF()) {
+            throw new Error('jsPDF no disponible');
+        }
+    }
+
+    function getJsPDF() {
+        return window.jspdf?.jsPDF || window.jsPDF;
+    }
+
+    function mountExpedienteDom(html) {
+        const host = document.createElement('div');
+        host.id = 'expediente-pdf-mount';
+        host.setAttribute('aria-hidden', 'true');
+        host.style.cssText = `position:fixed;left:-15000px;top:0;width:${PDF_PAGE_WIDTH_PX}px;background:#fff;overflow:visible;`;
+
+        const parsed = new DOMParser().parseFromString(html, 'text/html');
+        const styleEl = parsed.querySelector('style');
+        if (styleEl) {
+            host.appendChild(styleEl.cloneNode(true));
+        }
+        while (parsed.body.firstChild) {
+            host.appendChild(parsed.body.firstChild);
+        }
+        document.body.appendChild(host);
+        return host;
+    }
+
+    async function captureElementCanvas(el) {
+        const html2canvasFn = getHtml2Canvas();
+        return html2canvasFn(el, {
+            scale: 2,
+            useCORS: true,
+            allowTaint: true,
+            logging: false,
+            backgroundColor: '#ffffff',
+            scrollY: 0,
+            scrollX: 0
+        });
+    }
+
+    async function saveExpedientePdf(pageElements, fileName) {
+        const JsPDF = getJsPDF();
+        const html2canvasFn = getHtml2Canvas();
+        if (!JsPDF) throw new Error('jsPDF no disponible');
+        if (typeof html2canvasFn !== 'function') throw new Error('html2canvas no disponible');
+
+        const pdf = new JsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+        const marginMm = 8;
+        const pageWmm = pdf.internal.pageSize.getWidth();
+        const pageHmm = pdf.internal.pageSize.getHeight();
+        const contentWmm = pageWmm - marginMm * 2;
+        const contentHmm = pageHmm - marginMm * 2;
+
+        let pdfPageIndex = 0;
+
+        for (let i = 0; i < pageElements.length; i++) {
+            const el = pageElements[i];
+            el.style.width = PDF_PAGE_WIDTH_PX + 'px';
+            el.style.maxWidth = PDF_PAGE_WIDTH_PX + 'px';
+            el.style.overflow = 'visible';
+
+            const canvas = await captureElementCanvas(el);
+            const sliceHeightPx = Math.max(1, Math.floor((canvas.width * contentHmm) / contentWmm));
+            let srcY = 0;
+
+            while (srcY < canvas.height) {
+                const sliceH = Math.min(sliceHeightPx, canvas.height - srcY);
+                const sliceCanvas = document.createElement('canvas');
+                sliceCanvas.width = canvas.width;
+                sliceCanvas.height = sliceH;
+                const ctx = sliceCanvas.getContext('2d');
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, sliceCanvas.width, sliceCanvas.height);
+                ctx.drawImage(canvas, 0, srcY, canvas.width, sliceH, 0, 0, canvas.width, sliceH);
+
+                const imgData = sliceCanvas.toDataURL('image/jpeg', 0.92);
+                const imgHmm = (sliceH * contentWmm) / canvas.width;
+
+                if (pdfPageIndex > 0) pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', marginMm, marginMm, contentWmm, imgHmm);
+                pdfPageIndex++;
+                srcY += sliceH;
+            }
+        }
+
+        pdf.save(fileName);
+    }
+
+    async function preloadLogo() {
+        if (cachedLogoDataUrl) return cachedLogoDataUrl;
+        const candidates = ['img/empresa.jpg', 'img/logo-vete-horizontal.png'];
+        for (const relativePath of candidates) {
+            try {
+                const url = new URL(relativePath, window.location.href).href;
+                const response = await fetch(url);
+                if (!response.ok) continue;
+                const blob = await response.blob();
+                cachedLogoDataUrl = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(blob);
+                });
+                return cachedLogoDataUrl;
+            } catch (_) { /* intentar siguiente ruta */ }
+        }
+        return '';
+    }
+
+    function injectLogo(html, logoDataUrl) {
+        if (!logoDataUrl) return html;
+        return html.replace(/src="img\/empresa\.jpg"/g, `src="${logoDataUrl}"`);
+    }
+
+    async function generar(internamiento) {
+        await ensurePdfRenderLibs();
+        const logoDataUrl = await preloadLogo();
 
         const sections = [
             buildPortada(internamiento),
@@ -1068,29 +1255,43 @@ window.InternamientoExpedientePDF = (() => {
             buildEgreso(internamiento)
         ].filter(Boolean).join('');
 
-        const html = `<!DOCTYPE html>
+        let html = `<!DOCTYPE html>
 <html lang="es">
 <head><meta charset="UTF-8">${buildCSS()}</head>
 <body>${sections}</body>
 </html>`;
+        html = injectLogo(html, logoDataUrl);
 
         const nombreMascota = (internamiento.referencias?.nombreMascota || 'Paciente').replace(/\s+/g, '_');
         const expNum = internamiento.metadata?.expedienteNumero || internamiento.metadata?.internamientoId || 'SN';
         const fileName = `Expediente_${nombreMascota}_${expNum}.pdf`;
 
-        const opt = {
-            margin: [8, 8, 8, 8],
-            filename: fileName,
-            image: { type: 'jpeg', quality: 0.95 },
-            html2canvas: { scale: 1.5, useCORS: true, logging: false },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['css', 'legacy'] }
-        };
+        const host = mountExpedienteDom(html);
+        try {
+            await new Promise((resolve) => setTimeout(resolve, 450));
+            if (document.fonts && document.fonts.ready) {
+                await document.fonts.ready;
+            }
+            const imgs = host.querySelectorAll('img');
+            await Promise.all(Array.from(imgs).map((img) => {
+                if (img.complete) return Promise.resolve();
+                return new Promise((resolve) => {
+                    img.onload = resolve;
+                    img.onerror = resolve;
+                });
+            }));
+            const pageEls = host.querySelectorAll('.page-first, .page');
+            if (!pageEls.length) {
+                throw new Error('El expediente no tiene páginas para exportar.');
+            }
+            await saveExpedientePdf(Array.from(pageEls), fileName);
+        } finally {
+            host.remove();
+        }
 
-        await html2pdf().set(opt).from(html).save();
         return fileName;
     }
 
-    return { generar };
+    return { generar, preloadLogo };
 
 })();

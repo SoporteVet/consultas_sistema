@@ -30,6 +30,225 @@ InternamientoModule.prototype.getMensajePendientesSoloLectura = function(interna
     return 'No se pueden agregar pendientes en este estado.';
 };
 
+// ================================================================
+// RECORDATORIOS DE PENDIENTES (día + hora)
+// ================================================================
+
+InternamientoModule.prototype.getHtmlCampoRecordatorioPendiente = function(valores = {}, idPrefix = 'proc') {
+    const activo = !!(valores.recordatorioActivo && valores.recordatorioFecha);
+    const fecha = valores.recordatorioFecha || '';
+    const hora = valores.recordatorioHora || '';
+    return `
+        <div class="form-group pendiente-recordatorio-grupo">
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-weight:600;">
+                <input type="checkbox" id="${idPrefix}RecordatorioActivo" ${activo ? 'checked' : ''}
+                    onchange="window.internamientoModule._toggleCamposRecordatorioPendiente('${idPrefix}')">
+                <i class="fas fa-bell" style="color:#e65100;"></i> Programar recordatorio
+            </label>
+            <div id="${idPrefix}RecordatorioCampos" style="display:${activo ? 'grid' : 'none'};grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
+                <div>
+                    <label style="font-size:0.85rem;font-weight:600;">Día</label>
+                    <input type="date" id="${idPrefix}RecordatorioFecha" value="${fecha}"
+                        style="width:100%;padding:10px;border-radius:6px;border:1px solid #cbd5e1;">
+                </div>
+                <div>
+                    <label style="font-size:0.85rem;font-weight:600;">Hora</label>
+                    <input type="time" id="${idPrefix}RecordatorioHora" value="${hora}"
+                        style="width:100%;padding:10px;border-radius:6px;border:1px solid #cbd5e1;">
+                </div>
+            </div>
+            <small style="color:#64748b;display:block;margin-top:6px;">Recibirá una alerta en la fecha y hora indicadas.</small>
+        </div>`;
+};
+
+InternamientoModule.prototype._toggleCamposRecordatorioPendiente = function(prefix) {
+    const chk = document.getElementById(`${prefix}RecordatorioActivo`);
+    const campos = document.getElementById(`${prefix}RecordatorioCampos`);
+    if (campos) campos.style.display = chk?.checked ? 'grid' : 'none';
+};
+
+InternamientoModule.prototype.leerRecordatorioPendienteForm = function(prefix, requeridoSiActivo = true) {
+    const activo = document.getElementById(`${prefix}RecordatorioActivo`)?.checked;
+    if (!activo) {
+        return {
+            recordatorioActivo: false,
+            recordatorioFecha: null,
+            recordatorioHora: null,
+            recordatorioMs: null,
+            recordatorioNotificadoEn: null
+        };
+    }
+    const fecha = document.getElementById(`${prefix}RecordatorioFecha`)?.value?.trim() || '';
+    const hora = document.getElementById(`${prefix}RecordatorioHora`)?.value?.trim() || '';
+    if (!fecha || !hora) {
+        return requeridoSiActivo ? null : {
+            recordatorioActivo: false,
+            recordatorioFecha: null,
+            recordatorioHora: null,
+            recordatorioMs: null,
+            recordatorioNotificadoEn: null
+        };
+    }
+    const [anio, mes, dia] = fecha.split('-').map(Number);
+    const [horas, minutos] = hora.split(':').map(Number);
+    const ms = new Date(anio, mes - 1, dia, horas, minutos, 0, 0).getTime();
+    if (isNaN(ms)) return null;
+    return {
+        recordatorioActivo: true,
+        recordatorioFecha: fecha,
+        recordatorioHora: hora,
+        recordatorioMs: ms,
+        recordatorioNotificadoEn: null
+    };
+};
+
+InternamientoModule.prototype.aplicarRecordatorioAProcedimientoData = function(destino, recordatorio) {
+    if (!destino || !recordatorio) return destino;
+    Object.assign(destino, recordatorio);
+    return destino;
+};
+
+InternamientoModule.prototype.formatearRecordatorioPendiente = function(proc) {
+    if (!proc?.recordatorioActivo || !proc.recordatorioMs) return '';
+    return new Date(proc.recordatorioMs).toLocaleString('es-PE', {
+        weekday: 'short',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
+
+InternamientoModule.prototype.renderBadgeRecordatorioPendiente = function(proc) {
+    if (!proc?.recordatorioActivo || !proc.recordatorioMs) return '';
+    const texto = this.formatearRecordatorioPendiente(proc);
+    const vencido = proc.estado === 'pendiente' && proc.recordatorioMs <= Date.now();
+    const clase = vencido ? 'pendiente-recordatorio-badge pendiente-recordatorio-badge--vencido' : 'pendiente-recordatorio-badge';
+    return `<span class="${clase}"><i class="fas fa-bell"></i> Recordatorio: ${texto}</span>`;
+};
+
+InternamientoModule.prototype._ordenarProcedimientosConRecordatorio = function(lista) {
+    return [...lista].sort((a, b) => {
+        if (a.estado === 'pendiente' && b.estado !== 'pendiente') return -1;
+        if (a.estado !== 'pendiente' && b.estado === 'pendiente') return 1;
+        const ra = a.estado === 'pendiente' && a.recordatorioActivo && a.recordatorioMs ? a.recordatorioMs : Infinity;
+        const rb = b.estado === 'pendiente' && b.recordatorioActivo && b.recordatorioMs ? b.recordatorioMs : Infinity;
+        if (ra !== rb) return ra - rb;
+        return (b.fechaCreacion || 0) - (a.fechaCreacion || 0);
+    });
+};
+
+InternamientoModule.prototype._iniciarRecordatoriosPendientes = function() {
+    if (this._recordatoriosPendientesInterval) return;
+    this._recordatoriosPendientesMostrados = this._recordatoriosPendientesMostrados || new Set();
+    this._verificarRecordatoriosPendientes();
+    this._recordatoriosPendientesInterval = setInterval(
+        () => this._verificarRecordatoriosPendientes(),
+        60000
+    );
+};
+
+InternamientoModule.prototype._verificarRecordatoriosPendientes = function() {
+    if (!this.internamientos || typeof this.internamientos.forEach !== 'function') return;
+    const ahora = Date.now();
+    this._recordatoriosPendientesMostrados = this._recordatoriosPendientesMostrados || new Set();
+
+    this.internamientos.forEach((internamiento, mapKey) => {
+        if (!this.esRegistroInternamientoReal(mapKey)) return;
+        if (['egresado', 'defuncion'].includes(internamiento.estado?.actual)) return;
+        const nombreMascota = internamiento.referencias?.nombreMascota || 'Paciente';
+        const procs = Object.values(internamiento.procedimientos || {});
+        procs.forEach((proc) => {
+            if (proc.estado !== 'pendiente' || !proc.recordatorioActivo || !proc.recordatorioMs) return;
+            if (proc.recordatorioMs > ahora) return;
+            const key = `${mapKey}:${proc.procedimientoId}:${proc.recordatorioMs}`;
+            if (this._recordatoriosPendientesMostrados.has(key)) return;
+            this._recordatoriosPendientesMostrados.add(key);
+            const desc = (proc.descripcion || 'Pendiente').substring(0, 80);
+            this.showNotification(
+                `<strong>Recordatorio de pendiente</strong><br>${nombreMascota}: ${desc.replace(/</g, '&lt;')}`,
+                'warning',
+                8000
+            );
+            if (this.internamientosRef) {
+                this.internamientosRef.child(mapKey)
+                    .child(`procedimientos/${proc.procedimientoId}/recordatorioNotificadoEn`)
+                    .set(Date.now())
+                    .catch(() => {});
+            }
+        });
+    });
+};
+
+InternamientoModule.prototype.asignarRecordatorioPendiente = function(procedimientoId) {
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    const proc = internamiento?.procedimientos?.[procedimientoId];
+    if (!proc || proc.estado === 'completado') {
+        this.showAlert('No se puede programar recordatorio en este pendiente.', 'Acción no disponible', 'warning');
+        return;
+    }
+
+    const modalContent = `
+        <form id="formRecordatorioPendiente">
+            ${this.getHtmlCampoRecordatorioPendiente(proc, 'recProc')}
+            <div style="text-align:right;margin-top:20px;display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;">
+                ${proc.recordatorioActivo ? `
+                <button type="button" class="btn btn-secondary" style="margin-right:auto;color:#c62828;border-color:#ef9a9a;"
+                    onclick="window.internamientoModule.quitarRecordatorioPendiente('${procedimientoId}')">
+                    <i class="fas fa-bell-slash"></i> Quitar recordatorio
+                </button>` : ''}
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-bell"></i> Guardar recordatorio</button>
+            </div>
+        </form>`;
+
+    const modal = this.createModal('Recordatorio de pendiente', modalContent, 'fa-bell');
+    document.body.appendChild(modal);
+    document.getElementById('formRecordatorioPendiente')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const recordatorio = this.leerRecordatorioPendienteForm('recProc', true);
+        if (recordatorio === null) {
+            this.showAlert('Indique el día y la hora del recordatorio.', 'Campo requerido', 'warning');
+            return;
+        }
+        await this.guardarRecordatorioPendiente(procedimientoId, recordatorio);
+    });
+};
+
+InternamientoModule.prototype.guardarRecordatorioPendiente = async function(procedimientoId, recordatorio) {
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    if (!internamiento?.procedimientos?.[procedimientoId]) return;
+
+    const updates = {
+        [`procedimientos/${procedimientoId}/recordatorioActivo`]: !!recordatorio.recordatorioActivo,
+        [`procedimientos/${procedimientoId}/recordatorioFecha`]: recordatorio.recordatorioFecha,
+        [`procedimientos/${procedimientoId}/recordatorioHora`]: recordatorio.recordatorioHora,
+        [`procedimientos/${procedimientoId}/recordatorioMs`]: recordatorio.recordatorioMs,
+        [`procedimientos/${procedimientoId}/recordatorioNotificadoEn`]: null,
+        'metadata/fechaUltimaActualizacion': Date.now()
+    };
+
+    try {
+        await this.internamientosRef.child(this.currentInternamientoId).update(updates);
+        Object.assign(internamiento.procedimientos[procedimientoId], recordatorio, { recordatorioNotificadoEn: null });
+        document.querySelector('.modal-overlay')?.remove();
+        this.showNotification('Recordatorio guardado', 'success');
+        this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
+    } catch (err) {
+        this.showAlert('Error al guardar recordatorio: ' + (err.message || err), 'Error', 'error');
+    }
+};
+
+InternamientoModule.prototype.quitarRecordatorioPendiente = async function(procedimientoId) {
+    await this.guardarRecordatorioPendiente(procedimientoId, {
+        recordatorioActivo: false,
+        recordatorioFecha: null,
+        recordatorioHora: null,
+        recordatorioMs: null,
+        recordatorioNotificadoEn: null
+    });
+};
+
 InternamientoModule.prototype.loadProcedimientosView = function(bloqueado = false) {
     const container = document.getElementById('internamiento-procedimientos');
     if (!container) {
@@ -106,11 +325,10 @@ InternamientoModule.prototype.loadProcedimientosView = function(bloqueado = fals
                     ${porcentajeCompletado}%
                 </span>
             </div>
-            <div class="progress-bar" style="height: 16px; margin-bottom: 8px;">
-                <div class="progress-fill" style="width: ${porcentajeCompletado}%; display: flex; align-items: center; justify-content: center; color: white; font-size: 0.8rem; font-weight: 600;">
-                    ${porcentajeCompletado > 10 ? `${completados.length} / ${totalProcedimientos}` : ''}
-                </div>
-            </div>
+            ${this.renderBarraProgresoConGato(porcentajeCompletado, {
+                height: 16,
+                fillInner: porcentajeCompletado > 10 ? `${completados.length} / ${totalProcedimientos}` : ''
+            })}
         </div>
 
         <!-- Tabs: Pendientes / Completados / Todos -->
@@ -177,11 +395,7 @@ InternamientoModule.prototype.renderListaProcedimientos = function(procedimiento
     }
 
     // Ordenar: pendientes primero, luego por fecha
-    const ordenados = [...procedimientos].sort((a, b) => {
-        if (a.estado === 'pendiente' && b.estado !== 'pendiente') return -1;
-        if (a.estado !== 'pendiente' && b.estado === 'pendiente') return 1;
-        return b.fechaCreacion - a.fechaCreacion;
-    });
+    const ordenados = this._ordenarProcedimientosConRecordatorio(procedimientos);
 
     return `
         <div style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
@@ -205,6 +419,7 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
     });
     const bgStyle = paraFernanda ? 'background: #fce4ec; border-left: 4px solid #ec407a;'
         : (proc.tipoPendiente === 'cobro' ? 'border-left: 4px solid #e65100;' : 'border-left: 4px solid #1565c0;');
+    const badgeRecordatorio = this.renderBadgeRecordatorioPendiente(proc);
 
     return `
         <li class="procedimiento-item ${completado ? 'completado' : ''} ${paraFernanda ? 'procedimiento-para-fernanda' : ''}" style="padding: 18px; border-bottom: 1px solid #e0e0e0; transition: all 0.3s ease; ${bgStyle}">
@@ -242,6 +457,10 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
                     </div>
                     ` : ''}
 
+                    ${badgeRecordatorio ? `
+                    <div style="margin-bottom:8px;">${badgeRecordatorio}</div>
+                    ` : ''}
+
                     <div style="font-size: 0.85rem; color: #6c757d; margin-bottom: 8px;">
                         <i class="fas fa-calendar"></i> Creado: ${fechaCreacion}
                         ${proc.creadoNombre ? ` por <strong>${(proc.creadoNombre || '').replace(/</g, '&lt;')}</strong>` : ''}
@@ -276,6 +495,10 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
                         <i class="fas fa-history"></i>
                     </button>
                     ${!bloqueado && !completado ? `
+                        <button class="btn btn-sm" style="background: #e65100; color: white;"
+                                onclick="window.internamientoModule.asignarRecordatorioPendiente('${proc.procedimientoId}')" title="Programar recordatorio">
+                            <i class="fas fa-bell"></i>
+                        </button>
                         <button class="btn btn-sm" style="background: #17a2b8; color: white;" 
                                 onclick="window.internamientoModule.editarProcedimiento('${proc.procedimientoId}')" title="Editar">
                             <i class="fas fa-edit"></i>
@@ -500,6 +723,8 @@ InternamientoModule.prototype.agregarProcedimiento = async function() {
                 <textarea id="procObservaciones" rows="2" placeholder="Detalles adicionales, indicaciones especiales..."></textarea>
             </div>
 
+            ${this.getHtmlCampoRecordatorioPendiente({}, 'proc')}
+
             ${!this.currentInternamientoId || this.edicionIngresoConsultaId ? this.getOrigenAdmisionFormHTML() : ''}
 
             <div class="form-group">
@@ -567,6 +792,14 @@ InternamientoModule.prototype.handleAgregarProcedimiento = async function(e) {
         puestoPorInternos: !!origenFlags.puestoPorInternos
     };
 
+    const recordatorio = this.leerRecordatorioPendienteForm('proc', true);
+    if (recordatorio === null) {
+        if (esAdmisionListaLocal) this._agregandoProcedimientoAdmision = false;
+        this.showAlert('Si activa el recordatorio, indique día y hora.', 'Campo requerido', 'warning');
+        return;
+    }
+    this.aplicarRecordatorioAProcedimientoData(procData, recordatorio);
+
     // Nuevo internamiento o edición desde admisión: lista local, sin código aún.
     if (esAdmisionListaLocal) {
         this.pendientesAdmision = this.pendientesAdmision || [];
@@ -631,7 +864,12 @@ InternamientoModule.prototype.guardarProcedimiento = async function(data, codigo
         reportadoNombre: null,
         observacionesReporte: '',
         resultadoId: null,
-        documentosAdjuntos: []
+        documentosAdjuntos: [],
+        recordatorioActivo: !!data.recordatorioActivo,
+        recordatorioFecha: data.recordatorioFecha || null,
+        recordatorioHora: data.recordatorioHora || null,
+        recordatorioMs: data.recordatorioMs || null,
+        recordatorioNotificadoEn: null
     };
 
     const updates = {};
@@ -803,6 +1041,8 @@ InternamientoModule.prototype.editarProcedimiento = function(procedimientoId) {
                 <textarea id="editProcObservaciones" rows="2">${proc.observaciones || ''}</textarea>
             </div>
 
+            ${this.getHtmlCampoRecordatorioPendiente(proc, 'editProc')}
+
             <div class="form-group">
                 <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
                     <input type="checkbox" id="editProcParaFernanda" ${proc.paraFernanda ? 'checked' : ''} style="width: 18px; height: 18px;">
@@ -863,11 +1103,22 @@ InternamientoModule.prototype.guardarEdicionProcedimiento = async function(proce
         return;
     }
 
+    const recordatorio = this.leerRecordatorioPendienteForm('editProc', true);
+    if (recordatorio === null) {
+        this.showAlert('Si activa el recordatorio, indique día y hora.', 'Campo requerido', 'warning');
+        return;
+    }
+
     const updates = {};
     updates[`procedimientos/${procedimientoId}/descripcion`] = descripcion;
     updates[`procedimientos/${procedimientoId}/prioridad`] = document.getElementById('editProcPrioridad')?.value || 'normal';
     updates[`procedimientos/${procedimientoId}/observaciones`] = document.getElementById('editProcObservaciones')?.value.trim() || '';
     updates[`procedimientos/${procedimientoId}/paraFernanda`] = document.getElementById('editProcParaFernanda')?.checked || false;
+    updates[`procedimientos/${procedimientoId}/recordatorioActivo`] = !!recordatorio.recordatorioActivo;
+    updates[`procedimientos/${procedimientoId}/recordatorioFecha`] = recordatorio.recordatorioFecha;
+    updates[`procedimientos/${procedimientoId}/recordatorioHora`] = recordatorio.recordatorioHora;
+    updates[`procedimientos/${procedimientoId}/recordatorioMs`] = recordatorio.recordatorioMs;
+    updates[`procedimientos/${procedimientoId}/recordatorioNotificadoEn`] = null;
     updates['metadata/fechaUltimaActualizacion'] = Date.now();
 
     if (esConsultaExterna && proc) {

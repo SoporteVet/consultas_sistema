@@ -588,6 +588,27 @@ const verTicketsSection = document.getElementById('verTicketsSection');
 const estadisticasSection = document.getElementById('estadisticasSection');
 const edicionesSection = document.getElementById('edicionesSection');
 const ticketForm = document.getElementById('ticketForm');
+
+function bindAutoUppercaseField(el) {
+    if (!el) return;
+    el.addEventListener('input', () => {
+        const start = el.selectionStart;
+        const end = el.selectionEnd;
+        const upper = el.value.toUpperCase();
+        if (el.value !== upper) {
+            el.value = upper;
+            if (start != null && end != null) {
+                el.setSelectionRange(start, end);
+            }
+        }
+    });
+}
+
+function setupCrearConsultaUppercaseFields() {
+    ['nombre', 'mascota', 'motivoLlegada', 'motivo'].forEach((id) => {
+        bindAutoUppercaseField(document.getElementById(id));
+    });
+}
 const ticketContainer = document.getElementById('ticketContainer');
 const filterBtns = document.querySelectorAll('.filter-btn');
 const horarioBtn = document.getElementById('horarioBtn');
@@ -1565,6 +1586,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 if (ticketForm) {
+    setupCrearConsultaUppercaseFields();
     ticketForm.addEventListener('submit', (e) => {
         e.preventDefault();
         if (!ticketForm.checkValidity()) {
@@ -2194,8 +2216,8 @@ function setupTicketsIncrementalListeners() {
 function addTicket() {
     try {
         // 1. Obtener valores del formulario
-        const nombre = document.getElementById('nombre').value;
-        const mascota = document.getElementById('mascota').value;
+        const nombre = document.getElementById('nombre').value.trim().toUpperCase();
+        const mascota = document.getElementById('mascota').value.trim().toUpperCase();
         const cedula = document.getElementById('cedula').value;
         const correo = (document.getElementById('correo')?.value || '').trim();
         const telefono = (document.getElementById('telefono')?.value || '').trim();
@@ -2203,8 +2225,8 @@ function addTicket() {
             showNotification('Debe ingresar el correo electrónico y el teléfono del cliente.', 'error');
             return;
         }
-        const motivo = document.getElementById('motivo').value;
-        const motivoLlegada = document.getElementById('motivoLlegada')?.value || '';
+        const motivo = document.getElementById('motivo').value.toUpperCase();
+        const motivoLlegada = (document.getElementById('motivoLlegada')?.value || '').toUpperCase();
         const estado = document.getElementById('estado').value;
         const tipoMascota = document.getElementById('tipoMascota').value;
         if (tipoMascota === 'por_definir') {
@@ -5018,6 +5040,78 @@ function showNotification(message, type = 'info') {
 }
 
 // --- Estadísticas: "hoy" usa los tickets en memoria (día de consulta cargado); otros períodos consultan Firebase por rango ---
+let lastStatsFilteredTickets = [];
+
+function updateStatsPeriodLabel() {
+    const el = document.getElementById('statsPeriodLabel');
+    if (!el) return;
+    const bounds = getStatsPeriodDateStrings();
+    const periodo = document.getElementById('filtroPeriodoGlobal')?.value || 'hoy';
+    const labels = {
+        hoy: 'Hoy',
+        semana: 'Esta semana',
+        mes: 'Este mes',
+        ano: 'Este año',
+        personalizado: 'Periodo personalizado'
+    };
+    if (!bounds) {
+        el.textContent = labels[periodo] || '';
+        return;
+    }
+    const inicio = formatDate(bounds.start);
+    const fin = formatDate(bounds.end);
+    el.textContent = bounds.start === bounds.end
+        ? `${labels[periodo] || periodo}: ${inicio}`
+        : `${labels[periodo] || periodo}: ${inicio} — ${fin}`;
+}
+
+function updateStatsKPIs(filtered) {
+    const atendidos = filtered.filter(t => t.estado === 'terminado').length;
+    const seFueron = filtered.filter(t => t.estado === 'cliente_se_fue').length;
+    const finalizados = atendidos + seFueron;
+
+    const tasaAtencionEl = document.getElementById('tasaAtencion');
+    if (tasaAtencionEl) {
+        tasaAtencionEl.textContent = finalizados > 0
+            ? `${((atendidos / finalizados) * 100).toFixed(1)}%`
+            : '-';
+    }
+
+    const tasaAbandonoEl = document.getElementById('tasaAbandono');
+    if (tasaAbandonoEl) {
+        tasaAbandonoEl.textContent = filtered.length > 0
+            ? `${((seFueron / filtered.length) * 100).toFixed(1)}%`
+            : '-';
+    }
+
+    let tiempoTotal = 0;
+    let countTiempos = 0;
+    filtered.forEach(ticket => {
+        if (ticket.horaLlegada && (ticket.horaFinalizacion || ticket.horaAtencion)) {
+            const llegada = convertTimeToMinutes(ticket.horaLlegada);
+            const fin = convertTimeToMinutes(ticket.horaFinalizacion || ticket.horaAtencion);
+            const tiempo = fin - llegada;
+            if (tiempo >= 0) {
+                tiempoTotal += tiempo;
+                countTiempos++;
+            }
+        }
+    });
+
+    const tiempoPromedioEl = document.getElementById('tiempoPromedioGlobal');
+    if (tiempoPromedioEl) {
+        tiempoPromedioEl.textContent = countTiempos > 0
+            ? formatMinutesToTime(tiempoTotal / countTiempos)
+            : '-';
+    }
+}
+
+function refreshPersonalStatsCharts() {
+    const source = lastStatsFilteredTickets.length
+        ? lastStatsFilteredTickets
+        : filtrarTicketsPorPeriodoGlobal(tickets);
+    renderizarGraficosPersonalServicios(source);
+}
 function getStatsPeriodDateStrings() {
     const periodo = document.getElementById('filtroPeriodoGlobal')?.value || 'hoy';
     const hoy = new Date();
@@ -5056,6 +5150,8 @@ function getStatsPeriodDateStrings() {
 }
 
 function applyStatsFromTickets(filtered) {
+    lastStatsFilteredTickets = filtered;
+
     const totalEl = document.getElementById('totalPacientes');
     if (totalEl) totalEl.textContent = filtered.length;
     const espEl = document.getElementById('pacientesEspera');
@@ -5072,8 +5168,13 @@ function applyStatsFromTickets(filtered) {
     const cfEl = document.getElementById('clientesSeFueron');
     if (cfEl) cfEl.textContent = filtered.filter(t => t.estado === 'cliente_se_fue').length;
 
+    updateStatsKPIs(filtered);
+    updateStatsPeriodLabel();
     renderizarGraficosTiempoEspera(filtered);
     llenarSelectorPersonal(filtered);
+    llenarSelectorServicio(filtered);
+    renderizarGraficoTipoMascota(filtered);
+    renderizarGraficoFlujoHorario(filtered);
     renderizarGraficosPersonalServicios(filtered);
 }
 
@@ -5147,100 +5248,69 @@ function renderizarGraficosTiempoEspera(ticketsFiltrados) {
   }
   
   // Renderizar gráfico de tiempo de espera
-  const ctx = document.getElementById('waitTimeChart');
-  if (!ctx) return;
-  
-  // Destruir gráfico anterior si existe
-  if (window.waitTimeChart) {
-    try {
-      window.waitTimeChart.destroy();
-    } catch (error) {
-      // Error al destruir gráfico anterior
-    }
-  }
-  
-  // Si no hay datos, mostrar mensaje
+  const canvas = document.getElementById('waitTimeChart');
+  if (!canvas) return;
+
+  const SC = window.StatsCharts;
+  if (SC) SC.destroyChart('waitTimeChart');
+
   if (ticketsConTiempos === 0) {
-    const ctxCanvas = ctx.getContext('2d');
-    if (ctxCanvas) {
-      ctxCanvas.clearRect(0, 0, ctx.width, ctx.height);
-      ctxCanvas.font = '16px Arial';
-      ctxCanvas.fillStyle = '#888';
-      ctxCanvas.textAlign = 'center';
-      ctxCanvas.fillText('No hay datos suficientes para calcular tiempos de espera', 
-        ctx.width / 2 || 150, ctx.height / 2 || 150);
-    }
+    if (SC) SC.showEmpty(canvas, 'No hay datos suficientes para calcular tiempos de espera');
     return;
   }
-  
-  // Preparar datos para el gráfico
-  const labels = [];
-  const data = [];
-  const backgroundColors = [
-    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-    '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
-  ];
-  
-  // Tomar hasta 10 servicios para el gráfico
+
   const serviciosParaGrafico = Object.keys(tiemposEspera)
     .sort((a, b) => (tiemposEspera[b].total / tiemposEspera[b].count) - (tiemposEspera[a].total / tiemposEspera[a].count))
-    .slice(0, 10);
-  
-  serviciosParaGrafico.forEach((servicio, index) => {
-    const { total, count } = tiemposEspera[servicio];
-    const promedio = total / count;
-    
-    labels.push(getNombreServicio(servicio));
-    data.push(promedio);
-  });
-  
-  // Cargar Chart.js de forma diferida y crear gráfico
-  window.lazyLoadLibs.loadChartJS().then(() => {
-    try {
-      window.waitTimeChart = new Chart(ctx, {
+    .slice(0, 12);
+
+  const labels = serviciosParaGrafico.map(s => getNombreServicio(s));
+  const data = serviciosParaGrafico.map(s => tiemposEspera[s].total / tiemposEspera[s].count);
+
+  const wrap = canvas.closest('.chart-canvas-wrap');
+  if (wrap) wrap.style.setProperty('--chart-bars', String(serviciosParaGrafico.length));
+
+  const renderChart = () => {
+    const ctx = canvas.getContext('2d');
+    const backgrounds = SC
+      ? data.map((_, i) => SC.createBarGradient(ctx, i))
+      : data.map((_, i) => ['#4285F4', '#34A853', '#FBBC04', '#EA4335'][i % 4]);
+
+    window.waitTimeChart = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: labels,
+        labels,
         datasets: [{
-          label: 'Tiempo promedio de espera (minutos)',
-          data: data,
-          backgroundColor: backgroundColors.slice(0, data.length),
-          borderWidth: 1
+          label: 'Tiempo promedio',
+          data,
+          backgroundColor: backgrounds,
+          borderRadius: 6,
+          borderSkipped: false,
+          maxBarThickness: 28
         }]
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          y: {
-            beginAtZero: true,
-            title: {
-              display: true,
-              text: 'Minutos'
-            }
-          }
-        },
+      options: SC ? SC.baseOptions({
+        indexAxis: 'y',
+        scales: SC.gridScales(true, false, true),
         plugins: {
-          legend: {
-            display: false
-          },
+          legend: { display: false },
           tooltip: {
+            ...SC.baseTooltip(),
             callbacks: {
-              label: function(context) {
-                const value = context.raw;
-                return `Tiempo de espera: ${formatMinutesToTime(value)}`;
+              label(context) {
+                return ` Tiempo: ${formatMinutesToTime(context.raw)}`;
               }
             }
           }
         }
-      }
+      }) : { responsive: true, maintainAspectRatio: false }
     });
-    } catch (error) {
-      console.error('Error al crear gráfico de tiempo de espera:', error);
-    }
-  }).catch(error => {
-    console.error('Error al cargar Chart.js:', error);
-  });
+  };
+
+  if (SC) {
+    SC.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  } else {
+    window.lazyLoadLibs.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  }
 }
 
 // Función para renderizar los gráficos de personal y servicios
@@ -5366,177 +5436,327 @@ function actualizarTablaEstadisticas(conteoPersonalServicio, conteoServicios, to
 function renderizarGraficoPersonalPorServicio(conteoPersonalServicio) {
   const canvas = document.getElementById('chartServiciosPersonal');
   if (!canvas) return;
-  
-  const ctx = canvas.getContext('2d');
-  
-  // Destruir gráfico anterior si existe
-  if (window.chartServiciosPersonal) {
-    try {
-      window.chartServiciosPersonal.destroy();
-    } catch (error) {
-      // Error al destruir gráfico anterior
-    }
-    window.chartServiciosPersonal = null;
-  }
-  
-  // Limpiar canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  // Si no hay datos, mostrar mensaje
-  const personal = Object.keys(conteoPersonalServicio);
-  if (personal.length === 0) {
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#888';
-    ctx.textAlign = 'center';
-    ctx.fillText('No hay datos para mostrar', canvas.width / 2, canvas.height / 2);
+
+  const SC = window.StatsCharts;
+  if (SC) SC.destroyChart('chartServiciosPersonal');
+
+  const personalAll = Object.keys(conteoPersonalServicio);
+  if (personalAll.length === 0) {
+    if (SC) SC.showEmpty(canvas, 'No hay datos para mostrar');
     return;
   }
-  
-  // Recopilar todos los servicios únicos
+
+  const personal = personalAll
+    .map(nombre => ({
+      nombre,
+      total: Object.values(conteoPersonalServicio[nombre]).reduce((a, b) => a + b, 0)
+    }))
+    .sort((a, b) => b.total - a.total)
+    .slice(0, 10)
+    .map(p => p.nombre);
+
   const serviciosUnicos = new Set();
-  Object.values(conteoPersonalServicio).forEach(servicios => {
-    Object.keys(servicios).forEach(servicio => serviciosUnicos.add(servicio));
+  personal.forEach(p => {
+    Object.keys(conteoPersonalServicio[p] || {}).forEach(s => serviciosUnicos.add(s));
   });
-  
-  // Colores para los servicios
-  const colores = [
-    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-    '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
-  ];
-  
-  // Crear datasets para el gráfico
-  const datasets = [];
-  
-  // Convertir el conjunto a array y ordenar
   const servicios = Array.from(serviciosUnicos).sort();
-  
-  // Para cada servicio, crear un dataset
-  servicios.forEach((servicio, index) => {
-    const data = personal.map(persona => conteoPersonalServicio[persona][servicio] || 0);
-    
-    datasets.push({
-      label: getNombreServicio(servicio),
-      data: data,
-      backgroundColor: colores[index % colores.length],
-      borderWidth: 1
-    });
-  });
-  
-  // Cargar Chart.js de forma diferida y crear gráfico de barras
-  window.lazyLoadLibs.loadChartJS().then(() => {
-    try {
-      window.chartServiciosPersonal = new Chart(ctx, {
+
+  const datasets = servicios.map((servicio, index) => ({
+    label: getNombreServicio(servicio),
+    data: personal.map(persona => conteoPersonalServicio[persona][servicio] || 0),
+    backgroundColor: SC ? SC.getColors(servicios.length)[index] : '#4285F4',
+    borderRadius: 4,
+    borderSkipped: false
+  }));
+
+  const renderChart = () => {
+    window.chartServiciosPersonal = new Chart(canvas.getContext('2d'), {
       type: 'bar',
-      data: {
-        labels: personal,
-        datasets: datasets
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
+      data: { labels: personal, datasets },
+      options: SC ? SC.baseOptions({
         scales: {
-          x: { stacked: true },
-          y: { stacked: true, beginAtZero: true }
+          x: {
+            stacked: true,
+            grid: { display: false },
+            ticks: { font: { family: SC.FONT, size: 11 }, color: '#6c757d' }
+          },
+          y: {
+            stacked: true,
+            beginAtZero: true,
+            grid: { color: 'rgba(0, 0, 0, 0.06)', drawBorder: false },
+            ticks: { stepSize: 1, font: { family: SC.FONT, size: 11 }, color: '#6c757d' }
+          }
         },
         plugins: {
-          legend: { position: 'top' },
-          tooltip: { mode: 'index', intersect: false }
-        }
-      }
-    });
-    } catch (error) {
-      console.error('Error al crear gráfico de personal por servicio:', error);
-      ctx.font = '16px Arial';
-      ctx.fillStyle = '#f00';
-      ctx.textAlign = 'center';
-      ctx.fillText('Error al crear gráfico', canvas.width / 2, canvas.height / 2);
-    }
-  }).catch(error => {
-    console.error('Error al cargar Chart.js:', error);
-  });
-}
-
-// Renderizar gráfico de distribución de servicios (gráfico de pie)
-function renderizarGraficoDistribucionServicios(conteoServicios) {
-  const canvas = document.getElementById('chartDistribucionServicios');
-  if (!canvas) return;
-  
-  const ctx = canvas.getContext('2d');
-  
-  // Destruir gráfico anterior si existe
-  if (window.chartDistribucionServicios) {
-    try {
-      window.chartDistribucionServicios.destroy();
-    } catch (error) {
-      // Error al destruir gráfico anterior
-    }
-    window.chartDistribucionServicios = null;
-  }
-  
-  // Limpiar canvas
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  
-  // Si no hay datos, mostrar mensaje
-  const servicios = Object.keys(conteoServicios);
-  if (servicios.length === 0) {
-    ctx.font = '16px Arial';
-    ctx.fillStyle = '#888';
-    ctx.textAlign = 'center';
-    ctx.fillText('No hay datos para mostrar', canvas.width / 2, canvas.height / 2);
-    return;
-  }
-  
-  // Colores para los servicios
-  const colores = [
-    '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e', '#e74a3b',
-    '#6f42c1', '#fd7e14', '#20c9a6', '#858796', '#5a5c69'
-  ];
-  
-  // Preparar datos
-  const data = servicios.map(servicio => conteoServicios[servicio]);
-  const labels = servicios.map(servicio => getNombreServicio(servicio));
-  const colors = colores.slice(0, servicios.length);
-  
-  // Cargar Chart.js de forma diferida y crear gráfico de pie
-  window.lazyLoadLibs.loadChartJS().then(() => {
-    try {
-      window.chartDistribucionServicios = new Chart(ctx, {
-      type: 'pie',
-      data: {
-        labels: labels,
-        datasets: [{
-          data: data,
-          backgroundColor: colors,
-          borderWidth: 1
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: { position: 'right' },
-          tooltip: { callbacks: { label: function(context) {
-                const label = context.label || '';
-                const value = context.raw || 0;
-                const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                const percentage = total ? Math.round((value / total) * 100) : 0;
-                return `${label}: ${value} (${percentage}%)`;
+          legend: SC.baseLegend('bottom'),
+          tooltip: {
+            ...SC.baseTooltip(),
+            mode: 'index',
+            callbacks: {
+              footer(items) {
+                const sum = items.reduce((acc, item) => acc + (item.raw || 0), 0);
+                return sum ? `Total: ${sum}` : '';
               }
             }
           }
         }
+      }) : { responsive: true, maintainAspectRatio: false }
+    });
+  };
+
+  if (SC) {
+    SC.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  } else {
+    window.lazyLoadLibs.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  }
+}
+
+// Renderizar gráfico de distribución de servicios (doughnut)
+function renderizarGraficoDistribucionServicios(conteoServicios) {
+  const canvas = document.getElementById('chartDistribucionServicios');
+  if (!canvas) return;
+
+  const SC = window.StatsCharts;
+  if (SC) SC.destroyChart('chartDistribucionServicios');
+
+  const servicios = Object.keys(conteoServicios);
+  if (servicios.length === 0) {
+    if (SC) SC.showEmpty(canvas, 'No hay datos para mostrar');
+    return;
+  }
+
+  const labels = servicios.map(s => getNombreServicio(s));
+  const data = servicios.map(s => conteoServicios[s]);
+  const total = data.reduce((a, b) => a + b, 0);
+  const colors = SC ? SC.getColors(servicios.length) : ['#4285F4', '#34A853', '#FBBC04'];
+
+  const renderChart = () => {
+    window.chartDistribucionServicios = new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: colors,
+          borderWidth: 3,
+          borderColor: '#ffffff',
+          hoverOffset: 8
+        }]
+      },
+      options: SC ? SC.doughnutOptions(total, 'Servicios') : { responsive: true, maintainAspectRatio: false }
+    });
+  };
+
+  if (SC) {
+    SC.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  } else {
+    window.lazyLoadLibs.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  }
+}
+
+function renderizarGraficoTipoMascota(ticketsFiltrados) {
+  const canvas = document.getElementById('chartTipoMascota');
+  if (!canvas) return;
+
+  const SC = window.StatsCharts;
+  if (SC) SC.destroyChart('chartTipoMascota');
+
+  const conteo = {};
+  ticketsFiltrados.forEach(ticket => {
+    const tipo = (ticket.tipoMascota || 'otro').trim().toLowerCase();
+    const label = typeof getTipoMascotaLabel === 'function'
+      ? getTipoMascotaLabel(tipo)
+      : tipo;
+    conteo[label] = (conteo[label] || 0) + 1;
+  });
+
+  const labels = Object.keys(conteo).sort();
+  if (labels.length === 0) {
+    if (SC) SC.showEmpty(canvas, 'No hay datos para mostrar');
+    return;
+  }
+
+  const data = labels.map(label => conteo[label]);
+  const total = data.reduce((a, b) => a + b, 0);
+  const colors = SC ? SC.getColors(labels.length) : ['#4285F4', '#34A853', '#FBBC04'];
+
+  const renderChart = () => {
+    window.chartTipoMascota = new Chart(canvas.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels,
+        datasets: [{
+          data,
+          backgroundColor: colors,
+          borderWidth: 3,
+          borderColor: '#ffffff',
+          hoverOffset: 8
+        }]
+      },
+      options: SC ? SC.doughnutOptions(total, 'Pacientes') : { responsive: true, maintainAspectRatio: false }
+    });
+  };
+
+  if (SC) {
+    SC.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  } else {
+    window.lazyLoadLibs.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  }
+}
+
+function renderizarGraficoFlujoHorario(ticketsFiltrados) {
+  const canvas = document.getElementById('chartFlujoHorario');
+  if (!canvas) return;
+
+  const SC = window.StatsCharts;
+  if (SC) SC.destroyChart('chartFlujoHorario');
+
+  const horas = Array.from({ length: 24 }, (_, i) => i);
+  const conteo = horas.map(() => 0);
+
+  ticketsFiltrados.forEach(ticket => {
+    const horaStr = ticket.horaLlegada || ticket.horaConsulta || ticket.hora;
+    if (!horaStr || typeof horaStr !== 'string') return;
+    const h = parseInt(horaStr.split(':')[0], 10);
+    if (!Number.isNaN(h) && h >= 0 && h < 24) conteo[h]++;
+  });
+
+  const total = conteo.reduce((a, b) => a + b, 0);
+  if (total === 0) {
+    if (SC) SC.showEmpty(canvas, 'No hay datos de horarios disponibles');
+    return;
+  }
+
+  const labels = horas.map(h => `${String(h).padStart(2, '0')}:00`);
+  const lineColor = SC ? SC.PALETTE[0] : '#4285F4';
+
+  const renderChart = () => {
+    const ctx = canvas.getContext('2d');
+    const fillGradient = ctx.createLinearGradient(0, 0, 0, 320);
+    fillGradient.addColorStop(0, SC ? SC.hexToRgba(lineColor, 0.35) : 'rgba(66, 133, 244, 0.35)');
+    fillGradient.addColorStop(1, SC ? SC.hexToRgba(lineColor, 0.02) : 'rgba(66, 133, 244, 0.02)');
+
+    window.chartFlujoHorario = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Pacientes',
+          data: conteo,
+          borderColor: lineColor,
+          backgroundColor: fillGradient,
+          borderWidth: 2.5,
+          pointBackgroundColor: lineColor,
+          pointBorderColor: '#fff',
+          pointBorderWidth: 2,
+          pointRadius: 4,
+          pointHoverRadius: 6,
+          fill: true,
+          tension: 0.35
+        }]
+      },
+      options: SC ? SC.baseOptions({
+        scales: {
+          x: {
+            grid: { display: false },
+            ticks: {
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 12,
+              font: { family: SC.FONT, size: 10 },
+              color: '#6c757d'
+            }
+          },
+          y: {
+            beginAtZero: true,
+            grid: { color: 'rgba(0, 0, 0, 0.06)', drawBorder: false },
+            ticks: { stepSize: 1, font: { family: SC.FONT, size: 11 }, color: '#6c757d' }
+          }
+        },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            ...SC.baseTooltip(),
+            callbacks: {
+              label(context) {
+                return ` ${context.raw} paciente${context.raw === 1 ? '' : 's'}`;
+              }
+            }
+          }
+        }
+      }) : { responsive: true, maintainAspectRatio: false }
+    });
+  };
+
+  if (SC) {
+    SC.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  } else {
+    window.lazyLoadLibs.loadChartJS().then(renderChart).catch(err => console.error('Error al cargar Chart.js:', err));
+  }
+}
+
+function exportarEstadisticasCSV() {
+  const filtered = lastStatsFilteredTickets;
+  if (!filtered.length) {
+    showNotification('No hay datos para exportar en el periodo seleccionado', 'error');
+    return;
+  }
+
+  const periodo = document.getElementById('statsPeriodLabel')?.textContent || 'estadisticas';
+  const rows = [['Resumen de estadísticas', periodo], []];
+
+  rows.push(['Métrica', 'Valor']);
+  rows.push(['Total pacientes', document.getElementById('totalPacientes')?.textContent || '0']);
+  rows.push(['En espera', document.getElementById('pacientesEspera')?.textContent || '0']);
+  rows.push(['En consulta', document.getElementById('pacientesConsulta')?.textContent || '0']);
+  rows.push(['Atendidos', document.getElementById('pacientesAtendidos')?.textContent || '0']);
+  rows.push(['Clientes que se fueron', document.getElementById('clientesSeFueron')?.textContent || '0']);
+  rows.push(['Tasa de atención', document.getElementById('tasaAtencion')?.textContent || '-']);
+  rows.push(['Tasa de abandono', document.getElementById('tasaAbandono')?.textContent || '-']);
+  rows.push(['Tiempo promedio', document.getElementById('tiempoPromedioGlobal')?.textContent || '-']);
+  rows.push([]);
+
+  rows.push(['Detalle por personal']);
+  rows.push(['Personal', 'Servicio', 'Cantidad', '% del total']);
+  const tablaBody = document.getElementById('tablaEstadisticasBody');
+  if (tablaBody) {
+    tablaBody.querySelectorAll('tr').forEach(tr => {
+      const cells = tr.querySelectorAll('td');
+      if (cells.length === 4) {
+        rows.push([cells[0].textContent, cells[1].textContent, cells[2].textContent, cells[3].textContent]);
+      } else if (cells.length === 3) {
+        rows.push(['', cells[0].textContent, cells[1].textContent, cells[2].textContent]);
       }
     });
-    } catch (error) {
-      console.error('Error al crear gráfico de distribución:', error);
-      ctx.font = '16px Arial';
-      ctx.fillStyle = '#f00';
-      ctx.textAlign = 'center';
-      ctx.fillText('Error al crear gráfico', canvas.width / 2, canvas.height / 2);
-    }
-  }).catch(error => {
-    console.error('Error al cargar Chart.js:', error);
+  }
+
+  rows.push([]);
+  rows.push(['Detalle de tickets']);
+  rows.push(['ID', 'Mascota', 'Cliente', 'Servicio', 'Estado', 'Hora llegada', 'Médico']);
+  filtered.forEach(t => {
+    rows.push([
+      t.id || '',
+      t.mascota || '',
+      t.nombre || t.cliente || '',
+      getNombreServicio(t.tipoServicio || 'consulta'),
+      t.estado || '',
+      t.horaLlegada || '',
+      t.medicoAtiende || ''
+    ]);
   });
+
+  const csv = rows.map(row =>
+    row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(',')
+  ).join('\n');
+
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `estadisticas_${getLocalDateString()}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+  showNotification('Estadísticas exportadas correctamente', 'success');
 }
 
 // Configurar Event Listeners para estadísticas
@@ -5587,8 +5807,11 @@ document.addEventListener('DOMContentLoaded', function() {
   // Filtros adicionales
   const filtroPersonal = document.getElementById('filtroPersonal');
   const filtroServicio = document.getElementById('filtroServicio');
-  if (filtroPersonal) filtroPersonal.addEventListener('change', updateStatsGlobal);
-  if (filtroServicio) filtroServicio.addEventListener('change', updateStatsGlobal);
+  if (filtroPersonal) filtroPersonal.addEventListener('change', refreshPersonalStatsCharts);
+  if (filtroServicio) filtroServicio.addEventListener('change', refreshPersonalStatsCharts);
+
+  const exportarBtn = document.getElementById('exportarEstadisticasBtn');
+  if (exportarBtn) exportarBtn.addEventListener('click', exportarEstadisticasCSV);
   
   // Actualizar estadísticas al entrar a la sección
   // NOTA: Event listener para estadisticasBtn se maneja en setupCategorizedNavigation()
@@ -5775,17 +5998,41 @@ function llenarSelectorPersonal(sourceTickets = tickets) {
     const personalUnico = obtenerPersonalUnico(sourceTickets);
     const select = document.getElementById('filtroPersonal');
     if (!select) return;
-    // Limpiar opciones existentes excepto "Todos"
+    const valorActual = select.value;
     while (select.options.length > 1) {
         select.remove(1);
     }
-    // Agregar personal único
     personalUnico.forEach(persona => {
         const option = document.createElement('option');
         option.value = persona;
         option.textContent = persona;
         select.appendChild(option);
     });
+    if (valorActual && Array.from(select.options).some(o => o.value === valorActual)) {
+        select.value = valorActual;
+    }
+}
+
+function llenarSelectorServicio(sourceTickets = tickets) {
+    const serviciosUnicos = new Set();
+    sourceTickets.forEach(ticket => {
+        serviciosUnicos.add((ticket.tipoServicio || 'consulta').trim().toLowerCase());
+    });
+    const select = document.getElementById('filtroServicio');
+    if (!select) return;
+    const valorActual = select.value;
+    while (select.options.length > 1) {
+        select.remove(1);
+    }
+    Array.from(serviciosUnicos).sort().forEach(servicio => {
+        const option = document.createElement('option');
+        option.value = servicio;
+        option.textContent = getNombreServicio(servicio);
+        select.appendChild(option);
+    });
+    if (valorActual && Array.from(select.options).some(o => o.value === valorActual)) {
+        select.value = valorActual;
+    }
 }
 
 function getNombreServicio(tipoServicio) {

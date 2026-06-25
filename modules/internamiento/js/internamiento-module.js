@@ -94,6 +94,9 @@ class InternamientoModule {
             return false;
         }
         this._iniciarPopOutsMedicacion();
+        if (typeof this._iniciarRecordatoriosPendientes === 'function') {
+            this._iniciarRecordatoriosPendientes();
+        }
         const ok = await this.ensureInitialized(maxWaitMs);
         if (!ok) {
             this.showAlert(
@@ -616,9 +619,9 @@ class InternamientoModule {
             `;
             return;
         }
-        container.innerHTML = this.ordenarInternamientosLista(lista, filter)
+        container.innerHTML = `<div class="internamientos-grid">${this.ordenarInternamientosLista(lista, filter)
             .map((int) => this.renderInternamientoCard(int))
-            .join('');
+            .join('')}</div>`;
     }
 
     async toggleExpedienteSubidoSistema(internamientoId, subido) {
@@ -653,10 +656,121 @@ class InternamientoModule {
             if (query) this.buscarInternamientos(query);
             else this.filterInternamientos(this.currentFilter || 'activos');
             this.showNotification(subido ? 'Marcado: expediente subido al sistema' : 'Marcación de expediente subido quitada', 'success');
+            if (subido) this.showCelebracionExpedienteSubido();
         } catch (e) {
             console.error('Error actualizando expediente subido:', e);
             this.showAlert('Error al guardar: ' + (e.message || e), 'Error', 'error');
         }
+    }
+
+    showCelebracionExpedienteSubido() {
+        document.getElementById('int-celebracion-gato')?.remove();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'int-celebracion-gato';
+        overlay.className = 'int-celebracion-gato';
+        overlay.setAttribute('role', 'dialog');
+        overlay.setAttribute('aria-label', 'Celebración expediente subido');
+
+        const confettiColors = ['#ffd54f', '#ffb300', '#ff8f00', '#66bb6a', '#42a5f5', '#ef5350', '#ab47bc'];
+        const confettiHtml = Array.from({ length: 28 }, (_, i) => {
+            const left = (i * 3.7 + 5) % 100;
+            const delay = (i % 7) * 0.08;
+            const color = confettiColors[i % confettiColors.length];
+            const size = 6 + (i % 4) * 2;
+            return `<span class="int-celebracion-confetti" style="left:${left}%;animation-delay:${delay}s;background:${color};width:${size}px;height:${size * 0.6}px;"></span>`;
+        }).join('');
+
+        overlay.innerHTML = `
+            <div class="int-celebracion-backdrop"></div>
+            <div class="int-celebracion-confetti-wrap" aria-hidden="true">${confettiHtml}</div>
+            <div class="int-celebracion-stage">
+                <div class="int-celebracion-burbuja">
+                    <span class="int-celebracion-titulo">¡FELICIDADES!</span>
+                    <span class="int-celebracion-sub">Expediente subido al sistema</span>
+                </div>
+                <div class="int-celebracion-gato-art" aria-hidden="true">
+                    <div class="int-gato-cola"></div>
+                    <div class="int-gato-cuerpo"></div>
+                    <div class="int-gato-cabeza">
+                        <div class="int-gato-oreja int-gato-oreja--izq"></div>
+                        <div class="int-gato-oreja int-gato-oreja--der"></div>
+                        <div class="int-gato-cara">
+                            <div class="int-gato-ojos">
+                                <span class="int-gato-ojo int-gato-ojo--izq"></span>
+                                <span class="int-gato-ojo int-gato-ojo--der"></span>
+                            </div>
+                            <div class="int-gato-nariz"></div>
+                            <div class="int-gato-boca"></div>
+                            <div class="int-gato-bigote int-gato-bigote--izq"></div>
+                            <div class="int-gato-bigote int-gato-bigote--der"></div>
+                        </div>
+                    </div>
+                    <div class="int-gato-pata int-gato-pata--izq"></div>
+                    <div class="int-gato-pata int-gato-pata--der"></div>
+                </div>
+                <p class="int-celebracion-hint">Clic para cerrar</p>
+            </div>`;
+
+        const cerrar = () => {
+            overlay.classList.add('int-celebracion-gato--out');
+            setTimeout(() => overlay.remove(), 450);
+        };
+
+        overlay.addEventListener('click', cerrar);
+        document.body.appendChild(overlay);
+        requestAnimationFrame(() => overlay.classList.add('int-celebracion-gato--in'));
+
+        setTimeout(cerrar, 4200);
+    }
+
+    getHtmlGatoAmarilloArt(extraClass = '') {
+        return `
+            <div class="int-celebracion-gato-art ${extraClass}" aria-hidden="true">
+                <div class="int-gato-cola"></div>
+                <div class="int-gato-cuerpo"></div>
+                <div class="int-gato-cabeza">
+                    <div class="int-gato-oreja int-gato-oreja--izq"></div>
+                    <div class="int-gato-oreja int-gato-oreja--der"></div>
+                    <div class="int-gato-cara">
+                        <div class="int-gato-ojos">
+                            <span class="int-gato-ojo int-gato-ojo--izq"></span>
+                            <span class="int-gato-ojo int-gato-ojo--der"></span>
+                        </div>
+                        <div class="int-gato-nariz"></div>
+                        <div class="int-gato-boca"></div>
+                        <div class="int-gato-bigote int-gato-bigote--izq"></div>
+                        <div class="int-gato-bigote int-gato-bigote--der"></div>
+                    </div>
+                </div>
+                <div class="int-gato-pata int-gato-pata--izq"></div>
+                <div class="int-gato-pata int-gato-pata--der"></div>
+            </div>`;
+    }
+
+    renderBarraProgresoConGato(porcentaje, opts = {}) {
+        const pct = Math.max(0, Math.min(100, Math.round(Number(porcentaje) || 0)));
+        const height = opts.height || 16;
+        const fillInner = opts.fillInner || '';
+        const avanzando = pct < 100;
+        const posLeft = pct <= 2 ? '2%' : pct >= 98 ? '98%' : `${pct}%`;
+        const miniClass = avanzando
+            ? 'int-progreso-gato-mini int-progreso-gato-mini--avanzando'
+            : 'int-progreso-gato-mini int-progreso-gato-mini--meta';
+
+        return `
+            <div class="int-progreso-gato-container">
+                <div class="int-progreso-gato-pos" style="left: ${posLeft};" data-progreso="${pct}">
+                    <div class="${miniClass}">
+                        ${this.getHtmlGatoAmarilloArt('int-gato-progreso-scale')}
+                    </div>
+                </div>
+                <div class="progress-bar int-progreso-gato-track" style="height: ${height}px;">
+                    <div class="progress-fill int-progreso-gato-fill" style="width: ${pct}%;">
+                        ${fillInner}
+                    </div>
+                </div>
+            </div>`;
     }
 
     filterInternamientos(filter) {
@@ -787,7 +901,7 @@ class InternamientoModule {
                 container.innerHTML = `
                     <div class="empty-state">
                         <i class="fas fa-spinner fa-spin"></i>
-                        <p>Cargando internamientos"¦</p>
+                        <p>Cargando internamientos...</p>
                     </div>`;
             }
 
@@ -829,7 +943,7 @@ class InternamientoModule {
             visitasContainer.innerHTML = `
                 <div class="empty-state">
                     <i class="fas fa-spinner fa-spin"></i>
-                    <p>Cargando visitas"¦</p>
+                    <p>Cargando visitas...</p>
                 </div>`;
         }
 
@@ -893,7 +1007,7 @@ class InternamientoModule {
             const visitas = int.visitas && typeof int.visitas === 'object' ? int.visitas : {};
             const nombreMascota = int.referencias?.nombreMascota || 'Sin nombre';
             const propietario = this.getNombrePropietario(int) || '';
-            const pacienteLabel = propietario ? `${nombreMascota} "” ${propietario}` : nombreMascota;
+            const pacienteLabel = propietario ? `${nombreMascota} — ${propietario}` : nombreMascota;
             Object.entries(visitas).forEach(([visitaId, v]) => {
                 const nombreMascotaVisita = v.nombrePaciente || nombreMascota;
                 const pacienteLabelVisita = v.nombrePaciente
@@ -951,7 +1065,7 @@ class InternamientoModule {
         // Ordenar días (más recientes primero)
         const diasOrdenados = Object.keys(visitasPorDia).sort((a, b) => b.localeCompare(a));
         
-        const v = (s) => (s == null || s === '') ? '"”' : String(s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const v = (s) => (s == null || s === '') ? '—' : String(s).replace(/</g, '&lt;').replace(/"/g, '&quot;');
         const estados = ['En espera', 'En curso', 'Finalizada'];
         
         // Generar HTML de las tarjetas agrupadas por día
@@ -987,16 +1101,16 @@ class InternamientoModule {
                 let horaEstadoInfo = '';
                 if (visita.estado === 'En espera' && visita.horaEnEspera) {
                     const horaEspera = new Date(visita.horaEnEspera);
-                    const horaStr = horaEspera.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-                    horaEstadoInfo = `<div style="margin-top: 8px; padding: 8px 12px; background: #fff3e0; border-left: 3px solid #ff9800; border-radius: 6px; font-size: 0.85rem; color: #e65100;"><i class="fas fa-clock" style="margin-right: 6px;"></i><strong>En espera desde:</strong> ${horaStr}</div>`;
+                    const horaEspStr = horaEspera.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                    horaEstadoInfo = `<span class="visita-card-estado-hint hint-espera"><i class="fas fa-hourglass-half"></i> En espera desde ${horaEspStr}</span>`;
                 } else if (visita.estado === 'En curso' && visita.horaEnCurso) {
                     const horaCurso = new Date(visita.horaEnCurso);
-                    const horaStr = horaCurso.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-                    horaEstadoInfo = `<div style="margin-top: 8px; padding: 8px 12px; background: #e3f2fd; border-left: 3px solid #2196f3; border-radius: 6px; font-size: 0.85rem; color: #1565c0;"><i class="fas fa-user-check" style="margin-right: 6px;"></i><strong>En curso desde:</strong> ${horaStr}</div>`;
+                    const horaCurStr = horaCurso.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                    horaEstadoInfo = `<span class="visita-card-estado-hint hint-curso"><i class="fas fa-user-check"></i> En curso desde ${horaCurStr}</span>`;
                 } else if (visita.estado === 'Finalizada' && visita.horaFinalizada) {
                     const horaFin = new Date(visita.horaFinalizada);
-                    const horaStr = horaFin.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
-                    horaEstadoInfo = `<div style="margin-top: 8px; padding: 8px 12px; background: #e8f5e9; border-left: 3px solid #4caf50; border-radius: 6px; font-size: 0.85rem; color: #2e7d32;"><i class="fas fa-check-circle" style="margin-right: 6px;"></i><strong>Finalizada a las:</strong> ${horaStr}</div>`;
+                    const horaFinStr = horaFin.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' });
+                    horaEstadoInfo = `<span class="visita-card-estado-hint hint-finalizada"><i class="fas fa-check-circle"></i> Finalizada ${horaFinStr}</span>`;
                 }
                 
                 const estadoClass = visita.estado.toLowerCase().replace(' ', '-');
@@ -1014,26 +1128,28 @@ class InternamientoModule {
                 
                 return `
                     <div class="visita-card" data-estado="${v(visita.estado)}">
-                        <div class="visita-card-paciente-titulo">
-                            <i class="fas fa-paw"></i>
-                            <div class="visita-card-paciente-nombres">
-                                <span class="visita-card-mascota-nombre">${v(visita.nombreMascota)}</span>
-                                ${visita.nombrePropietario ? `<span class="visita-card-propietario-nombre">${v(visita.nombrePropietario)}</span>` : ''}
-                            </div>
-                        </div>
-                        <div class="visita-card-header">
-                            <div class="visita-card-time">
-                                <i class="fas fa-clock"></i>
-                                <span title="Hora de visita">${horaStr}</span>
+                        <div class="visita-card-top">
+                            <div class="visita-card-paciente-titulo">
+                                <i class="fas fa-paw"></i>
+                                <div class="visita-card-paciente-nombres">
+                                    <span class="visita-card-mascota-nombre">${v(visita.nombreMascota)}</span>
+                                    ${visita.nombrePropietario ? `<span class="visita-card-propietario-nombre">${v(visita.nombrePropietario)}</span>` : ''}
+                                </div>
                             </div>
                             <span class="visita-estado-badge ${estadoClass}">
                                 <i class="fas fa-${estadoIcono}"></i>
                                 ${v(visita.estado)}
                             </span>
                         </div>
-                        
-                        ${horaEstadoInfo}
-                        
+
+                        <div class="visita-card-meta-row">
+                            <div class="visita-card-time">
+                                <i class="fas fa-clock"></i>
+                                <span title="Hora de visita">${horaStr}</span>
+                            </div>
+                            ${horaEstadoInfo}
+                        </div>
+
                         <div class="visita-card-body">
                             <div class="visita-card-info-item">
                                 <div class="visita-card-info-label">
@@ -1042,7 +1158,6 @@ class InternamientoModule {
                                 </div>
                                 <div class="visita-card-info-value">${v(visita.nombreVisitante)}</div>
                             </div>
-                            
                             <div class="visita-card-info-item">
                                 <div class="visita-card-info-label">
                                     <i class="fas fa-users"></i>
@@ -1051,32 +1166,32 @@ class InternamientoModule {
                                 <div class="visita-card-info-value">${v(visita.parentesco)}</div>
                             </div>
                         </div>
-                        
+
                         <div class="visita-card-motivo">
                             <div class="visita-card-motivo-label">
                                 <i class="fas fa-comment-dots"></i>
-                                Motivo de visita
+                                Motivo
                             </div>
                             <div class="visita-card-motivo-text">${v(visita.motivo)}</div>
                         </div>
                         ${tipoSalidaVisita ? `
-                        <div class="visita-card-motivo" style="border-color: #fecaca; background: #fef2f2;">
-                            <div class="visita-card-motivo-label" style="color: #b91c1c;">
+                        <div class="visita-card-motivo visita-card-salida">
+                            <div class="visita-card-motivo-label">
                                 <i class="fas fa-sign-out-alt"></i>
                                 Salida programada
                             </div>
                             <div class="visita-card-motivo-text">${v(labelSalidaVisita)}</div>
                         </div>
                         ` : ''}
-                        
-                        <div class="visita-card-footer" style="flex-wrap: wrap; gap: 10px;">
-                            <div style="flex: 1; min-width: 180px;">
-                            <label class="visita-card-estado-label" for="visita-estado-${v(visita.visitaId)}">Estado de la visita</label>
-                            <select id="visita-estado-${v(visita.visitaId)}" class="visita-estado-select-card" data-internamiento-id="${v(visita.internamientoId)}" data-visita-id="${v(visita.visitaId)}">
-                                ${estados.map(e => `<option value="${v(e)}" ${visita.estado === e ? 'selected' : ''}>${v(e)}</option>`).join('')}
-                            </select>
+
+                        <div class="visita-card-footer">
+                            <div class="visita-card-footer-estado">
+                                <label class="visita-card-estado-label" for="visita-estado-${v(visita.visitaId)}">Estado</label>
+                                <select id="visita-estado-${v(visita.visitaId)}" class="visita-estado-select-card" data-internamiento-id="${v(visita.internamientoId)}" data-visita-id="${v(visita.visitaId)}">
+                                    ${estados.map(e => `<option value="${v(e)}" ${visita.estado === e ? 'selected' : ''}>${v(e)}</option>`).join('')}
+                                </select>
                             </div>
-                            <button type="button" class="btn btn-sm btn-secondary" style="align-self: flex-end;"
+                            <button type="button" class="btn btn-sm btn-secondary visita-card-btn-editar"
                                 onclick="window.internamientoModule.showModalEditarVisita('${intIdClick}', '${visitaIdClick}')">
                                 <i class="fas fa-edit"></i> Editar
                             </button>
@@ -1092,7 +1207,7 @@ class InternamientoModule {
                         <h3>${tituloFecha}</h3>
                         <span class="visitas-count">${visitasDelDia.length} visita${visitasDelDia.length !== 1 ? 's' : ''}</span>
                     </div>
-                    ${tarjetasDelDia}
+                    <div class="visitas-day-grid">${tarjetasDelDia}</div>
                 </div>
             `;
         }).join('');
@@ -1288,18 +1403,34 @@ class InternamientoModule {
     initVisitaNombrePacienteInput(modalEl, lista) {
         const input = modalEl.querySelector('#visitaNombrePaciente');
         const hiddenId = modalEl.querySelector('#visitaPacienteId');
+        const inputVisitante = modalEl.querySelector('#visitaNombrePersona');
         if (!input || !hiddenId) return;
 
         const mapaPorNombre = new Map();
+        const mapaPropietarioPorNombre = new Map();
         lista.forEach(int => {
             const nombre = (int.referencias?.nombreMascota || '').trim();
             const id = int.metadata?.internamientoId || '';
-            if (nombre && id) mapaPorNombre.set(nombre.toLowerCase(), id);
+            if (nombre && id) {
+                const key = nombre.toLowerCase();
+                mapaPorNombre.set(key, id);
+                const propietario = this.getNombrePropietario(int);
+                if (propietario && propietario !== 'No especificado') {
+                    mapaPropietarioPorNombre.set(key, propietario);
+                }
+            }
         });
 
         const actualizarVinculo = () => {
             const val = input.value.trim().toLowerCase();
             hiddenId.value = val ? (mapaPorNombre.get(val) || '') : '';
+            if (!inputVisitante || !val) return;
+            const propietario = mapaPropietarioPorNombre.get(val);
+            if (propietario) {
+                inputVisitante.value = propietario;
+                const parentesco = modalEl.querySelector('#visitaParentesco');
+                if (parentesco && !parentesco.value) parentesco.value = 'Propietario';
+            }
         };
 
         input.addEventListener('input', actualizarVinculo);
@@ -1319,7 +1450,7 @@ class InternamientoModule {
             const nombreMascota = int.referencias?.nombreMascota || '';
             if (!nombreMascota) return '';
             const propietario = this.getNombrePropietario(int) || '';
-            const label = propietario ? `${nombreMascota} "” ${propietario}` : nombreMascota;
+            const label = propietario ? `${nombreMascota} — ${propietario}` : nombreMascota;
             return `<option value="${esc(nombreMascota)}">${esc(label)}</option>`;
         }).join('');
 
@@ -1524,6 +1655,10 @@ class InternamientoModule {
         if (viewName !== 'curva_glucosa') {
             this._clearGlucosaCountdownInterval();
         }
+        this.currentInternamientoView = viewName;
+        if (viewName === 'admision') {
+            this._ocultarPopOutsMedicacion();
+        }
         // Ocultar todas las vistas de internamiento
         const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas', 'facturas', 'presupuestos_facturas', 'medicaciones_pendientes'];
         views.forEach(view => {
@@ -1572,8 +1707,8 @@ class InternamientoModule {
         const estadoConfig = {
             'activo': { icon: 'fa-heartbeat', label: 'ACTIVO' },
             'critico': { icon: 'fa-exclamation-triangle', label: 'CRÃTICO' },
-            'alta': { icon: 'fa-check-circle', label: 'ALTA MÉDICA' },
-            'egresado': { icon: 'fa-home', label: 'DADO DE ALTA' },
+            'alta': { icon: 'fa-check-circle', label: 'Alta médica' },
+            'egresado': { icon: 'fa-home', label: 'Dado de alta' },
             'defuncion': { icon: 'fa-cross', label: 'DEFUNCIÃ“N' }
         };
 
@@ -1600,104 +1735,109 @@ class InternamientoModule {
             ? new Date(fechaRefEstado).toLocaleDateString('es-PE', { day: '2-digit', month: 'short', year: 'numeric' })
             : '';
 
+        const cambioViaVencido = internamiento.cambioVia?.activo
+            && internamiento.cambioVia?.fechaVencimiento
+            && Date.now() >= internamiento.cambioVia.fechaVencimiento;
+        const cambioSondaVencido = this._sondaCambioVencida(this._obtenerCambioSondaEsofagica(internamiento))
+            || this._sondaCambioVencida(this._obtenerCambioSondaUrinaria(internamiento));
+        const esc = (s) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+        const alertas = [
+            cambioViaVencido ? '<span class="int-card-chip int-card-chip--danger"><i class="fas fa-exclamation-triangle"></i> Cambio de vía</span>' : '',
+            cambioSondaVencido ? '<span class="int-card-chip int-card-chip--warn"><i class="fas fa-exclamation-triangle"></i> Cambio de sonda</span>' : '',
+            tieneCirugiaProgramada ? '<span class="int-card-chip int-card-chip--info"><i class="fas fa-procedures"></i> Cirugía</span>' : ''
+        ].filter(Boolean).join('');
+
+        const tiempoLabel = estado === 'egresado' || estado === 'defuncion' ? fechaRefEstadoStr : diasInternado;
+        const tiempoHint = estado === 'egresado' ? 'Fecha de alta' : estado === 'defuncion' ? 'Fecha defunción' : 'Internado';
+        const colorSeguimiento = this.getColorEstadoSeguimiento(internamiento.metadata?.estadoSeguimientoAlta);
+        const borderSeguimiento = (colorSeguimiento && colorSeguimiento !== '#ffffff') ? colorSeguimiento : '#cbd5e1';
+        const bgSeguimiento = (colorSeguimiento && colorSeguimiento !== '#ffffff') ? colorSeguimiento + '22' : 'white';
+
         const cardAttrs = soloLectura
             ? `data-id="${idInt}" data-estado="${estado}" class="internamiento-card fade-in-up${expedienteSubido ? ' internamiento-card--expediente-subido' : ''}" style="cursor: default; pointer-events: none;"`
             : `data-id="${idInt}" data-estado="${estado}" class="internamiento-card fade-in-up${expedienteSubido ? ' internamiento-card--expediente-subido' : ''}" onclick="window.internamientoModule.showPanelPrincipal('${idForClick}')"`;
 
         return `
-            <div ${cardAttrs}>
-                ${mostrarCheckExpediente ? `
-                <div class="int-card-expediente-subido" onclick="event.stopPropagation();">
-                    <label class="int-expediente-subido-label" title="Marcar cuando el expediente ya fue cargado al sistema externo">
-                        <input type="checkbox"
-                            ${expedienteSubido ? 'checked' : ''}
-                            onchange="window.internamientoModule.toggleExpedienteSubidoSistema('${idForClick}', this.checked)">
-                        <span class="int-expediente-subido-text">
-                            <i class="fas fa-cloud-upload-alt"></i>
-                            Expediente subido al sistema
+            <article ${cardAttrs}>
+                <div class="int-card-inner">
+                    <div class="int-card-head">
+                        <span class="badge-estado-${estado} int-card-badge">
+                            <i class="fas ${config.icon}"></i> ${config.label}
                         </span>
-                        ${expedienteSubido ? '<span class="int-expediente-subido-ok"><i class="fas fa-check-circle"></i></span>' : ''}
-                    </label>
-                </div>
-                ` : ''}
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;">
-                    <div style="flex: 1;">
-                        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap;">
-                            <div style="width: 46px; height: 46px; background: linear-gradient(135deg, #e8eaf6, #c5cae9); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                                <i class="fas ${iconMascota}" style="font-size: 1.3rem; color: #3f51b5;"></i>
-                            </div>
-                            <div>
-                                <h3 style="margin-bottom: 3px;">${nombreMascota}</h3>
-                                <span style="font-size: 0.85rem; color: #666;">Exp. ${expediente}</span>
-                            </div>
-                            <span class="badge-estado-${estado}">
-                                <i class="fas ${config.icon}"></i> ${config.label}
-                            </span>
-                            ${internamiento.cambioVia?.activo && internamiento.cambioVia?.fechaVencimiento && Date.now() >= internamiento.cambioVia.fechaVencimiento ? `
-                            <span style="background: #c62828; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
-                                <i class="fas fa-exclamation-triangle"></i> Cambio de vía
-                            </span>
-                            ` : ''}
-                            ${this._sondaCambioVencida(this._obtenerCambioSondaEsofagica(internamiento)) || this._sondaCambioVencida(this._obtenerCambioSondaUrinaria(internamiento)) ? `
-                            <span style="background: #e65100; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700;">
-                                <i class="fas fa-exclamation-triangle"></i> Cambio de sonda
-                            </span>
-                            ` : ''}
-                            ${tieneCirugiaProgramada ? `
-                            <span style="background: #3949ab; color: white; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 600;">
-                                <i class="fas fa-procedures"></i> Cirugía programada
-                            </span>
-                            ` : ''}
+                    </div>
+
+                    <div class="int-card-hero">
+                        <div class="int-card-icon" aria-hidden="true">
+                            <i class="fas ${iconMascota}"></i>
                         </div>
-                        <div class="card-info" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px;">
-                            <div>
-                                <i class="fas fa-calendar-day" style="color: #5c6bc0; margin-right: 6px;"></i>
-                                <strong>${estado === 'egresado' || estado === 'defuncion' ? fechaRefEstadoStr : diasInternado}</strong>
-                                ${estado === 'egresado' ? '<span style="font-size:0.78rem;color:#666;margin-left:4px;">(fecha de alta)</span>' : ''}
-                                ${estado === 'defuncion' ? '<span style="font-size:0.78rem;color:#666;margin-left:4px;">(fecha defunción)</span>' : ''}
-                            </div>
-                            <div>
-                                <i class="fas fa-user" style="color: #26a69a; margin-right: 6px;"></i>
-                                ${this.getNombrePropietario(internamiento)}
-                            </div>
-                            ${estado === 'egresado' ? `
-                            <div>
-                                <i class="fas fa-id-card" style="color: #5c6bc0; margin-right: 6px;"></i>
-                                <strong>Cédula:</strong> ${cedulaPropietario || '—'}
-                            </div>
-                            <div>
-                                <i class="fas fa-phone" style="color: #00897b; margin-right: 6px;"></i>
-                                <strong>Teléfono:</strong> ${telefonoPropietario || '—'}
-                            </div>
-                            ` : ''}
-                            ${diagnostico ? `
-                            <div style="grid-column: 1 / -1; margin-top: 8px; padding-top: 10px; border-top: 1px solid #e0e0e0;">
-                                <i class="fas fa-stethoscope" style="color: #7e57c2; margin-right: 6px;"></i>
-                                <span style="font-style: italic; color: #666;">${diagnostico.substring(0, 50)}${diagnostico.length > 50 ? '...' : ''}</span>
-                            </div>
-                            ` : ''}
+                        <div class="int-card-title">
+                            <h3>${esc(nombreMascota)}</h3>
+                            <span class="int-card-exp">Exp. ${esc(expediente)}</span>
                         </div>
                     </div>
-                    ${soloLectura ? '' : `<div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 10px;">
+
+                    <div class="int-card-meta">
+                        <div class="int-card-meta-item">
+                            <i class="fas fa-calendar-day"></i>
+                            <span><strong>${esc(tiempoLabel)}</strong> · ${esc(tiempoHint)}</span>
+                        </div>
+                        <div class="int-card-meta-item">
+                            <i class="fas fa-user"></i>
+                            <span>${esc(this.getNombrePropietario(internamiento))}</span>
+                        </div>
                         ${estado === 'egresado' ? `
-                        <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: center;" onclick="event.stopPropagation();">
-                            <select class="estado-seguimiento-select" onchange="window.internamientoModule.aplicarColorEstadoSeguimientoSelect(this); window.internamientoModule.actualizarEstadoSeguimientoAlta('${idForClick}', this.value);" style="min-width: 140px; padding: 6px 10px; border-radius: 6px; border: 1px solid #cbd5e1; border-left-width: 4px; border-left-style: solid; border-left-color: ${(function(){ var c = this.getColorEstadoSeguimiento(internamiento.metadata?.estadoSeguimientoAlta); return (c && c !== '#ffffff') ? c : '#cbd5e1'; }.call(this))}; font-size: 0.8rem; background: ${(function(){ var c = this.getColorEstadoSeguimiento(internamiento.metadata?.estadoSeguimientoAlta); return (c && c !== '#ffffff') ? c + '22' : 'white'; }.call(this))};">
-                                ${this.getEstadoSeguimientoAltaOpciones().map(o => `<option value="${o.value}" ${(internamiento.metadata?.estadoSeguimientoAlta || 'no_se_ha_llamado') === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
-                            </select>
-                            <button type="button" class="btn btn-primary" onclick="event.stopPropagation(); window.internamientoModule.generarExpediente('${idForClick}');" style="background: #0d47a1; border-color: #0d47a1; white-space: nowrap; font-size: 0.85rem; padding: 8px 14px;">
-                                <i class="fas fa-file-alt"></i> Generar expediente
-                            </button>
+                        <div class="int-card-meta-item">
+                            <i class="fas fa-id-card"></i>
+                            <span>${esc(cedulaPropietario || '—')}</span>
+                        </div>
+                        <div class="int-card-meta-item">
+                            <i class="fas fa-phone"></i>
+                            <span>${esc(telefonoPropietario || '—')}</span>
                         </div>
                         ` : ''}
-                        ${estado === 'defuncion' ? `
-                        <button type="button" class="btn btn-primary" onclick="event.stopPropagation(); window.internamientoModule.generarExpediente('${idForClick}');" style="background: #0d47a1; border-color: #0d47a1; white-space: nowrap; font-size: 0.85rem; padding: 8px 14px;">
-                            <i class="fas fa-file-alt"></i> Generar expediente
-                        </button>
+                    </div>
+
+                    ${alertas ? `<div class="int-card-alerts">${alertas}</div>` : ''}
+
+                    ${diagnostico ? `
+                    <div class="int-card-diagnostico" title="${esc(diagnostico)}">
+                        <i class="fas fa-stethoscope"></i>
+                        <span>${esc(diagnostico)}</span>
+                    </div>
+                    ` : ''}
+
+                    ${mostrarCheckExpediente ? `
+                    <div class="int-card-expediente-subido" onclick="event.stopPropagation();">
+                        <label class="int-expediente-subido-label" title="Marcar cuando el expediente ya fue cargado al sistema externo">
+                            <input type="checkbox"
+                                ${expedienteSubido ? 'checked' : ''}
+                                onchange="window.internamientoModule.toggleExpedienteSubidoSistema('${idForClick}', this.checked)">
+                            <span class="int-expediente-subido-text">
+                                <i class="fas fa-cloud-upload-alt"></i>
+                                Subido al sistema
+                            </span>
+                            ${expedienteSubido ? '<span class="int-expediente-subido-ok"><i class="fas fa-check-circle"></i></span>' : ''}
+                        </label>
+                    </div>
+                    ` : ''}
+
+                    ${!soloLectura && (estado === 'egresado' || estado === 'defuncion') ? `
+                    <div class="int-card-footer" onclick="event.stopPropagation();">
+                        ${estado === 'egresado' ? `
+                        <select class="estado-seguimiento-select int-card-select"
+                            onchange="window.internamientoModule.aplicarColorEstadoSeguimientoSelect(this); window.internamientoModule.actualizarEstadoSeguimientoAlta('${idForClick}', this.value);"
+                            style="border-left-color: ${borderSeguimiento}; background: ${bgSeguimiento};">
+                            ${this.getEstadoSeguimientoAltaOpciones().map(o => `<option value="${o.value}" ${(internamiento.metadata?.estadoSeguimientoAlta || 'no_se_ha_llamado') === o.value ? 'selected' : ''}>${o.label}</option>`).join('')}
+                        </select>
                         ` : ''}
-                        <i class="fas fa-chevron-right" style="color: #bdbdbd; font-size: 1.1rem;"></i>
-                    </div>`}
+                        <button type="button" class="btn btn-primary int-card-btn-expediente"
+                            onclick="event.stopPropagation(); window.internamientoModule.generarExpediente('${idForClick}');">
+                            <i class="fas fa-file-alt"></i> Expediente
+                        </button>
+                    </div>
+                    ` : ''}
                 </div>
-            </div>
+            </article>
         `;
     }
 
@@ -1783,7 +1923,7 @@ class InternamientoModule {
                 loading.style.margin = '20px';
                 loading.innerHTML = `
                     <i class="fas fa-spinner fa-spin"></i>
-                    <p>Cargando formulario de admisión"¦</p>`;
+                    <p>Cargando formulario de admisión...</p>`;
                 admisionView.prepend(loading);
             }
 
@@ -1931,7 +2071,7 @@ class InternamientoModule {
         const firstOpt = select.querySelector('option[value=""]') || document.createElement('option');
         if (!firstOpt.value) {
             firstOpt.value = '';
-            firstOpt.textContent = '"” Seleccione un paciente para editar datos de ingreso "”';
+            firstOpt.textContent = '— Seleccione un paciente para editar datos de ingreso —';
         }
         select.innerHTML = '';
         select.appendChild(firstOpt);
@@ -1941,7 +2081,7 @@ class InternamientoModule {
             const expediente = int.metadata?.expedienteNumero || id;
             const opt = document.createElement('option');
             opt.value = id;
-            opt.textContent = `${nombreMascota} "” #${expediente}`;
+            opt.textContent = `${nombreMascota} — #${expediente}`;
             select.appendChild(opt);
         });
     }
@@ -2503,6 +2643,7 @@ class InternamientoModule {
                                 ${p.paraFernanda ? ' <span style="background: #f8bbd0; color: #c2185b; font-size: 0.75rem; padding: 2px 6px; border-radius: 4px;">FERNANDA</span>' : ''}
                                 ${p.tipo ? ` <span style="color: #6c757d; font-size: 0.8rem;">(${tiposLabel[p.tipo] || p.tipo})</span>` : ''}
                                 ${p.prioridad === 'alta' ? ' <span style="color: #d32f2f; font-size: 0.75rem;">Urgente</span>' : ''}
+                                ${p.recordatorioActivo && p.recordatorioMs ? ` <span style="color:#e65100;font-size:0.75rem;"><i class="fas fa-bell"></i> ${new Date(p.recordatorioMs).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>` : ''}
                             </span>
                             <div style="display: flex; gap: 6px;">
                                 ${enEdicionDropdown && p.procedimientoId ? `<button type="button" class="btn btn-sm" style="background: #17a2b8; color: white; padding: 4px 8px;" onclick="window.internamientoModule.editarPendienteConsultaExterna('${p.procedimientoId}')" title="Editar"><i class="fas fa-edit"></i></button>` : ''}
@@ -3036,7 +3177,7 @@ class InternamientoModule {
                 pendientes.forEach((p, idx) => {
                     const procedimientoId = 'proc_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).substr(2, 9);
                     const marcarCompletado = !!p.marcarCompletado;
-                    // Pendiente no marcado â†’ aparece como pendiente normal en expediente; marcado â†’ en completados
+                    // Pendiente no marcado → aparece como pendiente normal en expediente; marcado → en completados
                     procs[procedimientoId] = {
                         procedimientoId,
                         tipo: p.tipo || '',
@@ -3061,7 +3202,12 @@ class InternamientoModule {
                         reportadoNombre: null,
                         observacionesReporte: '',
                         resultadoId: null,
-                        documentosAdjuntos: []
+                        documentosAdjuntos: [],
+                        recordatorioActivo: !!p.recordatorioActivo,
+                        recordatorioFecha: p.recordatorioFecha || null,
+                        recordatorioHora: p.recordatorioHora || null,
+                        recordatorioMs: p.recordatorioMs || null,
+                        recordatorioNotificadoEn: null
                     };
                 });
                 return procs;
@@ -3583,10 +3729,15 @@ class InternamientoModule {
 
     /** Genera el expediente clínico completo en PDF con diseño por secciones. Requiere InternamientoExpedientePDF (internamiento-expediente-pdf.js). */
     async generarExpediente(internamientoIdFromCard) {
+        if (this._generandoExpediente) {
+            this.showNotification('Ya hay un expediente en generación, espere...', 'warning');
+            return;
+        }
+
         const id = internamientoIdFromCard || this.currentInternamientoId;
         if (!id) return;
+
         let internamiento = this.internamientos.get(id);
-        // Refrescar desde Firebase para que el expediente incluya los últimos datos de ingreso (p. ej. edición consulta externa)
         if (this.internamientosRef) {
             try {
                 const snapshot = await this.internamientosRef.child(id).once('value');
@@ -3598,25 +3749,37 @@ class InternamientoModule {
                 console.error('Error al refrescar para expediente:', err);
             }
         }
-        if (!internamiento) return;
+        if (!internamiento) {
+            this.showNotification('No se encontró el internamiento.', 'error');
+            return;
+        }
+
         const estado = internamiento?.estado?.actual || '';
-        if (estado !== 'egresado' && estado !== 'defuncion') return;
+        if (estado !== 'egresado' && estado !== 'defuncion') {
+            this.showNotification('Solo se puede generar expediente para pacientes egresados o en defunción.', 'warning');
+            return;
+        }
 
         if (typeof window.InternamientoExpedientePDF === 'undefined') {
             this.showNotification('Módulo PDF no disponible. Recargue la página.', 'error');
             return;
         }
 
-        this.showNotification('Generando expediente PDF, por favor espere"¦', 'info');
+        this._generandoExpediente = true;
+        const btns = document.querySelectorAll('.int-card-btn-expediente, [onclick*="generarExpediente"]');
+        btns.forEach(btn => { btn.disabled = true; });
 
-        window.InternamientoExpedientePDF.generar(internamiento)
-            .then(fileName => {
-                this.showNotification('Expediente generado: ' + fileName, 'success');
-            })
-            .catch(err => {
-                console.error('Error generando expediente PDF:', err);
-                this.showNotification('Error al generar el expediente: ' + (err.message || err), 'error');
-            });
+        try {
+            this.showNotification('Generando expediente PDF, por favor espere...', 'info');
+            const fileName = await window.InternamientoExpedientePDF.generar(internamiento);
+            this.showNotification('Expediente generado: ' + fileName, 'success');
+        } catch (err) {
+            console.error('Error generando expediente PDF:', err);
+            this.showNotification('Error al generar el expediente: ' + (err.message || err), 'error');
+        } finally {
+            this._generandoExpediente = false;
+            btns.forEach(btn => { btn.disabled = false; });
+        }
     }
 
     /**
@@ -3677,7 +3840,7 @@ class InternamientoModule {
         const nombreMascota = internamiento.referencias?.nombreMascota || 'Sin nombre';
         const expediente = internamiento.metadata?.expedienteNumero || 'N/A';
         const fechaIngresoTs = internamiento.datosIngreso?.fechaIngreso;
-        const fechaIngresoStr = fechaIngresoTs ? (() => { const d = new Date(fechaIngresoTs); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '"”';
+        const fechaIngresoStr = fechaIngresoTs ? (() => { const d = new Date(fechaIngresoTs); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '—';
         const tipoMascota = internamiento.referencias?.tipoMascota || 'perro';
         const iconMascota = tipoMascota === 'gato' ? 'fa-cat' : tipoMascota === 'ave' ? 'fa-dove' : 'fa-dog';
 
@@ -3696,7 +3859,7 @@ class InternamientoModule {
         const tipoAlta = internamiento.estado?.tipoAlta || '';
         const observacionesAlta = (internamiento.estado?.observacionesAlta || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
         const fechaAltaTs = internamiento.estado?.fechaAlta;
-        const fechaAltaStr = fechaAltaTs ? (() => { const d = new Date(fechaAltaTs); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '"”';
+        const fechaAltaStr = fechaAltaTs ? (() => { const d = new Date(fechaAltaTs); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '—';
         const infoAltaHTML = (estado === 'egresado' && (tipoAlta || observacionesAlta || fechaAltaTs)) ? `
                 <div style="margin-top: 16px; padding: 16px 20px; background: #e8f5e9; border: 1px solid #81c784; border-radius: 10px;">
                     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
@@ -3714,7 +3877,7 @@ class InternamientoModule {
         const defuncionesList = Object.values(defuncionesObj).sort((a, b) => (b.fechaHoraTs || 0) - (a.fechaHoraTs || 0));
         const ultimaDefuncion = defuncionesList.length > 0 ? defuncionesList[0] : null;
         const destinoCuerpoLabels = { entierro: 'Entierro', cremacion: 'Cremación', entrega_directa: 'Entrega directa del cuerpo' };
-        const fechaDefuncionStr = ultimaDefuncion?.fechaHoraTs ? (() => { const d = new Date(ultimaDefuncion.fechaHoraTs); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '"”';
+        const fechaDefuncionStr = ultimaDefuncion?.fechaHoraTs ? (() => { const d = new Date(ultimaDefuncion.fechaHoraTs); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '—';
         const motivoDefuncion = (ultimaDefuncion?.motivoFallecimiento || ultimaDefuncion?.causa || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
         const observacionesDefuncion = (ultimaDefuncion?.observaciones || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
         const turnoDefuncion = ultimaDefuncion?.turno || '';
@@ -3726,7 +3889,7 @@ class InternamientoModule {
                         <i class="fas fa-cross" style="color: #5c5c5c; font-size: 1.2rem;"></i>
                         <strong style="color: #424242; font-size: 1rem;">Registro de defunción</strong>
                     </div>
-                    ${fechaDefuncionStr !== '"”' ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Hora de muerte:</span> <strong>${fechaDefuncionStr}</strong></div>` : ''}
+                    ${fechaDefuncionStr !== '—' ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Hora de muerte:</span> <strong>${fechaDefuncionStr}</strong></div>` : ''}
                     ${turnoDefuncion ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Turno:</span> <strong>${turnoDefuncion.replace(/</g, '&lt;')}</strong></div>` : ''}
                     ${motivoDefuncion ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Motivo de fallecimiento:</span><div style="margin-top: 4px; color: #333; white-space: pre-wrap;">${motivoDefuncion}</div></div>` : ''}
                     ${destinoCuerpoLabel ? `<div style="margin-bottom: 6px;"><span style="color: #555;">Destino del cuerpo:</span> <strong>${destinoCuerpoLabel.replace(/</g, '&lt;')}</strong></div>` : ''}
@@ -3753,7 +3916,7 @@ class InternamientoModule {
                             </div>
                             <div class="patient-info-item">
                                 <i class="fas fa-user-md"></i>
-                                <span>Médico consulta externa: <strong>${(internamiento.datosIngreso?.medicoNombre || '"”').replace(/</g, '&lt;')}</strong></span>
+                                <span>Médico consulta externa: <strong>${(internamiento.datosIngreso?.medicoNombre || '—').replace(/</g, '&lt;')}</strong></span>
                             </div>
                             <div class="patient-info-item">
                                 <i class="fas fa-user"></i>
@@ -3825,7 +3988,7 @@ class InternamientoModule {
                 <div id="rer-countdown-box" data-rer-target-ts="${rerTargetTs}" data-rer-label="${(rerLabel || '').replace(/"/g, '&quot;')}" style="margin-top: 16px; padding: 12px 18px; background: linear-gradient(135deg, #fff8e1 0%, #ffecb3 100%); border: 1px solid #f59e0b; border-radius: 10px;">
                     <span style="font-weight: 600; color: #b45309;"><i class="fas fa-syringe" style="margin-right: 8px;"></i>Próxima toma RER:</span>
                     <span style="color: #92400e; font-weight: 700; margin-left: 6px;">${rerLabel}</span>
-                    <span style="font-size: 0.9rem; color: #78350f; margin-left: 8px;">"” <span id="rer-countdown-text">${rerTexto}</span></span>
+                    <span style="font-size: 0.9rem; color: #78350f; margin-left: 8px;">— <span id="rer-countdown-text">${rerTexto}</span></span>
                 </div>`;
                 })()}
                 ${estado !== 'egresado' && (() => {
@@ -4160,7 +4323,7 @@ class InternamientoModule {
                     <i class="fas fa-clipboard" style="font-size: 48px;"></i>
                     <p style="font-size: 0.95rem;">No hay turnos registrados</p>
                     <button class="btn btn-primary btn-sm" onclick="window.internamientoModule.showTurnosView()">
-                        <i class="fas fa-plus"></i> Ir a Turnos
+                        Ir a Turnos
                     </button>
                 </div>
             `;
@@ -4172,7 +4335,7 @@ class InternamientoModule {
             <div style="padding: 20px;">
                 ${turnos.map((turno, i) => this.renderTurnoCard(turno, i === 0, 'compacto')).join('')}
                 <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 10px;" onclick="window.internamientoModule.showTurnosView()">
-                    <i class="fas fa-plus"></i> Ir a Turnos
+                    Ir a Turnos
                 </button>
             </div>
         `;
@@ -4419,7 +4582,10 @@ class InternamientoModule {
             .sort((a, b) => {
                 if (a.estado === 'pendiente' && b.estado !== 'pendiente') return -1;
                 if (a.estado !== 'pendiente' && b.estado === 'pendiente') return 1;
-                return b.fechaCreacion - a.fechaCreacion;
+                const ra = a.estado === 'pendiente' && a.recordatorioActivo && a.recordatorioMs ? a.recordatorioMs : Infinity;
+                const rb = b.estado === 'pendiente' && b.recordatorioActivo && b.recordatorioMs ? b.recordatorioMs : Infinity;
+                if (ra !== rb) return ra - rb;
+                return (b.fechaCreacion || 0) - (a.fechaCreacion || 0);
             })
             .slice(0, 5);
 
@@ -4435,9 +4601,7 @@ class InternamientoModule {
                         </span>
                         <span style="font-weight: 700; font-size: 1rem; color: #7e57c2;">${porcentaje}%</span>
                     </div>
-                    <div class="progress-bar">
-                        <div class="progress-fill" style="width: ${porcentaje}%; background: linear-gradient(90deg, #7e57c2, #9c27b0);"></div>
-                    </div>
+                    ${this.renderBarraProgresoConGato(porcentaje, { height: 10 })}
                 </div>
 
                 <!-- Lista de procedimientos -->
@@ -4466,6 +4630,11 @@ class InternamientoModule {
                                         <span class="priority-tag priority-alta" style="margin-top: 6px;">
                                             <i class="fas fa-fire"></i> URGENTE
                                         </span>
+                                    ` : ''}
+                                    ${!completado && proc.recordatorioActivo && proc.recordatorioMs ? `
+                                        <div style="margin-top:6px;font-size:0.78rem;color:#e65100;">
+                                            <i class="fas fa-bell"></i> ${new Date(proc.recordatorioMs).toLocaleString('es-PE', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                                        </div>
                                     ` : ''}
                                 </div>
                                 ${!completado ? `
@@ -5618,7 +5787,7 @@ class InternamientoModule {
                         const puedeAdministrar = this.puedeAdministrarAhora(med);
                         const admins = Object.values(med.administraciones || {});
                         const ultimaAdmin = admins.filter(a => a.estado === 'administrado').sort((a, b) => (b.fechaHoraReal || 0) - (a.fechaHoraReal || 0))[0];
-                        const ultimaAdminNombre = ultimaAdmin ? (ultimaAdmin.administradoNombre || '"”') : null;
+                        const ultimaAdminNombre = ultimaAdmin ? (ultimaAdmin.administradoNombre || '—') : null;
                         const esc = (s) => (s || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
                         
                         const medIdSafe = (med.medicamentoId || '').replace(/'/g, "\\'");
@@ -5700,7 +5869,7 @@ class InternamientoModule {
                                 ${med.pedidoPermisoEmergencia && med.encargadaContactada ? `
                                 <div style="background: #fef3c7; border-left: 3px solid #d97706; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
                                     <span style="font-size: 0.8rem; color: #92400e; font-weight: 600;">
-                                        <i class="fas fa-phone-alt" style="margin-right: 6px;"></i>Permiso de emergencia "” Contactada: ${esc(med.encargadaContactada)}
+                                        <i class="fas fa-phone-alt" style="margin-right: 6px;"></i>Permiso de emergencia — Contactada: ${esc(med.encargadaContactada)}
                                     </span>
                                 </div>
                                 ` : ''}
@@ -5720,7 +5889,7 @@ class InternamientoModule {
                                         ${med.editadoNombre ? `
                                         <span style="font-size: 0.8rem; color: #5c6bc0;">
                                             <i class="fas fa-edit" style="margin-right: 4px;"></i>
-                                            Última edición: ${esc(med.editadoNombre)}${med.motivoUltimoCambio ? ' "” ' + esc(med.motivoUltimoCambio) : ''}
+                                            Última edición: ${esc(med.editadoNombre)}${med.motivoUltimoCambio ? ' — ' + esc(med.motivoUltimoCambio) : ''}
                                         </span>
                                         ` : ''}
                                         <button type="button" class="btn btn-sm" style="margin-top: 8px; font-size: 0.8rem; background: transparent; color: #0ea5e9; border: 1px solid #0ea5e9; padding: 4px 10px;" onclick="window.internamientoModule.mostrarHistorialAdministracionesMedicamento('${med.medicamentoId}')" title="Ver todas las administraciones">
@@ -6035,7 +6204,7 @@ class InternamientoModule {
         return String(valor || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
     }
 
-    /** Primera letra mayúscula, resto minúscula (p. ej. MELOXICAM â†’ Meloxicam). */
+    /** Primera letra mayúscula, resto minúscula (p. ej. MELOXICAM → Meloxicam). */
     normalizeNombreMedicamento(nombre) {
         const trimmed = (nombre || '').trim();
         if (!trimmed) return '';
@@ -6142,7 +6311,7 @@ class InternamientoModule {
                     <div class="form-group">
                         <label><i class="fas fa-weight" style="color: #8b5cf6; margin-right: 6px;"></i>Unidad de medida</label>
                         <select id="medUnidadMedida" style="width: 100%; padding: 8px 12px; border-radius: 8px; border: 1px solid #ddd;">
-                            <option value="">"”</option>
+                            <option value="">—</option>
                             <option value="mg" ${esEdicion && medParaEditar.unidadMedida === 'mg' ? 'selected' : ''}>mg</option>
                             <option value="ml" ${esEdicion && medParaEditar.unidadMedida === 'ml' ? 'selected' : ''}>ml</option>
                             <option value="g" ${esEdicion && medParaEditar.unidadMedida === 'g' ? 'selected' : ''}>g</option>
@@ -6318,10 +6487,10 @@ class InternamientoModule {
         if (historial.length > 0) {
             historial.forEach((entry, idx) => {
                 const fecha = entry.fecha || entry.timestamp;
-                const fechaStr = fecha ? new Date(fecha).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '"”';
-                const nombre = (entry.editadoNombre || entry.usuarioNombre || '"”').replace(/</g, '&lt;');
-                const motivo = (entry.motivoCambio || '"”').replace(/</g, '&lt;');
-                let datosAnt = '"”';
+                const fechaStr = fecha ? new Date(fecha).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '—';
+                const nombre = (entry.editadoNombre || entry.usuarioNombre || '—').replace(/</g, '&lt;');
+                const motivo = (entry.motivoCambio || '—').replace(/</g, '&lt;');
+                let datosAnt = '—';
                 if (entry.datosAnteriores) {
                     const d = entry.datosAnteriores;
                     const parts = [];
@@ -6329,7 +6498,7 @@ class InternamientoModule {
                     if (d.dosis != null) parts.push('Dosis: ' + String(d.dosis).replace(/</g, '&lt;'));
                     if (d.viaAdministracion) parts.push('Vía: ' + String(d.viaAdministracion).replace(/</g, '&lt;'));
                     if (d.frecuenciaHoras) parts.push('Cada ' + d.frecuenciaHoras + 'h');
-                    datosAnt = parts.length ? parts.join(' · ') : '"”';
+                    datosAnt = parts.length ? parts.join(' · ') : '—';
                 }
                 filas.push(`
                     <tr>
@@ -6341,12 +6510,12 @@ class InternamientoModule {
                 `);
             });
         } else if (med.editadoNombre || med.motivoUltimoCambio) {
-            const fechaStr = med.fechaUltimaEdicion ? new Date(med.fechaUltimaEdicion).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '"”';
+            const fechaStr = med.fechaUltimaEdicion ? new Date(med.fechaUltimaEdicion).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '—';
             filas.push(`
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(med.editadoNombre || '"”').replace(/</g, '&lt;')}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(med.motivoUltimoCambio || '"”').replace(/</g, '&lt;')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(med.editadoNombre || '—').replace(/</g, '&lt;')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(med.motivoUltimoCambio || '—').replace(/</g, '&lt;')}</td>
                 </tr>
             `);
         }
@@ -6807,9 +6976,9 @@ class InternamientoModule {
      * Formatea un timestamp (ms) a fecha+hora en formato 12h.
      */
     formatFechaHora12(ts, incluirFecha = true) {
-        if (!ts) return '"”';
+        if (!ts) return '—';
         const d = new Date(ts);
-        if (isNaN(d.getTime())) return '"”';
+        if (isNaN(d.getTime())) return '—';
         const opciones = { hour12: true };
         if (incluirFecha) {
             opciones.dateStyle = 'short';
@@ -7098,8 +7267,8 @@ class InternamientoModule {
             tableBody = '<tr><td colspan="3" style="padding: 24px; text-align: center; color: #888;">Aún no hay registros para este medicamento.</td></tr>';
         } else {
             tableBody = administraciones.map(a => {
-                const fechaStr = a.fechaHoraReal ? (() => { const d = new Date(a.fechaHoraReal); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '"”';
-                const quien = esc(a.administradoNombre || '"”');
+                const fechaStr = a.fechaHoraReal ? (() => { const d = new Date(a.fechaHoraReal); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '—';
+                const quien = esc(a.administradoNombre || '—');
                 const codigoOk = a.codigoVerificado ? ' <span style="color: #2e7d32; font-size: 0.75rem;" title="Código verificado"><i class="fas fa-check-circle"></i></span>' : '';
                 const esOmitido = a.estado === 'omitido' || a.estado === 'no_administrado';
                 const estadoLabel = esOmitido
@@ -7287,9 +7456,8 @@ class InternamientoModule {
         if (!internamiento) return;
         const bloqueado = internamiento.estado?.actual === 'egresado';
         const facturas = Object.values(internamiento.facturas || {}).sort((a, b) => (b.fechaCreacion || 0) - (a.fechaCreacion || 0));
-        const totalPendiente = facturas.filter(f => f.estado === 'pendiente').reduce((s, f) => s + (parseFloat(f.monto) || 0), 0);
-        const totalPagado = facturas.filter(f => f.estado === 'pagado').reduce((s, f) => s + (parseFloat(f.monto) || 0), 0);
-        const fmtMoney = n => '&#8353;' + n.toLocaleString('es-PE', { minimumFractionDigits: 2 });
+        const countPendiente = facturas.filter(f => f.estado === 'pendiente').length;
+        const countPagado = facturas.filter(f => f.estado === 'pagado').length;
 
         container.innerHTML = `
             <div class="section-header">
@@ -7302,16 +7470,16 @@ class InternamientoModule {
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;margin-bottom:24px;">
                 <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:16px;text-align:center;">
-                    <div style="font-size:1.5rem;font-weight:700;color:#e65100;">${fmtMoney(totalPendiente)}</div>
-                    <div style="font-size:0.9rem;color:#bf360c;"><i class="fas fa-clock"></i> Pendiente de cobro</div>
+                    <div style="font-size:1.5rem;font-weight:700;color:#e65100;">${countPendiente}</div>
+                    <div style="font-size:0.9rem;color:#bf360c;"><i class="fas fa-clock"></i> Pendientes</div>
                 </div>
                 <div style="background:#e8f5e9;border:1px solid #a5d6a7;border-radius:10px;padding:16px;text-align:center;">
-                    <div style="font-size:1.5rem;font-weight:700;color:#2e7d32;">${fmtMoney(totalPagado)}</div>
-                    <div style="font-size:0.9rem;color:#1b5e20;"><i class="fas fa-check-circle"></i> Pagado</div>
+                    <div style="font-size:1.5rem;font-weight:700;color:#2e7d32;">${countPagado}</div>
+                    <div style="font-size:0.9rem;color:#1b5e20;"><i class="fas fa-check-circle"></i> Pagadas</div>
                 </div>
                 <div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;padding:16px;text-align:center;">
-                    <div style="font-size:1.5rem;font-weight:700;color:#1565c0;">${fmtMoney(totalPendiente + totalPagado)}</div>
-                    <div style="font-size:0.9rem;color:#0d47a1;"><i class="fas fa-calculator"></i> Total general</div>
+                    <div style="font-size:1.5rem;font-weight:700;color:#1565c0;">${facturas.length}</div>
+                    <div style="font-size:0.9rem;color:#0d47a1;"><i class="fas fa-file-invoice"></i> Total facturas</div>
                 </div>
             </div>
 
@@ -7322,7 +7490,6 @@ class InternamientoModule {
                     <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
                         <thead><tr style="background:#1565c0;color:white;">
                             <th style="padding:12px 16px;text-align:left;">Descripcion</th>
-                            <th style="padding:12px 16px;text-align:right;">Monto</th>
                             <th style="padding:12px 16px;text-align:center;">Estado</th>
                             <th style="padding:12px 16px;text-align:left;">Fecha</th>
                             <th style="padding:12px 16px;text-align:left;">Creado por</th>
@@ -7337,7 +7504,6 @@ class InternamientoModule {
                                 return `<tr style="background:${i%2===0?'white':'#f9f9f9'};border-bottom:1px solid #eee;">
                                     <td style="padding:12px 16px;"><strong>${(f.descripcion||'').replace(/</g,'&lt;')}</strong>${f.observaciones?`<div style="font-size:0.8rem;color:#666;margin-top:3px;">${(f.observaciones||'').replace(/</g,'&lt;')}</div>`:''}
                                     </td>
-                                    <td style="padding:12px 16px;text-align:right;font-weight:700;color:#1565c0;">${fmtMoney(parseFloat(f.monto)||0)}</td>
                                     <td style="padding:12px 16px;text-align:center;"><span style="background:${estadoBg};color:${estadoColor};padding:3px 10px;border-radius:12px;font-size:0.78rem;font-weight:600;">${(f.estado||'pendiente').toUpperCase()}</span></td>
                                     <td style="padding:12px 16px;font-size:0.85rem;color:#555;">${fecha}</td>
                                     <td style="padding:12px 16px;font-size:0.85rem;color:#555;">${(f.creadoNombre||'').replace(/</g,'&lt;')}</td>
@@ -7367,10 +7533,6 @@ class InternamientoModule {
                     <input type="text" id="factDescripcion" required placeholder="Ej: Medicamentos dia 3" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
                 </div>
                 <div class="form-group">
-                    <label>Monto *</label>
-                    <input type="number" id="factMonto" required min="0" step="0.01" placeholder="0.00" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
-                </div>
-                <div class="form-group">
                     <label>Estado</label>
                     <select id="factEstado" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:6px;">
                         <option value="pendiente">Pendiente</option>
@@ -7391,14 +7553,13 @@ class InternamientoModule {
         document.getElementById('formFactura').onsubmit = async (e) => {
             e.preventDefault();
             const desc = document.getElementById('factDescripcion').value.trim();
-            const monto = parseFloat(document.getElementById('factMonto').value) || 0;
             const estado = document.getElementById('factEstado').value;
             const obs = document.getElementById('factObservaciones').value.trim();
             if (!desc) return;
             const facturaId = 'factura_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
             try {
                 await this.internamientosRef.child(this.currentInternamientoId).child(`facturas/${facturaId}`).set({
-                    facturaId, descripcion: desc, monto, estado, observaciones: obs,
+                    facturaId, descripcion: desc, estado, observaciones: obs,
                     fechaCreacion: Date.now(),
                     creadoPor: resultadoCodigo.assistantId || null,
                     creadoNombre: resultadoCodigo.nombre
@@ -7577,6 +7738,24 @@ class InternamientoModule {
         return section && !section.classList.contains('hidden') && section.style.display !== 'none';
     }
 
+    _estaEnAdmisionInternamiento() {
+        if (this.currentInternamientoView === 'admision') return true;
+        const admision = document.getElementById('internamiento-admision');
+        return admision && !admision.classList.contains('hidden') && admision.style.display !== 'none';
+    }
+
+    _debeMostrarPopOutsMedicacion() {
+        return this._estaEnModuloInternamiento() && !this._estaEnAdmisionInternamiento();
+    }
+
+    _ocultarPopOutsMedicacion() {
+        document.querySelectorAll('.med-popout-toast').forEach((toast) => {
+            if (toast._autoCloseTimer) clearTimeout(toast._autoCloseTimer);
+            toast.remove();
+        });
+        if (this._popOutPendingQueue) this._popOutPendingQueue.length = 0;
+    }
+
     _iniciarPopOutsMedicacion() {
         if (this._popOutMedInterval) return; // ya iniciado
         this._popOutMedNotificados = this._popOutMedNotificados || new Set();
@@ -7591,7 +7770,7 @@ class InternamientoModule {
     }
 
     _verificarPopOutsMedicacion() {
-        if (!this._estaEnModuloInternamiento()) return;
+        if (!this._debeMostrarPopOutsMedicacion()) return;
 
         const ahora = Date.now();
         const VENTANA_MS = 30 * 60 * 1000;
@@ -7641,14 +7820,14 @@ class InternamientoModule {
         // Mostrar uno a uno con 3 segundos de separación
         cola.forEach((item, idx) => {
             setTimeout(() => {
-                if (!this._estaEnModuloInternamiento()) return;
+                if (!this._debeMostrarPopOutsMedicacion()) return;
                 this._mostrarPopOutMedicacion(item.msg, item.internamientoId, item.esAhora);
             }, idx * 3000);
         });
     }
 
     _mostrarPopOutMedicacion(mensaje, internamientoId, urgente = false) {
-        if (!this._estaEnModuloInternamiento()) return;
+        if (!this._debeMostrarPopOutsMedicacion()) return;
 
         // Si ya hay un toast visible, esperar a que haya espacio
         const toastsActivos = document.querySelectorAll('.med-popout-toast');
@@ -7706,6 +7885,10 @@ class InternamientoModule {
     /** Muestra el siguiente pop-out de la cola pendiente. */
     _siguientePopOut() {
         if (!this._popOutPendingQueue || this._popOutPendingQueue.length === 0) return;
+        if (!this._debeMostrarPopOutsMedicacion()) {
+            this._popOutPendingQueue.length = 0;
+            return;
+        }
         // Pequeña pausa para que la animación de salida termine bien
         setTimeout(() => {
             const next = this._popOutPendingQueue.shift();
@@ -8122,7 +8305,7 @@ class InternamientoModule {
         const controles = internamiento?.datosIngreso?.controlesRapidos || {};
         const imagenologiaRegistros = internamiento?.imagenologia && typeof internamiento.imagenologia === 'object' ? internamiento.imagenologia : {};
         const listaRegistros = Object.entries(imagenologiaRegistros).sort((a, b) => (b[1].fechaRegistro || 0) - (a[1].fechaRegistro || 0));
-        const esc = (s) => (s != null && s !== '' ? String(s) : '"”').replace(/</g, '&lt;').replace(/\n/g, '<br>');
+        const esc = (s) => (s != null && s !== '' ? String(s) : '—').replace(/</g, '&lt;').replace(/\n/g, '<br>');
         const rayosX = !!controles.rayosX;
         const ultrasonido = !!controles.ultrasonido;
         const doctorRayosX = esc(controles.doctorRayosX);
@@ -8131,7 +8314,7 @@ class InternamientoModule {
         const reporteUltrasonido = esc(controles.reporteUltrasonido);
         const htmlRegistros = listaRegistros.length > 0 ? listaRegistros.map(([regId, reg]) => {
             const tipoLabel = reg.tipo === 'rayosx' ? 'Rayos X' : 'Ultrasonido';
-            const fechaStr = reg.fechaRegistro ? (() => { const d = new Date(reg.fechaRegistro); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '"”';
+            const fechaStr = reg.fechaRegistro ? (() => { const d = new Date(reg.fechaRegistro); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })() : '—';
             return `
                 <div style="background: white; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid #e2e8f0; padding: 16px 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px;">
@@ -8166,7 +8349,7 @@ class InternamientoModule {
                         <div style="display: grid; gap: 12px;">
                             <div><span style="color: #64748b;">Realizado:</span> <strong>${rayosX ? 'Sí' : 'No'}</strong></div>
                             ${rayosX ? `<div><span style="color: #64748b;">Doctor/Técnico:</span> <strong>${doctorRayosX}</strong></div>` : ''}
-                            ${rayosX && reporteRayosX !== '"”' ? `<div><span style="color: #64748b;">Reporte:</span> ${reporteRayosX}</div>` : ''}
+                            ${rayosX && reporteRayosX !== '—' ? `<div><span style="color: #64748b;">Reporte:</span> ${reporteRayosX}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -8178,7 +8361,7 @@ class InternamientoModule {
                         <div style="display: grid; gap: 12px;">
                             <div><span style="color: #64748b;">Realizado:</span> <strong>${ultrasonido ? 'Sí' : 'No'}</strong></div>
                             ${ultrasonido ? `<div><span style="color: #64748b;">Doctor:</span> <strong>${doctorUltrasonido}</strong></div>` : ''}
-                            ${ultrasonido && reporteUltrasonido !== '"”' ? `<div><span style="color: #64748b;">Reporte:</span> ${reporteUltrasonido}</div>` : ''}
+                            ${ultrasonido && reporteUltrasonido !== '—' ? `<div><span style="color: #64748b;">Reporte:</span> ${reporteUltrasonido}</div>` : ''}
                         </div>
                     </div>
                 </div>
@@ -8434,9 +8617,9 @@ class InternamientoModule {
                             ${tomasList.length > 0
                                 ? `<div style="display: flex; flex-direction: column; gap: 10px;">${tomasList.map(t => {
                                     const horaLabels = { '8am': '8:00 AM', '12md': '12:00 MD', '4pm': '4:00 PM', '8pm': '8:00 PM', '12mn': '12:00 MN' };
-                                    const hora = (t.hora ? (horaLabels[t.hora] || t.hora) : '"”').replace(/</g, '&lt;');
-                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '"”';
-                                    const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '"”';
+                                    const hora = (t.hora ? (horaLabels[t.hora] || t.hora) : '—').replace(/</g, '&lt;');
+                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '—';
+                                    const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '—';
                                     const registradoPor = (t.registradoPorNombre || '').replace(/</g, '&lt;');
                                     return `
                                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid var(--internamiento-primary); border-radius: 8px; padding: 12px; background: #f8fafc;">
@@ -8513,7 +8696,7 @@ class InternamientoModule {
         const rerDosisSectionHTML = `
             <div id="rer-dosis-section" style="margin-top: 20px; margin-bottom: 24px; background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%); border-radius: 12px; padding: 16px 20px; box-shadow: 0 4px 14px rgba(217,119,6,0.4); border: none;">
                 <h3 style="margin: 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);"><i class="fas fa-syringe"></i> RER dosis</h3>
-                ${hasDias ? `<p style="margin: 10px 0 0 0; font-size: 1.25rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">(30 Ã— peso actual) + 70 = <strong>${ml(rerDosisResultado)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 1 (25%): <strong>${ml(fase1Resultado)}</strong> · Dosis por toma: <strong>${ml(fase1PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 2 (50%): <strong>${ml(fase2Resultado)}</strong> · Dosis por toma: <strong>${ml(fase2PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 3 (75%): <strong>${ml(fase3Resultado)}</strong> · Dosis por toma: <strong>${ml(fase3PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 4 (100%): <strong>${ml(fase4Resultado)}</strong> · Dosis por toma: <strong>${ml(fase4PorToma)}</strong></p>${anunciosHTML}` : '<p style="margin: 10px 0 0 0; font-size: 1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Sin días agregados</p>'}
+                ${hasDias ? `<p style="margin: 10px 0 0 0; font-size: 1.25rem; font-weight: 700; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">(30 \u00D7 peso actual) + 70 = <strong>${ml(rerDosisResultado)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 1 (25%): <strong>${ml(fase1Resultado)}</strong> · Dosis por toma: <strong>${ml(fase1PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 2 (50%): <strong>${ml(fase2Resultado)}</strong> · Dosis por toma: <strong>${ml(fase2PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 3 (75%): <strong>${ml(fase3Resultado)}</strong> · Dosis por toma: <strong>${ml(fase3PorToma)}</strong></p><p style="margin: 8px 0 0 0; font-size: 1.1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Fase 4 (100%): <strong>${ml(fase4Resultado)}</strong> · Dosis por toma: <strong>${ml(fase4PorToma)}</strong></p>${anunciosHTML}` : '<p style="margin: 10px 0 0 0; font-size: 1rem; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,0.2);">Sin días agregados</p>'}
             </div>
         `;
 
@@ -8914,9 +9097,9 @@ class InternamientoModule {
                         <div style="padding: 20px;">
                             ${tomasList.length > 0
                                 ? `<div style="display: flex; flex-direction: column; gap: 10px;">${tomasList.map(t => {
-                                    const horaReg = t.horaRegistro ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { timeStyle: 'short' }); })(t.horaRegistro) : '"”';
-                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '"”';
-                                    const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '"”';
+                                    const horaReg = t.horaRegistro ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { timeStyle: 'short' }); })(t.horaRegistro) : '—';
+                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '—';
+                                    const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '—';
                                     const registradoPor = (t.registradoPorNombre || '').replace(/</g, '&lt;');
                                     return `
                                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid #2e7d32; border-radius: 8px; padding: 12px; background: #f8fafc;">
@@ -9244,9 +9427,9 @@ class InternamientoModule {
                 </div>
                 <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
                     ${registros.map((r, idx) => {
-                        const fechaHora = r.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })(r.fechaHora) : '"”';
-                        const tipo = (r.tipo || '"”').replace(/</g, '&lt;');
-                        const volumen = r.volumen != null && r.volumen !== '' ? r.volumen + ' ml' : '"”';
+                        const fechaHora = r.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })(r.fechaHora) : '—';
+                        const tipo = (r.tipo || '—').replace(/</g, '&lt;');
+                        const volumen = r.volumen != null && r.volumen !== '' ? r.volumen + ' ml' : '—';
                         const obs = (r.observaciones || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
                         const registradoPor = (r.registradoPorNombre || '').replace(/</g, '&lt;');
                         return `
@@ -9348,7 +9531,7 @@ class InternamientoModule {
                 const nuevo = {
                     id: registroId,
                     fechaHora: new Date().toISOString(),
-                    tipo: tipo || '"”',
+                    tipo: tipo || '—',
                     volumen: volumen ? parseInt(volumen, 10) : null,
                     observaciones: observaciones || '',
                     registradoPorNombre: this._hidratacionRegistradoPor || ''
@@ -9716,8 +9899,8 @@ class InternamientoModule {
                 </div>
                 <div style="padding: 20px; display: flex; flex-direction: column; gap: 12px;">
                     ${mediciones.map((r) => {
-                        const fechaHora = r.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })(r.fechaHora) : '"”';
-                        const valor = r.valor != null && r.valor !== '' ? r.valor + ' mg/dL' : '"”';
+                        const fechaHora = r.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })(r.fechaHora) : '—';
+                        const valor = r.valor != null && r.valor !== '' ? r.valor + ' mg/dL' : '—';
                         const obs = (r.observaciones || '').replace(/</g, '&lt;').replace(/\n/g, '<br>');
                         const insulina = r.insulinaAplicada && (r.cantidadInsulina != null || r.tipoInsulina) ? (r.cantidadInsulina != null ? r.cantidadInsulina + ' UI' : '') + (r.tipoInsulina ? (r.cantidadInsulina != null ? ' ' : '') + (r.tipoInsulina || '').replace(/</g, '&lt;') : '') : '';
                         const registradoPor = (r.registradoPorNombre || '').replace(/</g, '&lt;');
@@ -10230,7 +10413,7 @@ class InternamientoModule {
                 </div>
                 <div style="padding: 20px;">
                     <div style="font-size: 1rem; color: #334155;">
-                        <strong>Clasificación registrada:</strong> ${(reticulocitosTexto || '"”').replace(/</g, '&lt;')}
+                        <strong>Clasificación registrada:</strong> ${(reticulocitosTexto || '—').replace(/</g, '&lt;')}
                     </div>
                     ${!reticulocitosDesdeIngreso && reticulocitosTiene ? `
                     <div style="margin-top: 12px; padding: 12px 14px; background: #f1f5f9; border: 1px solid #94a3b8; border-left: 4px solid #64748b; border-radius: 8px; color: #475569; font-size: 0.9rem;">
@@ -10269,11 +10452,11 @@ class InternamientoModule {
         `;
 
         const formatFechaHora = (ts) => {
-            if (ts == null) return '"”';
+            if (ts == null) return '—';
             const d = new Date(ts);
-            return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true });
+            return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true });
         };
-        const fmt = (v) => (v != null && v !== '') ? v : '"”';
+        const fmt = (v) => (v != null && v !== '') ? v : '—';
 
         // Panel 1 (anclado): solo Registro de transfusiones
         const registroHTML = transfusionesList.length > 0
@@ -10289,9 +10472,9 @@ class InternamientoModule {
                             <i class="fas fa-clock"></i> ${formatFechaHora(t.fechaHoraInicio || t.fecha)}
                             ${tipoIcono && tipoTexto ? `<span style="margin-left: auto; font-size: 0.9rem; color: #c62828; font-weight: 500;">${tipoIcono} ${tipoTexto}</span>` : ''}
                         </div>
-                        ${t.receptor ? `<div style="font-size: 0.9rem; color: #555;">Receptor: ${t.receptor.peso || '"”'} kg, HT ${t.receptor.htActual || '"”'} â†’ ${t.receptor.htDeseado || '"”'}%</div>` : ''}
+                        ${t.receptor ? `<div style="font-size: 0.9rem; color: #555;">Receptor: ${t.receptor.peso || '—'} kg, HT ${t.receptor.htActual || '—'} → ${t.receptor.htDeseado || '—'}%</div>` : ''}
                         ${t.calculo?.volumenCalculado != null ? `<div style="font-size: 0.9rem; color: #c62828;"><strong>Volumen:</strong> ${t.calculo.volumenCalculado} ml</div>` : ''}
-                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(t.registradoNombre || t.responsableNombre || '"”').replace(/</g, '&lt;')}</div>
+                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(t.registradoNombre || t.responsableNombre || '—').replace(/</g, '&lt;')}</div>
                     </div>
                 `;
                 }).join('')}
@@ -10310,7 +10493,7 @@ class InternamientoModule {
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 ${parametrosList.map(p => `
                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid #c2185b; border-radius: 10px; padding: 14px; background: #fdf2f8;">
-                        <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-calendar-day"></i> ${(p.dia || '"”').replace(/</g, '&lt;')} · ${(p.hora || '"”').replace(/</g, '&lt;')}</div>
+                        <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-calendar-day"></i> ${(p.dia || '—').replace(/</g, '&lt;')} · ${(p.hora || '—').replace(/</g, '&lt;')}</div>
                         <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 8px; font-size: 0.9rem; color: #555;">
                             <span><strong>Temp:</strong> ${fmt(p.temp)} °C</span>
                             <span><strong>FC:</strong> ${fmt(p.fc)}</span>
@@ -10319,7 +10502,7 @@ class InternamientoModule {
                             <span><strong>PAM:</strong> ${fmt(p.pam)}</span>
                             ${p.anafilaxis ? '<span style="color:#c2185b;"><strong>Anafilaxis: Sí</strong></span>' : ''}
                         </div>
-                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(p.registradoNombre || '"”').replace(/</g, '&lt;')}</div>
+                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(p.registradoNombre || '—').replace(/</g, '&lt;')}</div>
                     </div>
                 `).join('')}
             </div>
@@ -10337,11 +10520,11 @@ class InternamientoModule {
             <div style="display: flex; flex-direction: column; gap: 12px;">
                 ${bolosList.map(b => `
                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid #722f37; border-radius: 10px; padding: 14px; background: #fdf8f8;">
-                        <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-clock"></i> ${formatFechaHora(b.fechaHoraInicio)}${b.fechaHoraFin ? ' â†’ ' + formatFechaHora(b.fechaHoraFin) : ''}</div>
+                        <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-clock"></i> ${formatFechaHora(b.fechaHoraInicio)}${b.fechaHoraFin ? ' → ' + formatFechaHora(b.fechaHoraFin) : ''}</div>
                         ${b.velocidadInfusion != null ? `<div style="font-size: 0.9rem; color: #555;"><strong>Velocidad:</strong> ${b.velocidadInfusion} ml/h</div>` : ''}
                         ${b.reaccionAdversa ? `<div style="font-size: 0.9rem; color: #c62828;"><strong>Reacción adversa:</strong> ${(b.descripcionReaccion || 'Sí').replace(/</g, '&lt;')}</div>` : ''}
                         ${b.observaciones ? `<div style="font-size: 0.9rem; color: #555; margin-top: 4px;">${(b.observaciones || '').replace(/</g, '&lt;')}</div>` : ''}
-                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Responsable: ${(b.responsableNombre || '"”').replace(/</g, '&lt;')}</div>
+                        <div style="margin-top: 6px; font-size: 0.85rem; color: #94a3b8;">Responsable: ${(b.responsableNombre || '—').replace(/</g, '&lt;')}</div>
                     </div>
                 `).join('')}
             </div>
@@ -10478,9 +10661,9 @@ class InternamientoModule {
         const defuncionesList = Object.values(defuncionesObj).sort((a, b) => (b.fechaHoraTs || 0) - (a.fechaHoraTs || 0));
 
         const formatFechaHora = (val) => {
-            if (val == null) return '"”';
+            if (val == null) return '—';
             const d = new Date(typeof val === 'number' ? val : val);
-            return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true });
+            return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true });
         };
 
         const listHTML = defuncionesList.length > 0
@@ -10491,10 +10674,10 @@ class InternamientoModule {
                     ${defuncionesList.map(d => `
                         <div style="border: 1px solid #e2e8f0; border-left: 4px solid #5c5c5c; border-radius: 10px; padding: 14px; background: #f8fafc;">
                             <div style="font-weight: 600; color: #333; margin-bottom: 6px;"><i class="fas fa-clock"></i> Hora de muerte: ${formatFechaHora(d.fechaHoraTs || d.fechaHora)}</div>
-                            ${d.turno ? `<div style="color: #475569; font-size: 0.9rem; margin-bottom: 4px;"><strong>Turno:</strong> ${(d.turno || '').replace(/</g, '&lt;')}${d.responsableTurno ? ' "” ' + (d.responsableTurno || '').replace(/</g, '&lt;') : ''}</div>` : ''}
+                            ${d.turno ? `<div style="color: #475569; font-size: 0.9rem; margin-bottom: 4px;"><strong>Turno:</strong> ${(d.turno || '').replace(/</g, '&lt;')}${d.responsableTurno ? ' — ' + (d.responsableTurno || '').replace(/</g, '&lt;') : ''}</div>` : ''}
                             ${(d.motivoFallecimiento || d.causa) ? `<div style="color: #334155; font-size: 0.95rem; margin-bottom: 4px; white-space: pre-wrap;"><strong>Motivo de fallecimiento:</strong><br>${(d.motivoFallecimiento || d.causa || '').replace(/</g, '&lt;')}</div>` : ''}
                             ${d.observaciones ? `<div style="color: #64748b; font-size: 0.9rem; white-space: pre-wrap;">${(d.observaciones || '').replace(/</g, '&lt;')}</div>` : ''}
-                            <div style="margin-top: 8px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(d.registradoNombre || '"”').replace(/</g, '&lt;')}</div>
+                            <div style="margin-top: 8px; font-size: 0.85rem; color: #94a3b8;">Registrado por: ${(d.registradoNombre || '—').replace(/</g, '&lt;')}</div>
                         </div>
                     `).join('')}
                 </div>
@@ -10746,12 +10929,12 @@ class InternamientoModule {
         const cirugiasList = Object.values(cirugiasObj).sort((a, b) => (a.fechaHoraTs || 0) - (b.fechaHoraTs || 0));
 
         const formatFechaHora = (val) => {
-            if (!val) return '"”';
+            if (!val) return '—';
             const d = new Date(val);
             return isNaN(d.getTime()) ? val : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true });
         };
         const formatHora12 = (hhmm) => {
-            if (!hhmm || !hhmm.match(/^\d{1,2}:\d{2}$/)) return hhmm || '"”';
+            if (!hhmm || !hhmm.match(/^\d{1,2}:\d{2}$/)) return hhmm || '—';
             if (typeof window.formatTime12Hour === 'function') return window.formatTime12Hour(hhmm);
             return hhmm;
         };
@@ -10768,8 +10951,8 @@ class InternamientoModule {
                                     <strong style="color: #795548;"><i class="fas fa-clock"></i> ${formatFechaHora(c.fechaHora)}</strong>
                                     ${c.horaSalida ? `<div style="margin-top: 4px; color: #64748b; font-size: 0.85rem;"><i class="fas fa-sign-out-alt"></i> Salida: ${formatHora12(c.horaSalida)}</div>` : '<div style="margin-top: 4px; color: #b45309; font-size: 0.85rem;"><i class="fas fa-exclamation-triangle"></i> Aún no se ha registrado la salida</div>'}
                                     ${c.recomendacionesSalida ? `<div style="margin-top: 6px; color: #475569; font-size: 0.9rem;"><strong>Recomendaciones al salir:</strong> ${(c.recomendacionesSalida || '').replace(/</g, '&lt;')}</div>` : ''}
-                                    <div style="margin-top: 6px; color: #475569; font-size: 0.9rem;">${(c.motivo || '"”').replace(/</g, '&lt;')}</div>
-                                    <div style="margin-top: 4px; color: #64748b; font-size: 0.85rem;"><i class="fas fa-user-md"></i> ${(c.doctor || '"”').replace(/</g, '&lt;')}</div>
+                                    <div style="margin-top: 6px; color: #475569; font-size: 0.9rem;">${(c.motivo || '—').replace(/</g, '&lt;')}</div>
+                                    <div style="margin-top: 4px; color: #64748b; font-size: 0.85rem;"><i class="fas fa-user-md"></i> ${(c.doctor || '—').replace(/</g, '&lt;')}</div>
                                     ${c.creadoNombre ? `<div style="margin-top: 4px; color: #64748b; font-size: 0.85rem;"><i class="fas fa-user-edit"></i> Registrado por: ${(c.creadoNombre || '').replace(/</g, '&lt;')}</div>` : ''}
                                     ${c.cirugiaAgendadaConDoctor ? '<div style="margin-top: 6px;"><span style="display: inline-flex; align-items: center; gap: 4px; background: #e8f5e9; color: #2e7d32; padding: 4px 10px; border-radius: 20px; font-size: 0.8rem;"><i class="fas fa-calendar-check"></i> Agendada con el doctor</span></div>' : ''}
                                 </div>
@@ -10857,7 +11040,7 @@ class InternamientoModule {
                         <label>Hora de salida</label>
                         <div style="display: flex; align-items: center; gap: 6px;">
                             <select id="cirugiaSalidaH" title="Hora (1-12) o en blanco" style="min-width: 52px; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd;">
-                                <option value="">"”</option>
+                                <option value="">—</option>
                                 ${Array.from({ length: 12 }, (_, i) => i + 1).map(n => `<option value="${n}">${n}</option>`).join('')}
                             </select>
                             <span style="font-weight: bold;">:</span>
@@ -11003,9 +11186,9 @@ class InternamientoModule {
         if (historial.length > 0) {
             historial.forEach((entry) => {
                 const fecha = entry.fecha || entry.timestamp;
-                const fechaStr = fecha ? new Date(fecha).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '"”';
-                const nombre = (entry.editadoNombre || entry.usuarioNombre || '"”').replace(/</g, '&lt;');
-                const motivo = (entry.motivoCambio || '"”').replace(/</g, '&lt;');
+                const fechaStr = fecha ? new Date(fecha).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '—';
+                const nombre = (entry.editadoNombre || entry.usuarioNombre || '—').replace(/</g, '&lt;');
+                const motivo = (entry.motivoCambio || '—').replace(/</g, '&lt;');
                 filas.push(`
                     <tr>
                         <td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}</td>
@@ -11015,12 +11198,12 @@ class InternamientoModule {
                 `);
             });
         } else if (c.editadoNombre || c.motivoUltimoCambio) {
-            const fechaStr = c.fechaUltimaEdicion ? new Date(c.fechaUltimaEdicion).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '"”';
+            const fechaStr = c.fechaUltimaEdicion ? new Date(c.fechaUltimaEdicion).toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }) : '—';
             filas.push(`
                 <tr>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(c.editadoNombre || '"”').replace(/</g, '&lt;')}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(c.motivoUltimoCambio || '"”').replace(/</g, '&lt;')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(c.editadoNombre || '—').replace(/</g, '&lt;')}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${(c.motivoUltimoCambio || '—').replace(/</g, '&lt;')}</td>
                 </tr>
             `);
         }
@@ -11147,7 +11330,7 @@ class InternamientoModule {
                         <label>Hora de salida</label>
                         <div style="display: flex; align-items: center; gap: 6px;">
                             <select id="cirugiaSalidaH" title="Hora (1-12) o en blanco" style="min-width: 52px; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd;">
-                                <option value="" ${!c.horaSalida ? 'selected' : ''}>"”</option>
+                                <option value="" ${!c.horaSalida ? 'selected' : ''}>—</option>
                                 ${Array.from({ length: 12 }, (_, i) => i + 1).map(n => `<option value="${n}" ${c.horaSalida && n === salida12.h ? 'selected' : ''}>${n}</option>`).join('')}
                             </select>
                             <span style="font-weight: bold;">:</span>
@@ -11182,7 +11365,7 @@ class InternamientoModule {
         e.preventDefault();
         const pending = this._edicionCirugiaPending;
         if (!pending || pending.cirugiaId === undefined) {
-            this.showAlert('Debe verificar su código e indicar el motivo de edición antes de guardar. Cierre y pulse de nuevo "Editar" â†’ "Realizar nueva edición".', 'Verificación requerida', 'warning');
+            this.showAlert('Debe verificar su código e indicar el motivo de edición antes de guardar. Cierre y pulse de nuevo "Editar" → "Realizar nueva edición".', 'Verificación requerida', 'warning');
             return;
         }
         const cirugiaId = pending.cirugiaId;
@@ -11393,7 +11576,7 @@ class InternamientoModule {
             this.showAlert('Internamiento no encontrado', 'Error', 'error');
             return;
         }
-        const v = (s) => (s == null || s === '') ? '"”' : String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const v = (s) => (s == null || s === '') ? '—' : String(s).replace(/</g, '&lt;').replace(/>/g, '&gt;');
         const ref = internamiento.referencias || {};
         const datosIngreso = internamiento.datosIngreso || {};
         const controles = datosIngreso.controlesRapidos || {};
@@ -11404,7 +11587,7 @@ class InternamientoModule {
         const procedimientos = internamiento.procedimientos && typeof internamiento.procedimientos === 'object' ? Object.values(internamiento.procedimientos) : [];
         const datosProp = this.getDatosPropietario(internamiento);
         const fechaIngresoTs = datosIngreso.fechaIngreso;
-        const fechaIngresoStr = fechaIngresoTs ? (() => { const d = new Date(fechaIngresoTs); return isNaN(d.getTime()) ? '"”' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '"”';
+        const fechaIngresoStr = fechaIngresoTs ? (() => { const d = new Date(fechaIngresoTs); return isNaN(d.getTime()) ? '—' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '—';
 
         const htmlProp = `
             <div class="ingreso-detalle-section">
@@ -11423,7 +11606,7 @@ class InternamientoModule {
             </div>`;
         const edicionConsultaExterna = !!datosIngreso.ultimaEdicionPorConsultaExterna;
         const fechaEdicionExt = datosIngreso.fechaEdicionConsultaExterna ? (() => { const d = new Date(datosIngreso.fechaEdicionConsultaExterna); return isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE', { dateStyle: 'medium', timeStyle: 'short' }); })() : '';
-        const quienEdito = (datosIngreso.edicionConsultaExternaPorNombre || '').trim() || '"”';
+        const quienEdito = (datosIngreso.edicionConsultaExternaPorNombre || '').trim() || '—';
         const htmlConsultaExterna = edicionConsultaExterna ? `
             <div class="ingreso-detalle-section" style="background: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 12px; margin-bottom: 12px;">
                 <h4 class="ingreso-detalle-section-title" style="color: #92400e;"><i class="fas fa-external-link-alt"></i> Cambios realizados por consulta externa</h4>
@@ -11444,8 +11627,8 @@ class InternamientoModule {
                 <div class="ingreso-detalle-fila" style="margin-top: 14px;"><span class="label">Diagnóstico presuntivo</span><span class="value">${v(datosIngreso.diagnosticoPresuntivo)}</span></div>
                 <div style="font-size: 0.85rem; color: var(--internamiento-text-secondary); margin: 14px 0 6px 0;">Padecimientos previos</div>
                 <div class="ingreso-detalle-texto">${v(datosIngreso.padecimientosPrevios)}</div>
-                <div class="ingreso-detalle-fila" style="margin-top: 14px;"><span class="label">Peso de ingreso</span><span class="value">${datosIngreso.pesoIngreso != null ? datosIngreso.pesoIngreso + ' kg' : '"”'}</span></div>
-                <div class="ingreso-detalle-fila"><span class="label">Temperatura de ingreso</span><span class="value">${datosIngreso.temperaturaIngreso != null ? datosIngreso.temperaturaIngreso + ' °C' : '"”'}</span></div>
+                <div class="ingreso-detalle-fila" style="margin-top: 14px;"><span class="label">Peso de ingreso</span><span class="value">${datosIngreso.pesoIngreso != null ? datosIngreso.pesoIngreso + ' kg' : '—'}</span></div>
+                <div class="ingreso-detalle-fila"><span class="label">Temperatura de ingreso</span><span class="value">${datosIngreso.temperaturaIngreso != null ? datosIngreso.temperaturaIngreso + ' °C' : '—'}</span></div>
                 <div style="font-size: 0.85rem; color: var(--internamiento-text-secondary); margin: 14px 0 6px 0;">Necesidades especiales</div>
                 <div class="ingreso-detalle-texto">${v(datosIngreso.necesidadesEspeciales)}</div>
             </div>`;
@@ -11453,7 +11636,11 @@ class InternamientoModule {
             <div class="ingreso-detalle-section">
                 <h4 class="ingreso-detalle-section-title"><i class="fas fa-clipboard-list"></i> Controles rápidos</h4>
                 <div class="ingreso-detalle-controles">
-                    <div class="item"><span>Toma de muestras</span><strong>${controles.tomaronMuestras ? 'Sí' : 'No'}${controles.tipoMuestra ? ' "” ' + v(controles.tipoMuestra) : ''}</strong></div>
+                    <div class="item">
+                        <span>Toma de muestras</span>
+                        <strong>${controles.tomaronMuestras ? 'Sí' : 'No'}</strong>
+                        ${controles.tipoMuestra ? `<div class="item-nota">${v(controles.tipoMuestra)}</div>` : ''}
+                    </div>
                     <div class="item"><span>Ultrasonido</span><strong>${controles.ultrasonido ? 'Sí' : 'No'}</strong></div>
                     <div class="item"><span>Rayos X</span><strong>${controles.rayosX ? 'Sí' : 'No'}</strong></div>
                     <div class="item"><span>Castrado</span><strong>${controles.castrado ? 'Sí' : 'No'}</strong></div>
@@ -11473,7 +11660,7 @@ class InternamientoModule {
                 <div>
                     ${medicamentos.map(m => `
                         <div class="ingreso-detalle-med-item">
-                            <strong>${v(m.nombreComercial)}</strong> "” ${v(this.formatDosisUnidad(m))} · ${v(m.viaAdministracion)}${m.frecuenciaHoras ? ' cada ' + m.frecuenciaHoras + ' h' : ''}${(m.horariosExactos && m.horariosExactos.length) ? ' · Horarios: ' + (m.horariosExactos || []).join(', ') : ''}
+                            <strong>${v(m.nombreComercial)}</strong> — ${v(this.formatDosisUnidad(m))} · ${v(m.viaAdministracion)}${m.frecuenciaHoras ? ' cada ' + m.frecuenciaHoras + ' h' : ''}${(m.horariosExactos && m.horariosExactos.length) ? ' · Horarios: ' + (m.horariosExactos || []).join(', ') : ''}
                             ${m.observaciones ? '<div style="margin-top: 6px; color: #64748b; font-size: 0.85rem;">' + v(m.observaciones) + '</div>' : ''}
                         </div>
                     `).join('')}
@@ -11485,14 +11672,14 @@ class InternamientoModule {
                 <div>
                     ${procedimientos.map(p => `
                         <div class="ingreso-detalle-proc-item">
-                            <strong>${v(p.tipo)}</strong> "” ${v(p.descripcion)}${p.prioridad ? ' · Prioridad: ' + v(p.prioridad) : ''} · Estado: ${v(p.estado)}
+                            <strong>${v(p.tipo)}</strong> — ${v(p.descripcion)}${p.prioridad ? ' · Prioridad: ' + v(p.prioridad) : ''} · Estado: ${v(p.estado)}
                             ${p.observaciones ? '<div style="margin-top: 6px; color: #64748b; font-size: 0.85rem;">' + v(p.observaciones) + '</div>' : ''}
                         </div>
                     `).join('')}
                 </div>
             </div>` : '';
 
-        const nombreMascota = v(ref.nombreMascota) !== '"”' ? v(ref.nombreMascota) : 'Paciente';
+        const nombreMascota = v(ref.nombreMascota) !== '—' ? v(ref.nombreMascota) : 'Paciente';
         const contenido = `
             <div class="ingreso-detalle-modal">
                 <div class="ingreso-detalle-header">

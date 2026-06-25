@@ -184,33 +184,235 @@
 }
 
 /* ============================================================
-   CARDS DE INTERNAMIENTOS
+   GRID Y CARDS DE INTERNAMIENTOS
    ============================================================ */
+
+.internamientos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
+    gap: 16px;
+    align-items: stretch;
+}
+
+@media (max-width: 640px) {
+    .internamientos-grid {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+}
 
 .internamiento-card {
     background: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 15px;
+    border-radius: 14px;
+    margin-bottom: 0;
     box-shadow: var(--internamiento-shadow);
     transition: var(--internamiento-transition);
     cursor: pointer;
-    border-left: 5px solid var(--internamiento-activo);
+    border: 1px solid #e8eaf0;
+    border-top: 4px solid var(--internamiento-activo);
     position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
 }
 
 .internamiento-card:hover {
-    transform: translateY(-3px);
+    transform: translateY(-4px);
     box-shadow: var(--internamiento-shadow-hover);
+}
+
+.internamiento-card .int-card-inner {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px 16px 16px;
+    height: 100%;
+}
+
+.internamiento-card .int-card-head {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.internamiento-card .int-card-badge {
+    font-size: 0.68rem;
+    padding: 4px 10px;
+}
+
+.internamiento-card .int-card-hero {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.internamiento-card .int-card-icon {
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    background: linear-gradient(145deg, #eef2ff, #dbeafe);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3f51b5;
+    font-size: 1.35rem;
+}
+
+.internamiento-card .int-card-title {
+    min-width: 0;
+    flex: 1;
+}
+
+.internamiento-card .int-card-title h3 {
+    margin: 0 0 4px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--internamiento-text);
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.internamiento-card .int-card-exp {
+    font-size: 0.78rem;
+    color: var(--internamiento-text-secondary);
+    font-weight: 500;
+}
+
+.internamiento-card .int-card-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.internamiento-card .int-card-meta-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    font-size: 0.82rem;
+    color: var(--internamiento-text-secondary);
+    line-height: 1.35;
+}
+
+.internamiento-card .int-card-meta-item i {
+    width: 14px;
+    margin-top: 2px;
+    color: #5c6bc0;
+    flex-shrink: 0;
+}
+
+.internamiento-card .int-card-meta-item:nth-child(2) i {
+    color: #26a69a;
+}
+
+.internamiento-card .int-card-alerts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.internamiento-card .int-card-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.2;
+}
+
+.internamiento-card .int-card-chip--danger {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.internamiento-card .int-card-chip--warn {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.internamiento-card .int-card-chip--info {
+    background: #e8eaf6;
+    color: #3949ab;
+}
+
+.internamiento-card .int-card-diagnostico {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #eef2f7;
+    font-size: 0.78rem;
+    color: #64748b;
+    font-style: italic;
+    line-height: 1.35;
+}
+
+.internamiento-card .int-card-diagnostico i {
+    color: #7e57c2;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.internamiento-card .int-card-diagnostico span {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.internamiento-card .int-card-expediente-subido {
+    margin: 0;
+    padding: 8px 10px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid #c8e6c9;
+    border-radius: 8px;
+}
+
+.internamiento-card .int-card-footer {
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid #eef2f7;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.internamiento-card .int-card-select {
+    width: 100%;
+    padding: 7px 10px;
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    border-left-width: 4px;
+    border-left-style: solid;
+    font-size: 0.78rem;
+    font-family: inherit;
+}
+
+.internamiento-card .int-card-btn-expediente {
+    width: 100%;
+    background: #0d47a1 !important;
+    border-color: #0d47a1 !important;
+    font-size: 0.82rem;
+    padding: 8px 12px;
+    justify-content: center;
 }
 
 /* Estados de cards */
 .internamiento-card[data-estado="activo"] {
-    border-left-color: var(--internamiento-activo);
+    border-top-color: var(--internamiento-activo);
+    border-left-color: #e8f5e9;
 }
 
 .internamiento-card[data-estado="critico"] {
-    border-left-color: var(--internamiento-critico);
+    border-top-color: var(--internamiento-critico);
+    border-left-color: #ffebee;
     animation: pulse-critico 2s ease-in-out infinite;
 }
 
@@ -224,20 +426,23 @@
 }
 
 .internamiento-card[data-estado="alta"] {
-    border-left-color: var(--internamiento-alta);
+    border-top-color: var(--internamiento-alta);
+    border-left-color: #fff3e0;
 }
 
 .internamiento-card[data-estado="egresado"] {
-    border-left-color: var(--internamiento-egresado);
+    border-top-color: var(--internamiento-egresado);
+    border-left-color: #f5f5f5;
 }
 
 .internamiento-card[data-estado="defuncion"] {
-    border-left-color: #607d8b;
+    border-top-color: #607d8b;
+    border-left-color: #eceff1;
 }
 
 .internamiento-card.internamiento-card--expediente-subido {
-    background: linear-gradient(135deg, #e8f5e9 0%, #f1f8e9 55%, #ffffff 100%);
-    border-left-color: #2e7d32 !important;
+    background: linear-gradient(180deg, #f1f8e9 0%, #ffffff 42%);
+    border-top-color: #2e7d32 !important;
     box-shadow: 0 2px 10px rgba(46, 125, 50, 0.15);
 }
 
@@ -246,8 +451,8 @@
 }
 
 .int-card-expediente-subido {
-    margin: -4px -4px 14px -4px;
-    padding: 8px 12px;
+    margin: 0;
+    padding: 8px 10px;
     background: rgba(255, 255, 255, 0.85);
     border: 1px solid #c8e6c9;
     border-radius: 8px;
@@ -1409,6 +1614,99 @@
     transition: width 0.5s ease;
 }
 
+/* Barra de progreso con gato caminando */
+.int-progreso-gato-container {
+    position: relative;
+    padding-top: 42px;
+    margin-bottom: 8px;
+}
+
+.int-progreso-gato-track {
+    overflow: visible !important;
+    background: #e8eaf0;
+    border-radius: 999px;
+    box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.int-progreso-gato-fill {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 0.8rem;
+    font-weight: 600;
+    border-radius: 999px;
+    transition: width 0.65s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+.int-progreso-gato-pos {
+    position: absolute;
+    bottom: -2px;
+    transform: translateX(-50%);
+    z-index: 4;
+    pointer-events: none;
+    transition: left 0.75s cubic-bezier(0.34, 1.35, 0.64, 1);
+}
+
+.int-progreso-gato-mini {
+    width: 44px;
+    height: 38px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    overflow: visible;
+}
+
+.int-gato-progreso-scale {
+    width: 200px;
+    height: 170px;
+    transform: scale(0.24);
+    transform-origin: bottom center;
+    animation: none !important;
+    margin-bottom: -2px;
+}
+
+.int-progreso-gato-mini--avanzando .int-gato-progreso-scale {
+    animation: int-gato-progreso-caminar 0.55s ease-in-out infinite !important;
+}
+
+.int-progreso-gato-mini--avanzando .int-gato-pata--izq {
+    animation: int-gato-paso-izq 0.55s ease-in-out infinite;
+}
+
+.int-progreso-gato-mini--avanzando .int-gato-pata--der {
+    animation: int-gato-paso-der 0.55s ease-in-out infinite;
+}
+
+.int-progreso-gato-mini--avanzando .int-gato-cola {
+    animation: int-gato-cola 0.35s ease-in-out infinite alternate;
+}
+
+.int-progreso-gato-mini--meta .int-gato-progreso-scale {
+    animation: int-gato-progreso-meta 0.8s ease-in-out infinite !important;
+}
+
+@keyframes int-gato-progreso-caminar {
+    0%, 100% { transform: scale(0.24) translateY(0) rotate(0deg); }
+    35% { transform: scale(0.24) translateY(-4px) rotate(3deg); }
+    70% { transform: scale(0.24) translateY(-1px) rotate(-2deg); }
+}
+
+@keyframes int-gato-paso-izq {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-3px) rotate(-8deg); }
+}
+
+@keyframes int-gato-paso-der {
+    0%, 100% { transform: translateY(-3px) rotate(8deg); }
+    50% { transform: translateY(0); }
+}
+
+@keyframes int-gato-progreso-meta {
+    0%, 100% { transform: scale(0.24) translateY(0); }
+    50% { transform: scale(0.26) translateY(-6px); }
+}
+
 /* ============================================================
    PROCEDIMIENTOS - LISTA
    ============================================================ */
@@ -1437,6 +1735,31 @@
 
 .procedimiento-item.completado {
     opacity: 0.6;
+}
+
+.pendiente-recordatorio-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #e65100;
+    background: #fff3e0;
+    border: 1px solid #ffcc80;
+    border-radius: 999px;
+    padding: 4px 10px;
+}
+
+.pendiente-recordatorio-badge--vencido {
+    color: #b71c1c;
+    background: #ffebee;
+    border-color: #ef9a9a;
+    animation: pendiente-recordatorio-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pendiente-recordatorio-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.75; }
 }
 
 .procedimiento-checkbox {
@@ -1843,7 +2166,7 @@
 
 .ingreso-detalle-controles {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
     gap: 10px;
 }
 .ingreso-detalle-controles .item {
@@ -1853,21 +2176,30 @@
     border-radius: 8px;
     font-size: 0.875rem;
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 10px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
     min-height: 44px;
 }
 .ingreso-detalle-controles .item span {
-    flex: 1 1 0%;
-    min-width: 0;
+    font-weight: 600;
+    color: #3949ab;
+    font-size: 0.82rem;
     line-height: 1.35;
-    word-break: break-word;
 }
 .ingreso-detalle-controles .item strong {
-    flex-shrink: 0;
     color: var(--internamiento-primary);
-    white-space: nowrap;
+    font-weight: 700;
+    line-height: 1.4;
+    word-break: break-word;
+}
+.ingreso-detalle-controles .item .item-nota {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    color: #334155;
+    word-break: break-word;
+    padding-top: 2px;
+    border-top: 1px dashed rgba(57, 73, 171, 0.25);
 }
 
 .ingreso-detalle-med-item {
@@ -2353,17 +2685,27 @@
     font-weight: 600;
 }
 
-/* Tarjetas de visitas premium */
+.visitas-day-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+/* Tarjetas de visitas */
 .visita-card {
     background: white;
     border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 12px;
+    padding: 16px;
+    margin-bottom: 0;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     transition: all 0.3s ease;
-    border-left: 5px solid var(--internamiento-secondary);
+    border-left: 4px solid var(--internamiento-secondary);
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
 }
 
 .visita-card::before {
@@ -2401,7 +2743,51 @@
     border-left-color: #4caf50;
 }
 
-/* Header de la tarjeta */
+/* Header compacto de la tarjeta */
+.visita-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 10px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e8eaf6;
+}
+
+.visita-card-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.visita-card-estado-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: 6px;
+    line-height: 1.2;
+}
+
+.visita-card-estado-hint.hint-espera {
+    background: #fff3e0;
+    color: #e65100;
+}
+
+.visita-card-estado-hint.hint-curso {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.visita-card-estado-hint.hint-finalizada {
+    background: #e8f5e9;
+    color: #2e7d32;
+}
+
 .visita-card-header {
     display: flex;
     justify-content: space-between;
@@ -2462,9 +2848,9 @@
 /* Contenido principal de tarjeta */
 .visita-card-body {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 15px;
-    margin-bottom: 15px;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
 }
 
 .visita-card-info-item {
@@ -2499,9 +2885,22 @@
 .visita-card-motivo {
     background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
     border-left: 3px solid var(--internamiento-secondary);
-    padding: 12px 15px;
+    padding: 10px 12px;
     border-radius: 8px;
-    margin-top: 12px;
+    margin-top: 0;
+}
+
+.visita-card-motivo + .visita-card-motivo {
+    margin-top: 8px;
+}
+
+.visita-card-salida {
+    border-left-color: #f87171;
+    background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+}
+
+.visita-card-salida .visita-card-motivo-label {
+    color: #b91c1c;
 }
 
 .visita-card-motivo-label {
@@ -2522,18 +2921,33 @@
 
 .visita-card-motivo-text {
     color: #334155;
-    font-size: 0.9rem;
-    line-height: 1.5;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
 }
 
 /* Footer de tarjeta con acciones */
 .visita-card-footer {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    padding-top: 15px;
+    align-items: flex-end;
+    gap: 10px;
+    padding-top: 12px;
     border-top: 1px solid #e2e8f0;
-    margin-top: 15px;
+    margin-top: auto;
+}
+
+.visita-card-footer-estado {
+    flex: 1;
+    min-width: 0;
+}
+
+.visita-card-btn-editar {
+    flex-shrink: 0;
 }
 
 .visita-card-patient {
@@ -2642,14 +3056,16 @@
 .visita-card-paciente-titulo {
     display: flex;
     align-items: center;
-    gap: 12px;
-    margin-bottom: 14px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #e8eaf6;
+    gap: 10px;
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+    flex: 1;
+    min-width: 0;
 }
 
 .visita-card-paciente-titulo > i {
-    font-size: 1.4rem;
+    font-size: 1.15rem;
     color: #3949ab;
     flex-shrink: 0;
 }
@@ -2662,26 +3078,44 @@
 }
 
 .visita-card-mascota-nombre {
-    font-size: 1.15rem;
+    font-size: 1rem;
     font-weight: 700;
     color: #1e293b;
-    line-height: 1.3;
+    line-height: 1.25;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .visita-card-propietario-nombre {
-    font-size: 0.9rem;
+    font-size: 0.82rem;
     color: #475569;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .visita-card-estado-label {
-    font-size: 0.8rem;
+    display: block;
+    font-size: 0.72rem;
     font-weight: 600;
     color: #64748b;
-    margin-right: auto;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
 }
 
 /* Responsive para visitas */
 @media (max-width: 768px) {
+    .visitas-day-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .visita-card-top {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     .visita-card-header {
         flex-direction: column;
         gap: 10px;
@@ -2698,8 +3132,8 @@
         align-items: stretch;
     }
 
-    .visita-card-estado-label {
-        margin-right: 0;
+    .visita-card-btn-editar {
+        width: 100%;
     }
 
     .visita-estado-select-card {
@@ -3216,6 +3650,62 @@ thead .med-col-fija {
     line-height: 1.2;
 }
 
+.med-estado-aplicado-vista,
+.med-estado-pendiente-vista {
+    display: block;
+    width: 100%;
+    margin-bottom: 4px;
+    padding: 3px 6px;
+    font-size: 0.62rem;
+    font-weight: 700;
+    border-radius: 4px;
+    line-height: 1.2;
+    text-align: center;
+    user-select: none;
+    pointer-events: none;
+}
+
+.med-estado-aplicado-vista {
+    color: #1b5e20;
+    background: #e8f5e9;
+    border: 1px solid #81c784;
+}
+
+.med-estado-pendiente-vista {
+    color: #757575;
+    background: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    text-transform: lowercase;
+}
+
+.med-celda-vista {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    background: #fff;
+    cursor: default;
+    pointer-events: none;
+    user-select: none;
+}
+
+.med-celda-vista.pendiente {
+    background: #fafafa;
+}
+
+.med-celda-vista.administrado {
+    background: #e8f5e9;
+    border-color: #81c784;
+}
+
+.med-celda-vista.omitido {
+    background: #ffebee;
+    border-color: #ef9a9a;
+}
+
 .med-btn-aplicado-dia:hover {
     background: #c8e6c9;
     border-color: #4caf50;
@@ -3466,6 +3956,7 @@ thead .med-col-fija {
     font-weight: 600;
 }
 
+.pf-ref { font-size: 0.8rem; color: #475569; margin-top: 3px; }
 .pf-obs { font-size: 0.8rem; color: #64748b; margin-top: 3px; }
 .pf-legacy-tag { font-size: 0.75rem; color: #94a3b8; margin-top: 4px; }
 .pf-monto { font-weight: 700; color: #1565c0; text-align: right; }
@@ -3931,5 +4422,335 @@ thead .med-col-fija {
 
     .med-pendientes-col-body {
         max-height: 360px;
+    }
+}
+
+/* ============================================================
+   CELEBRACIÓN — GATO FELICIDADES (expediente subido)
+   ============================================================ */
+
+.int-celebracion-gato {
+    position: fixed;
+    inset: 0;
+    z-index: 99999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.35s ease;
+}
+
+.int-celebracion-gato--in {
+    opacity: 1;
+}
+
+.int-celebracion-gato--out {
+    opacity: 0;
+}
+
+.int-celebracion-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    backdrop-filter: blur(4px);
+}
+
+.int-celebracion-confetti-wrap {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.int-celebracion-confetti {
+    position: absolute;
+    top: -12px;
+    border-radius: 2px;
+    opacity: 0;
+    animation: int-confetti-fall 2.4s ease-in forwards;
+}
+
+@keyframes int-confetti-fall {
+    0% {
+        opacity: 1;
+        transform: translateY(0) rotate(0deg);
+    }
+    100% {
+        opacity: 0.85;
+        transform: translateY(105vh) rotate(720deg);
+    }
+}
+
+.int-celebracion-stage {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transform: scale(0.6) translateY(40px);
+    opacity: 0;
+    animation: int-celebracion-pop 0.65s cubic-bezier(0.34, 1.56, 0.64, 1) 0.05s forwards;
+}
+
+.int-celebracion-gato--out .int-celebracion-stage {
+    animation: int-celebracion-out 0.4s ease forwards;
+}
+
+@keyframes int-celebracion-pop {
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes int-celebracion-out {
+    to {
+        transform: scale(0.85) translateY(20px);
+        opacity: 0;
+    }
+}
+
+.int-celebracion-burbuja {
+    position: relative;
+    background: #fff;
+    border: 3px solid #ffb300;
+    border-radius: 20px;
+    padding: 14px 28px 16px;
+    margin-bottom: 8px;
+    text-align: center;
+    box-shadow: 0 8px 24px rgba(255, 179, 0, 0.35);
+    animation: int-burbuja-wiggle 0.5s ease 0.55s 2;
+}
+
+.int-celebracion-burbuja::after {
+    content: '';
+    position: absolute;
+    bottom: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 12px solid transparent;
+    border-top-color: #ffb300;
+}
+
+.int-celebracion-burbuja::before {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 10px solid transparent;
+    border-top-color: #fff;
+    z-index: 1;
+}
+
+@keyframes int-burbuja-wiggle {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-3deg); }
+    75% { transform: rotate(3deg); }
+}
+
+.int-celebracion-titulo {
+    display: block;
+    font-size: 2rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    color: #f57f17;
+    text-shadow: 0 2px 0 #ffe082;
+    line-height: 1.1;
+}
+
+.int-celebracion-sub {
+    display: block;
+    margin-top: 4px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #558b2f;
+}
+
+.int-celebracion-hint {
+    margin: 14px 0 0;
+    font-size: 0.78rem;
+    color: rgba(255, 255, 255, 0.85);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Gato amarillo gordo — CSS art */
+.int-celebracion-gato-art {
+    position: relative;
+    width: 200px;
+    height: 170px;
+    animation: int-gato-bounce 0.9s ease-in-out 0.7s infinite;
+}
+
+@keyframes int-gato-bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+}
+
+.int-gato-cuerpo {
+    position: absolute;
+    bottom: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 130px;
+    height: 95px;
+    background: radial-gradient(circle at 40% 35%, #ffe082 0%, #ffca28 45%, #ffb300 100%);
+    border-radius: 50% 50% 45% 45% / 55% 55% 45% 45%;
+    box-shadow: inset -8px -10px 0 rgba(245, 127, 23, 0.15), 0 6px 16px rgba(0, 0, 0, 0.12);
+}
+
+.int-gato-cabeza {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 110px;
+    height: 100px;
+}
+
+.int-gato-oreja {
+    position: absolute;
+    top: 2px;
+    width: 0;
+    height: 0;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-bottom: 32px solid #ffb300;
+}
+
+.int-gato-oreja--izq { left: 8px; transform: rotate(-18deg); }
+.int-gato-oreja--der { right: 8px; transform: rotate(18deg); }
+
+.int-gato-oreja::after {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: -10px;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-bottom: 18px solid #ff8f00;
+}
+
+.int-gato-cara {
+    position: absolute;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 100px;
+    height: 88px;
+    background: radial-gradient(circle at 45% 40%, #ffe082 0%, #ffca28 60%, #ffb300 100%);
+    border-radius: 50%;
+    box-shadow: inset -4px -6px 0 rgba(245, 127, 23, 0.12);
+}
+
+.int-gato-ojos {
+    position: absolute;
+    top: 28px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 28px;
+}
+
+.int-gato-ojo {
+    width: 14px;
+    height: 18px;
+    background: #263238;
+    border-radius: 50%;
+    position: relative;
+    animation: int-gato-parpadeo 3s ease infinite;
+}
+
+.int-gato-ojo::after {
+    content: '';
+    position: absolute;
+    top: 3px;
+    right: 3px;
+    width: 5px;
+    height: 5px;
+    background: #fff;
+    border-radius: 50%;
+}
+
+@keyframes int-gato-parpadeo {
+    0%, 92%, 100% { transform: scaleY(1); }
+    96% { transform: scaleY(0.1); }
+}
+
+.int-gato-nariz {
+    position: absolute;
+    top: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 12px;
+    height: 9px;
+    background: #ff8a65;
+    border-radius: 50% 50% 45% 45%;
+}
+
+.int-gato-boca {
+    position: absolute;
+    top: 54px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 24px;
+    height: 12px;
+    border-bottom: 3px solid #5d4037;
+    border-radius: 0 0 50% 50%;
+}
+
+.int-gato-bigote {
+    position: absolute;
+    top: 52px;
+    width: 28px;
+    height: 2px;
+    background: #5d4037;
+    border-radius: 2px;
+}
+
+.int-gato-bigote--izq { left: -8px; transform: rotate(-8deg); box-shadow: 0 6px 0 #5d4037, 0 12px 0 #5d4037; }
+.int-gato-bigote--der { right: -8px; transform: rotate(8deg); box-shadow: 0 6px 0 #5d4037, 0 12px 0 #5d4037; }
+
+.int-gato-cola {
+    position: absolute;
+    bottom: 42px;
+    right: 8px;
+    width: 50px;
+    height: 50px;
+    border: 14px solid #ffb300;
+    border-color: transparent transparent #ffb300 #ffb300;
+    border-radius: 50%;
+    transform: rotate(-35deg);
+    animation: int-gato-cola 0.6s ease-in-out infinite alternate;
+}
+
+@keyframes int-gato-cola {
+    from { transform: rotate(-35deg); }
+    to { transform: rotate(-20deg); }
+}
+
+.int-gato-pata {
+    position: absolute;
+    bottom: 0;
+    width: 34px;
+    height: 22px;
+    background: #ffb300;
+    border-radius: 50% 50% 40% 40%;
+    box-shadow: inset 0 -3px 0 rgba(245, 127, 23, 0.25);
+}
+
+.int-gato-pata--izq { left: 48px; }
+.int-gato-pata--der { right: 48px; }
+
+@media (max-width: 480px) {
+    .int-celebracion-titulo {
+        font-size: 1.5rem;
+    }
+
+    .int-celebracion-gato-art {
+        transform: scale(0.9);
     }
 }

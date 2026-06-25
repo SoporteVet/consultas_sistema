@@ -50,18 +50,14 @@ InternamientoModule.prototype.loadPresupuestosFacturasView = function () {
   const bloqueado = internamiento.estado?.actual === 'egresado';
   const mascota = internamiento.referencias?.nombreMascota || 'Paciente';
   const docs = this._getDocumentosFinancierosLista(internamiento);
-  const fmtMoney = (n) =>
-    '&#8353;' + (parseFloat(n) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 });
 
   const presupuestos = docs.filter((d) => d.tipo === 'presupuesto');
   const facturas = docs.filter((d) => d.tipo === 'factura');
 
-  const totalPendiente = docs
-    .filter((d) => d.estado === 'pendiente' || d.estado === 'aprobado')
-    .reduce((s, d) => s + (parseFloat(d.monto) || 0), 0);
-  const totalPagado = docs
-    .filter((d) => d.estado === 'pagado')
-    .reduce((s, d) => s + (parseFloat(d.monto) || 0), 0);
+  const countPendiente = docs.filter(
+    (d) => d.estado === 'pendiente' || d.estado === 'aprobado'
+  ).length;
+  const countPagado = docs.filter((d) => d.estado === 'pagado').length;
 
   const filtro = this._pfFiltroActivo || 'todos';
 
@@ -95,7 +91,6 @@ InternamientoModule.prototype.loadPresupuestosFacturasView = function () {
               <thead>
                 <tr>
                   <th>Descripción</th>
-                  <th>Monto</th>
                   <th>Estado</th>
                   <th>Fecha</th>
                   <th>Archivo</th>
@@ -145,16 +140,16 @@ InternamientoModule.prototype.loadPresupuestosFacturasView = function () {
 
     <div class="pf-summary-grid">
       <div class="pf-summary-card pf-summary-pending">
-        <div class="pf-summary-value">${fmtMoney(totalPendiente)}</div>
-        <div class="pf-summary-label"><i class="fas fa-clock"></i> Pendiente</div>
+        <div class="pf-summary-value">${countPendiente}</div>
+        <div class="pf-summary-label"><i class="fas fa-clock"></i> Pendientes</div>
       </div>
       <div class="pf-summary-card pf-summary-paid">
-        <div class="pf-summary-value">${fmtMoney(totalPagado)}</div>
-        <div class="pf-summary-label"><i class="fas fa-check-circle"></i> Pagado</div>
+        <div class="pf-summary-value">${countPagado}</div>
+        <div class="pf-summary-label"><i class="fas fa-check-circle"></i> Pagados</div>
       </div>
       <div class="pf-summary-card pf-summary-total">
-        <div class="pf-summary-value">${fmtMoney(totalPendiente + totalPagado)}</div>
-        <div class="pf-summary-label"><i class="fas fa-calculator"></i> Total</div>
+        <div class="pf-summary-value">${presupuestos.length + facturas.length}</div>
+        <div class="pf-summary-label"><i class="fas fa-file-alt"></i> Presup. + Fact.</div>
       </div>
       <div class="pf-summary-card pf-summary-docs">
         <div class="pf-summary-value">${docs.length}</div>
@@ -182,8 +177,6 @@ InternamientoModule.prototype._pfSetFiltro = function (key) {
 };
 
 InternamientoModule.prototype._renderDocumentoFinancieroRow = function (d, index, bloqueado, showTipoColumn) {
-  const fmtMoney = (n) =>
-    '&#8353;' + (parseFloat(n) || 0).toLocaleString('es-PE', { minimumFractionDigits: 2 });
   const fecha = d.fechaCreacion ? this.formatFechaHora12(d.fechaCreacion) : '—';
   const estado = d.estado || 'pendiente';
   const estadoColors = {
@@ -197,6 +190,7 @@ InternamientoModule.prototype._renderDocumentoFinancieroRow = function (d, index
   const tipoBg = d.tipo === 'presupuesto' ? '#0d9488' : '#1565c0';
   const docId = String(d.docId || '').replace(/'/g, "\\'");
   const desc = (d.descripcion || '').replace(/</g, '&lt;');
+  const ref = (d.numeroReferencia || '').replace(/</g, '&lt;');
   const obs = (d.observaciones || '').replace(/</g, '&lt;');
   const tieneArchivo = d.archivo && (d.archivo.downloadUrl || d.archivo.storagePath);
   const legacy = d._legacy;
@@ -244,10 +238,10 @@ InternamientoModule.prototype._renderDocumentoFinancieroRow = function (d, index
     ${showTipoColumn ? `<td><span class="pf-tipo-badge" style="background:${tipoBg}">${tipoLabel}</span></td>` : ''}
     <td>
       <strong>${desc}</strong>
+      ${ref ? `<div class="pf-ref">Ref: ${ref}</div>` : ''}
       ${obs ? `<div class="pf-obs">${obs}</div>` : ''}
       ${legacy ? '<div class="pf-legacy-tag">Registro anterior (sin archivo)</div>' : ''}
     </td>
-    <td class="pf-monto">${fmtMoney(d.monto)}</td>
     <td><span class="pf-estado-badge" style="background:${ec.bg};color:${ec.color}">${estado.toUpperCase()}</span></td>
     <td class="pf-fecha">${fecha}</td>
     <td class="pf-archivo-cell">${archivoCell}</td>
@@ -368,10 +362,6 @@ InternamientoModule.prototype.abrirModalDocumentoFinanciero = async function () 
       <div class="form-group">
         <label>Descripción *</label>
         <input type="text" id="pfDescripcion" required placeholder="Ej: Internamiento día 3" class="pf-input">
-      </div>
-      <div class="form-group">
-        <label>Monto *</label>
-        <input type="number" id="pfMonto" required min="0" step="0.01" placeholder="0.00" class="pf-input">
       </div>
       <div class="form-group">
         <label>Nº referencia (opcional)</label>
@@ -533,7 +523,6 @@ InternamientoModule.prototype.guardarDocumentoFinanciero = async function (submi
 
   const codigo = this._pfModalCodigo;
   const descripcion = document.getElementById('pfDescripcion').value.trim();
-  const monto = parseFloat(document.getElementById('pfMonto').value) || 0;
   const referencia = document.getElementById('pfReferencia').value.trim();
   const observaciones = document.getElementById('pfObservaciones').value.trim();
 
@@ -573,7 +562,6 @@ InternamientoModule.prototype.guardarDocumentoFinanciero = async function (submi
         docId,
         tipo,
         descripcion,
-        monto,
         estado: 'pendiente',
         numeroReferencia: referencia || null,
         observaciones: observaciones || null,

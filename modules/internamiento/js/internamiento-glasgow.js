@@ -7,8 +7,30 @@
 // MOSTRAR CALCULADORA DE GLASGOW
 // ================================================================
 
-InternamientoModule.prototype.showGlasgowCalculator = function() {
-    const tipoMascota = this.getTipoMascotaActual();
+InternamientoModule.prototype.normalizeGlasgowEspecie = function(tipo) {
+    const t = typeof normalizeTipoMascotaKey === 'function'
+        ? normalizeTipoMascotaKey(tipo)
+        : String(tipo || '').trim().toLowerCase();
+    if (t === 'gato' || t === 'felino') return 'gato';
+    return 'perro';
+};
+
+InternamientoModule.prototype.getTipoMascotaActual = function() {
+    if (!this.currentInternamientoId) return 'perro';
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    return this.normalizeGlasgowEspecie(internamiento?.referencias?.tipoMascota || 'perro');
+};
+
+InternamientoModule.prototype.getGlasgowEspecieActiva = function() {
+    const fromHidden = document.getElementById('glasgowTipoMascota')?.value;
+    if (fromHidden) return this.normalizeGlasgowEspecie(fromHidden);
+    return this.getTipoMascotaActual();
+};
+
+InternamientoModule.prototype.showGlasgowCalculator = function(especieOverride) {
+    const tipoMascota = especieOverride != null
+        ? this.normalizeGlasgowEspecie(especieOverride)
+        : this.getTipoMascotaActual();
     const modalContent = this.getGlasgowFormHTML(tipoMascota);
     const modal = this.createModal('Escala de Glasgow - Evaluación de Dolor', modalContent, 'fa-paw');
     document.body.appendChild(modal);
@@ -18,43 +40,38 @@ InternamientoModule.prototype.showGlasgowCalculator = function() {
     }, 100);
 };
 
-InternamientoModule.prototype.getTipoMascotaActual = function() {
-    if (!this.currentInternamientoId) return 'perro';
-    const internamiento = this.internamientos.get(this.currentInternamientoId);
-    return internamiento?.referencias?.tipoMascota || 'perro';
-};
-
 // ================================================================
 // HTML DEL FORMULARIO
 // ================================================================
 
 InternamientoModule.prototype.getGlasgowFormHTML = function(tipoMascota) {
-    const esPerro = tipoMascota === 'perro';
+    const especie = this.normalizeGlasgowEspecie(tipoMascota);
+    const esPerro = especie === 'perro';
+    const btnActivo = 'padding: 12px 30px; font-size: 1rem; background: #fff; color: #5a67d8; border: 2px solid #fff; font-weight: 600; border-radius: 8px; cursor: pointer;';
+    const btnInactivo = 'padding: 12px 30px; font-size: 1rem; background: rgba(255,255,255,0.15); color: #fff; border: 2px solid rgba(255,255,255,0.65); font-weight: 600; border-radius: 8px; cursor: pointer;';
     
     return `
         <div style="max-height: 80vh; overflow-y: auto; padding: 15px;">
             <!-- Selector de especie -->
             <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
-                <label style="font-size: 1.1rem; font-weight: 600; display: block; margin-bottom: 10px;">
+                <label style="font-size: 1.1rem; font-weight: 600; display: block; margin-bottom: 10px; color: #fff;">
                     Selecciona la especie del paciente:
                 </label>
                 <div style="display: flex; gap: 15px; justify-content: center;">
                     <button type="button" onclick="window.internamientoModule.cambiarEspecieGlasgow('perro')" 
-                            class="btn ${esPerro ? 'btn-light' : 'btn-secondary'}" 
                             id="glasgowBtnPerro"
-                            style="padding: 12px 30px; font-size: 1rem;">
+                            style="${esPerro ? btnActivo : btnInactivo}">
                         <i class="fas fa-dog"></i> Perro
                     </button>
                     <button type="button" onclick="window.internamientoModule.cambiarEspecieGlasgow('gato')" 
-                            class="btn ${!esPerro ? 'btn-light' : 'btn-secondary'}" 
                             id="glasgowBtnGato"
-                            style="padding: 12px 30px; font-size: 1rem;">
+                            style="${!esPerro ? btnActivo : btnInactivo}">
                         <i class="fas fa-cat"></i> Gato
                     </button>
                 </div>
             </div>
 
-            <input type="hidden" id="glasgowTipoMascota" value="${tipoMascota}">
+            <input type="hidden" id="glasgowTipoMascota" value="${especie}">
 
             <!-- Resultado -->
             <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 25px; text-align: center; border: 2px solid #dee2e6;">
@@ -272,14 +289,16 @@ InternamientoModule.prototype.getGlasgowGatoHTML = function() {
 InternamientoModule.prototype.setupGlasgowCalculator = function(tipoMascota) {
     const selects = document.querySelectorAll('.glasgow-select');
     selects.forEach(select => {
-        select.addEventListener('change', () => this.calcularGlasgow(tipoMascota));
+        select.addEventListener('change', () => this.calcularGlasgow(this.getGlasgowEspecieActiva()));
     });
 
-    // Calcular inicial
-    this.calcularGlasgow(tipoMascota);
+    this.calcularGlasgow(this.normalizeGlasgowEspecie(tipoMascota));
 };
 
 InternamientoModule.prototype.calcularGlasgow = function(tipoMascota) {
+    const especie = this.normalizeGlasgowEspecie(
+        tipoMascota || this.getGlasgowEspecieActiva()
+    );
     const estadoMental = parseInt(document.getElementById('glasgowEstadoMental')?.value) || 0;
     const actividadMotora = parseInt(document.getElementById('glasgowActividadMotora')?.value) || 0;
     const vocalizacion = parseInt(document.getElementById('glasgowVocalizacion')?.value) || 0;
@@ -294,7 +313,7 @@ InternamientoModule.prototype.calcularGlasgow = function(tipoMascota) {
     // Determinar nivel de dolor según especie
     let nivelDolor, colorFondo, rangoTexto;
 
-    if (tipoMascota === 'gato') {
+    if (especie === 'gato') {
         if (puntajeTotal <= 3) {
             nivelDolor = 'Sin dolor';
             colorFondo = '#d4edda';
@@ -345,19 +364,15 @@ InternamientoModule.prototype.calcularGlasgow = function(tipoMascota) {
 };
 
 InternamientoModule.prototype.cambiarEspecieGlasgow = function(tipoMascota) {
-    document.getElementById('glasgowTipoMascota').value = tipoMascota;
-    
-    // Cerrar modal actual
     document.querySelector('.modal-overlay')?.remove();
-    
-    // Reabrir con nueva especie
+
     setTimeout(() => {
-        this.showGlasgowCalculator();
+        this.showGlasgowCalculator(tipoMascota);
     }, 100);
 };
 
 InternamientoModule.prototype.aplicarGlasgowATurno = function() {
-    const tipoMascota = document.getElementById('glasgowTipoMascota')?.value || 'perro';
+    const tipoMascota = this.getGlasgowEspecieActiva();
     const resultado = this.calcularGlasgow(tipoMascota);
     const observaciones = document.getElementById('glasgowObservaciones')?.value.trim() || '';
 

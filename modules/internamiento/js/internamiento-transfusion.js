@@ -3,6 +3,18 @@
 // ====================================================================
 // Extensión del módulo de internamiento para manejar transfusiones
 
+function resolveInternamientoAssetUrl(relativePath) {
+    try {
+        return new URL(relativePath, window.location.href).href;
+    } catch (e) {
+        return relativePath;
+    }
+}
+
+InternamientoModule.prototype.resolveInternamientoAssetUrl = resolveInternamientoAssetUrl;
+
+const TRANSFUSION_REFERENCIA_IMG = resolveInternamientoAssetUrl('img/transfusion.jpg');
+
 // ================================================================
 // MOSTRAR FORMULARIO DE REGISTRO DE TRANSFUSIÓN (modal)
 // ================================================================
@@ -48,7 +60,7 @@ InternamientoModule.prototype.getTransfusionFormHTML = function(internamiento) {
         <div style="max-height: 80vh; overflow-y: auto; padding: 10px;">
             <!-- Imagen de referencia -->
             <div style="background: #e8f4f8; padding: 15px; border-radius: 8px; margin-bottom: 20px; text-align: center;">
-                <img src="/img/transfusion.jpg" alt="Fórmula de Transfusión" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <img src="${TRANSFUSION_REFERENCIA_IMG}" alt="Fórmula de Transfusión" style="max-width: 100%; height: auto; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);" onerror="this.style.display='none'">
                 <p style="margin: 10px 0 0 0; color: #2c3e50; font-size: 0.9rem; font-style: italic;">
                     <i class="fas fa-info-circle"></i> Fórmula: Volumen (ml) = [Peso (kg) × N] × (Ht deseado - Ht receptor) / Ht donante
                 </p>

@@ -74,7 +74,7 @@ const PERMISSIONS = {
     canViewFullTicket: false,
     canViewSchedule: false,
     canExportData: false,
-    canViewConsentForms: false,
+    canViewConsentForms: true,
     canViewVacunas: false,
     canEditVacunas: false,
     canEditTurnos: false,

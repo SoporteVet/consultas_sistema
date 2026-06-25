@@ -272,7 +272,17 @@ InternamientoModule.prototype.renderHorasMedicamentoHTML = function(horarios, me
     `;
 };
 
-InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, diaKey, horaSlot, admin) {
+InternamientoModule.prototype.renderEtiquetaEstadoAplicadoCE = function(admin) {
+    const administrado = admin
+        && admin.estado !== 'omitido'
+        && admin.estado !== 'no_administrado';
+    if (administrado) {
+        return '<span class="med-estado-aplicado-vista"><i class="fas fa-check"></i> Aplicado</span>';
+    }
+    return '<span class="med-estado-pendiente-vista">pendiente</span>';
+};
+
+InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, diaKey, horaSlot, admin, soloLectura = false) {
     const medId = (medicamento.medicamentoId || '').replace(/'/g, "\\'");
     const estado = admin
         ? (admin.estado === 'omitido' || admin.estado === 'no_administrado' ? 'omitido' : 'administrado')
@@ -292,6 +302,12 @@ InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, 
         contenido = '<span class="med-celda-omitido" aria-label="No administrado"></span>';
     } else {
         contenido = '<span class="med-celda-vacia">·</span>';
+    }
+    if (soloLectura) {
+        return `
+            <div class="med-celda-vista ${estado || 'pendiente'}" title="${title.replace(/"/g, '&quot;')}">
+                ${contenido}
+            </div>`;
     }
     return `
         <button type="button" class="med-celda-btn ${estado || 'pendiente'}"
@@ -318,15 +334,11 @@ InternamientoModule.prototype.renderTablaControlMedicacion = function(internamie
             }
             const slots = horarios.map(h => {
                 const admin = this.obtenerAdminCeldaMedicacion(med, d.key, h);
-                return `<div class="med-slot-wrap"><span class="med-slot-hora">${this._hora24a12(h)}</span>${this.renderCeldaMedicacionHTML(med, d.key, h, admin)}</div>`;
+                const esConsultaExt = !!med.puestoPorConsultaExterna;
+                const etiquetaCE = esConsultaExt ? this.renderEtiquetaEstadoAplicadoCE(admin) : '';
+                return `<div class="med-slot-wrap">${etiquetaCE}<span class="med-slot-hora">${this._hora24a12(h)}</span>${this.renderCeldaMedicacionHTML(med, d.key, h, admin, esConsultaExt)}</div>`;
             }).join('');
-            const medIdSafe = (med.medicamentoId || '').replace(/'/g, "\\'");
-            const btnDiaConsulta = med.puestoPorConsultaExterna ? `
-                <button type="button" class="med-btn-aplicado-dia" title="Marcar todas las dosis de este día como aplicadas"
-                    onclick="window.internamientoModule.marcarMedicamentoAplicadoDia('${medIdSafe}', '${d.key}')">
-                    <i class="fas fa-check"></i> Aplicado
-                </button>` : '';
-            return `<td class="med-dia-celda med-dia-${d.tipo || 'internamiento'}"><div class="med-dia-slots">${btnDiaConsulta}${slots}</div></td>`;
+            return `<td class="med-dia-celda med-dia-${d.tipo || 'internamiento'}"><div class="med-dia-slots">${slots}</div></td>`;
         }).join('');
 
         return `
