@@ -6421,6 +6421,7 @@ class InternamientoModule {
                     <input type="number" id="medFrecuencia" min="1" placeholder="Ej: 8 (horas)" value="${esEdicion && medParaEditar.frecuenciaHoras != null ? medParaEditar.frecuenciaHoras : ''}">
                     <small style="color:#6c757d;font-size:0.8rem;">Ingresar número de horas entre dosis, o marcar "Dosis única"</small>
                 </div>
+                ${this.agregarMedicamentoContexto !== 'admision' ? `
                 <div class="form-group" style="padding: 14px; background: #eef2ff; border-radius: 8px; border: 1px solid #c7d2fe;">
                     <label style="margin-bottom: 10px; display: block;"><i class="fas fa-calendar-alt" style="color: #4f46e5; margin-right: 6px;"></i>Programación del tratamiento</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -6440,7 +6441,7 @@ class InternamientoModule {
                     <small style="display: block; color: #6366f1; font-size: 0.8rem; margin-top: 8px;">
                         Al llegar la <strong>fecha y hora fin</strong>, el medicamento ya no podrá administrarse.
                     </small>
-                </div>
+                </div>` : ''}
                 <div class="form-group">
                     <label><i class="fas fa-list-ol" style="color: #0ea5e9; margin-right: 6px;"></i>Horas exactas (opcional)</label>
                     <div style="display: flex; align-items: center; gap: 8px; flex-wrap: nowrap;">
@@ -6596,11 +6597,20 @@ class InternamientoModule {
     }
 
     _leerProgramacionMedicamentoDesdeForm() {
+        const hoy = typeof this._fechaLocalYmd === 'function' ? this._fechaLocalYmd() : '';
+        // En admisión no hay campos de programación: devolver valores neutros
+        if (this.agregarMedicamentoContexto === 'admision') {
+            return {
+                programacionDesde: hoy,
+                programacionDesdeHora: '00:00',
+                programacionHasta: null,
+                programacionHastaHora: null
+            };
+        }
         const desde = document.getElementById('medProgramacionDesde')?.value?.trim() || '';
         const hasta = document.getElementById('medProgramacionHasta')?.value?.trim() || '';
         const desdeHora = document.getElementById('medProgramacionDesdeHora')?.value?.trim() || '00:00';
         const hastaHora = document.getElementById('medProgramacionHastaHora')?.value?.trim() || '23:59';
-        const hoy = typeof this._fechaLocalYmd === 'function' ? this._fechaLocalYmd() : '';
         return {
             programacionDesde: desde || hoy,
             programacionDesdeHora: desdeHora,
