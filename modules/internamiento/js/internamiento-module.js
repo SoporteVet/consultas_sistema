@@ -112,6 +112,9 @@ class InternamientoModule {
         if (typeof this.actualizarBannerSesionCodigo === 'function') {
             this.actualizarBannerSesionCodigo();
         }
+        if (typeof this.applyMedicacionButtonsVisibility === 'function') {
+            this.applyMedicacionButtonsVisibility();
+        }
         return true;
     }
 
@@ -135,6 +138,27 @@ class InternamientoModule {
         const userRole = sessionStorage.getItem('userRole');
         const allowedRoles = ['admin', 'consulta_externa', 'internos', 'recepción', 'recepcion', 'quirofano', 'veterinario'];
         return this.betaEnabled && allowedRoles.includes(userRole);
+    }
+
+    /** Medicación del paciente: bloqueada para consulta externa, recepción y laboratorio. */
+    canAccessMedicacionView() {
+        const role = String(sessionStorage.getItem('userRole') || '')
+            .toLowerCase()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '');
+        return !['consulta_externa', 'recepcion', 'laboratorio'].includes(role);
+    }
+
+    applyMedicacionButtonsVisibility() {
+        const puede = this.canAccessMedicacionView();
+        const btnPendientes = document.getElementById('btnVerMedicacionesPendientes');
+        if (btnPendientes) {
+            btnPendientes.style.display = puede ? '' : 'none';
+        }
+        if (!puede) {
+            this._ocultarPopOutsMedicacion();
+            this._detenerPopOutsMedicacion();
+        }
     }
 
     /** Origen de ítems agregados desde Nuevo internamiento según rol del usuario. */
@@ -267,6 +291,9 @@ class InternamientoModule {
             this.refreshInternamientosList();
             this.refreshAdmisionEdicionSelect();
             this.refreshVisitasIfVisible();
+            if (typeof this.refreshDisponibilidadCamposIfVisible === 'function') {
+                this.refreshDisponibilidadCamposIfVisible();
+            }
         });
 
         this.listeners.push(activeListener);
@@ -296,6 +323,9 @@ class InternamientoModule {
         // Agregar botón inmediatamente si el DOM está listo
         this.addMenuButton();
         this.setupEventListeners();
+        if (typeof this.applyMedicacionButtonsVisibility === 'function') {
+            this.applyMedicacionButtonsVisibility();
+        }
         
         // Si no se pudo agregar, reintentar después de un momento
         if (!document.getElementById('internamientosCategory')) {
@@ -341,6 +371,9 @@ class InternamientoModule {
           <div id="internamientosSubmenu" class="nav-submenu">
             <button id="verInternamientosBtn" class="submenu-btn" onclick="if(window.internamientoModule) { window.internamientoModule.showInternamientosSection(); }">
               <i class="fas fa-list-alt"></i> Ver Internamientos
+            </button>
+            <button id="disponibilidadCamposBtn" class="submenu-btn" onclick="if(window.internamientoModule) { window.internamientoModule.showDisponibilidadCamposView(); }">
+              <i class="fas fa-map-marked-alt"></i> Disponibilidad de campos
             </button>
             <button id="crearInternamientoBtn" class="submenu-btn" onclick="if(window.internamientoModule) { window.internamientoModule.showAdmisionForm(); }">
               <i class="fas fa-plus-circle"></i> Nuevo Internamiento
@@ -1660,7 +1693,7 @@ class InternamientoModule {
             this._ocultarPopOutsMedicacion();
         }
         // Ocultar todas las vistas de internamiento
-        const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas', 'facturas', 'presupuestos_facturas', 'medicaciones_pendientes', 'pendientes_global'];
+        const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas', 'facturas', 'presupuestos_facturas', 'medicaciones_pendientes', 'pendientes_global', 'disponibilidad_campos'];
         views.forEach(view => {
             const element = document.getElementById(`internamiento-${view}`);
             if (element) {
@@ -1746,6 +1779,9 @@ class InternamientoModule {
             cambioSondaVencido ? '<span class="int-card-chip int-card-chip--warn"><i class="fas fa-exclamation-triangle"></i> Cambio de sonda</span>' : '',
             tieneCirugiaProgramada ? '<span class="int-card-chip int-card-chip--info"><i class="fas fa-procedures"></i> Cirugía</span>' : ''
         ].filter(Boolean).join('');
+        const chipUbicacion = typeof this.renderChipUbicacionCampo === 'function'
+            ? this.renderChipUbicacionCampo(internamiento, estado)
+            : '';
 
         const tiempoLabel = estado === 'egresado' || estado === 'defuncion' ? fechaRefEstadoStr : diasInternado;
         const tiempoHint = estado === 'egresado' ? 'Fecha de alta' : estado === 'defuncion' ? 'Fecha defunción' : 'Internado';
@@ -1806,7 +1842,7 @@ class InternamientoModule {
                         ` : ''}
                     </div>
 
-                    ${alertas ? `<div class="int-card-alerts">${alertas}</div>` : ''}
+                    ${(alertas || chipUbicacion) ? `<div class="int-card-alerts">${alertas}${chipUbicacion}</div>` : ''}
 
                     ${diagnostico ? `
                     <div class="int-card-diagnostico" title="${esc(diagnostico)}">
@@ -3669,6 +3705,7 @@ class InternamientoModule {
             'estado/tipoAlta': tipo,
             'estado/fechaAlta': Date.now(),
             'estado/observacionesAlta': observaciones || null,
+            'ubicacion': null,
             'metadata/fechaUltimaActualizacion': Date.now()
         };
         try {
@@ -4087,8 +4124,10 @@ class InternamientoModule {
                         <button class="btn btn-turno" onclick="window.internamientoModule.showTurnosView()" id="btnTurnos">
                             <i class="fas fa-clipboard-list"></i> Turnos
                         </button>
-                        <button class="btn btn-medicacion" onclick="window.internamientoModule.showMedicacionView()">
-                            <i class="fas fa-pills"></i> Medicación
+                        <button class="btn btn-medicacion" ${this.canAccessMedicacionView()
+                            ? 'onclick="window.internamientoModule.showMedicacionView()"'
+                            : 'disabled title="No disponible para su rol" style="opacity:0.5;cursor:not-allowed;"'}>
+                            <i class="fas ${this.canAccessMedicacionView() ? 'fa-pills' : 'fa-lock'}"></i> Medicación
                         </button>
                         <button class="btn btn-procedimientos" onclick="window.internamientoModule.showProcedimientosView()">
                             <i class="fas fa-clipboard-list"></i> Pendientes
@@ -4490,15 +4529,18 @@ class InternamientoModule {
         const medicamentos = Object.values(internamiento.planTerapeutico?.medicamentos || {})
             .filter(med => med.estadoMedicamento === 'activo');
 
+        const puedeMedicacion = this.canAccessMedicacionView();
+
         if (medicamentos.length === 0) {
             container.innerHTML = `
                 <h3><i class="fas fa-pills"></i> Plan de Medicación</h3>
                 <div class="empty-state" style="padding: 40px 20px;">
                     <i class="fas fa-pills" style="font-size: 48px;"></i>
                     <p style="font-size: 0.95rem;">No hay medicamentos activos</p>
+                    ${puedeMedicacion ? `
                     <button class="btn btn-primary btn-sm" onclick="window.internamientoModule.showMedicacionView()">
                         <i class="fas fa-plus"></i> Agregar Medicamento
-                    </button>
+                    </button>` : ''}
                 </div>
             `;
             return;
@@ -4561,9 +4603,10 @@ class InternamientoModule {
                         </div>
                     `;
                 }).join('')}
+                ${puedeMedicacion ? `
                 <button class="btn btn-secondary btn-sm" style="width: 100%; margin-top: 10px;" onclick="window.internamientoModule.showMedicacionView()">
                     <i class="fas fa-list"></i> Ver Todo
-                </button>
+                </button>` : ''}
             </div>
         `;
     }
@@ -5750,6 +5793,10 @@ class InternamientoModule {
     // ================================================================
     
     showMedicacionView() {
+        if (!this.canAccessMedicacionView()) {
+            this.showAlert('No tienes permisos para acceder a Medicación.', 'Acceso Denegado', 'error');
+            return;
+        }
         if (!this.currentInternamientoId) {
             alert('Error: No hay internamiento seleccionado');
             return;
@@ -7891,6 +7938,10 @@ class InternamientoModule {
     // ================================================================
 
     showMedicacionesPendientesView() {
+        if (!this.canAccessMedicacionView()) {
+            this.showAlert('No tienes permisos para acceder a Medicaciones pendientes.', 'Acceso Denegado', 'error');
+            return;
+        }
         this.showInternamientoView('medicaciones_pendientes');
         const render = () => setTimeout(() => this.loadMedicacionesPendientesView(), 100);
         if (typeof this._verificarTodasSuspensionesVencidas === 'function') {
@@ -8066,6 +8117,7 @@ class InternamientoModule {
     }
 
     _debeMostrarPopOutsMedicacion() {
+        if (!this.canAccessMedicacionView()) return false;
         return this._estaEnModuloInternamiento() && !this._estaEnAdmisionInternamiento();
     }
 
@@ -8078,6 +8130,11 @@ class InternamientoModule {
     }
 
     _iniciarPopOutsMedicacion() {
+        if (!this.canAccessMedicacionView()) {
+            this._ocultarPopOutsMedicacion();
+            this._detenerPopOutsMedicacion();
+            return;
+        }
         if (this._popOutMedInterval) return; // ya iniciado
         this._popOutMedNotificados = this._popOutMedNotificados || new Set();
         this._popOutMedInterval = setInterval(() => this._verificarPopOutsMedicacion(), 30 * 60 * 1000); // c/30min

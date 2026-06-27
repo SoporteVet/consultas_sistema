@@ -243,6 +243,7 @@ InternamientoModule.prototype.procesarEgreso = async function(egresoData) {
     updates['estado/actual'] = 'egresado';
     updates['estado/fechaCambio'] = Date.now();
     updates['estado/cambiadoPor'] = userId;
+    updates['ubicacion'] = null;
     updates['metadata/fechaUltimaActualizacion'] = Date.now();
 
     const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);

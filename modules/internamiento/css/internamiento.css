@@ -4887,3 +4887,467 @@ thead .med-col-fija {
         transform: scale(0.9);
     }
 }
+
+/* ====================================================================
+   DISPONIBILIDAD DE CAMPOS (JAULAS)
+   ==================================================================== */
+
+.internamiento-card .int-card-chip--ubicacion {
+    background: #e0f2fe;
+    color: #0369a1;
+}
+
+.internamiento-card .int-card-chip--sin-jaula {
+    background: #fef9c3;
+    color: #854d0e;
+}
+
+/* Semáforo */
+.disp-semaforo {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 18px 22px;
+    border-radius: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    margin-bottom: 22px;
+}
+
+.disp-semaforo-luz {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.8rem;
+    color: white;
+    flex-shrink: 0;
+}
+
+.disp-semaforo--verde {
+    background: #ecfdf5;
+    border-color: #a7f3d0;
+}
+.disp-semaforo--verde .disp-semaforo-luz {
+    background: #22c55e;
+}
+
+.disp-semaforo--amarillo {
+    background: #fffbeb;
+    border-color: #fde68a;
+}
+.disp-semaforo--amarillo .disp-semaforo-luz {
+    background: #f59e0b;
+}
+
+.disp-semaforo--rojo {
+    background: #fef2f2;
+    border-color: #fecaca;
+}
+.disp-semaforo--rojo .disp-semaforo-luz {
+    background: #ef4444;
+}
+
+.disp-semaforo-titulo {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.disp-semaforo-desc {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-top: 2px;
+}
+
+.disp-semaforo-nums {
+    display: flex;
+    gap: 16px;
+    margin-top: 10px;
+    font-size: 0.85rem;
+    color: #334155;
+}
+
+.disp-resumen-areas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 16px;
+    margin-top: 8px;
+    font-size: 0.8rem;
+    color: #475569;
+}
+
+.disp-readonly-note {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #f1f5f9;
+    color: #475569;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+    margin-bottom: 18px;
+}
+
+/* Anotaciones de disponibilidad (Firebase internamientoConfig/campos/anotacion) */
+.disp-anotacion {
+    margin-bottom: 22px;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    background: #fff;
+    padding: 14px 16px;
+}
+
+.disp-anotacion--edit label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #334155;
+    font-size: 0.9rem;
+    margin-bottom: 8px;
+}
+
+.disp-anotacion--edit textarea {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 56px;
+    color: #1e293b;
+}
+
+.disp-anotacion--edit textarea:focus {
+    outline: none;
+    border-color: #6366f1;
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.disp-anotacion-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 10px;
+}
+
+.disp-anotacion-meta {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.disp-anotacion--readonly {
+    background: #f8fafc;
+    border-color: #e2e8f0;
+}
+
+.disp-anotacion-label {
+    font-weight: 600;
+    color: #475569;
+    font-size: 0.85rem;
+    margin-bottom: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.disp-anotacion-texto {
+    color: #1e293b;
+    font-size: 0.92rem;
+    line-height: 1.5;
+    white-space: pre-wrap;
+}
+
+.disp-anotacion--readonly .disp-anotacion-meta {
+    margin-top: 8px;
+}
+
+/* Bloques de área */
+#internamiento-disponibilidad_campos .disp-areas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+    margin-top: 8px;
+}
+
+.disp-areas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 18px;
+}
+
+.disp-area-bloque {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px;
+    opacity: 1;
+    transform: none;
+}
+
+.disp-area-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.disp-area-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    color: #1e293b;
+}
+
+.disp-area-tag {
+    background: #ede9fe;
+    color: #6d28d9;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.disp-area-vacia {
+    color: #94a3b8;
+    font-size: 0.85rem;
+    padding: 12px 0;
+}
+
+/* Grilla de jaulas */
+.disp-jaulas-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: 10px;
+}
+
+.disp-jaula {
+    border-radius: 10px;
+    padding: 10px;
+    border: 1px solid transparent;
+    min-height: 78px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.disp-jaula--click {
+    cursor: pointer;
+    transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+
+.disp-jaula--click:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.disp-jaula--libre {
+    background: #f0fdf4;
+    border-color: #bbf7d0;
+}
+
+.disp-jaula--ocupada {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+}
+
+.disp-jaula-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.disp-jaula-num {
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: #1e293b;
+}
+
+.disp-jaula-tamano {
+    background: rgba(15, 23, 42, 0.08);
+    color: #334155;
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 6px;
+}
+
+.disp-jaula-libre-txt {
+    color: #16a34a;
+    font-size: 0.82rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.disp-jaula-paciente {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #1d4ed8;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.disp-jaula-exp {
+    font-size: 0.72rem;
+    color: #64748b;
+}
+
+/* Modales de asignación / movimiento */
+.disp-modal-aviso {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    background: rgba(59, 130, 246, 0.12);
+    color: #93c5fd;
+    border-radius: 10px;
+    padding: 10px 12px;
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+}
+
+.disp-modal-ocupante {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    padding: 12px 14px;
+    color: #f1f5f9;
+    font-weight: 600;
+}
+
+.disp-mover-area {
+    margin-bottom: 14px;
+}
+
+.disp-mover-area-label {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #cbd5e1;
+    margin-bottom: 6px;
+}
+
+.disp-mover-area-jaulas {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.disp-mover-jaula-btn {
+    background: rgba(34, 197, 94, 0.15);
+    border: 1px solid rgba(34, 197, 94, 0.4);
+    color: #bbf7d0;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.disp-mover-jaula-btn:hover {
+    background: rgba(34, 197, 94, 0.3);
+}
+
+.disp-mover-jaula-btn .disp-jaula-tamano {
+    background: rgba(255, 255, 255, 0.15);
+    color: inherit;
+}
+
+/* Panel de configuración (admin) */
+.disp-config-area {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 14px;
+}
+
+.disp-config-area-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #f1f5f9;
+    margin-bottom: 10px;
+}
+
+.disp-config-fila {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.disp-config-fila--inactiva {
+    opacity: 0.55;
+}
+
+.disp-config-num {
+    min-width: 78px;
+    font-weight: 600;
+    color: #e2e8f0;
+    font-size: 0.85rem;
+}
+
+.disp-config-tamano {
+    padding: 6px 10px;
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+    color: #f1f5f9;
+    font-size: 0.82rem;
+}
+
+.disp-config-estado {
+    flex: 1;
+}
+
+.disp-config-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 999px;
+}
+
+.disp-config-badge--libre {
+    background: rgba(34, 197, 94, 0.2);
+    color: #86efac;
+}
+
+.disp-config-badge--ocupada {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+}
+
+.disp-config-badge--off {
+    background: rgba(148, 163, 184, 0.2);
+    color: #cbd5e1;
+}
+
+.disp-config-add {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+    .disp-semaforo {
+        flex-direction: column;
+        text-align: center;
+        align-items: center;
+    }
+    .disp-semaforo-nums,
+    .disp-resumen-areas {
+        justify-content: center;
+    }
+}

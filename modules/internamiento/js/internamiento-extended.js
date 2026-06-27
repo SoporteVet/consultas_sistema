@@ -435,6 +435,9 @@ InternamientoModule.prototype.actualizarEstadoInternamiento = async function(int
     updates['estado/fechaCambio'] = Date.now();
     updates['estado/cambiadoPor'] = userId;
     updates['estado/razonCambio'] = razon || `Cambio a ${nuevoEstado}`;
+    if (nuevoEstado === 'egresado' || nuevoEstado === 'defuncion') {
+        updates['ubicacion'] = null;
+    }
     updates['metadata/fechaUltimaActualizacion'] = Date.now();
 
     try {
