@@ -1,5 +1,5 @@
 ﻿// ====================================================================
-// MÃ“DULO DE INTERNAMIENTO - SISTEMA VETERINARIO
+// MODULO DE INTERNAMIENTO - SISTEMA VETERINARIO
 // ====================================================================
 // Versión: 1.0.0 BETA
 // Este módulo es completamente independiente y no modifica otros módulos
@@ -55,7 +55,7 @@ class InternamientoModule {
     }
 
     // ================================================================
-    // INICIALIZACIÃ“N (solo al abrir Internamientos, no al cargar la app)
+    // INICIALIZACIÓN (solo al abrir Internamientos, no al cargar la app)
     // ================================================================
     
     async init() {
@@ -1660,7 +1660,7 @@ class InternamientoModule {
             this._ocultarPopOutsMedicacion();
         }
         // Ocultar todas las vistas de internamiento
-        const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas', 'facturas', 'presupuestos_facturas', 'medicaciones_pendientes'];
+        const views = ['lista', 'admision', 'panel', 'turnos', 'turno', 'medicacion', 'procedimientos', 'evolucion', 'cirugias', 'llamadas', 'defunciones', 'transfusiones', 'controles_adicionales', 'imagenologia', 'rer', 'alimentacion_asistida', 'hidratacion', 'curva_glucosa', 'egreso', 'visitas', 'facturas', 'presupuestos_facturas', 'medicaciones_pendientes', 'pendientes_global'];
         views.forEach(view => {
             const element = document.getElementById(`internamiento-${view}`);
             if (element) {
@@ -1709,7 +1709,7 @@ class InternamientoModule {
             'critico': { icon: 'fa-exclamation-triangle', label: 'CRÃTICO' },
             'alta': { icon: 'fa-check-circle', label: 'Alta médica' },
             'egresado': { icon: 'fa-home', label: 'Dado de alta' },
-            'defuncion': { icon: 'fa-cross', label: 'DEFUNCIÃ“N' }
+            'defuncion': { icon: 'fa-cross', label: 'DEFUNCIÓN' }
         };
 
         const config = estadoConfig[estado] || estadoConfig.activo;
@@ -1752,6 +1752,10 @@ class InternamientoModule {
         const colorSeguimiento = this.getColorEstadoSeguimiento(internamiento.metadata?.estadoSeguimientoAlta);
         const borderSeguimiento = (colorSeguimiento && colorSeguimiento !== '#ffffff') ? colorSeguimiento : '#cbd5e1';
         const bgSeguimiento = (colorSeguimiento && colorSeguimiento !== '#ffffff') ? colorSeguimiento + '22' : 'white';
+        const estadosReporteDiario = ['activo', 'critico', 'alta'];
+        const reporteLlamadaHoy = estadosReporteDiario.includes(estado)
+            && typeof this.tieneReporteLlamadaHoy === 'function'
+            && this.tieneReporteLlamadaHoy(internamiento);
 
         const cardAttrs = soloLectura
             ? `data-id="${idInt}" data-estado="${estado}" class="internamiento-card fade-in-up${expedienteSubido ? ' internamiento-card--expediente-subido' : ''}" style="cursor: default; pointer-events: none;"`
@@ -1761,6 +1765,11 @@ class InternamientoModule {
             <article ${cardAttrs}>
                 <div class="int-card-inner">
                     <div class="int-card-head">
+                        ${reporteLlamadaHoy ? `
+                        <span class="int-card-reporte-hoy" title="Reporte al cliente registrado hoy (llamada o mensaje)">
+                            <i class="fas fa-check-circle"></i> Reportado
+                        </span>
+                        ` : ''}
                         <span class="badge-estado-${estado} int-card-badge">
                             <i class="fas ${config.icon}"></i> ${config.label}
                         </span>
@@ -3843,7 +3852,7 @@ class InternamientoModule {
             'critico': { icon: 'fa-exclamation-triangle', label: 'CRÃTICO' },
             'alta': { icon: 'fa-check-circle', label: 'ALTA MÉDICA' },
             'egresado': { icon: 'fa-home', label: 'EGRESADO' },
-            'defuncion': { icon: 'fa-cross', label: 'DEFUNCIÃ“N' }
+            'defuncion': { icon: 'fa-cross', label: 'DEFUNCIÓN' }
         };
 
         const config = estadoConfig[estado] || estadoConfig.activo;
@@ -4097,7 +4106,7 @@ class InternamientoModule {
                             <i class="fas fa-procedures"></i> Cirugías
                         </button>
                     <button class="btn btn-llamada" onclick="window.internamientoModule.showLlamadasView()">
-                        <i class="fas fa-phone-alt"></i> Llamadas
+                        <i class="fas fa-comments"></i> Reportes
                     </button>
                     ${estado !== 'defuncion' ? `
                     <button class="btn btn-secondary" onclick="window.internamientoModule.agregarDefuncion()" style="background:#5c5c5c;color:white;">
@@ -11531,31 +11540,42 @@ class InternamientoModule {
         const llamadasRaw = internamiento?.llamadasCliente;
         const llamadasObj = llamadasRaw && typeof llamadasRaw === 'object' && !Array.isArray(llamadasRaw) ? llamadasRaw : {};
         const llamadasList = Object.values(llamadasObj).sort((a, b) => (b.fechaHora || 0) - (a.fechaHora || 0));
+        const totalLlamadas = llamadasList.filter((ll) => typeof this.getTipoComunicacionReporte !== 'function' || this.getTipoComunicacionReporte(ll) === 'llamada').length;
+        const totalMensajes = llamadasList.length - totalLlamadas;
 
         const listHTML = llamadasList.length > 0
             ? `
             <div style="background: white; padding: 20px; border-radius: 12px; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
-                <h3 style="margin: 0 0 16px 0; color: #333; font-size: 1rem;"><i class="fas fa-list"></i> Llamadas registradas (${llamadasList.length})</h3>
+                <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+                    <h3 style="margin: 0; color: #333; font-size: 1rem;"><i class="fas fa-list"></i> Reportes registrados (${llamadasList.length})</h3>
+                    <div style="display:flex;gap:8px;font-size:0.82rem;">
+                        <span class="reporte-tipo-badge reporte-tipo-badge--llamada"><i class="fas fa-phone-alt"></i> ${totalLlamadas} llamada${totalLlamadas !== 1 ? 's' : ''}</span>
+                        <span class="reporte-tipo-badge reporte-tipo-badge--mensaje"><i class="fas fa-comment-dots"></i> ${totalMensajes} mensaje${totalMensajes !== 1 ? 's' : ''}</span>
+                    </div>
+                </div>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
-                    ${typeof this.renderLlamadaCard === 'function' ? llamadasList.map(ll => this.renderLlamadaCard(ll)).join('') : llamadasList.map(ll => `<div style="padding:12px;background:#f8fafc;border-radius:8px;">${ll.resumen || 'Llamada'}</div>`).join('')}
+                    ${typeof this.renderLlamadaCard === 'function' ? llamadasList.map(ll => this.renderLlamadaCard(ll)).join('') : llamadasList.map(ll => `<div style="padding:12px;background:#f8fafc;border-radius:8px;">${ll.resumen || 'Reporte'}</div>`).join('')}
                 </div>
             </div>
             `
             : `
             <div style="background: white; padding: 40px; border-radius: 12px; margin-top: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); text-align: center; color: #6c757d;">
-                <i class="fas fa-phone" style="font-size: 3rem; color: #667eea; margin-bottom: 16px; opacity: 0.8;"></i>
-                <p style="margin: 0; font-size: 1rem;">No hay llamadas registradas. Use "Agregar llamada" para registrar una.</p>
+                <i class="fas fa-comments" style="font-size: 3rem; color: #667eea; margin-bottom: 16px; opacity: 0.8;"></i>
+                <p style="margin: 0; font-size: 1rem;">No hay reportes registrados. Use «Agregar llamada» o «Agregar mensaje».</p>
             </div>
             `;
 
         container.innerHTML = `
             <div class="section-header">
-                <h2><i class="fas fa-phone-alt"></i> Llamadas</h2>
-                <div>
-                    <button class="btn btn-primary" onclick="if(window.internamientoModule.showRegistroLlamadaForm) { window.internamientoModule.showRegistroLlamadaForm(); }">
-                        <i class="fas fa-plus"></i> Agregar llamada
+                <h2><i class="fas fa-comments"></i> Reportes al cliente</h2>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                    <button class="btn btn-primary" onclick="if(window.internamientoModule.showRegistroLlamadaForm) { window.internamientoModule.showRegistroLlamadaForm('llamada'); }">
+                        <i class="fas fa-phone-alt"></i> Agregar llamada
                     </button>
-                    <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal('${id}')" style="margin-left: 10px;">
+                    <button class="btn" style="background:#25d366;color:white;border-color:#25d366;" onclick="if(window.internamientoModule.showRegistroLlamadaForm) { window.internamientoModule.showRegistroLlamadaForm('mensaje'); }">
+                        <i class="fas fa-comment-dots"></i> Agregar mensaje
+                    </button>
+                    <button class="btn btn-secondary" onclick="window.internamientoModule.showPanelPrincipal('${id}')">
                         <i class="fas fa-arrow-left"></i> Volver al Panel
                     </button>
                 </div>

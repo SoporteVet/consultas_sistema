@@ -903,14 +903,35 @@ InternamientoModule.prototype.guardarProcedimiento = async function(data, codigo
 // TOGGLE PROCEDIMIENTO (Marcar/Desmarcar)
 // ================================================================
 
-InternamientoModule.prototype.toggleProcedimiento = async function(procedimientoId) {
+InternamientoModule.prototype._refreshVistaProcedimientos = function() {
+    if (this.currentInternamientoView === 'pendientes_global') {
+        if (typeof this.loadPendientesGlobalView === 'function') {
+            this.loadPendientesGlobalView();
+        }
+        return;
+    }
+    this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
+};
+
+InternamientoModule.prototype.toggleProcedimiento = async function(procedimientoId, internamientoIdOverride) {
+    const prevInternamientoId = this.currentInternamientoId;
+    if (internamientoIdOverride) {
+        this.currentInternamientoId = internamientoIdOverride;
+    }
     const internamiento = this.internamientos.get(this.currentInternamientoId);
-    if (!internamiento) return;
+    if (!internamiento) {
+        if (internamientoIdOverride) this.currentInternamientoId = prevInternamientoId;
+        return;
+    }
 
     const procedimiento = internamiento.procedimientos?.[procedimientoId];
-    if (!procedimiento) return;
+    if (!procedimiento) {
+        if (internamientoIdOverride) this.currentInternamientoId = prevInternamientoId;
+        return;
+    }
 
     if (procedimiento.estado === 'completado') {
+        if (internamientoIdOverride) this.currentInternamientoId = prevInternamientoId;
         return;
     }
 
@@ -921,7 +942,8 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
         { confirmText: 'Sí, marcar completado', cancelText: 'Cancelar', icon: 'fa-check-circle', iconColor: '#27ae60' }
     );
     if (!confirmar) {
-        this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
+        if (internamientoIdOverride) this.currentInternamientoId = prevInternamientoId;
+        this._refreshVistaProcedimientos();
         return;
     }
 
@@ -931,7 +953,8 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
     {
         const resultadoCodigo = await this.verificarCodigoAsistente('completar_procedimiento');
         if (!resultadoCodigo.valido || resultadoCodigo.cancelado) {
-            this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
+            if (internamientoIdOverride) this.currentInternamientoId = prevInternamientoId;
+            this._refreshVistaProcedimientos();
             return;
         }
         completadoPorId = resultadoCodigo.assistantId;
@@ -995,14 +1018,18 @@ InternamientoModule.prototype.toggleProcedimiento = async function(procedimiento
             }
         });
 
-        this.loadProcedimientosView(this.getPendientesAgregarBloqueado());
+        const idCompletado = this.currentInternamientoId;
+        if (internamientoIdOverride) this.currentInternamientoId = prevInternamientoId;
+        this._refreshVistaProcedimientos();
         if (typeof this.renderProcedimientosRecientes === 'function') {
-            this.renderProcedimientosRecientes(this.internamientos.get(this.currentInternamientoId));
+            const intActualizado = this.internamientos.get(idCompletado);
+            if (intActualizado) this.renderProcedimientosRecientes(intActualizado);
         }
         if (nuevoEstado === 'completado') this.showNotification('Completado por ' + completadoPorNombre, 'success');
     } catch (error) {
         console.error('Error actualizando procedimiento:', error);
         alert('Error: ' + error.message);
+        if (internamientoIdOverride) this.currentInternamientoId = prevInternamientoId;
     }
 };
 
@@ -1179,6 +1206,188 @@ InternamientoModule.prototype.eliminarProcedimiento = async function(procedimien
         console.error('Error eliminando procedimiento:', error);
         this.showAlert('Error al eliminar procedimiento: ' + error.message, 'Error', 'error');
     }
+};
+
+// ================================================================
+// PENDIENTES GLOBALES (TODOS LOS PACIENTES)
+// ================================================================
+
+InternamientoModule.prototype.showPendientesGlobalView = function() {
+    this.showInternamientoView('pendientes_global');
+    setTimeout(() => this.loadPendientesGlobalView(), 100);
+};
+
+InternamientoModule.prototype._resolverInternamientoMapKey = function(internamientoId) {
+    if (!internamientoId) return null;
+    if (this.internamientos.has(internamientoId)) return internamientoId;
+    for (const [mapKey, int] of this.internamientos.entries()) {
+        if (mapKey === internamientoId || int.metadata?.internamientoId === internamientoId) {
+            return mapKey;
+        }
+    }
+    return null;
+};
+
+InternamientoModule.prototype._irAPacientePendientes = function(internamientoId) {
+    const id = this._resolverInternamientoMapKey(internamientoId);
+    if (!id || !this.internamientos.has(id)) {
+        this.showAlert('No se encontró el expediente del paciente.', 'Paciente no encontrado', 'warning');
+        return;
+    }
+    clearInterval(this._pendientesGlobalRefreshTimer);
+    this.currentInternamientoId = id;
+    this.showProcedimientosView();
+};
+
+InternamientoModule.prototype._clasificarPendienteGlobal = function(proc) {
+    const ahora = Date.now();
+    if (proc.prioridad === 'alta') return 'urgentes';
+    if (proc.recordatorioActivo && proc.recordatorioMs) {
+        return proc.recordatorioMs <= ahora ? 'urgentes' : 'recordatorio';
+    }
+    return 'otros';
+};
+
+InternamientoModule.prototype._renderPendienteGlobalCard = function(item) {
+    const { internamiento, internamientoId, proc } = item;
+    const nombre = (internamiento.referencias?.nombreMascota || 'Paciente').replace(/</g, '&lt;');
+    const expediente = (internamiento.metadata?.expedienteNumero || internamiento.referencias?.expediente || '').replace(/</g, '&lt;');
+    const desc = (proc.descripcion || '').replace(/</g, '&lt;');
+    const tipoPendiente = this.traducirTipoPendiente(proc.tipoPendiente || 'procedimiento');
+    const idSafe = (internamientoId || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const procIdSafe = (proc.procedimientoId || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const clasificacion = this._clasificarPendienteGlobal(proc);
+    const urgenciaClass = clasificacion === 'urgentes' ? 'vencido' : (clasificacion === 'recordatorio' ? 'proximo' : 'programado');
+    const badgeRecordatorio = this.renderBadgeRecordatorioPendiente(proc);
+
+    return `
+        <div class="med-pendientes-card med-pendientes-card-${urgenciaClass}">
+            ${proc.prioridad === 'alta' ? '<div class="med-pendientes-card-badge">Urgente</div>' : ''}
+            <div class="med-pendientes-card-paciente">${nombre}</div>
+            ${expediente ? `<div class="med-pendientes-card-exp">${expediente}</div>` : ''}
+            <div class="med-pendientes-card-med">
+                <i class="fas fa-clipboard-list"></i>
+                <span>${desc}</span>
+            </div>
+            <div class="med-pendientes-card-dosis">
+                <span style="background:${tipoPendiente.bg};color:${tipoPendiente.color};font-size:0.75rem;font-weight:600;padding:2px 8px;border-radius:20px;">
+                    <i class="fas ${tipoPendiente.icon}"></i> ${tipoPendiente.label}
+                </span>
+                ${proc.asignadoANombre ? ` · Asignado: ${(proc.asignadoANombre || '').replace(/</g, '&lt;')}` : ''}
+            </div>
+            ${badgeRecordatorio ? `<div style="margin-top:4px;">${badgeRecordatorio}</div>` : ''}
+            <div style="display:flex;gap:8px;align-items:center;margin-top:8px;">
+                <input type="checkbox"
+                       class="procedimiento-checkbox"
+                       onchange="window.internamientoModule.toggleProcedimiento('${procIdSafe}', '${idSafe}')"
+                       title="Marcar como completado"
+                       style="width:18px;height:18px;cursor:pointer;">
+                <span style="font-size:0.78rem;color:#64748b;">Completar</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-success med-pendientes-card-btn" onclick="window.internamientoModule._irAPacientePendientes('${idSafe}')">
+                <i class="fas fa-arrow-right"></i> Ver pendientes del paciente
+            </button>
+        </div>`;
+};
+
+InternamientoModule.prototype.loadPendientesGlobalView = function() {
+    const container = document.getElementById('internamiento-pendientes_global');
+    if (!container) return;
+
+    const items = [];
+    this.internamientos.forEach((internamiento, mapKey) => {
+        if (['egresado', 'alta', 'defuncion'].includes(internamiento.estado?.actual)) return;
+        const internamientoId = internamiento.metadata?.internamientoId || mapKey;
+        if (typeof this.esRegistroInternamientoReal === 'function' && !this.esRegistroInternamientoReal(internamientoId)) return;
+
+        Object.values(internamiento.procedimientos || {})
+            .filter(p => p.estado === 'pendiente')
+            .forEach(proc => {
+                items.push({ internamiento, internamientoId: mapKey, proc });
+            });
+    });
+
+    items.sort((a, b) => {
+        const pa = a.proc;
+        const pb = b.proc;
+        const ra = pa.recordatorioActivo && pa.recordatorioMs ? pa.recordatorioMs : Infinity;
+        const rb = pb.recordatorioActivo && pb.recordatorioMs ? pb.recordatorioMs : Infinity;
+        if (pa.prioridad === 'alta' && pb.prioridad !== 'alta') return -1;
+        if (pa.prioridad !== 'alta' && pb.prioridad === 'alta') return 1;
+        if (ra !== rb) return ra - rb;
+        return (pb.fechaCreacion || 0) - (pa.fechaCreacion || 0);
+    });
+
+    const urgentes = items.filter(i => this._clasificarPendienteGlobal(i.proc) === 'urgentes');
+    const recordatorio = items.filter(i => this._clasificarPendienteGlobal(i.proc) === 'recordatorio');
+    const otros = items.filter(i => this._clasificarPendienteGlobal(i.proc) === 'otros');
+
+    const pendientesCobro = items.filter(i => i.proc.tipoPendiente === 'cobro').length;
+    const pendientesProcedimiento = items.length - pendientesCobro;
+
+    const renderColumna = (titulo, colItems, tipo, icono) => `
+        <div class="med-pendientes-col med-pendientes-col-${tipo}">
+            <div class="med-pendientes-col-header">
+                <i class="fas ${icono}"></i>
+                <span>${titulo}</span>
+                <span class="med-pendientes-col-count">${colItems.length}</span>
+            </div>
+            <div class="med-pendientes-col-body">
+                ${colItems.length === 0
+                    ? `<div class="med-pendientes-col-empty"><i class="fas fa-check"></i> Sin registros</div>`
+                    : colItems.map(i => this._renderPendienteGlobalCard(i)).join('')}
+            </div>
+        </div>
+    `;
+
+    container.innerHTML = `
+        <div class="section-header">
+            <h2><i class="fas fa-clipboard-list"></i> Lista de pendientes</h2>
+            <div>
+                <button class="btn btn-secondary" onclick="window.internamientoModule.loadPendientesGlobalView()" style="margin-right:10px;">
+                    <i class="fas fa-sync"></i> Actualizar
+                </button>
+                <button class="btn btn-secondary" onclick="window.internamientoModule.showInternamientoView('lista')">
+                    <i class="fas fa-arrow-left"></i> Volver
+                </button>
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:20px;">
+            <div style="background:#f3e5f5;border:1px solid #ce93d8;border-radius:10px;padding:16px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:700;color:#7e57c2;">${items.length}</div>
+                <div style="font-size:0.9rem;color:#6a1b9a;"><i class="fas fa-clipboard-list"></i> Total pendientes</div>
+            </div>
+            <div style="background:#fff3e0;border:1px solid #ffcc80;border-radius:10px;padding:16px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:700;color:#e65100;">${pendientesCobro}</div>
+                <div style="font-size:0.9rem;color:#bf360c;"><i class="fas fa-dollar-sign"></i> Pendientes de cobro</div>
+            </div>
+            <div style="background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;padding:16px;text-align:center;">
+                <div style="font-size:1.8rem;font-weight:700;color:#1565c0;">${pendientesProcedimiento}</div>
+                <div style="font-size:0.9rem;color:#0d47a1;"><i class="fas fa-tasks"></i> Pendientes de procedimiento</div>
+            </div>
+        </div>
+
+        ${items.length === 0 ? `
+            <div class="empty-state"><i class="fas fa-check-circle" style="color:#2e7d32;"></i><p>No hay pendientes activos en este momento</p></div>
+        ` : `
+            <div class="med-pendientes-columnas">
+                ${renderColumna('Urgentes / vencidos', urgentes, 'vencidos', 'fa-exclamation-circle')}
+                ${renderColumna('Con recordatorio', recordatorio, 'proximos', 'fa-bell')}
+                ${renderColumna('Otros pendientes', otros, 'programados', 'fa-list')}
+            </div>
+        `}
+    `;
+
+    clearInterval(this._pendientesGlobalRefreshTimer);
+    this._pendientesGlobalRefreshTimer = setInterval(() => {
+        const c = document.getElementById('internamiento-pendientes_global');
+        if (!c || c.classList.contains('hidden')) {
+            clearInterval(this._pendientesGlobalRefreshTimer);
+            return;
+        }
+        this.loadPendientesGlobalView();
+    }, 60000);
 };
 
 console.log('Módulo de procedimientos cargado');

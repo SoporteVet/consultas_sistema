@@ -636,28 +636,32 @@ window.InternamientoExpedientePDF = (() => {
         const cards = lista.map(l => {
             const com = l.comunicacion || {};
             const sig = l.siguienteLlamada || {};
+            const tipo = (l.tipoComunicacion || com.tipo) === 'mensaje' ? 'mensaje' : 'llamada';
+            const tipoLabel = tipo === 'mensaje' ? 'Mensaje' : 'Llamada';
+            const quienLabel = tipo === 'mensaje' ? 'Quién envió' : 'Quién llamó';
             return `
             <div class="llamada-block">
-                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;flex-wrap:wrap;">
                     <span style="font-weight:600;">${fts(l.fechaHora)}</span>
+                    <span class="badge ${tipo === 'mensaje' ? 'badge-green' : 'badge-blue'}">${tipoLabel}</span>
                     <span class="badge badge-blue">${esc(motivoLabel[com.motivo] || com.motivo)}</span>
-                    ${com.reaccionCliente ? `<span class="badge ${reaccionColor[com.reaccionCliente] || 'badge-grey'}">${esc(reaccionLabel[com.reaccionCliente] || com.reaccionCliente)}</span>` : ''}
+                    ${tipo === 'llamada' && com.reaccionCliente ? `<span class="badge ${reaccionColor[com.reaccionCliente] || 'badge-grey'}">${esc(reaccionLabel[com.reaccionCliente] || com.reaccionCliente)}</span>` : ''}
                 </div>
                 <div class="field-grid cols3" style="margin-bottom:6px;">
-                    <div class="field"><div class="f-label">Quién llamó</div><div class="f-value">${esc(com.quienLlamo)}</div></div>
-                    <div class="field"><div class="f-label">Quién atendió</div><div class="f-value">${esc(com.quienAtendio)}</div></div>
+                    <div class="field"><div class="f-label">${quienLabel}</div><div class="f-value">${esc(com.quienLlamo)}</div></div>
+                    <div class="field"><div class="f-label">Quién atendió / respondió</div><div class="f-value">${esc(com.quienAtendio)}</div></div>
                     <div class="field"><div class="f-label">Registrado por</div><div class="f-value">${esc(l.registradoNombre)}</div></div>
                 </div>
-                <div class="field" style="margin-bottom:6px;"><div class="f-label">Resumen de la llamada</div><div class="f-value">${esc(l.resumen)}</div></div>
-                ${sig.programada ? `<div class="field" style="border-left-color:#66bb6a;"><div class="f-label">Próxima llamada programada</div><div class="f-value">${esc(sig.fecha)} ${esc(sig.hora)} — ${esc(sig.motivo)}</div></div>` : ''}
+                <div class="field" style="margin-bottom:6px;"><div class="f-label">Resumen</div><div class="f-value">${esc(l.resumen)}</div></div>
+                ${sig.programada ? `<div class="field" style="border-left-color:#66bb6a;"><div class="f-label">Próximo contacto programado</div><div class="f-value">${esc(sig.fecha)} ${esc(sig.hora)} — ${esc(sig.motivo)}</div></div>` : ''}
             </div>`;
         }).join('');
 
         return `
         <div class="page">
             <div class="sec-header" style="background: linear-gradient(90deg, #2e7d32, #66bb6a);">
-                <span class="sec-title">📞 LLAMADAS AL CLIENTE</span>
-                <span class="sec-count">${lista.length} llamada(s)</span>
+                <span class="sec-title">📞 REPORTES AL CLIENTE</span>
+                <span class="sec-count">${lista.length} reporte(s)</span>
             </div>
             ${cards}
             <div class="pdf-footer">

@@ -1,13 +1,94 @@
 // ====================================================================
-// MÓDULO DE BITÁCORA DE LLAMADAS AL CLIENTE
+// MÓDULO DE BITÁCORA DE REPORTES AL CLIENTE (LLAMADA / MENSAJE)
 // ====================================================================
-// Registro de comunicación con los propietarios
+
+InternamientoModule.prototype.getTipoComunicacionReporte = function(registro) {
+    const tipo = registro?.tipoComunicacion || registro?.comunicacion?.tipo;
+    return tipo === 'mensaje' ? 'mensaje' : 'llamada';
+};
+
+InternamientoModule.prototype._configLabelsTipoComunicacion = function(tipo) {
+    if (tipo === 'mensaje') {
+        return {
+            tituloFecha: 'Fecha y hora del mensaje',
+            quienRealizo: 'Quién envió el mensaje',
+            quienAtendio: 'Quién recibió / respondió',
+            tituloMotivo: 'Motivo del mensaje',
+            tituloResumen: 'Resumen del mensaje',
+            resumenPlaceholder: 'Describe el contenido del mensaje enviado (WhatsApp, SMS, etc.)...',
+            programarSiguiente: '¿Programar siguiente contacto?',
+            btnGuardar: 'Guardar mensaje',
+            modalTitulo: 'Registrar mensaje al cliente',
+            modalIcon: 'fa-comment-dots',
+            notifOk: 'Mensaje registrado exitosamente',
+            notifCancel: 'Registro de mensaje cancelado',
+            cardBorder: '#25d366',
+            tipoLabel: 'Mensaje',
+            tipoIcon: 'fa-comment-dots',
+            quienRealizoCard: 'Envió',
+            quienAtendioCard: 'Recibió / respondió'
+        };
+    }
+    return {
+        tituloFecha: 'Fecha y hora de la llamada',
+        quienRealizo: 'Quién realizó la llamada',
+        quienAtendio: 'Persona que atendió',
+        tituloMotivo: 'Motivo de la llamada',
+        tituloResumen: 'Resumen de la conversación',
+        resumenPlaceholder: 'Describe brevemente de qué se habló en la llamada...',
+        programarSiguiente: '¿Programar siguiente llamada?',
+        btnGuardar: 'Guardar llamada',
+        modalTitulo: 'Registrar llamada al cliente',
+        modalIcon: 'fa-phone',
+        notifOk: 'Llamada registrada exitosamente',
+        notifCancel: 'Registro de llamada cancelado',
+        cardBorder: '#667eea',
+        tipoLabel: 'Llamada',
+        tipoIcon: 'fa-phone-alt',
+        quienRealizoCard: 'Llamó',
+        quienAtendioCard: 'Atendió'
+    };
+};
+
+InternamientoModule.prototype._aplicarLabelsTipoComunicacionForm = function(tipo) {
+    const cfg = this._configLabelsTipoComunicacion(tipo);
+    const setText = (id, text) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = text;
+    };
+    setText('llamadaSeccionFechaTitulo', cfg.tituloFecha);
+    setText('llamadaLabelQuienRealizo', cfg.quienRealizo);
+    setText('llamadaLabelQuienAtendio', cfg.quienAtendio);
+    setText('llamadaSeccionMotivoTitulo', cfg.tituloMotivo);
+    setText('llamadaSeccionResumenTitulo', cfg.tituloResumen);
+    setText('llamadaLabelProgramarSiguiente', cfg.programarSiguiente);
+    const resumen = document.getElementById('llamadaResumen');
+    if (resumen) resumen.placeholder = cfg.resumenPlaceholder;
+    const btn = document.getElementById('llamadaBtnGuardar');
+    if (btn) btn.innerHTML = `<i class="fas fa-save"></i> ${cfg.btnGuardar}`;
+    document.querySelectorAll('.reporte-tipo-opcion').forEach((btn) => {
+        btn.classList.toggle('reporte-tipo-opcion--activo', btn.dataset.tipo === tipo);
+    });
+    const seccionReaccion = document.getElementById('llamadaSeccionReaccion');
+    const selectReaccion = document.getElementById('llamadaReaccion');
+    if (seccionReaccion) {
+        seccionReaccion.style.display = tipo === 'mensaje' ? 'none' : '';
+    }
+    if (selectReaccion && tipo === 'mensaje') {
+        selectReaccion.value = '';
+    }
+};
+
+InternamientoModule.prototype._getTipoComunicacionForm = function() {
+    const sel = document.querySelector('input[name="llamadaTipoComunicacion"]:checked');
+    return sel?.value === 'mensaje' ? 'mensaje' : 'llamada';
+};
 
 // ================================================================
-// MOSTRAR FORMULARIO DE LLAMADA
+// MOSTRAR FORMULARIO DE REPORTE
 // ================================================================
 
-InternamientoModule.prototype.showRegistroLlamadaForm = async function() {
+InternamientoModule.prototype.showRegistroLlamadaForm = async function(tipoPreseleccionado) {
     if (!this.currentInternamientoId) {
         this.showAlert('No hay internamiento seleccionado', 'Error', 'error');
         return;
@@ -18,13 +99,16 @@ InternamientoModule.prototype.showRegistroLlamadaForm = async function() {
 
     const resultadoCodigo = await this.verificarCodigoAsistente('registrar_llamada');
     if (!resultadoCodigo || !resultadoCodigo.valido || resultadoCodigo.cancelado) {
-        this.showNotification('Registro de llamada cancelado', 'info');
+        const cfg = this._configLabelsTipoComunicacion(tipoPreseleccionado === 'mensaje' ? 'mensaje' : 'llamada');
+        this.showNotification(cfg.notifCancel, 'info');
         return;
     }
     this._llamadaQuienLlamoVerificado = resultadoCodigo.nombre || '';
+    this._llamadaTipoPreseleccionado = tipoPreseleccionado === 'mensaje' ? 'mensaje' : 'llamada';
 
-    const modalContent = this.getLlamadaFormHTML(internamiento);
-    const modal = this.createModal('Registrar Llamada al Cliente', modalContent, 'fa-phone');
+    const modalContent = this.getLlamadaFormHTML(internamiento, null, this._llamadaTipoPreseleccionado);
+    const cfgModal = this._configLabelsTipoComunicacion(this._llamadaTipoPreseleccionado);
+    const modal = this.createModal(cfgModal.modalTitulo, modalContent, cfgModal.modalIcon);
     document.body.appendChild(modal);
 
     setTimeout(() => {
@@ -36,13 +120,16 @@ InternamientoModule.prototype.showRegistroLlamadaForm = async function() {
 // HTML DEL FORMULARIO
 // ================================================================
 
-InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
+InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento, llamadaExistente = null, tipoPreseleccionado = 'llamada') {
     const clienteNombre = this.getNombrePropietario(internamiento);
     const clienteTelefono = this.getTelefonoCliente(internamiento);
+    const tipoInicial = llamadaExistente
+        ? this.getTipoComunicacionReporte(llamadaExistente)
+        : (tipoPreseleccionado === 'mensaje' ? 'mensaje' : 'llamada');
 
     const now = new Date();
-    const fechaActual = now.toISOString().split('T')[0];
-    const horaActual = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    const fechaActual = llamadaExistente?.fechaFormato || now.toISOString().split('T')[0];
+    const horaActual = llamadaExistente?.horaFormato || `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
 
     return `
         <div style="max-height: 80vh; overflow-y: auto; padding: 15px;">
@@ -63,10 +150,27 @@ InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
             </div>
 
             <form id="formLlamada">
+                <!-- Tipo de reporte -->
+                <div class="form-section" style="margin-bottom: 20px;">
+                    <h4 style="color: var(--internamiento-primary); margin-bottom: 12px;">
+                        <i class="fas fa-exchange-alt"></i> Tipo de reporte
+                    </h4>
+                    <div class="reporte-tipo-toggle">
+                        <label class="reporte-tipo-opcion ${tipoInicial === 'llamada' ? 'reporte-tipo-opcion--activo' : ''}" data-tipo="llamada">
+                            <input type="radio" name="llamadaTipoComunicacion" value="llamada" ${tipoInicial === 'llamada' ? 'checked' : ''} style="display:none;">
+                            <i class="fas fa-phone-alt"></i> Llamada
+                        </label>
+                        <label class="reporte-tipo-opcion ${tipoInicial === 'mensaje' ? 'reporte-tipo-opcion--activo' : ''}" data-tipo="mensaje">
+                            <input type="radio" name="llamadaTipoComunicacion" value="mensaje" ${tipoInicial === 'mensaje' ? 'checked' : ''} style="display:none;">
+                            <i class="fas fa-comment-dots"></i> Mensaje
+                        </label>
+                    </div>
+                </div>
+
                 <!-- Fecha y Hora -->
                 <div class="form-section" style="margin-bottom: 20px;">
                     <h4 style="color: var(--internamiento-primary); margin-bottom: 15px;">
-                        <i class="fas fa-clock"></i> Fecha y Hora de la Llamada
+                        <i class="fas fa-clock"></i> <span id="llamadaSeccionFechaTitulo">Fecha y hora de la llamada</span>
                     </h4>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                         <div class="form-group">
@@ -88,7 +192,7 @@ InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
                         <i class="fas fa-user-md"></i> Datos de la Comunicación
                     </h4>
                     <div class="form-group">
-                        <label>Quién realizó la llamada *</label>
+                        <label id="llamadaLabelQuienRealizo">Quién realizó la llamada *</label>
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <input type="text" id="llamadaQuienLlamo" required readonly placeholder="Se mostrará al verificar el código" 
                                    style="width: 100%; padding: 10px; border-radius: 6px; background: #e9ecef; cursor: default;">
@@ -98,7 +202,7 @@ InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
                         </small>
                     </div>
                     <div class="form-group" style="margin-top: 15px;">
-                        <label>Persona que atendió *</label>
+                        <label id="llamadaLabelQuienAtendio">Persona que atendió *</label>
                         <input type="text" id="llamadaQuienAtendio" required placeholder="Nombre del propietario o familiar" 
                                style="width: 100%; padding: 10px; border-radius: 6px;">
                         <small style="color: #6c757d; display: block; margin-top: 5px;">
@@ -107,10 +211,10 @@ InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
                     </div>
                 </div>
 
-                <!-- Motivo de la llamada -->
+                <!-- Motivo -->
                 <div class="form-section" style="margin-bottom: 20px;">
                     <h4 style="color: var(--internamiento-primary); margin-bottom: 15px;">
-                        <i class="fas fa-bullseye"></i> Motivo de la Llamada
+                        <i class="fas fa-bullseye"></i> <span id="llamadaSeccionMotivoTitulo">Motivo de la llamada</span>
                     </h4>
                     <div class="form-group">
                         <select id="llamadaMotivo" required style="width: 100%; padding: 10px; border-radius: 6px; margin-bottom: 10px;">
@@ -126,10 +230,10 @@ InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
                     </div>
                 </div>
 
-                <!-- Resumen de la conversación -->
+                <!-- Resumen -->
                 <div class="form-section" style="margin-bottom: 20px;">
                     <h4 style="color: var(--internamiento-primary); margin-bottom: 15px;">
-                        <i class="fas fa-comments"></i> Resumen de la Conversación
+                        <i class="fas fa-comments"></i> <span id="llamadaSeccionResumenTitulo">Resumen de la conversación</span>
                     </h4>
                     <div class="form-group">
                         <textarea id="llamadaResumen" rows="5" required 
@@ -141,8 +245,8 @@ InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
                     </div>
                 </div>
 
-                <!-- Reacción del cliente -->
-                <div class="form-section" style="margin-bottom: 20px;">
+                <!-- Reacción del cliente (solo llamadas) -->
+                <div class="form-section" id="llamadaSeccionReaccion" style="margin-bottom: 20px;${tipoInicial === 'mensaje' ? ' display:none;' : ''}">
                     <h4 style="color: var(--internamiento-primary); margin-bottom: 15px;">
                         <i class="fas fa-smile"></i> Reacción del Cliente
                     </h4>
@@ -167,7 +271,7 @@ InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
                     <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
                         <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px;">
                             <input type="checkbox" id="llamadaProgramarSiguiente" style="width: 18px; height: 18px;">
-                            <span style="font-weight: 600;">¿Programar siguiente llamada?</span>
+                            <span id="llamadaLabelProgramarSiguiente" style="font-weight: 600;">¿Programar siguiente llamada?</span>
                         </label>
                         <div id="siguienteLlamadaInputs" style="display: none;">
                             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 10px;">
@@ -196,8 +300,8 @@ InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
                     <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">
                         <i class="fas fa-times"></i> Cancelar
                     </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> Guardar Llamada
+                    <button type="submit" class="btn btn-primary" id="llamadaBtnGuardar">
+                        <i class="fas fa-save"></i> Guardar
                     </button>
                 </div>
             </form>
@@ -209,24 +313,34 @@ InternamientoModule.prototype.getLlamadaFormHTML = function(internamiento) {
 // SETUP DEL FORMULARIO
 // ================================================================
 
-InternamientoModule.prototype.setupLlamadaForm = function(internamiento) {
-    // Quién realizó la llamada: solo lectura, se llena con el nombre del código verificado
+InternamientoModule.prototype.setupLlamadaForm = function(internamiento, llamadaExistente) {
     const quienLlamoInput = document.getElementById('llamadaQuienLlamo');
     if (quienLlamoInput) {
-        quienLlamoInput.value = this._llamadaQuienLlamoVerificado || '';
+        if (!quienLlamoInput.value.trim()) {
+            quienLlamoInput.value = this._llamadaQuienLlamoVerificado || '';
+        }
         quienLlamoInput.readOnly = true;
     }
 
-    // Pre-llenar quién atendió (propietario)
     const quienAtendioInput = document.getElementById('llamadaQuienAtendio');
-    if (quienAtendioInput) {
+    if (quienAtendioInput && !llamadaExistente) {
         const propietario = this.getNombrePropietario(internamiento);
         if (propietario !== 'No especificado') {
             quienAtendioInput.value = `${propietario} (propietario)`;
         }
     }
 
-    // Toggle de programar siguiente llamada
+    const tipoInicial = llamadaExistente
+        ? this.getTipoComunicacionReporte(llamadaExistente)
+        : (this._llamadaTipoPreseleccionado || 'llamada');
+    this._aplicarLabelsTipoComunicacionForm(tipoInicial);
+
+    document.querySelectorAll('input[name="llamadaTipoComunicacion"]').forEach((radio) => {
+        radio.addEventListener('change', () => {
+            this._aplicarLabelsTipoComunicacionForm(this._getTipoComunicacionForm());
+        });
+    });
+
     const checkboxProgramar = document.getElementById('llamadaProgramarSiguiente');
     const inputsSiguiente = document.getElementById('siguienteLlamadaInputs');
     
@@ -236,7 +350,6 @@ InternamientoModule.prototype.setupLlamadaForm = function(internamiento) {
         });
     }
 
-    // Submit del formulario
     const form = document.getElementById('formLlamada');
     if (form) {
         form.onsubmit = (e) => this.handleLlamadaSubmit(e);
@@ -252,18 +365,22 @@ InternamientoModule.prototype.handleLlamadaSubmit = async function(e) {
 
     const quienLlamo = document.getElementById('llamadaQuienLlamo')?.value.trim() || '';
     if (!quienLlamo) {
-        this.showAlert('Debe verificar su código de personal médico antes de registrar la llamada. Cierre el formulario y pulse de nuevo "Agregar llamada".', 'Verificación requerida', 'warning');
+        this.showAlert('Debe verificar su código de personal médico antes de registrar el reporte. Cierre el formulario y pulse de nuevo el botón de agregar.', 'Verificación requerida', 'warning');
         return;
     }
 
+    const tipoComunicacion = this._getTipoComunicacionForm();
+    const cfg = this._configLabelsTipoComunicacion(tipoComunicacion);
+
     const llamadaData = {
+        tipoComunicacion,
         fecha: document.getElementById('llamadaFecha')?.value,
         hora: document.getElementById('llamadaHora')?.value,
         quienLlamo: quienLlamo,
         quienAtendio: document.getElementById('llamadaQuienAtendio')?.value.trim() || '',
         motivo: document.getElementById('llamadaMotivo')?.value,
         resumen: document.getElementById('llamadaResumen')?.value.trim() || '',
-        reaccion: document.getElementById('llamadaReaccion')?.value || '',
+        reaccion: tipoComunicacion === 'mensaje' ? '' : (document.getElementById('llamadaReaccion')?.value || ''),
         programarSiguiente: document.getElementById('llamadaProgramarSiguiente')?.checked || false,
         siguienteFecha: document.getElementById('llamadaSiguienteFecha')?.value || '',
         siguienteHora: document.getElementById('llamadaSiguienteHora')?.value || '',
@@ -272,7 +389,7 @@ InternamientoModule.prototype.handleLlamadaSubmit = async function(e) {
 
     try {
         await this.guardarLlamada(llamadaData);
-        this.showNotification('Llamada registrada exitosamente', 'success');
+        this.showNotification(cfg.notifOk, 'success');
         document.querySelector('.modal-overlay')?.remove();
         this.showInternamientoView('llamadas');
         if (typeof this.loadLlamadasView === 'function') this.loadLlamadasView();
@@ -301,14 +418,16 @@ InternamientoModule.prototype.guardarLlamada = async function(data) {
 
     const llamadaData = {
         llamadaId: llamadaId,
+        tipoComunicacion: data.tipoComunicacion === 'mensaje' ? 'mensaje' : 'llamada',
         fechaHora: fechaHoraLlamada,
         fechaFormato: data.fecha,
         horaFormato: data.hora,
         comunicacion: {
+            tipo: data.tipoComunicacion === 'mensaje' ? 'mensaje' : 'llamada',
             quienLlamo: data.quienLlamo,
             quienAtendio: data.quienAtendio,
             motivo: data.motivo,
-            reaccionCliente: data.reaccion
+            reaccionCliente: data.tipoComunicacion === 'mensaje' ? '' : data.reaccion
         },
         resumen: data.resumen,
         siguienteLlamada: data.programarSiguiente ? {
@@ -352,10 +471,38 @@ InternamientoModule.prototype.guardarLlamada = async function(data) {
         accion: 'registrar_llamada',
         detalles: {
             llamadaId: llamadaId,
+            tipoComunicacion: data.tipoComunicacion === 'mensaje' ? 'mensaje' : 'llamada',
             motivo: data.motivo,
             quienAtendio: data.quienAtendio
         }
     });
+    this._refreshTarjetasInternamientoLista();
+};
+
+InternamientoModule.prototype._fechaYmdLocal = function(date) {
+    const d = date instanceof Date ? date : new Date(date || Date.now());
+    if (isNaN(d.getTime())) return '';
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+InternamientoModule.prototype._fechaYmdFromLlamada = function(llamada) {
+    if (llamada?.fechaFormato) return llamada.fechaFormato;
+    if (llamada?.fechaHora) return this._fechaYmdLocal(new Date(llamada.fechaHora));
+    return '';
+};
+
+InternamientoModule.prototype.tieneReporteLlamadaHoy = function(internamiento) {
+    if (!internamiento) return false;
+    const hoy = this._fechaYmdLocal(new Date());
+    const raw = internamiento.llamadasCliente;
+    const obj = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+    return Object.values(obj).some((ll) => this._fechaYmdFromLlamada(ll) === hoy);
+};
+
+InternamientoModule.prototype._refreshTarjetasInternamientoLista = function() {
+    if (typeof this.refreshInternamientosList === 'function') {
+        this.refreshInternamientosList();
+    }
 };
 
 // ================================================================
@@ -387,8 +534,8 @@ InternamientoModule.prototype.renderLlamadasEnEvolucion = function(internamiento
     if (llamadas.length === 0) {
         return `
             <div class="empty-state">
-                <i class="fas fa-phone"></i>
-                <p>No hay llamadas registradas</p>
+                <i class="fas fa-comments"></i>
+                <p>No hay reportes registrados</p>
             </div>
         `;
     }
@@ -401,6 +548,8 @@ InternamientoModule.prototype.renderLlamadasEnEvolucion = function(internamiento
 };
 
 InternamientoModule.prototype.renderLlamadaCard = function(llamada) {
+    const tipo = this.getTipoComunicacionReporte(llamada);
+    const cfg = this._configLabelsTipoComunicacion(tipo);
     const fecha = new Date(llamada.fechaHora).toLocaleDateString('es-ES', {
         weekday: 'long',
         year: 'numeric',
@@ -416,7 +565,7 @@ InternamientoModule.prototype.renderLlamadaCard = function(llamada) {
         'autorizacion': '<i class="fas fa-check-circle"></i> Autorización',
         'alta': '<i class="fas fa-home"></i> Alta médica',
         'seguimiento': '<i class="fas fa-search"></i> Seguimiento',
-        'otro': '<i class="fas fa-phone"></i> Otro'
+        'otro': `<i class="fas ${cfg.tipoIcon}"></i> Otro`
     };
 
     const reaccionIcons = {
@@ -429,17 +578,22 @@ InternamientoModule.prototype.renderLlamadaCard = function(llamada) {
     };
 
     return `
-        <div style="border-left: 4px solid #667eea; background: #f8f9fa; padding: 20px; margin-bottom: 20px; border-radius: 8px;">
+        <div style="border-left: 4px solid ${cfg.cardBorder}; background: #f8f9fa; padding: 20px; margin-bottom: 20px; border-radius: 8px;">
             <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
                 <div>
+                    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px;">
+                        <span class="reporte-tipo-badge reporte-tipo-badge--${tipo}">
+                            <i class="fas ${cfg.tipoIcon}"></i> ${cfg.tipoLabel}
+                        </span>
+                    </div>
                     <div style="font-size: 1.1rem; font-weight: 600; color: var(--internamiento-primary); margin-bottom: 5px;">
-                        ${motivoLabels[llamada.comunicacion?.motivo] || '<i class="fas fa-phone"></i> Llamada'}
+                        ${motivoLabels[llamada.comunicacion?.motivo] || `<i class="fas ${cfg.tipoIcon}"></i> ${cfg.tipoLabel}`}
                     </div>
                     <div style="font-size: 0.85rem; color: #6c757d;">
                         ${fecha} - ${hora}
                     </div>
                 </div>
-                ${llamada.comunicacion?.reaccionCliente ? `
+                ${tipo === 'llamada' && llamada.comunicacion?.reaccionCliente ? `
                     <div style="font-size: 1.5rem;">
                         ${reaccionIcons[llamada.comunicacion.reaccionCliente] || ''}
                     </div>
@@ -448,11 +602,11 @@ InternamientoModule.prototype.renderLlamadaCard = function(llamada) {
 
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; font-size: 0.9rem;">
                 <div>
-                    <strong style="color: #6c757d;">Llamó:</strong>
+                    <strong style="color: #6c757d;">${cfg.quienRealizoCard}:</strong>
                     <div>${llamada.comunicacion?.quienLlamo || 'N/A'}</div>
                 </div>
                 <div>
-                    <strong style="color: #6c757d;">Atendió:</strong>
+                    <strong style="color: #6c757d;">${cfg.quienAtendioCard}:</strong>
                     <div>${llamada.comunicacion?.quienAtendio || 'N/A'}</div>
                 </div>
             </div>
@@ -468,7 +622,7 @@ InternamientoModule.prototype.renderLlamadaCard = function(llamada) {
 
             ${llamada.siguienteLlamada?.programada ? `
                 <div style="background: #fff3cd; padding: 12px; border-radius: 6px; border-left: 3px solid #f39c12;">
-                    <strong style="color: #856404;"><i class="fas fa-calendar-check"></i> Siguiente llamada programada:</strong>
+                    <strong style="color: #856404;"><i class="fas fa-calendar-check"></i> Próximo contacto programado:</strong>
                     <div style="margin-top: 5px; color: #856404;">
                         ${llamada.siguienteLlamada.fecha ? new Date(llamada.siguienteLlamada.fecha).toLocaleDateString('es-ES') : ''} 
                         ${llamada.siguienteLlamada.hora || ''}

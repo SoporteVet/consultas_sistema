@@ -386,7 +386,7 @@ InternamientoModule.prototype.getCodigoAsistenteFormHTML = function(accion) {
         'reticulocitos_transfusion': 'registrar reticulocitos y dar fe de que leyó o fue informado del resultado de laboratorio',
         'agregar_cirugia': 'agregar esta cirugía',
         'editar_cirugia': 'editar esta cirugía',
-        'registrar_llamada': 'registrar esta llamada',
+        'registrar_llamada': 'registrar este reporte al cliente',
         'agregar_dia_rer': 'agregar este día de RER',
         'editar_dia_rer': 'editar este día de RER',
         'agregar_dia_alimentacion_asistida': 'agregar este día de Alimentación asistida',

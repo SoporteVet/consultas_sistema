@@ -70,7 +70,7 @@ InternamientoModule.prototype.loadEvolucionView = function() {
                 <i class="fas fa-notes-medical"></i> Notas Médicas
             </button>
             <button class="tab-btn" onclick="window.internamientoModule.showTab('llamadas')">
-                <i class="fas fa-phone"></i> Llamadas
+                <i class="fas fa-comments"></i> Reportes
             </button>
         </div>
 
