@@ -1055,6 +1055,10 @@ class InternamientoModule {
                     nombreVisitante: v.nombreVisitante || '',
                     parentesco: v.parentesco || '',
                     motivo: v.motivo || '',
+                    tipoSalida: v.tipoSalida || '',
+                    tieneSalida: !!v.tieneSalida,
+                    razonSalida: v.razonSalida || '',
+                    atendidoPor: v.atendidoPor || '',
                     estado: v.estado || 'En espera',
                     fechaHora: v.fechaHora || '',
                     timestamp: v.timestamp || 0,
@@ -1155,9 +1159,10 @@ class InternamientoModule {
                 const tipoSalidaVisita = typeof this.resolveTipoSalidaVisita === 'function'
                     ? this.resolveTipoSalidaVisita(visita)
                     : (visita.tipoSalida || (visita.tieneSalida ? 'salida' : ''));
-                const labelSalidaVisita = tipoSalidaVisita && typeof this.getTipoSalidaVisitaLabel === 'function'
-                    ? this.getTipoSalidaVisitaLabel(tipoSalidaVisita)
-                    : (visita.razonSalida || '');
+                const labelTipoVisita = typeof this.getVisitaTipoDisplayLabel === 'function'
+                    ? this.getVisitaTipoDisplayLabel(visita)
+                    : (tipoSalidaVisita ? (visita.razonSalida || 'Salida') : 'Visita normal');
+                const esSalidaVisita = !!tipoSalidaVisita;
                 
                 return `
                     <div class="visita-card" data-estado="${v(visita.estado)}">
@@ -1169,10 +1174,16 @@ class InternamientoModule {
                                     ${visita.nombrePropietario ? `<span class="visita-card-propietario-nombre">${v(visita.nombrePropietario)}</span>` : ''}
                                 </div>
                             </div>
-                            <span class="visita-estado-badge ${estadoClass}">
-                                <i class="fas fa-${estadoIcono}"></i>
-                                ${v(visita.estado)}
-                            </span>
+                            <div class="visita-card-top-badges">
+                                <span class="visita-tipo-badge ${esSalidaVisita ? 'visita-tipo-salida' : 'visita-tipo-normal'}">
+                                    <i class="fas fa-${esSalidaVisita ? 'sign-out-alt' : 'user-friends'}"></i>
+                                    ${v(labelTipoVisita)}
+                                </span>
+                                <span class="visita-estado-badge ${estadoClass}">
+                                    <i class="fas fa-${estadoIcono}"></i>
+                                    ${v(visita.estado)}
+                                </span>
+                            </div>
                         </div>
 
                         <div class="visita-card-meta-row">
@@ -1181,6 +1192,14 @@ class InternamientoModule {
                                 <span title="Hora de visita">${horaStr}</span>
                             </div>
                             ${horaEstadoInfo}
+                        </div>
+
+                        <div class="visita-card-tipo-strip ${esSalidaVisita ? 'visita-card-tipo-salida' : 'visita-card-tipo-normal'}">
+                            <span class="visita-card-tipo-strip-label">Tipo de visita</span>
+                            <span class="visita-card-tipo-strip-value">
+                                <i class="fas fa-${esSalidaVisita ? 'sign-out-alt' : 'user-friends'}"></i>
+                                ${v(labelTipoVisita)}
+                            </span>
                         </div>
 
                         <div class="visita-card-body">
@@ -1198,6 +1217,13 @@ class InternamientoModule {
                                 </div>
                                 <div class="visita-card-info-value">${v(visita.parentesco)}</div>
                             </div>
+                            <div class="visita-card-info-item">
+                                <div class="visita-card-info-label">
+                                    <i class="fas fa-user-md"></i>
+                                    Atendió la visita
+                                </div>
+                                <div class="visita-card-info-value">${v(visita.atendidoPor || 'Sin asignar')}</div>
+                            </div>
                         </div>
 
                         <div class="visita-card-motivo">
@@ -1207,15 +1233,6 @@ class InternamientoModule {
                             </div>
                             <div class="visita-card-motivo-text">${v(visita.motivo)}</div>
                         </div>
-                        ${tipoSalidaVisita ? `
-                        <div class="visita-card-motivo visita-card-salida">
-                            <div class="visita-card-motivo-label">
-                                <i class="fas fa-sign-out-alt"></i>
-                                Salida programada
-                            </div>
-                            <div class="visita-card-motivo-text">${v(labelSalidaVisita)}</div>
-                        </div>
-                        ` : ''}
 
                         <div class="visita-card-footer">
                             <div class="visita-card-footer-estado">
@@ -1526,6 +1543,7 @@ class InternamientoModule {
                         </select>
                     </div>
                     ${typeof this._getVisitaSalidaFieldsHTML === 'function' ? this._getVisitaSalidaFieldsHTML({}) : ''}
+                    ${typeof this._getVisitaAtendidoPorFieldsHTML === 'function' ? this._getVisitaAtendidoPorFieldsHTML({}) : ''}
                     <div class="form-group" style="margin-bottom: 16px;">
                         <label style="display: block; margin-bottom: 10px; font-weight: 600; color: #3949ab;">
                             <i class="fas fa-clock"></i> Fecha y hora de la visita *
@@ -1577,6 +1595,7 @@ class InternamientoModule {
                         tipoSalida: datos.tipoSalida,
                         tieneSalida: datos.tieneSalida,
                         razonSalida: datos.razonSalida,
+                        atendidoPor: datos.atendidoPor,
                         fechaHoraMs: datos.fechaHoraMs
                     });
                     return;
@@ -1652,6 +1671,7 @@ class InternamientoModule {
                     ? this.getTipoSalidaVisitaLabel(datos.tipoSalida)
                     : (datos.razonSalida || ''))
                 : '',
+            atendidoPor: datos.atendidoPor || '',
             estado: 'En espera',
             fechaHora: new Date(fechaVisitaMs).toISOString(),
             timestamp: fechaVisitaMs,
@@ -8951,7 +8971,7 @@ class InternamientoModule {
         const lastDay = hasDias ? diasList[diasList.length - 1] : null;
         const lastDayTomas = lastDay ? Object.keys(lastDay[1].tomas || {}).length : 0;
         const lastDayComplete = lastDayTomas >= MIN_TOMAS_POR_DIA;
-        const canAddNewDay = !hasDias || lastDayComplete;
+        const canAgendaDiaSiguiente = hasDias;
 
         const tabsHTML = hasDias
             ? `
@@ -8959,7 +8979,8 @@ class InternamientoModule {
                 ${diasList.map(([diaKey, data], idx) => {
                     const numTomas = Object.keys(data.tomas || {}).length;
                     const completo = numTomas >= MIN_TOMAS_POR_DIA;
-                    const label = `Día ${data.numero != null ? data.numero : idx + 1} (${numTomas}/${MIN_TOMAS_POR_DIA})`;
+                    const esAgenda = !!data.esAgenda;
+                    const label = `Día ${data.numero != null ? data.numero : idx + 1} (${numTomas}/${MIN_TOMAS_POR_DIA})${esAgenda ? ' · Agenda' : ''}`;
                     return `
                     <button class="tab-btn rer-tab ${idx === 0 ? 'active' : ''}" data-rer-dia="${diaKey}" onclick="window.internamientoModule.showTabRer('${diaKey}')" title="${completo ? 'Día completo' : `Faltan ${MIN_TOMAS_POR_DIA - numTomas} tomas`}">
                         ${label}${completo ? ' âœ“' : ''}
@@ -9010,6 +9031,7 @@ class InternamientoModule {
                                 ? `<div style="display: flex; flex-direction: column; gap: 10px;">${tomasEntries.map(([tomaId, t]) => {
                                     const horaLabels = { '8am': '8:00 AM', '12md': '12:00 MD', '4pm': '4:00 PM', '8pm': '8:00 PM', '12mn': '12:00 MN' };
                                     const hora = (t.hora ? (horaLabels[t.hora] || t.hora) : '—').replace(/</g, '&lt;');
+                                    const esAgendaToma = !!t.esAgenda;
                                     const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '—';
                                     const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '—';
                                     const registradoPor = (t.registradoPorNombre || '').replace(/</g, '&lt;');
@@ -9023,7 +9045,10 @@ class InternamientoModule {
                                     return `
                                     <div style="border: 1px solid #e2e8f0; border-left: 4px solid var(--internamiento-primary); border-radius: 8px; padding: 12px; background: #f8fafc; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
                                         <div style="flex: 1; min-width: 220px;">
-                                            <div style="font-weight: 600; color: #334155; margin-bottom: 8px;"><i class="fas fa-clock"></i> ${hora}</div>
+                                            <div style="font-weight: 600; color: #334155; margin-bottom: 8px;">
+                                                <i class="fas fa-clock"></i> ${hora}
+                                                ${esAgendaToma ? '<span style="margin-left: 8px; font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #7c3aed; background: #ede9fe; padding: 2px 8px; border-radius: 999px;">Agenda</span>' : ''}
+                                            </div>
                                             <div style="font-size: 0.88rem; color: #475569; padding: 8px 10px; background: #fff; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: ${cantApl != null ? '8px' : '0'};">
                                                 <div style="font-weight: 600; color: #64748b; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 4px;">Indicado</div>
                                                 <div>Cantidad por toma: ${cant} · Agua: ${agua}</div>
@@ -9064,16 +9089,14 @@ class InternamientoModule {
             </div>
             `;
 
-        const agregarDiaBtnDisabled = !canAddNewDay;
-        const agregarDiaTitle = canAddNewDay ? 'Agregar un nuevo día' : 'Complete el día actual con al menos 5 tomas para poder agregar un nuevo día';
-        const agregarDiaBtnHTML = agregarDiaBtnDisabled
-            ? `<button class="btn btn-primary" disabled title="${agregarDiaTitle}" style="background: var(--internamiento-primary); border-color: var(--internamiento-primary); opacity: 0.6; cursor: not-allowed;">
-                <i class="fas fa-plus"></i> Agregar día
-                ${hasDias && !lastDayComplete ? ` <span style="font-size: 0.85rem; opacity: 0.9;">(mín. 5 tomas en Día ${lastDay[1].numero})</span>` : ''}
-            </button>`
-            : `<button class="btn btn-primary" onclick="window.internamientoModule.agregarDiaRer()" title="${agregarDiaTitle}" style="background: var(--internamiento-primary); border-color: var(--internamiento-primary);">
+        const agregarDiaBtnHTML = `<button class="btn btn-primary" onclick="window.internamientoModule.agregarDiaRer()" title="Agregar un nuevo día" style="background: var(--internamiento-primary); border-color: var(--internamiento-primary);">
                 <i class="fas fa-plus"></i> Agregar día
             </button>`;
+        const agendaDiaSiguienteBtnHTML = canAgendaDiaSiguiente
+            ? `<button class="btn btn-secondary" onclick="window.internamientoModule.agendaTomasDiaSiguienteRer()" title="Preescribir tomas para el día siguiente (agenda) sin mínimo de tomas">
+                <i class="fas fa-calendar-plus"></i> Agenda día siguiente
+            </button>`
+            : '';
 
         let ultimaTomaCantidad = null;
         if (hasDias && diasList.length > 0) {
@@ -9119,6 +9142,7 @@ class InternamientoModule {
                 <h2><i class="fas fa-file-medical-alt"></i> RER</h2>
                 <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
                     ${agregarDiaBtnHTML}
+                    ${agendaDiaSiguienteBtnHTML}
                     <button class="btn btn-secondary" onclick="window.internamientoModule.showControlesAdicionalesView()">
                         <i class="fas fa-arrow-left"></i> Volver
                     </button>
@@ -9154,20 +9178,6 @@ class InternamientoModule {
         const rer = internamiento?.rer && typeof internamiento.rer === 'object' ? { ...internamiento.rer } : {};
         const dias = rer.dias && typeof rer.dias === 'object' ? { ...rer.dias } : {};
         const diasList = Object.entries(dias).sort((a, b) => (a[1].numero || 0) - (b[1].numero || 0));
-        const MIN_TOMAS_POR_DIA = 5;
-
-        if (diasList.length > 0) {
-            const lastDay = diasList[diasList.length - 1];
-            const lastDayTomas = Object.keys(lastDay[1].tomas || {}).length;
-            if (lastDayTomas < MIN_TOMAS_POR_DIA) {
-                this.showAlert(
-                    `El día actual (Día ${lastDay[1].numero}) debe tener al menos ${MIN_TOMAS_POR_DIA} tomas para poder agregar un nuevo día. Actualmente tiene ${lastDayTomas}.`,
-                    'Día incompleto',
-                    'warning'
-                );
-                return;
-            }
-        }
 
         const esPrimerDia = diasList.length === 0;
         const modalContent = this.getAgregarDiaRerFormHTML(esPrimerDia);
@@ -9725,6 +9735,190 @@ class InternamientoModule {
             this.showNotification('Toma registrada', 'success');
         } catch (err) {
             console.error('Error guardando toma RER:', err);
+            this.showAlert('Error al guardar: ' + (err.message || err), 'Error', 'error');
+        }
+    }
+
+    _getDiaSiguienteRerInfo() {
+        const id = this.currentInternamientoId;
+        const internamiento = this.internamientos.get(id);
+        const rer = internamiento?.rer && typeof internamiento.rer === 'object' ? { ...internamiento.rer } : {};
+        const dias = rer.dias && typeof rer.dias === 'object' ? { ...rer.dias } : {};
+        const diasList = Object.entries(dias).sort((a, b) => (a[1].numero || 0) - (b[1].numero || 0));
+        if (diasList.length === 0) {
+            return { ok: false, message: 'Agregue el primer día de RER antes de programar la agenda del día siguiente.' };
+        }
+        const lastEntry = diasList[diasList.length - 1];
+        const lastNum = lastEntry[1].numero || diasList.length;
+        const nextNum = lastNum + 1;
+        const existingNext = diasList.find(([, d]) => (d.numero || 0) === nextNum);
+        if (existingNext) {
+            return { ok: true, id, internamiento, rer, dias, diaKey: existingNext[0], diaData: existingNext[1], nextNum, created: false };
+        }
+        const diaKey = 'dia_' + nextNum;
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(8, 0, 0, 0);
+        const diaData = {
+            numero: nextNum,
+            fechaRegistro: Date.now(),
+            fechaHora: tomorrow.getTime(),
+            dosis: rer.caloriasTotales != null ? String(rer.caloriasTotales) : '',
+            observaciones: '',
+            preescritoPor: '',
+            esAgenda: true,
+            tomas: {}
+        };
+        dias[diaKey] = diaData;
+        rer.dias = dias;
+        return { ok: true, id, internamiento, rer, dias, diaKey, diaData, nextNum, created: true };
+    }
+
+    async agendaTomasDiaSiguienteRer() {
+        if (!this.currentInternamientoId) { this.showAlert('No hay internamiento seleccionado', 'Error', 'error'); return; }
+        const resultadoCodigo = await this.verificarCodigoAsistente('agregar_toma_rer');
+        if (!resultadoCodigo || !resultadoCodigo.valido || resultadoCodigo.cancelado) {
+            this.showNotification('Agenda de tomas RER cancelada', 'info');
+            return;
+        }
+        this._tomaRerRegistradoPor = resultadoCodigo.nombre || '';
+
+        const info = this._getDiaSiguienteRerInfo();
+        if (!info.ok) {
+            this.showAlert(info.message, 'Agenda RER', 'warning');
+            return;
+        }
+
+        if (info.created) {
+            info.diaData.preescritoPor = this._tomaRerRegistradoPor;
+            const updates = {};
+            updates['rer/dias/' + info.diaKey] = info.diaData;
+            updates['metadata/fechaUltimaActualizacion'] = Date.now();
+            try {
+                if (window.database && this.internamientosRef) {
+                    await this.internamientosRef.child(info.id).update(updates);
+                }
+                this.internamientos.set(info.id, { ...info.internamiento, rer: info.rer });
+            } catch (err) {
+                console.error('Error creando día agenda RER:', err);
+                this.showAlert('Error al crear el día siguiente: ' + (err.message || err), 'Error', 'error');
+                return;
+            }
+        }
+
+        const horasUsadas = Object.values(info.diaData.tomas || {}).map(t => t.hora).filter(Boolean);
+        const modalContent = this.getAgendaTomasRerFormHTML(info.nextNum, horasUsadas);
+        const modal = this.createModal(`Agenda día ${info.nextNum} — tomas programadas`, modalContent, 'fa-calendar-plus');
+        document.body.appendChild(modal);
+        const form = document.getElementById('formAgendaTomasRer');
+        if (form) form.onsubmit = (e) => { e.preventDefault(); this.handleAgendaTomasRerSubmit(info.diaKey); };
+    }
+
+    getAgendaTomasRerFormHTML(numeroDia, horasUsadas = []) {
+        const horas = [
+            { value: '8am', label: '8:00 AM' },
+            { value: '12md', label: '12:00 MD' },
+            { value: '4pm', label: '4:00 PM' },
+            { value: '8pm', label: '8:00 PM' },
+            { value: '12mn', label: '12:00 MN' }
+        ];
+        const rowsHTML = horas.map(h => {
+            const ocupada = horasUsadas.includes(h.value);
+            return `
+                <div style="display: grid; grid-template-columns: 110px 1fr 1fr; gap: 10px; align-items: center; padding: 10px 0; border-bottom: 1px solid #e2e8f0;">
+                    <div style="font-weight: 600; color: #475569;">${h.label}</div>
+                    <input type="number" id="agendaRerCant_${h.value}" min="0" step="0.01" placeholder="Cantidad" ${ocupada ? 'disabled' : ''}
+                        style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: ${ocupada ? '#f1f5f9' : '#fff'};">
+                    <input type="number" id="agendaRerAgua_${h.value}" min="0" step="1" placeholder="Agua (ml)" ${ocupada ? 'disabled' : ''}
+                        style="width: 100%; padding: 8px; border-radius: 6px; border: 1px solid #cbd5e1; background: ${ocupada ? '#f1f5f9' : '#fff'};">
+                    ${ocupada ? '<small style="grid-column: 2 / -1; color: #94a3b8;">Horario ya registrado</small>' : ''}
+                </div>`;
+        }).join('');
+        return `
+        <div style="max-height: 75vh; overflow-y: auto; padding: 10px;">
+            <p style="margin: 0 0 12px 0; color: #475569; font-size: 0.92rem;">
+                Preescriba las tomas para el <strong>día ${numeroDia}</strong>. Complete solo los horarios que desee; no hay mínimo de tomas.
+            </p>
+            <form id="formAgendaTomasRer">
+                <div style="display: grid; grid-template-columns: 110px 1fr 1fr; gap: 10px; font-size: 0.8rem; font-weight: 700; color: #64748b; text-transform: uppercase; padding-bottom: 8px;">
+                    <div>Hora</div><div>Cantidad por toma</div><div>Agua (ml)</div>
+                </div>
+                ${rowsHTML}
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="background: var(--internamiento-primary); border-color: var(--internamiento-primary);"><i class="fas fa-save"></i> Guardar agenda</button>
+                </div>
+            </form>
+        </div>`;
+    }
+
+    async handleAgendaTomasRerSubmit(diaKey) {
+        const horas = ['8am', '12md', '4pm', '8pm', '12mn'];
+        const nuevasTomas = [];
+        horas.forEach(hora => {
+            const cantEl = document.getElementById('agendaRerCant_' + hora);
+            const aguaEl = document.getElementById('agendaRerAgua_' + hora);
+            if (!cantEl || cantEl.disabled) return;
+            const cantidad = cantEl.value?.trim();
+            const agua = aguaEl?.value?.trim();
+            if (cantidad === '' && agua === '') return;
+            if (cantidad === '' || agua === '') {
+                nuevasTomas.push({ invalid: true, hora });
+                return;
+            }
+            nuevasTomas.push({ hora, cantidadPorToma: cantidad, cantidadAgua: agua });
+        });
+
+        if (nuevasTomas.some(t => t.invalid)) {
+            this.showAlert('Si completa un horario, indique cantidad por toma y agua en ese mismo horario.', 'Datos incompletos', 'warning');
+            return;
+        }
+        if (nuevasTomas.length === 0) {
+            this.showAlert('Indique al menos un horario con cantidad y agua, o cancele si no desea programar tomas.', 'Sin tomas', 'warning');
+            return;
+        }
+
+        const id = this.currentInternamientoId;
+        const internamiento = this.internamientos.get(id);
+        if (!internamiento) { this.showAlert('No se encontró el internamiento', 'Error', 'error'); return; }
+        const rer = internamiento.rer && typeof internamiento.rer === 'object' ? { ...internamiento.rer } : {};
+        const dias = rer.dias && typeof rer.dias === 'object' ? { ...rer.dias } : {};
+        const diaData = dias[diaKey];
+        if (!diaData) { this.showAlert('No se encontró el día', 'Error', 'error'); return; }
+
+        const tomas = diaData.tomas && typeof diaData.tomas === 'object' ? { ...diaData.tomas } : {};
+        nuevasTomas.forEach(t => {
+            const tomaId = 'toma_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            tomas[tomaId] = {
+                cantidadPorToma: t.cantidadPorToma,
+                hora: t.hora,
+                cantidadAgua: t.cantidadAgua,
+                fechaRegistro: Date.now(),
+                registradoPorNombre: this._tomaRerRegistradoPor || '',
+                esAgenda: true
+            };
+        });
+
+        const updatedDia = { ...diaData, esAgenda: true, tomas };
+        dias[diaKey] = updatedDia;
+        rer.dias = dias;
+
+        const updates = {};
+        updates['rer/dias/' + diaKey] = updatedDia;
+        updates['metadata/fechaUltimaActualizacion'] = Date.now();
+        try {
+            if (window.database && this.internamientosRef) {
+                await this.internamientosRef.child(id).update(updates);
+            }
+            this.internamientos.set(id, { ...internamiento, rer });
+            delete this._rerCountdownVencidoPorId[id];
+            this._saveCountdownVencidoStorage();
+            document.querySelector('.modal-overlay')?.remove();
+            this.loadRerView();
+            if (typeof this.showTabRer === 'function') this.showTabRer(diaKey);
+            this.showNotification('Agenda del día siguiente guardada', 'success');
+        } catch (err) {
+            console.error('Error guardando agenda RER:', err);
             this.showAlert('Error al guardar: ' + (err.message || err), 'Error', 'error');
         }
     }

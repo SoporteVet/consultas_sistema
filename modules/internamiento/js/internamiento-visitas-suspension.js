@@ -337,9 +337,22 @@ InternamientoModule.TIPOS_SALIDA_VISITA = [
     { value: 'salida', label: 'Salida' }
 ];
 
+InternamientoModule.ATENDIDO_POR_VISITA = [
+    { value: '', label: 'Sin asignar' },
+    { value: 'Tec. Daniela Fonseca', label: 'Tec. Daniela Fonseca' },
+    { value: 'Alejandra Cardona', label: 'Alejandra Cardona' },
+    { value: 'Dra. Nicole Sibaja', label: 'Dra. Nicole Sibaja' }
+];
+
 InternamientoModule.prototype.getTipoSalidaVisitaLabel = function(tipo) {
     const found = InternamientoModule.TIPOS_SALIDA_VISITA.find(t => t.value === tipo);
     return found ? found.label : (tipo || '');
+};
+
+InternamientoModule.prototype.getVisitaTipoDisplayLabel = function(visitaOrDatos) {
+    const tipo = this.resolveTipoSalidaVisita(visitaOrDatos);
+    if (!tipo) return 'Visita normal';
+    return this.getTipoSalidaVisitaLabel(tipo);
 };
 
 InternamientoModule.prototype.resolveTipoSalidaVisita = function(visitaOrDatos) {
@@ -373,6 +386,21 @@ InternamientoModule.prototype._getVisitaSalidaFieldsHTML = function(datos) {
         </div>`;
 };
 
+InternamientoModule.prototype._getVisitaAtendidoPorFieldsHTML = function(datos) {
+    const esc = (s) => this._escapeVisitaHtml(s);
+    const actual = datos?.atendidoPor || '';
+    const opciones = InternamientoModule.ATENDIDO_POR_VISITA.map(p =>
+        `<option value="${esc(p.value)}" ${actual === p.value ? 'selected' : ''}>${esc(p.label)}</option>`
+    ).join('');
+    return `
+        <div class="form-group" style="margin-bottom: 16px;">
+            <label>Quién atendió / atenderá la visita</label>
+            <select id="visitaAtendidoPor" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1;">
+                ${opciones}
+            </select>
+        </div>`;
+};
+
 InternamientoModule.prototype._bindVisitaSalidaToggle = function() {
     /* Ya no aplica: el tipo de salida es un solo selector */
 };
@@ -396,6 +424,7 @@ InternamientoModule.prototype._collectVisitaFormData = function(modal) {
         tipoSalida,
         tieneSalida: !!tipoSalida,
         razonSalida: tipoSalida ? this.getTipoSalidaVisitaLabel(tipoSalida) : '',
+        atendidoPor: modal.querySelector('#visitaAtendidoPor')?.value?.trim() || '',
         fechaVisita,
         horaVisita
     };
@@ -491,6 +520,7 @@ InternamientoModule.prototype.showModalEditarVisita = function(internamientoId, 
                     </select>
                 </div>
                 ${this._getVisitaSalidaFieldsHTML(visita)}
+                ${this._getVisitaAtendidoPorFieldsHTML(visita)}
                 <div class="form-group" style="margin-bottom: 16px;">
                     <label>Fecha y hora de la visita *</label>
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
@@ -528,6 +558,7 @@ InternamientoModule.prototype.actualizarVisita = async function(internamientoIdO
         tipoSalida: datos.tipoSalida || '',
         tieneSalida: !!datos.tipoSalida,
         razonSalida: datos.tipoSalida ? this.getTipoSalidaVisitaLabel(datos.tipoSalida) : '',
+        atendidoPor: datos.atendidoPor || '',
         fechaHora: new Date(datos.fechaHoraMs).toISOString(),
         timestamp: datos.fechaHoraMs,
         editadoEn: Date.now(),

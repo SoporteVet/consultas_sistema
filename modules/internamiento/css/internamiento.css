@@ -2841,6 +2841,82 @@
     border-bottom: 1px solid #e8eaf6;
 }
 
+.visita-card-top-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.visita-tipo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.visita-tipo-badge.visita-tipo-normal {
+    background: #e8eaf6;
+    color: #3949ab;
+}
+
+.visita-tipo-badge.visita-tipo-salida {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.visita-card-tipo-strip {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+}
+
+.visita-card-tipo-strip.visita-card-tipo-normal {
+    background: linear-gradient(135deg, #e8eaf6 0%, #c5cae9 100%);
+    border-color: #9fa8da;
+}
+
+.visita-card-tipo-strip.visita-card-tipo-salida {
+    background: linear-gradient(135deg, #ffebee 0%, #ffcdd2 100%);
+    border-color: #ef9a9a;
+}
+
+.visita-card-tipo-strip-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #475569;
+}
+
+.visita-card-tipo-strip-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #1e293b;
+}
+
+.visita-card-tipo-strip.visita-card-tipo-normal .visita-card-tipo-strip-value {
+    color: #3949ab;
+}
+
+.visita-card-tipo-strip.visita-card-tipo-salida .visita-card-tipo-strip-value {
+    color: #b71c1c;
+}
+
 .visita-card-meta-row {
     display: flex;
     flex-wrap: wrap;
