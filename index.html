@@ -2650,6 +2650,9 @@ document.addEventListener('DOMContentLoaded', function() {
         <button id="btnVerMedicacionesPendientes" class="btn" style="background:#e65100;color:white;" onclick="window.internamientoModule.showMedicacionesPendientesView()">
           <i class="fas fa-pills"></i> Medicaciones pendientes
         </button>
+        <button id="btnVerPendientesGlobal" class="btn" style="background:#7e57c2;color:white;" onclick="window.internamientoModule.showPendientesGlobalView()">
+          <i class="fas fa-clipboard-list"></i> Lista de pendientes
+        </button>
         <button id="btnNuevoInternamiento" class="btn btn-primary">
           <i class="fas fa-plus"></i> Nuevo Internamiento
         </button>
@@ -3522,6 +3525,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
   <!-- Vista de Medicaciones Pendientes (todos los pacientes) -->
   <div id="internamiento-medicaciones_pendientes" class="hidden">
+    <!-- Se llena dinámicamente por JS -->
+  </div>
+
+  <!-- Vista de Pendientes (procedimientos) de todos los pacientes -->
+  <div id="internamiento-pendientes_global" class="hidden">
     <!-- Se llena dinámicamente por JS -->
   </div>
 
