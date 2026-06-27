@@ -4045,7 +4045,7 @@ class InternamientoModule {
                 <div class="cambio-via-vencido" style="margin-top: 16px; padding: 16px 20px; background: #ffebee; border: 2px solid #e53935; border-radius: 10px;">
                     <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
                         <span style="background: #c62828; color: white; padding: 8px 14px; border-radius: 8px; font-weight: 700; font-size: 0.95rem;">
-                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>CAMBIO DE VÃA PENDIENTE
+                            <i class="fas fa-exclamation-triangle" style="margin-right: 8px;"></i>CAMBIO DE VÍA PENDIENTE
                         </span>
                         <span style="color: #b71c1c; font-weight: 600;">El paciente ya le toca cambio de vía (pasaron 72h desde el último registro).</span>
                     </div>
