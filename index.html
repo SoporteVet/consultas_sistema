@@ -143,6 +143,9 @@
             <button id="verInternamientosBtn" class="submenu-btn" onclick="typeof verInternamientos === 'function' ? verInternamientos() : (window.internamientoModule && window.internamientoModule.showInternamientosSection && window.internamientoModule.showInternamientosSection());">
               <i class="fas fa-list-alt"></i> Ver Internamientos
             </button>
+            <button id="disponibilidadCamposBtn" class="submenu-btn" onclick="window.internamientoModule && window.internamientoModule.showDisponibilidadCamposView && window.internamientoModule.showDisponibilidadCamposView();">
+              <i class="fas fa-map-marked-alt"></i> Disponibilidad de campos
+            </button>
             <button id="visitasBtn" class="submenu-btn" onclick="window.internamientoModule && window.internamientoModule.showVisitasView && window.internamientoModule.showVisitasView();">
               <i class="fas fa-user-friends"></i> Agregar visitas
             </button>
@@ -3585,6 +3588,10 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- Vista Visitas - se llena dinámicamente por JS -->
   </div>
 
+  <div id="internamiento-disponibilidad_campos" class="hidden">
+    <!-- Vista Disponibilidad de campos - se llena dinámicamente por JS -->
+  </div>
+
   </div><!-- Cierre de int-container -->
 </section>
 
@@ -3637,6 +3644,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script src="modules/internamiento/js/internamiento-transfusion.js"></script>
 <script src="modules/internamiento/js/internamiento-glasgow.js"></script>
 <script src="modules/internamiento/js/internamiento-llamadas.js"></script>
+<script src="modules/internamiento/js/internamiento-disponibilidad-campos.js"></script>
 <script src="modules/internamiento/js/internamiento-auth-asistentes.js"></script>
 <script src="modules/internamiento/js/internamiento-presupuestos-facturas.js?v=20250625h"></script>
 <script src="modules/internamiento/js/internamiento-documento-compress.js?v=20250625e"></script>
