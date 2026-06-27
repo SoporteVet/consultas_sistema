@@ -282,9 +282,61 @@ InternamientoModule.prototype.renderEtiquetaEstadoAplicadoCE = function(admin) {
     return '<span class="med-estado-pendiente-vista">pendiente</span>';
 };
 
+InternamientoModule.prototype.celdaMedicacionFueraProgramacion = function(medicamento, diaKey, horaSlot) {
+    if (!medicamento || !diaKey) return false;
+    if (typeof this.estaDiaDentroProgramacionMedicamento === 'function'
+        && !this.estaDiaDentroProgramacionMedicamento(medicamento, diaKey)) {
+        return true;
+    }
+    if (horaSlot && typeof this.estaSlotDentroProgramacionMedicamento === 'function'
+        && !this.estaSlotDentroProgramacionMedicamento(medicamento, diaKey, horaSlot)) {
+        return true;
+    }
+    return false;
+};
+
+InternamientoModule.prototype.getEtiquetaBloqueoProgramacion = function(medicamento, diaKey, horaSlot) {
+    if (!medicamento || !diaKey) return null;
+    if (typeof this.celdaMedicacionFueraProgramacion !== 'function'
+        || !this.celdaMedicacionFueraProgramacion(medicamento, diaKey, horaSlot)) {
+        return null;
+    }
+    return 'bloqueado';
+};
+
+InternamientoModule.prototype.renderEtiquetaBloqueoProgramacion = function(medicamento, diaKey, horaSlot) {
+    const texto = this.getEtiquetaBloqueoProgramacion(medicamento, diaKey, horaSlot);
+    if (!texto) return '';
+    return `<span class="med-estado-bloqueado-vista">${texto}</span>`;
+};
+
+InternamientoModule.prototype.getMensajeCeldaFueraProgramacion = function(medicamento, diaKey) {
+    const fmt = (ymd) => {
+        if (!ymd) return ymd;
+        const [y, m, d] = ymd.split('-').map(Number);
+        if (!y || !m || !d) return ymd;
+        return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
+    };
+    const desde = typeof this.getProgramacionDesdeYmd === 'function'
+        ? this.getProgramacionDesdeYmd(medicamento)
+        : medicamento?.programacionDesde;
+    const hasta = typeof this.getProgramacionHastaYmd === 'function'
+        ? this.getProgramacionHastaYmd(medicamento)
+        : medicamento?.programacionHasta;
+    if (desde && diaKey < desde) {
+        return `Este medicamento inicia el ${fmt(desde)}. No se puede registrar en días anteriores.`;
+    }
+    if (hasta && diaKey > hasta) {
+        return `El tratamiento de este medicamento finalizó el ${fmt(hasta)}. No se puede registrar en días posteriores.`;
+    }
+    return 'Esta dosis está fuera del periodo programado de este medicamento.';
+};
+
 InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, diaKey, horaSlot, admin, soloLectura = false) {
     const medId = (medicamento.medicamentoId || '').replace(/'/g, "\\'");
-    const fueraProgramacion = false;
+    const fueraProgramacion = typeof this.celdaMedicacionFueraProgramacion === 'function'
+        ? this.celdaMedicacionFueraProgramacion(medicamento, diaKey, horaSlot)
+        : false;
     if (fueraProgramacion) {
         soloLectura = true;
     }
@@ -311,7 +363,7 @@ InternamientoModule.prototype.renderCeldaMedicacionHTML = function(medicamento, 
     if (soloLectura) {
         return `
             <div class="med-celda-vista ${estado || 'pendiente'}${fueraProgramacion ? ' med-celda-fuera-programacion' : ''}" title="${title.replace(/"/g, '&quot;')}">
-                ${fueraProgramacion ? '<span class="med-celda-na">—</span>' : contenido}
+                ${fueraProgramacion ? '' : contenido}
             </div>`;
     }
     return `
@@ -340,8 +392,11 @@ InternamientoModule.prototype.renderTablaControlMedicacion = function(internamie
             const slots = horarios.map(h => {
                 const admin = this.obtenerAdminCeldaMedicacion(med, d.key, h);
                 const esConsultaExt = !!med.puestoPorConsultaExterna;
-                const etiquetaCE = esConsultaExt ? this.renderEtiquetaEstadoAplicadoCE(admin) : '';
-                // soloLectura siempre false: todas las celdas son clickeables
+                const bloqueado = typeof this.celdaMedicacionFueraProgramacion === 'function'
+                    && this.celdaMedicacionFueraProgramacion(med, d.key, h);
+                const etiquetaCE = bloqueado
+                    ? this.renderEtiquetaBloqueoProgramacion(med, d.key, h)
+                    : (esConsultaExt ? this.renderEtiquetaEstadoAplicadoCE(admin) : '');
                 return `<div class="med-slot-wrap">${etiquetaCE}<span class="med-slot-hora">${this._hora24a12(h)}</span>${this.renderCeldaMedicacionHTML(med, d.key, h, admin, false)}</div>`;
             }).join('');
             return `<td class="med-dia-celda med-dia-${d.tipo || 'internamiento'}"><div class="med-dia-slots">${slots}</div></td>`;
@@ -405,6 +460,7 @@ InternamientoModule.prototype.renderTablaControlMedicacion = function(internamie
                 <span><span class="med-celda-x med-leyenda-icon">X</span> Administrado</span>
                 <span><span class="med-celda-omitido med-leyenda-icon"></span> No administrado</span>
                 <span><span class="med-celda-vacia med-leyenda-icon">·</span> Pendiente — clic para registrar</span>
+                <span><span class="med-estado-bloqueado-vista med-leyenda-icon">bloqueado</span> Fuera del periodo de este medicamento</span>
             </div>
             <div class="med-control-scroll">
                 <table class="med-control-table">
@@ -433,6 +489,15 @@ InternamientoModule.prototype.abrirModalCeldaMedicacion = function(medicamentoId
     }
     const med = internamiento.planTerapeutico?.medicamentos?.[medicamentoId];
     if (!med) return;
+
+    if (typeof this.celdaMedicacionFueraProgramacion === 'function'
+        && this.celdaMedicacionFueraProgramacion(med, diaKey, horaSlot)) {
+        const mensaje = typeof this.getMensajeCeldaFueraProgramacion === 'function'
+            ? this.getMensajeCeldaFueraProgramacion(med, diaKey)
+            : 'Esta dosis está fuera del periodo programado de este medicamento.';
+        this.showAlert(mensaje, 'Fuera de programación', 'warning');
+        return;
+    }
 
     const admin = this.obtenerAdminCeldaMedicacion(med, diaKey, horaSlot);
     const estadoActual = admin
@@ -510,6 +575,15 @@ InternamientoModule.prototype.guardarCeldaMedicacion = async function(medicament
     const med = internamiento?.planTerapeutico?.medicamentos?.[medicamentoId];
     if (!internamiento || !med) return;
 
+    if (typeof this.celdaMedicacionFueraProgramacion === 'function'
+        && this.celdaMedicacionFueraProgramacion(med, diaKey, horaSlot)) {
+        const mensaje = typeof this.getMensajeCeldaFueraProgramacion === 'function'
+            ? this.getMensajeCeldaFueraProgramacion(med, diaKey)
+            : 'Esta dosis está fuera del periodo programado de este medicamento.';
+        this.showAlert(mensaje, 'Fuera de programación', 'warning');
+        return;
+    }
+
     const internamientoRef = this.internamientosRef.child(this.currentInternamientoId);
 
     try {
@@ -549,7 +623,22 @@ InternamientoModule.prototype.marcarMedicamentoAplicadoDia = async function(medi
         return;
     }
 
-    const pendientes = horarios.filter(h => this.obtenerEstadoCeldaMedicacion(med, diaKey, h) !== 'administrado');
+    if (typeof this.celdaMedicacionFueraProgramacion === 'function'
+        && this.celdaMedicacionFueraProgramacion(med, diaKey, horarios[0])) {
+        const mensaje = typeof this.getMensajeCeldaFueraProgramacion === 'function'
+            ? this.getMensajeCeldaFueraProgramacion(med, diaKey)
+            : 'Este día está fuera del periodo programado de este medicamento.';
+        this.showAlert(mensaje, 'Fuera de programación', 'warning');
+        return;
+    }
+
+    const pendientes = horarios.filter(h => {
+        if (typeof this.celdaMedicacionFueraProgramacion === 'function'
+            && this.celdaMedicacionFueraProgramacion(med, diaKey, h)) {
+            return false;
+        }
+        return this.obtenerEstadoCeldaMedicacion(med, diaKey, h) !== 'administrado';
+    });
     if (pendientes.length === 0) {
         this.showNotification('Todas las dosis de este día ya están registradas', 'info');
         return;

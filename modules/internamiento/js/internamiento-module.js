@@ -244,7 +244,7 @@ class InternamientoModule {
             };
         }
         return {
-            puestoPorConsultaExterna: origen.puestoPorConsultaExterna,
+            puestoPorConsultaExterna: false,
             puestoPorInternos: origen.puestoPorInternos
         };
     }
@@ -5530,45 +5530,96 @@ class InternamientoModule {
         return { target: new Date(target), texto: `${horas}h ${minutos}m`, vencido: false, restanteMs };
     }
 
+    buildRerScheduleTomas(lastDayData) {
+        const slots = [
+            { hora: '8am', h: 8, label: '8:00 AM' },
+            { hora: '12md', h: 12, label: '12:00 MD' },
+            { hora: '4pm', h: 16, label: '4:00 PM' },
+            { hora: '8pm', h: 20, label: '8:00 PM' },
+            { hora: '12mn', label: '12:00 MN', esMedianoche: true }
+        ];
+        const MIN_TOMAS = 5;
+        const buildTarget = (dayStart, slot) => {
+            const target = new Date(dayStart);
+            if (slot.esMedianoche) {
+                target.setDate(target.getDate() + 1);
+                target.setHours(0, 0, 0, 0);
+            } else {
+                target.setHours(slot.h, 0, 0, 0);
+            }
+            return target;
+        };
+
+        const now = new Date();
+        let refDayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+        let inicioMs = 0;
+        if (lastDayData?.fechaHora) {
+            const fh = new Date(lastDayData.fechaHora);
+            if (!isNaN(fh.getTime())) {
+                refDayStart = new Date(fh.getFullYear(), fh.getMonth(), fh.getDate(), 0, 0, 0, 0);
+                inicioMs = fh.getTime();
+            }
+        }
+
+        const schedule = [];
+        let dayOffset = 0;
+        while (schedule.length < MIN_TOMAS && dayOffset < 4) {
+            const dayStart = new Date(refDayStart);
+            dayStart.setDate(dayStart.getDate() + dayOffset);
+            for (const slot of slots) {
+                if (schedule.length >= MIN_TOMAS) break;
+                const target = buildTarget(dayStart, slot);
+                if (dayOffset === 0 && inicioMs && target.getTime() < inicioMs) continue;
+                schedule.push({ target, label: slot.label, hora: slot.hora });
+            }
+            dayOffset++;
+        }
+        return schedule;
+    }
+
     getProximaTomaRerRestante(internamiento) {
         const rer = internamiento?.rer && typeof internamiento.rer === 'object' ? internamiento.rer : {};
         const dias = rer.dias && typeof rer.dias === 'object' ? rer.dias : {};
         const diasList = Object.entries(dias).sort((a, b) => (a[1].numero || 0) - (b[1].numero || 0));
         if (diasList.length === 0) return null;
         const lastDay = diasList[diasList.length - 1];
-        const tomas = lastDay[1].tomas && typeof lastDay[1].tomas === 'object' ? lastDay[1].tomas : {};
-        const horasUsadas = new Set(Object.values(tomas).map(t => t.hora).filter(Boolean));
-        const slots = [
-            { hora: '8am', h: 8, label: '8:00 AM' },
-            { hora: '12md', h: 12, label: '12:00 MD' },
-            { hora: '4pm', h: 16, label: '4:00 PM' },
-            { hora: '8pm', h: 20, label: '8:00 PM' },
-            { hora: '12mn', h: 24, label: '12:00 MN' }
-        ];
+        const lastDayData = lastDay[1] || {};
+        const numTomas = Object.keys(lastDayData.tomas || {}).length;
+        if (numTomas >= 5) return null;
+
+        const schedule = this.buildRerScheduleTomas(lastDayData);
+        if (!schedule.length) return null;
+
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-        for (const slot of slots) {
-            if (horasUsadas.has(slot.hora)) continue;
-            let target = new Date(todayStart);
-            if (slot.h === 24) {
-                target.setDate(target.getDate() + 1);
-                target.setHours(0, 0, 0, 0);
-            } else {
-                target.setHours(slot.h, 0, 0, 0);
+
+        const labelConDia = (target, slotLabel) => {
+            const targetDay = new Date(target.getFullYear(), target.getMonth(), target.getDate(), 0, 0, 0, 0);
+            if (targetDay.getTime() === todayStart.getTime()) return slotLabel;
+            const mananaStart = new Date(todayStart);
+            mananaStart.setDate(mananaStart.getDate() + 1);
+            if (targetDay.getTime() === mananaStart.getTime()) return `${slotLabel} (mañana)`;
+            return `${slotLabel} (${String(target.getDate()).padStart(2, '0')}/${String(target.getMonth() + 1).padStart(2, '0')})`;
+        };
+
+        for (const item of schedule) {
+            if (item.target.getTime() > now.getTime()) {
+                const restanteMs = item.target.getTime() - now.getTime();
+                const horas = Math.floor(restanteMs / (1000 * 60 * 60));
+                const minutos = Math.floor((restanteMs % (1000 * 60 * 60)) / (1000 * 60));
+                return {
+                    label: labelConDia(item.target, item.label),
+                    target: item.target,
+                    restanteMs,
+                    texto: `${horas}h ${minutos}m`,
+                    horas,
+                    minutos
+                };
             }
-            if (target.getTime() <= now.getTime()) continue;
-            const restanteMs = target.getTime() - now.getTime();
-            const horas = Math.floor(restanteMs / (1000 * 60 * 60));
-            const minutos = Math.floor((restanteMs % (1000 * 60 * 60)) / (1000 * 60));
-            return { label: slot.label, target, restanteMs, texto: `${horas}h ${minutos}m`, horas, minutos };
         }
-        const primeraHoraManana = new Date(todayStart);
-        primeraHoraManana.setDate(primeraHoraManana.getDate() + 1);
-        primeraHoraManana.setHours(8, 0, 0, 0);
-        const restanteMs = primeraHoraManana.getTime() - now.getTime();
-        const horas = Math.floor(restanteMs / (1000 * 60 * 60));
-        const minutos = Math.floor((restanteMs % (1000 * 60 * 60)) / (1000 * 60));
-        return { label: '8:00 AM (mañana)', target: primeraHoraManana, restanteMs, texto: `${horas}h ${minutos}m`, horas, minutos };
+
+        const ultima = schedule[schedule.length - 1];
+        return { label: 'Ahora', target: ultima.target, restanteMs: 0, texto: 'Ahora', horas: 0, minutos: 0, vencido: true };
     }
 
     generarAlertasAutomaticas(data) {
@@ -6485,19 +6536,6 @@ class InternamientoModule {
                 </div>
                 ${(!esEdicion && this.agregarMedicamentoContexto === 'admision') ? (() => {
                     const origen = this.getOrigenIngresoAdmision();
-                    // Si el rol fija el origen automáticamente, lo muestra como etiqueta fija
-                    if (origen.puestoPorConsultaExterna) {
-                        return `
-                        <input type="hidden" id="medPuestoPorConsultaExterna" value="true">
-                        <div class="form-group" style="margin-top: 12px; padding: 14px; background: #ecfdf5; border-radius: 8px; border: 1px solid #0d9488;">
-                            <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
-                                <span style="color: #0f766e; font-weight: 600; font-size: 0.95rem;">
-                                    <i class="fas fa-stethoscope" style="margin-right: 6px;"></i>Puesto por consulta externa
-                                </span>
-                            </div>
-                            <small style="display: block; color: #0f766e; font-size: 0.8rem; margin-top: 6px;">La primera dosis se marcará automáticamente como administrada en la tabla de medicación.</small>
-                        </div>`;
-                    }
                     if (origen.puestoPorInternos) {
                         return `
                         <input type="hidden" id="medPuestoPorInternos" value="true">
@@ -6505,7 +6543,6 @@ class InternamientoModule {
                             <span style="color: #5b21b6; font-weight: 600;"><i class="fas fa-bed" style="margin-right: 6px;"></i>Puesto por internos</span>
                         </div>`;
                     }
-                    // Para otros roles: botón opcional para marcar como "puesto por consulta externa"
                     return `
                     <div class="form-group" style="margin-top: 16px;">
                         <label style="font-weight: 600; margin-bottom: 8px; display: block; color: #374151;">
@@ -6520,7 +6557,7 @@ class InternamientoModule {
                                 <i class="fas fa-stethoscope" style="margin-right: 6px;"></i>Puesto por consulta externa
                             </button>
                         </div>
-                        <small id="notaOrigenAdmision" style="display: block; color: #6c757d; font-size: 0.8rem; margin-top: 8px;">Si viene de consulta externa, la primera dosis se marcará automáticamente en la tabla de medicación.</small>
+                        <small id="notaOrigenAdmision" style="display: block; color: #6c757d; font-size: 0.8rem; margin-top: 8px;">Actívelo solo si el paciente ya recibió una dosis de este medicamento en consulta externa.</small>
                     </div>`;
                 })() : (esEdicion && (medParaEditar.puestoPorConsultaExterna || medParaEditar.puestoPorInternos)) ? (() => {
                     const e = this.getEtiquetaOrigenItem(medParaEditar);
@@ -6584,15 +6621,15 @@ class InternamientoModule {
             hInternos.value = 'false';
             if (btnCE)  { btnCE.style.background  = nuevo ? '#0d9488' : 'white'; btnCE.style.color  = nuevo ? 'white' : '#0f766e'; }
             if (btnInt) { btnInt.style.background = 'white'; btnInt.style.color = '#5b21b6'; }
-            if (nota && nuevo) nota.textContent = 'La primera dosis se marcará automáticamente como administrada en la tabla de medicación.';
-            else if (nota) nota.textContent = 'Si viene de consulta externa, la primera dosis se marcará automáticamente en la tabla de medicación.';
+            if (nota && nuevo) nota.textContent = 'La primera dosis quedará marcada como administrada en la tabla de medicación al guardar el internamiento.';
+            else if (nota) nota.textContent = 'Actívelo solo si el paciente ya recibió una dosis de este medicamento en consulta externa.';
         } else {
             const nuevo = !intActivo;
             hInternos.value  = nuevo ? 'true' : 'false';
             hConsulta.value  = 'false';
             if (btnInt) { btnInt.style.background  = nuevo ? '#7c3aed' : 'white'; btnInt.style.color  = nuevo ? 'white' : '#5b21b6'; }
             if (btnCE)  { btnCE.style.background  = 'white'; btnCE.style.color  = '#0f766e'; }
-            if (nota) nota.textContent = 'Si viene de consulta externa, la primera dosis se marcará automáticamente en la tabla de medicación.';
+            if (nota) nota.textContent = 'Actívelo solo si el paciente ya recibió una dosis de este medicamento en consulta externa.';
         }
     }
 
@@ -6859,9 +6896,7 @@ class InternamientoModule {
         const pedidoPermisoEmergencia = document.getElementById('medPedidoPermisoEmergencia')?.checked || false;
         const origenFlags = esAdmision ? this.getOrigenAdmisionFlagsDesdeForm() : { puestoPorConsultaExterna: false, puestoPorInternos: false };
         const esDosisUnica = document.getElementById('medDosisUnica')?.checked || false;
-        const aplicadoEnConsultaExterna = esAdmision && sessionStorage.getItem('userRole') === 'consulta_externa'
-            ? (document.getElementById('medAplicadoConsultaExterna')?.value === 'true')
-            : false;
+        const aplicadoEnConsultaExterna = esAdmision ? !!origenFlags.puestoPorConsultaExterna : false;
         const programacion = this._leerProgramacionMedicamentoDesdeForm();
         const validacionProgramacion = this._validarProgramacionMedicamento(programacion);
         if (!validacionProgramacion.valido) {
@@ -7350,14 +7385,6 @@ class InternamientoModule {
         if (!frecuenciaHoras || frecuenciaHoras < 1 || !horariosExactos || horariosExactos.length === 0) {
             return { valido: true };
         }
-        const minutosPorHora = 60;
-        const totalMinutos = 24 * minutosPorHora;
-        const intervaloEsperadoMin = frecuenciaHoras * minutosPorHora;
-        const numDosisEsperado = Math.floor(24 / frecuenciaHoras);
-
-        if (24 % frecuenciaHoras !== 0) {
-            return { valido: false, mensaje: 'La frecuencia debe dividir 24 (ej: 1, 2, 3, 4, 6, 8, 12, 24 horas).' };
-        }
 
         const aMinutos = (horaStr) => {
             const m = (horaStr || '').trim().match(/^(\d{1,2}):(\d{2})$/);
@@ -7366,6 +7393,29 @@ class InternamientoModule {
             const min = parseInt(m[2], 10) % 60;
             return h * 60 + min;
         };
+
+        // c/48h, c/36h, etc.: una sola hora exacta como ancla (no aplica regla de dividir 24)
+        if (frecuenciaHoras > 24) {
+            if (horariosExactos.length !== 1) {
+                return {
+                    valido: false,
+                    mensaje: `Para "cada ${frecuenciaHoras}h" indique exactamente una hora de inicio (ej: 21:00).`
+                };
+            }
+            if (aMinutos(horariosExactos[0]) == null) {
+                return { valido: false, mensaje: 'La hora exacta no tiene formato válido (use HH:MM, ej: 21:00).' };
+            }
+            return { valido: true };
+        }
+
+        const minutosPorHora = 60;
+        const totalMinutos = 24 * minutosPorHora;
+        const intervaloEsperadoMin = frecuenciaHoras * minutosPorHora;
+        const numDosisEsperado = Math.floor(24 / frecuenciaHoras);
+
+        if (24 % frecuenciaHoras !== 0) {
+            return { valido: false, mensaje: 'La frecuencia debe dividir 24 (ej: 1, 2, 3, 4, 6, 8, 12, 24 horas). Para c/48h use una sola hora exacta.' };
+        }
 
         const minutos = horariosExactos.map(aMinutos).filter((n) => n != null);
         if (minutos.length !== horariosExactos.length) {
@@ -8839,10 +8889,10 @@ class InternamientoModule {
         const tabContentsHTML = hasDias
             ? diasList.map(([diaKey, data], idx) => {
                 const tomas = data.tomas && typeof data.tomas === 'object' ? data.tomas : {};
-                const tomasList = Object.values(tomas).sort((a, b) => {
-                    const oa = horaOrder[a.hora] ?? 99;
-                    const ob = horaOrder[b.hora] ?? 99;
-                    return oa !== ob ? oa - ob : (a.fechaRegistro || 0) - (b.fechaRegistro || 0);
+                const tomasEntries = Object.entries(tomas).sort((a, b) => {
+                    const oa = horaOrder[a[1].hora] ?? 99;
+                    const ob = horaOrder[b[1].hora] ?? 99;
+                    return oa !== ob ? oa - ob : (a[1].fechaRegistro || 0) - (b[1].fechaRegistro || 0);
                 });
                 const isActive = idx === 0;
                 const fechaHoraStr = data.fechaHora ? (function(ts) { const d = new Date(ts); return isNaN(d.getTime()) ? '' : d.toLocaleString('es-PE', { dateStyle: 'short', timeStyle: 'short', hour12: true }); })(data.fechaHora) : '';
@@ -8863,23 +8913,48 @@ class InternamientoModule {
                             <button class="btn btn-primary" onclick="window.internamientoModule.agregarTomasDiaRer('${diaKey}')" style="background: var(--internamiento-primary); border-color: var(--internamiento-primary);">
                                 <i class="fas fa-plus"></i> Agregar tomas del día
                             </button>
+                            <button class="btn btn-secondary" onclick="window.internamientoModule.editarDiaRer('${diaKey}')">
+                                <i class="fas fa-edit"></i> Editar día
+                            </button>
                             <button class="btn btn-secondary" onclick="window.internamientoModule.eliminarDiaRer('${diaKey}')" style="color: #b91c1c; border-color: #b91c1c;">
                                 <i class="fas fa-trash-alt"></i> Eliminar día
                             </button>
                         </div>
                         <div style="padding: 20px;">
-                            ${tomasList.length > 0
-                                ? `<div style="display: flex; flex-direction: column; gap: 10px;">${tomasList.map(t => {
+                            ${tomasEntries.length > 0
+                                ? `<div style="display: flex; flex-direction: column; gap: 10px;">${tomasEntries.map(([tomaId, t]) => {
                                     const horaLabels = { '8am': '8:00 AM', '12md': '12:00 MD', '4pm': '4:00 PM', '8pm': '8:00 PM', '12mn': '12:00 MN' };
                                     const hora = (t.hora ? (horaLabels[t.hora] || t.hora) : '—').replace(/</g, '&lt;');
                                     const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '—';
                                     const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '—';
                                     const registradoPor = (t.registradoPorNombre || '').replace(/</g, '&lt;');
+                                    const cantApl = t.cantidadAplicada != null && t.cantidadAplicada !== '' ? t.cantidadAplicada : null;
+                                    const aguaApl = t.aguaAplicada != null && t.aguaAplicada !== '' ? t.aguaAplicada + ' ml' : null;
+                                    const aplicadoPor = (t.aplicadoPorNombre || '').replace(/</g, '&lt;');
+                                    const tomaIdEsc = (tomaId || '').replace(/'/g, "\\'");
+                                    const btnAplicacion = cantApl != null
+                                        ? `<button type="button" class="btn btn-sm btn-secondary" onclick="window.internamientoModule.registrarAplicacionTomaRer('${diaKey}', '${tomaIdEsc}')" title="Actualizar lo aplicado"><i class="fas fa-syringe"></i> Actualizar aplicado</button>`
+                                        : `<button type="button" class="btn btn-sm btn-primary" onclick="window.internamientoModule.registrarAplicacionTomaRer('${diaKey}', '${tomaIdEsc}')" style="background: var(--internamiento-primary); border-color: var(--internamiento-primary);" title="Registrar lo que se le pudo dar al paciente"><i class="fas fa-syringe"></i> Registrar aplicado</button>`;
                                     return `
-                                    <div style="border: 1px solid #e2e8f0; border-left: 4px solid var(--internamiento-primary); border-radius: 8px; padding: 12px; background: #f8fafc;">
-                                        <div style="font-weight: 600; color: #334155; margin-bottom: 4px;"><i class="fas fa-clock"></i> ${hora}</div>
-                                        <div style="font-size: 0.9rem; color: #64748b;">Cantidad por toma: ${cant} · Agua: ${agua}</div>
-                                        ${registradoPor ? `<div style="font-size: 0.85rem; color: #94a3b8; margin-top: 4px;"><i class="fas fa-user"></i> Registrado por: ${registradoPor}</div>` : ''}
+                                    <div style="border: 1px solid #e2e8f0; border-left: 4px solid var(--internamiento-primary); border-radius: 8px; padding: 12px; background: #f8fafc; display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+                                        <div style="flex: 1; min-width: 220px;">
+                                            <div style="font-weight: 600; color: #334155; margin-bottom: 8px;"><i class="fas fa-clock"></i> ${hora}</div>
+                                            <div style="font-size: 0.88rem; color: #475569; padding: 8px 10px; background: #fff; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: ${cantApl != null ? '8px' : '0'};">
+                                                <div style="font-weight: 600; color: #64748b; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 4px;">Indicado</div>
+                                                <div>Cantidad por toma: ${cant} · Agua: ${agua}</div>
+                                                ${registradoPor ? `<div style="font-size: 0.82rem; color: #94a3b8; margin-top: 4px;"><i class="fas fa-user"></i> Indicado por: ${registradoPor}</div>` : ''}
+                                            </div>
+                                            ${cantApl != null ? `
+                                            <div style="font-size: 0.88rem; color: #065f46; padding: 8px 10px; background: #ecfdf5; border-radius: 6px; border: 1px solid #6ee7b7;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                                    <div style="font-weight: 600; color: #047857; font-size: 0.75rem; text-transform: uppercase;">Aplicado al paciente</div>
+                                                    ${this.esAdmin() ? `<button type="button" class="btn btn-sm" onclick="window.internamientoModule.eliminarAplicacionTomaRer('${diaKey}', '${tomaIdEsc}')" title="Eliminar registro de aplicación (solo admin)" style="padding: 2px 8px; font-size: 0.72rem; color: #b91c1c; border-color: #fca5a5; background: #fff;"><i class="fas fa-trash-alt"></i> Eliminar</button>` : ''}
+                                                </div>
+                                                <div>Cantidad por toma: ${cantApl} · Agua: ${aguaApl || '—'}</div>
+                                                ${aplicadoPor ? `<div style="font-size: 0.82rem; color: #059669; margin-top: 4px;"><i class="fas fa-user-check"></i> Aplicado por: ${aplicadoPor}</div>` : ''}
+                                            </div>` : ''}
+                                        </div>
+                                        ${btnAplicacion}
                                     </div>
                                     `;
                                 }).join('')}</div>`
@@ -9047,6 +9122,28 @@ class InternamientoModule {
         `;
     }
 
+    _parseLocalDateTimeInput(val) {
+        if (!val) return NaN;
+        const s = String(val).trim();
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+        if (m) {
+            return new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], 0, 0).getTime();
+        }
+        const t = new Date(val).getTime();
+        return isNaN(t) ? NaN : t;
+    }
+
+    _datetimeLocalValueFromTs(ts) {
+        const d = new Date(ts);
+        if (isNaN(d.getTime())) return '';
+        const y = d.getFullYear();
+        const m = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const h = String(d.getHours()).padStart(2, '0');
+        const min = String(d.getMinutes()).padStart(2, '0');
+        return `${y}-${m}-${day}T${h}:${min}`;
+    }
+
     setupAgregarDiaRerFormDefaults() {
         const input = document.getElementById('agregarDiaRerFechaHora');
         if (input) {
@@ -9074,7 +9171,7 @@ class InternamientoModule {
                 return;
             }
         }
-        const fechaHoraTs = new Date(fechaHoraVal).getTime();
+        const fechaHoraTs = this._parseLocalDateTimeInput(fechaHoraVal);
         if (isNaN(fechaHoraTs)) {
             this.showAlert('Fecha y hora no válidas', 'Error', 'error');
             return;
@@ -9130,6 +9227,8 @@ class InternamientoModule {
                 await this.internamientosRef.child(id).update(updates);
             }
             this.internamientos.set(id, { ...internamiento, rer });
+            delete this._rerCountdownVencidoPorId[id];
+            if (typeof this._saveCountdownVencidoStorage === 'function') this._saveCountdownVencidoStorage();
             document.querySelector('.modal-overlay')?.remove();
             this.loadRerView();
             this.showNotification('Día agregado', 'success');
@@ -9164,6 +9263,120 @@ class InternamientoModule {
         }
     }
 
+    async editarDiaRer(diaKey) {
+        if (!this.currentInternamientoId) { this.showAlert('No hay internamiento seleccionado', 'Error', 'error'); return; }
+        const resultadoCodigo = await this.verificarCodigoAsistente('editar_dia_rer');
+        if (!resultadoCodigo || !resultadoCodigo.valido || resultadoCodigo.cancelado) {
+            this.showNotification('Edición de día RER cancelada', 'info');
+            return;
+        }
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        const diaData = internamiento?.rer?.dias?.[diaKey];
+        if (!diaData) { this.showAlert('Día no encontrado', 'Error', 'error'); return; }
+        const esPrimerDia = (diaData.numero || 0) === 1;
+        const modalContent = this.getEditarDiaRerFormHTML(diaData, esPrimerDia);
+        const modal = this.createModal('Editar día RER', modalContent, 'fa-edit');
+        document.body.appendChild(modal);
+        const input = document.getElementById('editarDiaRerFechaHora');
+        if (input && diaData.fechaHora) {
+            input.value = this._datetimeLocalValueFromTs(diaData.fechaHora);
+        }
+        const form = document.getElementById('formEditarDiaRer');
+        if (form) form.onsubmit = (e) => { e.preventDefault(); this.handleEditarDiaRerSubmit(diaKey, esPrimerDia); };
+    }
+
+    getEditarDiaRerFormHTML(diaData, esPrimerDia) {
+        const obsEsc = (diaData.observaciones || '').replace(/</g, '&lt;');
+        const caloriasVal = esPrimerDia ? (diaData.dosis != null ? String(diaData.dosis).replace(/"/g, '&quot;') : '') : '';
+        const caloriasFieldHTML = esPrimerDia ? `
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label>Cantidad de calorías totales *</label>
+                    <input type="number" id="editarDiaRerDosis" required min="0" step="1" value="${caloriasVal}" placeholder="Ej: 1500" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b;">
+                </div>` : '';
+        return `
+        <div style="max-height: 75vh; overflow-y: auto; padding: 10px;">
+            <form id="formEditarDiaRer">
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label>Fecha y hora *</label>
+                    <input type="datetime-local" id="editarDiaRerFechaHora" required style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b;">
+                    <small style="color: #64748b; display: block; margin-top: 4px;">La próxima toma en el panel se calcula según esta fecha.</small>
+                </div>
+                ${caloriasFieldHTML}
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label>Observaciones adicionales</label>
+                    <textarea id="editarDiaRerObservaciones" rows="3" placeholder="Observaciones del día..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b; resize: vertical;">${obsEsc}</textarea>
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="background: var(--internamiento-primary); border-color: var(--internamiento-primary);"><i class="fas fa-save"></i> Guardar cambios</button>
+                </div>
+            </form>
+        </div>
+        `;
+    }
+
+    async handleEditarDiaRerSubmit(diaKey, esPrimerDia) {
+        const fechaHoraVal = document.getElementById('editarDiaRerFechaHora')?.value;
+        const observaciones = document.getElementById('editarDiaRerObservaciones')?.value?.trim() || '';
+        if (!fechaHoraVal) {
+            this.showAlert('Complete fecha y hora', 'Datos incompletos', 'warning');
+            return;
+        }
+        const fechaHoraTs = this._parseLocalDateTimeInput(fechaHoraVal);
+        if (isNaN(fechaHoraTs)) {
+            this.showAlert('Fecha y hora no válidas', 'Error', 'error');
+            return;
+        }
+        let caloriasTotales = null;
+        if (esPrimerDia) {
+            caloriasTotales = document.getElementById('editarDiaRerDosis')?.value?.trim();
+            if (!caloriasTotales) {
+                this.showAlert('Complete la cantidad de calorías totales', 'Datos incompletos', 'warning');
+                return;
+            }
+        }
+
+        const id = this.currentInternamientoId;
+        const internamiento = this.internamientos.get(id);
+        if (!internamiento) { this.showAlert('No se encontró el internamiento', 'Error', 'error'); return; }
+        const rer = internamiento?.rer && typeof internamiento.rer === 'object' ? { ...internamiento.rer } : {};
+        const dias = rer.dias && typeof rer.dias === 'object' ? { ...rer.dias } : {};
+        const diaData = dias[diaKey];
+        if (!diaData) { this.showAlert('Día no encontrado', 'Error', 'error'); return; }
+
+        const updatedDia = {
+            ...diaData,
+            fechaHora: fechaHoraTs,
+            observaciones
+        };
+        if (esPrimerDia) {
+            updatedDia.dosis = caloriasTotales;
+            rer.caloriasTotales = caloriasTotales;
+        }
+        dias[diaKey] = updatedDia;
+        rer.dias = dias;
+
+        const updates = {};
+        updates['rer/dias/' + diaKey] = updatedDia;
+        updates['metadata/fechaUltimaActualizacion'] = Date.now();
+        if (esPrimerDia) updates['rer/caloriasTotales'] = caloriasTotales;
+
+        try {
+            if (window.database && this.internamientosRef) {
+                await this.internamientosRef.child(id).update(updates);
+            }
+            this.internamientos.set(id, { ...internamiento, rer });
+            delete this._rerCountdownVencidoPorId[id];
+            if (typeof this._saveCountdownVencidoStorage === 'function') this._saveCountdownVencidoStorage();
+            document.querySelector('.modal-overlay')?.remove();
+            this.loadRerView();
+            this.showNotification('Día RER actualizado', 'success');
+        } catch (err) {
+            console.error('Error editando día RER:', err);
+            this.showAlert('Error al guardar: ' + (err.message || err), 'Error', 'error');
+        }
+    }
+
     async agregarTomasDiaRer(diaKey) {
         if (!this.currentInternamientoId) { this.showAlert('No hay internamiento seleccionado', 'Error', 'error'); return; }
         const resultadoCodigo = await this.verificarCodigoAsistente('agregar_toma_rer');
@@ -9184,6 +9397,164 @@ class InternamientoModule {
         if (form) form.onsubmit = (e) => { e.preventDefault(); this.handleTomaRerSubmit(diaKey); };
     }
 
+    async registrarAplicacionTomaRer(diaKey, tomaId) {
+        if (!this.currentInternamientoId) { this.showAlert('No hay internamiento seleccionado', 'Error', 'error'); return; }
+        const resultadoCodigo = await this.verificarCodigoAsistente('editar_toma_rer');
+        if (!resultadoCodigo || !resultadoCodigo.valido || resultadoCodigo.cancelado) {
+            this.showNotification('Registro de aplicación cancelado', 'info');
+            return;
+        }
+        this._tomaRerAplicadoPor = resultadoCodigo.nombre || '';
+
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        const toma = internamiento?.rer?.dias?.[diaKey]?.tomas?.[tomaId];
+        if (!toma) { this.showAlert('Toma no encontrada', 'Error', 'error'); return; }
+
+        const horaLabels = { '8am': '8:00 AM', '12md': '12:00 MD', '4pm': '4:00 PM', '8pm': '8:00 PM', '12mn': '12:00 MN' };
+        const horaLabel = toma.hora ? (horaLabels[toma.hora] || toma.hora) : '—';
+        const cantInd = toma.cantidadPorToma != null && toma.cantidadPorToma !== '' ? String(toma.cantidadPorToma) : '—';
+        const aguaInd = toma.cantidadAgua != null && toma.cantidadAgua !== '' ? String(toma.cantidadAgua) + ' ml' : '—';
+        const cantAplVal = toma.cantidadAplicada != null ? String(toma.cantidadAplicada).replace(/"/g, '&quot;') : '';
+        const aguaAplVal = toma.aguaAplicada != null ? String(toma.aguaAplicada).replace(/"/g, '&quot;') : '';
+
+        const modalContent = `
+        <div style="max-height: 75vh; overflow-y: auto; padding: 10px;">
+            <form id="formAplicacionTomaRer">
+                <div style="margin-bottom: 16px; padding: 12px; background: #f0f4ff; border-radius: 8px; font-size: 0.95rem; color: #475569;">
+                    <i class="fas fa-clock"></i> Horario: <strong>${horaLabel.replace(/</g, '&lt;')}</strong>
+                </div>
+                <div style="margin-bottom: 18px; padding: 12px; background: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0;">
+                    <div style="font-weight: 600; color: #64748b; font-size: 0.8rem; text-transform: uppercase; margin-bottom: 6px;">Indicado (no se modifica)</div>
+                    <div style="font-size: 0.95rem; color: #334155;">Cantidad por toma: <strong>${cantInd.replace(/</g, '&lt;')}</strong> · Agua: <strong>${aguaInd.replace(/</g, '&lt;')}</strong></div>
+                </div>
+                <p style="margin: 0 0 14px 0; font-size: 0.9rem; color: #475569;">Registre lo que <strong>realmente se le pudo aplicar</strong> al paciente en este horario:</p>
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label>Cantidad por toma aplicada *</label>
+                    <input type="number" id="aplicacionTomaRerCantidad" min="0" step="0.01" required value="${cantAplVal}" placeholder="Ej: 8.6" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; color: #1e293b;">
+                </div>
+                <div class="form-group" style="margin-bottom: 18px;">
+                    <label>Cantidad de agua aplicada (ml) *</label>
+                    <input type="number" id="aplicacionTomaRerAgua" min="0" step="1" required value="${aguaAplVal}" placeholder="Ej: 5" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #fff; color: #1e293b;">
+                </div>
+                <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                    <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">Cancelar</button>
+                    <button type="submit" class="btn btn-primary" style="background: var(--internamiento-primary); border-color: var(--internamiento-primary);"><i class="fas fa-save"></i> Guardar aplicado</button>
+                </div>
+            </form>
+        </div>`;
+        const modal = this.createModal('Registrar lo aplicado', modalContent, 'fa-syringe');
+        document.body.appendChild(modal);
+        const form = document.getElementById('formAplicacionTomaRer');
+        if (form) form.onsubmit = (e) => { e.preventDefault(); this.handleRegistrarAplicacionTomaRerSubmit(diaKey, tomaId); };
+    }
+
+    async handleRegistrarAplicacionTomaRerSubmit(diaKey, tomaId) {
+        const cantidadAplicada = document.getElementById('aplicacionTomaRerCantidad')?.value;
+        const aguaAplicada = document.getElementById('aplicacionTomaRerAgua')?.value;
+        if (cantidadAplicada === '' || aguaAplicada === '') {
+            this.showAlert('Complete cantidad aplicada y agua aplicada', 'Datos incompletos', 'warning');
+            return;
+        }
+        const id = this.currentInternamientoId;
+        const internamiento = this.internamientos.get(id);
+        if (!internamiento) { this.showAlert('No se encontró el internamiento', 'Error', 'error'); return; }
+        const rer = internamiento.rer && typeof internamiento.rer === 'object' ? { ...internamiento.rer } : {};
+        const dias = rer.dias && typeof rer.dias === 'object' ? { ...rer.dias } : {};
+        const diaData = dias[diaKey];
+        if (!diaData?.tomas?.[tomaId]) { this.showAlert('Toma no encontrada', 'Error', 'error'); return; }
+
+        const tomas = { ...diaData.tomas };
+        tomas[tomaId] = {
+            ...tomas[tomaId],
+            cantidadAplicada,
+            aguaAplicada,
+            fechaAplicacion: Date.now(),
+            aplicadoPorNombre: this._tomaRerAplicadoPor || ''
+        };
+        const updatedDia = { ...diaData, tomas };
+        dias[diaKey] = updatedDia;
+        rer.dias = dias;
+
+        const updates = {};
+        updates['rer/dias/' + diaKey + '/tomas/' + tomaId + '/cantidadAplicada'] = cantidadAplicada;
+        updates['rer/dias/' + diaKey + '/tomas/' + tomaId + '/aguaAplicada'] = aguaAplicada;
+        updates['rer/dias/' + diaKey + '/tomas/' + tomaId + '/fechaAplicacion'] = tomas[tomaId].fechaAplicacion;
+        updates['rer/dias/' + diaKey + '/tomas/' + tomaId + '/aplicadoPorNombre'] = tomas[tomaId].aplicadoPorNombre;
+        updates['metadata/fechaUltimaActualizacion'] = Date.now();
+        try {
+            if (window.database && this.internamientosRef) {
+                await this.internamientosRef.child(id).update(updates);
+            }
+            this.internamientos.set(id, { ...internamiento, rer });
+            document.querySelector('.modal-overlay')?.remove();
+            this.loadRerView();
+            this.showNotification('Aplicación registrada por ' + (this._tomaRerAplicadoPor || ''), 'success');
+        } catch (err) {
+            console.error('Error registrando aplicación RER:', err);
+            this.showAlert('Error al guardar: ' + (err.message || err), 'Error', 'error');
+        }
+    }
+
+    /** @deprecated use registrarAplicacionTomaRer */
+    async editarTomaRer(diaKey, tomaId) {
+        return this.registrarAplicacionTomaRer(diaKey, tomaId);
+    }
+
+    async eliminarAplicacionTomaRer(diaKey, tomaId) {
+        if (!this.esAdmin()) {
+            this.showAlert('Solo un administrador puede eliminar el registro de aplicación.', 'Acceso denegado', 'warning');
+            return;
+        }
+        if (!this.currentInternamientoId) { this.showAlert('No hay internamiento seleccionado', 'Error', 'error'); return; }
+
+        const internamiento = this.internamientos.get(this.currentInternamientoId);
+        const toma = internamiento?.rer?.dias?.[diaKey]?.tomas?.[tomaId];
+        if (!toma?.cantidadAplicada && toma?.cantidadAplicada !== 0) {
+            this.showAlert('No hay registro de aplicación para eliminar.', 'Sin datos', 'info');
+            return;
+        }
+
+        const confirmar = await this.showConfirm(
+            '¿Eliminar el registro de lo aplicado al paciente en esta toma?\n\nSe conservará lo indicado; solo se borra la sección "Aplicado al paciente".',
+            'Eliminar aplicación',
+            { confirmText: 'Eliminar', cancelText: 'Cancelar', icon: 'fa-trash-alt', iconColor: '#dc2626' }
+        );
+        if (!confirmar) return;
+
+        const id = this.currentInternamientoId;
+        const rer = internamiento.rer && typeof internamiento.rer === 'object' ? { ...internamiento.rer } : {};
+        const dias = rer.dias && typeof rer.dias === 'object' ? { ...rer.dias } : {};
+        const diaData = dias[diaKey];
+        if (!diaData?.tomas?.[tomaId]) return;
+
+        const tomas = { ...diaData.tomas };
+        const { cantidadAplicada, aguaAplicada, fechaAplicacion, aplicadoPorNombre, ...resto } = tomas[tomaId];
+        tomas[tomaId] = resto;
+        dias[diaKey] = { ...diaData, tomas };
+        rer.dias = dias;
+
+        const base = 'rer/dias/' + diaKey + '/tomas/' + tomaId + '/';
+        const updates = {
+            [base + 'cantidadAplicada']: null,
+            [base + 'aguaAplicada']: null,
+            [base + 'fechaAplicacion']: null,
+            [base + 'aplicadoPorNombre']: null,
+            'metadata/fechaUltimaActualizacion': Date.now()
+        };
+
+        try {
+            if (window.database && this.internamientosRef) {
+                await this.internamientosRef.child(id).update(updates);
+            }
+            this.internamientos.set(id, { ...internamiento, rer });
+            this.loadRerView();
+            this.showNotification('Registro de aplicación eliminado', 'success');
+        } catch (err) {
+            console.error('Error eliminando aplicación RER:', err);
+            this.showAlert('Error al eliminar: ' + (err.message || err), 'Error', 'error');
+        }
+    }
+
     getTomaRerFormHTML(horasUsadas = []) {
         const horas = [
             { value: '8am', label: '8:00 AM' },
@@ -9201,8 +9572,9 @@ class InternamientoModule {
         <div style="max-height: 75vh; overflow-y: auto; padding: 10px;">
             <form id="formTomaRer">
                 <div class="form-group" style="margin-bottom: 18px;">
-                    <label>Cantidad por toma *</label>
+                    <label>Cantidad por toma indicada *</label>
                     <input type="number" id="tomaRerCantidadPorToma" min="0" step="0.01" required placeholder="Ej: 50" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b;">
+                    <small style="color: #64748b; display: block; margin-top: 4px;">Lo aplicado al paciente se registra después en cada tarjeta con código.</small>
                 </div>
                 <div class="form-group" style="margin-bottom: 18px;">
                     <label>Hora *</label>
@@ -9212,7 +9584,7 @@ class InternamientoModule {
                     ${sinHorasDisponibles ? '<small style="color: #94a3b8; display: block; margin-top: 4px;">Ya se registraron tomas en todos los horarios de este día (8am, 12md, 4pm, 8pm, 12mn).</small>' : ''}
                 </div>
                 <div class="form-group" style="margin-bottom: 18px;">
-                    <label>Cantidad de agua (ml) *</label>
+                    <label>Cantidad de agua indicada (ml) *</label>
                     <input type="number" id="tomaRerCantidadAgua" min="0" step="1" required placeholder="Ej: 100" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b;">
                 </div>
                 <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 25px; padding-top: 20px; border-top: 1px solid #e2e8f0;">

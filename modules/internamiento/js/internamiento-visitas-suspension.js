@@ -22,26 +22,44 @@ InternamientoModule.prototype._parseProgramacionDateTime = function(fechaYmd, ho
     return new Date(y, m - 1, d, h, min, 0, 0).getTime();
 };
 
+InternamientoModule.prototype.getProgramacionDesdeYmd = function(medicamento) {
+    if (medicamento?.programacionDesde) return medicamento.programacionDesde;
+    if (medicamento?.fechaInicio && typeof this._fechaLocalYmd === 'function') {
+        return this._fechaLocalYmd(new Date(medicamento.fechaInicio));
+    }
+    return null;
+};
+
+InternamientoModule.prototype.getProgramacionHastaYmd = function(medicamento) {
+    if (medicamento?.programacionHasta) return medicamento.programacionHasta;
+    if (medicamento?.fechaFin && typeof this._fechaLocalYmd === 'function') {
+        return this._fechaLocalYmd(new Date(medicamento.fechaFin));
+    }
+    return null;
+};
+
 InternamientoModule.prototype.getProgramacionInicioMs = function(medicamento) {
-    if (!medicamento?.programacionDesde) return null;
+    const desde = this.getProgramacionDesdeYmd(medicamento);
+    if (!desde) return null;
     return this._parseProgramacionDateTime(
-        medicamento.programacionDesde,
+        desde,
         medicamento.programacionDesdeHora || '00:00'
     );
 };
 
 InternamientoModule.prototype.getProgramacionFinMs = function(medicamento) {
-    if (!medicamento?.programacionHasta) return null;
+    const hasta = this.getProgramacionHastaYmd(medicamento);
+    if (!hasta) return null;
     return this._parseProgramacionDateTime(
-        medicamento.programacionHasta,
+        hasta,
         medicamento.programacionHastaHora || '23:59'
     );
 };
 
 InternamientoModule.prototype.estaDiaDentroProgramacionMedicamento = function(medicamento, diaKey) {
     if (!medicamento || !diaKey) return true;
-    const desde = medicamento.programacionDesde || null;
-    const hasta = medicamento.programacionHasta || null;
+    const desde = this.getProgramacionDesdeYmd(medicamento);
+    const hasta = this.getProgramacionHastaYmd(medicamento);
     if (desde && diaKey < desde) return false;
     if (hasta && diaKey > hasta) return false;
     return true;
@@ -67,10 +85,12 @@ InternamientoModule.prototype.estaDentroProgramacionMedicamento = function(medic
 };
 
 InternamientoModule.prototype.estaMedicamentoPendienteInicioProgramacion = function(medicamento) {
-    // Solo bloquea si la FECHA (sin hora) es futura — no bloquea por la hora dentro del mismo día
-    if (!medicamento?.programacionDesde) return false;
+    const desde = typeof this.getProgramacionDesdeYmd === 'function'
+        ? this.getProgramacionDesdeYmd(medicamento)
+        : medicamento?.programacionDesde;
+    if (!desde) return false;
     const hoy = typeof this._fechaLocalYmd === 'function' ? this._fechaLocalYmd() : '';
-    return hoy < medicamento.programacionDesde;
+    return hoy < desde;
 };
 
 InternamientoModule.prototype.estaMedicamentoFinalizadoProgramacion = function(medicamento) {
@@ -81,8 +101,12 @@ InternamientoModule.prototype.estaMedicamentoFinalizadoProgramacion = function(m
 
 InternamientoModule.prototype.formatProgramacionMedicamento = function(medicamento) {
     if (!medicamento) return '';
-    const desde = medicamento.programacionDesde || null;
-    const hasta = medicamento.programacionHasta || null;
+    const desde = typeof this.getProgramacionDesdeYmd === 'function'
+        ? this.getProgramacionDesdeYmd(medicamento)
+        : (medicamento.programacionDesde || null);
+    const hasta = typeof this.getProgramacionHastaYmd === 'function'
+        ? this.getProgramacionHastaYmd(medicamento)
+        : (medicamento.programacionHasta || null);
     if (!desde && !hasta) return '';
     const fmtFecha = (ymd) => {
         if (!ymd) return '';

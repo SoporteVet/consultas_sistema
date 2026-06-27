@@ -3651,7 +3651,8 @@ thead .med-col-fija {
 }
 
 .med-estado-aplicado-vista,
-.med-estado-pendiente-vista {
+.med-estado-pendiente-vista,
+.med-estado-bloqueado-vista {
     display: block;
     width: 100%;
     margin-bottom: 4px;
@@ -3663,6 +3664,16 @@ thead .med-col-fija {
     text-align: center;
     user-select: none;
     pointer-events: none;
+}
+
+.med-estado-bloqueado-vista {
+    color: #9e9e9e;
+    background: #eeeeee;
+    border: 1px solid #bdbdbd;
+    text-transform: lowercase;
+    font-size: 0.58rem;
+    line-height: 1.15;
+    padding: 3px 4px;
 }
 
 .med-estado-aplicado-vista {
@@ -3857,6 +3868,7 @@ thead .med-col-fija {
 .med-celda-fuera-programacion {
     background: #f5f5f5 !important;
     opacity: 0.65;
+    cursor: not-allowed;
 }
 
 .med-celda-na {
