@@ -7883,7 +7883,12 @@ class InternamientoModule {
 
     showMedicacionesPendientesView() {
         this.showInternamientoView('medicaciones_pendientes');
-        setTimeout(() => this.loadMedicacionesPendientesView(), 100);
+        const render = () => setTimeout(() => this.loadMedicacionesPendientesView(), 100);
+        if (typeof this._verificarTodasSuspensionesVencidas === 'function') {
+            this._verificarTodasSuspensionesVencidas().then(render).catch(render);
+        } else {
+            render();
+        }
     }
 
     loadMedicacionesPendientesView() {
@@ -7901,6 +7906,9 @@ class InternamientoModule {
             if (!this.esRegistroInternamientoReal(internamientoId)) return;
             const medicamentos = Object.values(internamiento.planTerapeutico?.medicamentos || {})
                 .filter(m => {
+                    if (typeof this.esMedicamentoElegibleMedicacionesPendientes === 'function') {
+                        return this.esMedicamentoElegibleMedicacionesPendientes(m);
+                    }
                     if (m.puestoPorConsultaExterna || m.dosisUnica) return false;
                     if (typeof this.esMedicamentoVisibleParaAdmin === 'function') {
                         return this.esMedicamentoVisibleParaAdmin(m);
@@ -8084,7 +8092,12 @@ class InternamientoModule {
         this.internamientos.forEach((internamiento, internamientoId) => {
             if (['egresado', 'alta', 'defuncion'].includes(internamiento.estado?.actual)) return;
             const medicamentos = Object.values(internamiento.planTerapeutico?.medicamentos || {})
-                .filter(m => m.estadoMedicamento === 'activo' && !m.puestoPorConsultaExterna && !m.dosisUnica);
+                .filter(m => {
+                    if (typeof this.esMedicamentoElegibleMedicacionesPendientes === 'function') {
+                        return this.esMedicamentoElegibleMedicacionesPendientes(m);
+                    }
+                    return m.estadoMedicamento === 'activo' && !m.puestoPorConsultaExterna && !m.dosisUnica;
+                });
 
             medicamentos.forEach(med => {
                 const proxima = this._calcularProximaDosisTiempo(med);
@@ -8201,6 +8214,12 @@ class InternamientoModule {
     }
 
     _calcularProximaDosisTiempo(medicamento) {
+        if (typeof this.estaMedicamentoSuspendido === 'function' && this.estaMedicamentoSuspendido(medicamento)) {
+            return null;
+        }
+        if (medicamento?.estadoMedicamento === 'suspendido') {
+            if (!medicamento.suspensionDesde && !medicamento.suspensionHasta) return null;
+        }
         if (!medicamento?.frecuenciaHoras && !(medicamento?.horariosCalculados?.length) && !(medicamento?.horariosExactos?.length)) return null;
         const horarios = this.obtenerHorariosMedicamento(medicamento);
         if (horarios.length === 0 && !medicamento.frecuenciaHoras) return null;

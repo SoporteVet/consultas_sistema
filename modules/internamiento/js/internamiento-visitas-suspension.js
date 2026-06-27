@@ -156,6 +156,44 @@ InternamientoModule.prototype.esMedicamentoVisibleParaAdmin = function(medicamen
     return false;
 };
 
+/** Medicamentos que pueden aparecer en la lista global de medicaciones pendientes. */
+InternamientoModule.prototype.esMedicamentoElegibleMedicacionesPendientes = function(medicamento) {
+    if (!medicamento) return false;
+    if (medicamento.puestoPorConsultaExterna || medicamento.dosisUnica) return false;
+
+    if (typeof this.estaMedicamentoSuspendido === 'function' && this.estaMedicamentoSuspendido(medicamento)) {
+        return false;
+    }
+    if (medicamento.estadoMedicamento === 'suspendido') {
+        if (!medicamento.suspensionDesde && !medicamento.suspensionHasta) return false;
+    }
+
+    if (typeof this.esMedicamentoVisibleParaAdmin === 'function') {
+        if (!this.esMedicamentoVisibleParaAdmin(medicamento)) return false;
+    } else if (medicamento.estadoMedicamento !== 'activo') {
+        return false;
+    }
+
+    if (typeof this.estaDentroProgramacionMedicamento === 'function'
+        && !this.estaDentroProgramacionMedicamento(medicamento)) {
+        return false;
+    }
+
+    return true;
+};
+
+InternamientoModule.prototype._verificarTodasSuspensionesVencidas = async function() {
+    if (typeof this.verificarSuspensionesVencidas !== 'function' || !this.internamientos) return;
+    const ids = [];
+    this.internamientos.forEach((internamiento, mapKey) => {
+        if (['egresado', 'alta', 'defuncion'].includes(internamiento.estado?.actual)) return;
+        const internamientoId = internamiento.metadata?.internamientoId || mapKey;
+        if (typeof this.esRegistroInternamientoReal === 'function' && !this.esRegistroInternamientoReal(internamientoId)) return;
+        ids.push(internamientoId);
+    });
+    await Promise.all(ids.map((id) => this.verificarSuspensionesVencidas(id).catch(() => {})));
+};
+
 InternamientoModule.prototype.verificarSuspensionesVencidas = async function(internamientoId) {
     if (!internamientoId || !this.internamientosRef) return;
     const internamiento = this.internamientos.get(internamientoId);
