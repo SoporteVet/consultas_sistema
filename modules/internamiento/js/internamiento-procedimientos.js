@@ -452,8 +452,15 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
                     </div>
                     
                     ${proc.asignadoANombre ? `
-                    <div style="font-size:0.85rem;color:#1565c0;margin-bottom:8px;background:#e3f2fd;padding:4px 10px;border-radius:6px;display:inline-block;">
-                        <i class="fas fa-user-nurse"></i> Asignado a: <strong>${(proc.asignadoANombre || '').replace(/</g, '&lt;')}</strong>
+                    <div style="display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:8px;">
+                        <div style="font-size:0.85rem;color:#1565c0;background:#e3f2fd;padding:4px 10px;border-radius:6px;display:inline-flex;align-items:center;gap:6px;">
+                            <i class="fas fa-user-nurse"></i> Asignado a: <strong>${(proc.asignadoANombre || '').replace(/</g, '&lt;')}</strong>
+                        </div>
+                        ${proc.asignadoOriginalNombre && proc.asignadoOriginalNombre !== proc.asignadoANombre ? `
+                        <div style="font-size:0.82rem;color:#6a1b9a;background:#f3e5f5;padding:3px 9px;border-radius:6px;display:inline-flex;align-items:center;gap:5px;" title="Asignado originalmente">
+                            <i class="fas fa-history"></i> Original: <strong>${(proc.asignadoOriginalNombre || '').replace(/</g, '&lt;')}</strong>
+                        </div>
+                        ` : ''}
                     </div>
                     ` : ''}
 
@@ -499,6 +506,10 @@ InternamientoModule.prototype.renderProcedimientoItem = function(proc, bloqueado
                                 onclick="window.internamientoModule.asignarRecordatorioPendiente('${proc.procedimientoId}')" title="Programar recordatorio">
                             <i class="fas fa-bell"></i>
                         </button>
+                        <button class="btn btn-sm" style="background: #6a1b9a; color: white;"
+                                onclick="window.internamientoModule.reasignarProcedimiento('${proc.procedimientoId}')" title="Reasignar a otro personal">
+                            <i class="fas fa-user-edit"></i>
+                        </button>
                         <button class="btn btn-sm" style="background: #17a2b8; color: white;" 
                                 onclick="window.internamientoModule.editarProcedimiento('${proc.procedimientoId}')" title="Editar">
                             <i class="fas fa-edit"></i>
@@ -523,8 +534,14 @@ InternamientoModule.prototype.mostrarHistorialCambiosProcedimiento = function(pr
             const fechaStr = entry.fecha ? new Date(entry.fecha).toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' }) : '—';
             const nombre = (entry.editadoNombre || '—').replace(/</g, '&lt;');
             const motivo = (entry.motivo || '—').replace(/</g, '&lt;');
+            const esReasignacion = entry.tipo === 'reasignacion';
+
             let datosAnt = '—';
-            if (entry.datosAnteriores) {
+            if (esReasignacion) {
+                const ant = (entry.datosAnteriores?.asignadoANombre || 'Sin asignar').replace(/</g, '&lt;');
+                const nuevo = (entry.datosNuevos?.asignadoANombre || 'Sin asignar').replace(/</g, '&lt;');
+                datosAnt = `<span style="color:#c62828;">${ant}</span> → <span style="color:#2e7d32;font-weight:600;">${nuevo}</span>`;
+            } else if (entry.datosAnteriores) {
                 const d = entry.datosAnteriores;
                 const parts = [];
                 if (d.descripcion) parts.push('Descripción: ' + String(d.descripcion).replace(/</g, '&lt;'));
@@ -533,10 +550,15 @@ InternamientoModule.prototype.mostrarHistorialCambiosProcedimiento = function(pr
                 if (d.paraFernanda) parts.push('Para Fernanda: sí');
                 datosAnt = parts.length ? parts.join(' · ') : '—';
             }
+
+            const tipoBadge = esReasignacion
+                ? `<span style="font-size:0.75rem;background:#f3e5f5;color:#6a1b9a;padding:2px 7px;border-radius:10px;font-weight:600;"><i class="fas fa-user-edit"></i> Reasignación</span>`
+                : `<span style="font-size:0.75rem;background:#e3f2fd;color:#1565c0;padding:2px 7px;border-radius:10px;font-weight:600;"><i class="fas fa-edit"></i> Edición</span>`;
+
             filas += `
-                <tr>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${fechaStr}</td>
-                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${nombre}</td>
+                <tr style="${esReasignacion ? 'background:#fdf6ff;' : ''}">
+                    <td style="padding: 10px; border-bottom: 1px solid #eee; white-space:nowrap;">${fechaStr}</td>
+                    <td style="padding: 10px; border-bottom: 1px solid #eee;">${tipoBadge}<br><span style="font-size:0.9rem;">${nombre}</span></td>
                     <td style="padding: 10px; border-bottom: 1px solid #eee;">${motivo}</td>
                     <td style="padding: 10px; border-bottom: 1px solid #eee; font-size: 0.85rem; color: #555;">${datosAnt}</td>
                 </tr>`;
@@ -554,9 +576,9 @@ InternamientoModule.prototype.mostrarHistorialCambiosProcedimiento = function(pr
                     <thead>
                         <tr style="background: #f5f5f5;">
                             <th style="padding: 10px; text-align: left;">Fecha / Hora</th>
-                            <th style="padding: 10px; text-align: left;">Editado por</th>
+                            <th style="padding: 10px; text-align: left;">Tipo / Realizado por</th>
                             <th style="padding: 10px; text-align: left;">Motivo</th>
-                            <th style="padding: 10px; text-align: left;">Lo que estaba en ese momento</th>
+                            <th style="padding: 10px; text-align: left;">Cambio registrado</th>
                         </tr>
                     </thead>
                     <tbody>${filas}</tbody>
@@ -1103,6 +1125,170 @@ InternamientoModule.prototype.editarProcedimiento = function(procedimientoId) {
 
     const modal = this.createModal('Editar Procedimiento', modalContent);
     document.body.appendChild(modal);
+};
+
+// ================================================================
+// REASIGNACIÓN DE PROCEDIMIENTOS / PENDIENTES
+// ================================================================
+
+InternamientoModule.prototype.reasignarProcedimiento = async function(procedimientoId) {
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    if (!internamiento) return;
+    const proc = internamiento.procedimientos?.[procedimientoId];
+    if (!proc) {
+        this.showAlert('Procedimiento no encontrado.', 'Error', 'error');
+        return;
+    }
+    if (proc.estado === 'completado') {
+        this.showAlert('No se puede reasignar un pendiente ya completado.', 'Acción bloqueada', 'warning');
+        return;
+    }
+
+    // Construir opciones de asignados (puede ser async)
+    const opcionesAsistentes = await this.buildOpcionesAsignadosPendientes();
+
+    const asignadoActualNombre = (proc.asignadoANombre || '').replace(/</g, '&lt;');
+    const asignadoOriginalNombre = (proc.asignadoOriginalNombre || '').replace(/</g, '&lt;');
+    const descEsc = (proc.descripcion || '').replace(/</g, '&lt;');
+
+    const modalContent = `
+        <form id="formReasignarProcedimiento" autocomplete="off">
+            <div style="background:#f8f9fa;border-radius:8px;padding:12px 16px;margin-bottom:18px;">
+                <div style="font-size:0.95rem;font-weight:600;color:#333;margin-bottom:6px;">
+                    <i class="fas fa-clipboard-list" style="color:#6a1b9a;margin-right:6px;"></i>${descEsc}
+                </div>
+                ${asignadoActualNombre ? `
+                <div style="font-size:0.85rem;color:#1565c0;">
+                    <i class="fas fa-user-nurse"></i> Actualmente asignado a: <strong>${asignadoActualNombre}</strong>
+                </div>` : '<div style="font-size:0.85rem;color:#888;"><i class="fas fa-user-slash"></i> Sin asignación actual</div>'}
+                ${asignadoOriginalNombre && asignadoOriginalNombre !== asignadoActualNombre ? `
+                <div style="font-size:0.82rem;color:#6a1b9a;margin-top:4px;">
+                    <i class="fas fa-history"></i> Asignado original: <strong>${asignadoOriginalNombre}</strong>
+                </div>` : ''}
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="font-weight:600;display:block;margin-bottom:6px;">
+                    <i class="fas fa-user-edit" style="color:#6a1b9a;"></i> Reasignar a *
+                </label>
+                <select id="reasignarNuevoAsignado" required style="width:100%;padding:10px;border-radius:6px;border:1px solid #cbd5e1;font-size:0.95rem;">
+                    ${opcionesAsistentes}
+                </select>
+            </div>
+
+            <div class="form-group" style="margin-bottom:16px;">
+                <label style="font-weight:600;display:block;margin-bottom:6px;">
+                    <i class="fas fa-comment-alt" style="color:#e65100;"></i> Motivo de la reasignación *
+                </label>
+                <textarea id="reasignarMotivo" rows="3" required
+                    placeholder="Indique por qué se reasigna este pendiente..."
+                    style="width:100%;padding:10px;border-radius:6px;border:1px solid #cbd5e1;resize:vertical;font-size:0.95rem;"></textarea>
+                <small style="color:#64748b;">El motivo quedará registrado en el historial de cambios.</small>
+            </div>
+
+            <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:20px;">
+                <button type="button" class="btn btn-secondary" onclick="this.closest('.modal-overlay').remove()">
+                    <i class="fas fa-times"></i> Cancelar
+                </button>
+                <button type="submit" class="btn btn-primary" style="background:#6a1b9a;border-color:#6a1b9a;">
+                    <i class="fas fa-user-edit"></i> Confirmar reasignación
+                </button>
+            </div>
+        </form>
+    `;
+
+    const modal = this.createModal('Reasignar pendiente', modalContent, 'fa-user-edit');
+    document.body.appendChild(modal);
+
+    const form = document.getElementById('formReasignarProcedimiento');
+    if (form) {
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            await this._ejecutarReasignacion(procedimientoId, modal);
+        });
+    }
+};
+
+InternamientoModule.prototype._ejecutarReasignacion = async function(procedimientoId, modal) {
+    const nuevoAsignadoRaw = document.getElementById('reasignarNuevoAsignado')?.value || '';
+    const motivo = document.getElementById('reasignarMotivo')?.value?.trim() || '';
+
+    if (!motivo) {
+        this.showAlert('El motivo de la reasignación es obligatorio.', 'Campo requerido', 'warning');
+        return;
+    }
+
+    const internamiento = this.internamientos.get(this.currentInternamientoId);
+    const proc = internamiento?.procedimientos?.[procedimientoId];
+    if (!proc) return;
+
+    // Extraer nuevo asignado
+    const [nuevoAsignadoId, nuevoAsignadoNombre] = nuevoAsignadoRaw.includes('|')
+        ? nuevoAsignadoRaw.split('|')
+        : [nuevoAsignadoRaw || null, nuevoAsignadoRaw || null];
+
+    // Solicitar código de verificación
+    const resultadoCodigo = await this.verificarCodigoAsistente('reasignar_pendiente');
+    if (!resultadoCodigo?.valido || resultadoCodigo?.cancelado) {
+        this.showNotification('Reasignación cancelada', 'info');
+        return;
+    }
+
+    try {
+        const ahora = Date.now();
+        const updates = {};
+        const basePath = `procedimientos/${procedimientoId}`;
+
+        // Guardar el asignado original la primera vez que se reasigna
+        if (!proc.asignadoOriginalNombre) {
+            updates[`${basePath}/asignadoOriginalId`] = proc.asignadoAId || null;
+            updates[`${basePath}/asignadoOriginalNombre`] = proc.asignadoANombre || null;
+        }
+
+        updates[`${basePath}/asignadoAId`] = nuevoAsignadoId || null;
+        updates[`${basePath}/asignadoANombre`] = nuevoAsignadoNombre || null;
+        updates['metadata/fechaUltimaActualizacion'] = ahora;
+
+        // Registrar entrada en historialCambios
+        const entradaHistorial = {
+            tipo: 'reasignacion',
+            fecha: ahora,
+            editadoPor: resultadoCodigo.assistantId || null,
+            editadoNombre: resultadoCodigo.nombre || '',
+            motivo,
+            datosAnteriores: {
+                asignadoAId: proc.asignadoAId || null,
+                asignadoANombre: proc.asignadoANombre || 'Sin asignar'
+            },
+            datosNuevos: {
+                asignadoAId: nuevoAsignadoId || null,
+                asignadoANombre: nuevoAsignadoNombre || 'Sin asignar'
+            }
+        };
+        const historialPrev = proc.historialCambios || [];
+        updates[`${basePath}/historialCambios`] = [...historialPrev, entradaHistorial];
+
+        // Guardar en Firebase
+        await this.internamientosRef.child(this.currentInternamientoId).update(updates);
+
+        // Actualizar estado local
+        if (!proc.asignadoOriginalNombre) {
+            proc.asignadoOriginalId = proc.asignadoAId || null;
+            proc.asignadoOriginalNombre = proc.asignadoANombre || null;
+        }
+        proc.asignadoAId = nuevoAsignadoId || null;
+        proc.asignadoANombre = nuevoAsignadoNombre || null;
+        proc.historialCambios = [...historialPrev, entradaHistorial];
+        this.internamientos.set(this.currentInternamientoId, { ...internamiento });
+
+        modal?.remove();
+        const nombreFinal = nuevoAsignadoNombre || 'Sin asignar';
+        this.showNotification(`Pendiente reasignado a ${nombreFinal} por ${resultadoCodigo.nombre}`, 'success');
+        this._refreshVistaProcedimientos();
+    } catch (err) {
+        console.error('Error reasignando procedimiento:', err);
+        this.showAlert('Error al reasignar: ' + (err.message || err), 'Error', 'error');
+    }
 };
 
 InternamientoModule.prototype.guardarEdicionProcedimiento = async function(procedimientoId) {

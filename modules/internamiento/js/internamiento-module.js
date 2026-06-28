@@ -8307,40 +8307,61 @@ class InternamientoModule {
             if (!medicamento.suspensionDesde && !medicamento.suspensionHasta) return null;
         }
         if (!medicamento?.frecuenciaHoras && !(medicamento?.horariosCalculados?.length) && !(medicamento?.horariosExactos?.length)) return null;
-        const horarios = this.obtenerHorariosMedicamento(medicamento);
-        if (horarios.length === 0 && !medicamento.frecuenciaHoras) return null;
 
-        const admins = Object.values(medicamento.administraciones || {})
-            .filter(a => a.estado === 'administrado')
-            .sort((a, b) => (b.fechaHoraReal || 0) - (a.fechaHoraReal || 0));
-        const ultimaTs = admins[0]?.fechaHoraReal || null;
+        // obtenerHorariosMedicamento prioriza horariosExactos > horariosCalculados > frecuenciaHoras
+        // Esta función DEBE seguir la misma prioridad para ser consistente con la tabla/grid.
+        const horarios = this.obtenerHorariosMedicamento(medicamento);
         const ahora = Date.now();
 
-        if (medicamento.frecuenciaHoras && medicamento.frecuenciaHoras > 0) {
-            if (!ultimaTs) return ahora; // nunca administrado = ahora
-            const proxima = ultimaTs + (medicamento.frecuenciaHoras * 3600000);
-            return proxima;
-        }
-
-        // Horarios exactos: buscar próximo
+        // RUTA 1: Horarios explícitos (exactos, calculados o generados desde frecuencia)
+        // Se evalúa siempre que haya horarios, sin importar si también existe frecuenciaHoras,
+        // porque la tabla usa esta misma lógica.
         if (horarios.length > 0) {
             const ahoraDate = new Date(ahora);
+            const hoyKey = this._formatDiaKey(ahoraDate);
             const ahoraMin = ahoraDate.getHours() * 60 + ahoraDate.getMinutes();
+
+            // Revisar slots de hoy en orden cronológico
             for (const h of horarios) {
                 const [hh, mm] = h.split(':').map(Number);
                 const slotMin = hh * 60 + mm;
-                if (slotMin >= ahoraMin) {
+                if (slotMin < ahoraMin) {
+                    // Slot de hoy que ya pasó: verificar si fue administrado
+                    const admin = typeof this.obtenerAdminCeldaMedicacion === 'function'
+                        ? this.obtenerAdminCeldaMedicacion(medicamento, hoyKey, h)
+                        : null;
+                    const yaAdministrado = admin && admin.estado === 'administrado';
+                    if (!yaAdministrado) {
+                        // Slot pasado no administrado → vencido
+                        const slotTs = new Date(ahoraDate);
+                        slotTs.setHours(hh, mm, 0, 0);
+                        return slotTs.getTime();
+                    }
+                    // Si ya fue administrado, continuar al siguiente slot
+                } else {
+                    // Primer slot de hoy que aún no llegó (o es exactamente ahora)
                     const prox = new Date(ahoraDate);
                     prox.setHours(hh, mm, 0, 0);
                     return prox.getTime();
                 }
             }
-            // Próximo es mañana (primer horario)
-            const [hh, mm] = horarios[0].split(':').map(Number);
+
+            // Todos los slots de hoy ya pasaron y fueron administrados → mañana primer horario
+            const [hh0, mm0] = horarios[0].split(':').map(Number);
             const manana = new Date(ahoraDate);
             manana.setDate(manana.getDate() + 1);
-            manana.setHours(hh, mm, 0, 0);
+            manana.setHours(hh0, mm0, 0, 0);
             return manana.getTime();
+        }
+
+        // RUTA 2: Solo frecuenciaHoras sin horarios explícitos definidos
+        if (medicamento.frecuenciaHoras && medicamento.frecuenciaHoras > 0) {
+            const admins = Object.values(medicamento.administraciones || {})
+                .filter(a => a.estado === 'administrado')
+                .sort((a, b) => (b.fechaHoraReal || 0) - (a.fechaHoraReal || 0));
+            const ultimaTs = admins[0]?.fechaHoraReal || null;
+            if (!ultimaTs) return ahora;
+            return ultimaTs + (medicamento.frecuenciaHoras * 3600000);
         }
 
         return null;
