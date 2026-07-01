@@ -3611,6 +3611,16 @@
     box-shadow: var(--internamiento-shadow);
 }
 
+.med-header-paciente {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: #37474f;
+}
+
+#internamientosSection .section-header h2 .med-header-paciente {
+    font-size: 1.15rem;
+}
+
 .med-control-dias-toolbar {
     display: flex;
     align-items: center;
@@ -3711,6 +3721,10 @@
     border-collapse: collapse;
     font-size: 0.82rem;
     min-width: 900px;
+    --med-col-med-w: 190px;
+    --med-col-dosis-w: 72px;
+    --med-col-via-w: 52px;
+    --med-col-horas-w: 130px;
 }
 
 .med-control-table th,
@@ -3740,24 +3754,156 @@
 
 .med-col-med {
     left: 0;
-    min-width: 140px;
-    max-width: 180px;
+    width: var(--med-col-med-w, 190px);
+    min-width: var(--med-col-med-w, 190px);
+    max-width: var(--med-col-med-w, 190px);
 }
 
 .med-col-dosis {
-    left: 140px;
-    min-width: 70px;
+    left: var(--med-col-med-w, 190px);
+    width: var(--med-col-dosis-w, 72px);
+    min-width: var(--med-col-dosis-w, 72px);
 }
 
 .med-col-via {
-    left: 210px;
-    min-width: 55px;
+    left: calc(var(--med-col-med-w, 190px) + var(--med-col-dosis-w, 72px));
+    width: var(--med-col-via-w, 52px);
+    min-width: var(--med-col-via-w, 52px);
     text-align: center;
 }
 
 .med-col-horas {
-    left: 265px;
-    min-width: 130px;
+    left: calc(var(--med-col-med-w, 190px) + var(--med-col-dosis-w, 72px) + var(--med-col-via-w, 52px));
+    width: var(--med-col-horas-w, 130px);
+    min-width: var(--med-col-horas-w, 130px);
+}
+
+.med-col-med-content {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.med-col-med-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.med-col-med-nombre {
+    display: block;
+    font-size: 0.82rem;
+    line-height: 1.25;
+    word-break: break-word;
+    flex: 1;
+    min-width: 0;
+}
+
+.med-col-med-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.med-col-med-meta > span {
+    margin-left: 0 !important;
+    white-space: normal !important;
+    display: inline-block;
+    max-width: 100%;
+    line-height: 1.25;
+    font-size: 0.68rem !important;
+}
+
+.med-tabla-menu-wrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.med-tabla-menu-btn {
+    width: 22px;
+    height: 22px;
+    border: 1px solid #cfd8dc;
+    background: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+    color: #78909c;
+    font-size: 0.72rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.med-tabla-menu-btn:hover {
+    background: #eceff1;
+    color: #37474f;
+    border-color: #90a4ae;
+}
+
+.med-tabla-menu {
+    display: none;
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+    z-index: 20;
+    min-width: 148px;
+    overflow: hidden;
+}
+
+.med-tabla-menu.open {
+    display: block;
+}
+
+.med-tabla-menu--flotante {
+    position: fixed;
+    top: auto;
+    right: auto;
+}
+
+.med-tabla-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: none;
+    background: none;
+    font-family: inherit;
+    font-size: 0.78rem;
+    color: #37474f;
+    cursor: pointer;
+    text-align: left;
+    white-space: nowrap;
+    transition: background 0.12s;
+}
+
+.med-tabla-menu-item:hover {
+    background: #f5f5f5;
+}
+
+.med-tabla-menu-item i {
+    width: 14px;
+    text-align: center;
+    font-size: 0.72rem;
+    color: #78909c;
+}
+
+.med-tabla-menu-item--suspender {
+    color: #e65100;
+    border-top: 1px solid #f0f0f0;
+}
+
+.med-tabla-menu-item--suspender i {
+    color: #e65100;
 }
 
 thead .med-col-fija {
@@ -3814,8 +3960,7 @@ thead .med-col-fija {
 }
 
 .med-estado-aplicado-vista,
-.med-estado-pendiente-vista,
-.med-estado-bloqueado-vista {
+.med-estado-pendiente-vista {
     display: block;
     width: 100%;
     margin-bottom: 4px;
@@ -3830,13 +3975,36 @@ thead .med-col-fija {
 }
 
 .med-estado-bloqueado-vista {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    min-width: 28px;
+    max-width: 28px;
+    margin-bottom: 0;
+    padding: 0;
+    font-size: 0.58rem;
+    font-weight: 700;
+    border-radius: 4px;
+    line-height: 1;
+    text-align: center;
+    user-select: none;
+    pointer-events: none;
     color: #9e9e9e;
     background: #eeeeee;
     border: 1px solid #bdbdbd;
-    text-transform: lowercase;
+    box-sizing: border-box;
+}
+
+.med-estado-bloqueado-vista.med-leyenda-icon {
+    width: auto;
+    min-width: auto;
+    max-width: none;
+    height: auto;
+    padding: 2px 6px;
     font-size: 0.58rem;
-    line-height: 1.15;
-    padding: 3px 4px;
+    text-transform: lowercase;
 }
 
 .med-estado-aplicado-vista {

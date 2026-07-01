@@ -16,6 +16,57 @@ const MEDICAMENTOS_PREDETERMINADOS = [
     'Sinvirax', 'Suero Oral', 'Sucramal', 'Tramadol', 'Trilox', 'Vancomicina', 'Vitamina K'
 ];
 
+// ====================================================================
+// CALCULADORA DE ALIMENTACIÓN RER
+// ====================================================================
+// Tabla de referencia de kcal/gramo por tipo de alimento. Son valores INICIALES
+// investigados en fichas de producto públicas (Hill's, USDA, etiquetas de fabricante);
+// varían según presentación/lote/región, así que pueden y deben ajustarse aquí según
+// lo que indique el veterinario a cargo.
+const RER_ALIMENTOS_CONFIG = {
+    lata_ad: { label: 'Lata A/D', kcalPorGramo: 183 / 156, consistenciaDefault: 'liquido' },
+    lata_id: { label: 'Lata I/D', kcalPorGramo: 328 / 370, consistenciaDefault: 'liquido' },
+    lata_wd: { label: 'Lata W/D', kcalPorGramo: 305 / 370, consistenciaDefault: 'solido' },
+    lata_cd: { label: 'Lata C/D', kcalPorGramo: 445 / 370, consistenciaDefault: 'solido' },
+    lata_kd: { label: 'Lata K/D', kcalPorGramo: 433 / 370, consistenciaDefault: 'solido' },
+    viyo: { label: 'Viyo', kcalPorGramo: 45 / 100, consistenciaDefault: 'liquido' },
+    tilapia: { label: 'Tilapia', kcalPorGramo: 1.28, consistenciaDefault: 'solido' },
+    pollo: { label: 'Pollo desmenuzado sin piel, hueso o grasa', kcalPorGramo: 1.5, consistenciaDefault: 'solido' },
+    sardina: { label: 'Sardina', kcalPorGramo: 2.0, consistenciaDefault: 'solido' },
+    proplan_urinary_concentrado: { label: 'Pro Plan Urinary (concentrado)', kcalPorGramo: 3.8, consistenciaDefault: 'solido' },
+    proplan_urinary_lata: { label: 'Pro Plan Urinary (lata)', kcalPorGramo: 1.2, consistenciaDefault: 'liquido' }
+};
+
+// Tipos de paciente según padecimiento/patología gástrica. Lista ampliable.
+const RER_TIPO_PACIENTE_CONFIG = {
+    sin_patologia: { label: 'Paciente sin patología gástrica' },
+    gastritis: { label: 'Gastritis' },
+    ulcera: { label: 'Úlcera gástrica' },
+    otro: { label: 'Otro' }
+};
+
+// Tiempo que lleva el paciente sin comer (anorexia).
+const RER_TIEMPO_ANOREXIA_CONFIG = {
+    sin_anorexia: { label: 'No ha dejado de comer' },
+    menos_2_dias: { label: 'Menos de 2 días' },
+    dos_a_cuatro_dias: { label: '2 a 4 días' },
+    mas_4_dias: { label: 'Más de 4 días' }
+};
+
+// Mapeo INICIAL (editable) de tipo de paciente + tiempo sin comer -> fase sugerida de RER.
+// Fase 1=25%, 2=50%, 3=75%, 4=100%. Mientras más tiempo sin comer o exista patología
+// gástrica, se sugiere iniciar más bajo y avanzar de forma gradual; un paciente sano que
+// no ha dejado de comer puede iniciar directo en el 100%. Siempre queda editable a mano.
+function getRerFaseSugerida(tipoPaciente, tiempoAnorexia) {
+    if (tiempoAnorexia === 'mas_4_dias') return 1;
+    if (tipoPaciente === 'gastritis' || tipoPaciente === 'ulcera') return 1;
+    if (tiempoAnorexia === 'dos_a_cuatro_dias') return 1;
+    if (tiempoAnorexia === 'menos_2_dias') return 2;
+    if (tiempoAnorexia === 'sin_anorexia' && tipoPaciente === 'sin_patologia') return 4;
+    if (tiempoAnorexia === 'sin_anorexia') return 3;
+    return 1;
+}
+
 class InternamientoModule {
     constructor() {
         this.internamientosRef = null;
@@ -5831,6 +5882,10 @@ class InternamientoModule {
         const internamiento = this.internamientos.get(this.currentInternamientoId);
         if (!internamiento) return;
 
+        if (typeof this._actualizarEncabezadoMedicacion === 'function') {
+            this._actualizarEncabezadoMedicacion(internamiento);
+        }
+
         const render = () => {
             this.renderMedicamentosList(internamiento);
             const btnAgregarMed = document.getElementById('btnAgregarMedicamento');
@@ -5844,6 +5899,13 @@ class InternamientoModule {
         } else {
             render();
         }
+    }
+
+    _actualizarEncabezadoMedicacion(internamiento) {
+        const header = document.querySelector('#internamiento-medicacion .section-header h2');
+        if (!header || !internamiento) return;
+        const nombre = (internamiento.referencias?.nombreMascota || 'Paciente').replace(/</g, '&lt;');
+        header.innerHTML = `<i class="fas fa-pills"></i> Plan de Medicación <span class="med-header-paciente">— ${nombre}</span>`;
     }
 
     renderMedicamentosList(internamiento) {
@@ -5868,7 +5930,6 @@ class InternamientoModule {
 
         if (activos.length === 0 && finalizados.length === 0) {
             container.innerHTML = `
-                ${this.renderMedicacionViewToggle ? this.renderMedicacionViewToggle() : ''}
                 <div class="empty-state" style="padding: 60px 30px;">
                     <i class="fas fa-pills" style="font-size: 64px;"></i>
                     <p style="font-size: 1.1rem;">No hay medicamentos activos</p>
@@ -5880,184 +5941,8 @@ class InternamientoModule {
             return;
         }
 
-        const viaIcons = {
-            'IV': { icon: 'fa-syringe', color: '#f44336', label: 'Intravenosa' },
-            'IM': { icon: 'fa-syringe', color: '#ff9800', label: 'Intramuscular' },
-            'SC': { icon: 'fa-syringe', color: '#4caf50', label: 'Subcutánea' },
-            'VO': { icon: 'fa-capsules', color: '#5c6bc0', label: 'Vía Oral' },
-            'Topica': { icon: 'fa-hand-holding-medical', color: '#7e57c2', label: 'Tópica' },
-            'Otra': { icon: 'fa-prescription-bottle', color: '#757575', label: 'Otra' }
-        };
-
-        const activosAdministrar = activos.filter(m => this.puedeAdministrarAhora(m));
-        const vistaTabla = this.getMedicacionVista ? this.getMedicacionVista() === 'tabla' : true;
-
         container.innerHTML = `
-            ${this.renderMedicacionViewToggle ? this.renderMedicacionViewToggle() : ''}
-            ${vistaTabla && this.renderTablaControlMedicacion ? this.renderTablaControlMedicacion(internamiento, activos) : ''}
-            <div id="medicacionTarjetasWrap" style="${vistaTabla ? 'display:none;' : ''}">
-            ${activos.length > 0 ? `
-            ${activosAdministrar.length > 0 ? `
-            <div id="barraMedicamentosLote" style="display:none;margin-bottom:16px;padding:14px 18px;background:#e3f2fd;border:1px solid #90caf9;border-radius:10px;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
-                <span style="font-weight:600;color:#1565c0;"><i class="fas fa-check-double"></i> <span id="contadorMedicamentosSeleccionados">0</span> medicamento(s) seleccionado(s)</span>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;">
-                    <button type="button" class="btn btn-success btn-sm" onclick="window.internamientoModule.administrarMedicamentosSeleccionados()">
-                        <i class="fas fa-syringe"></i> Administrar seleccionados (un solo código)
-                    </button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="window.internamientoModule.limpiarSeleccionMedicamentos()">
-                        <i class="fas fa-times"></i> Limpiar selección
-                    </button>
-                </div>
-            </div>
-            ` : ''}
-            <div style="margin-bottom: 30px;">
-                <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 20px;">
-                    <div style="width: 46px; height: 46px; background: linear-gradient(135deg, #26a69a, #00897b); border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                        <i class="fas fa-pills" style="color: white; font-size: 1.2rem;"></i>
-                    </div>
-                    <div>
-                        <h3 style="margin: 0; color: #333; font-size: 1.2rem;">Medicamentos Activos</h3>
-                        <p style="margin: 4px 0 0 0; color: #666; font-size: 0.9rem;">${activos.length} medicamento${activos.length !== 1 ? 's' : ''} en tratamiento</p>
-                    </div>
-                </div>
-                
-                <!-- Grid de medicamentos -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 18px;">
-                    ${activos.map(med => {
-                        const via = viaIcons[med.viaAdministracion] || viaIcons.Otra;
-                        const proximaDosis = this.calcularProximaDosis(med);
-                        const esAhora = proximaDosis.includes('AHORA');
-                        const puedeAdministrar = this.puedeAdministrarAhora(med);
-                        const pendienteInicio = typeof this.estaMedicamentoPendienteInicioProgramacion === 'function' && this.estaMedicamentoPendienteInicioProgramacion(med);
-                        const programacionTexto = typeof this.formatProgramacionMedicamento === 'function' ? this.formatProgramacionMedicamento(med) : '';
-                        const admins = Object.values(med.administraciones || {});
-                        const ultimaAdmin = admins.filter(a => a.estado === 'administrado').sort((a, b) => (b.fechaHoraReal || 0) - (a.fechaHoraReal || 0))[0];
-                        const ultimaAdminNombre = ultimaAdmin ? (ultimaAdmin.administradoNombre || '—') : null;
-                        const esc = (s) => (s || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
-                        
-                        const medIdSafe = (med.medicamentoId || '').replace(/'/g, "\\'");
-                        const puedeSeleccionar = puedeAdministrar;
-                        const seleccionado = this._medicamentosSeleccionados?.has?.(med.medicamentoId);
-                        
-                        return `
-                            <div style="background: white; border: 1px solid ${esAhora ? '#f44336' : seleccionado ? '#2196f3' : '#e0e0e0'}; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: all 0.3s ease; ${esAhora ? 'animation: pulse-critico 2s ease-in-out infinite;' : ''}" onmouseenter="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 4px 16px rgba(0,0,0,0.12)';" onmouseleave="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 8px rgba(0,0,0,0.08)';">
-                                <div class="med-card-header">
-                                    <div style="display: flex; align-items: center; gap: 12px; min-width: 0; flex: 1;">
-                                        ${puedeSeleccionar ? `
-                                        <label style="display:flex;align-items:center;cursor:pointer;margin:0;" title="Seleccionar para administración múltiple">
-                                            <input type="checkbox" class="chk-med-lote" data-med-id="${medIdSafe}" ${seleccionado ? 'checked' : ''} onchange="window.internamientoModule.toggleSeleccionMedicamento('${medIdSafe}', this.checked)" style="width:18px;height:18px;cursor:pointer;">
-                                        </label>
-                                        ` : ''}
-                                        <div style="width: 44px; height: 44px; background: ${via.color}15; border: 1px solid ${via.color}30; border-radius: 10px; display: flex; align-items: center; justify-content: center;">
-                                            <i class="fas ${via.icon}" style="color: ${via.color}; font-size: 1.1rem;"></i>
-                                        </div>
-                                        <div>
-                                            <h4 style="margin: 0; color: #333; font-size: 1rem; font-weight: 600; display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">${med.nombreComercial || 'Sin nombre'}${this.renderChipOrigenItem(med)}</h4>
-                                            <span style="font-size: 0.85rem; color: ${via.color};">${via.label}</span>
-                                        </div>
-                                    </div>
-                                    <div class="med-acciones-btns">
-                                        <button class="med-btn-accion med-btn-historial" onclick="window.internamientoModule.mostrarHistorialMedicamentoPanel('${med.medicamentoId}')" title="Historial de cambios">
-                                            <i class="fas fa-history"></i>
-                                        </button>
-                                        <button class="med-btn-accion med-btn-editar" onclick="window.internamientoModule.showEditarMedicamentoForm('${med.medicamentoId}')" title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        ${puedeAdministrar
-                                            ? `<button class="med-btn-accion med-btn-admin" onclick="window.internamientoModule.administrarMedicamento('${med.medicamentoId}')" title="Administrar dosis"><i class="fas fa-syringe"></i></button>`
-                                            : `<button class="med-btn-accion" disabled title="${pendienteInicio ? 'El tratamiento aún no ha iniciado' : 'Espere a que llegue la hora o el tratamiento ya finalizó'}" style="background:#9ca3af;cursor:not-allowed;opacity:0.7;"><i class="fas fa-syringe"></i></button>`
-                                        }
-                                        <button class="med-btn-accion med-btn-suspender" onclick="window.internamientoModule.suspenderMedicamento('${med.medicamentoId}')" title="Suspender">
-                                            <i class="fas fa-pause"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                
-                                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 14px;">
-                                    <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
-                                        <span style="display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 3px;">Dosis</span>
-                                        <span style="font-size: 0.95rem; font-weight: 600; color: #333;">${this.formatDosisUnidad(med)}</span>
-                                    </div>
-                                    <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
-                                        <span style="display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 3px;">Vía</span>
-                                        <span style="font-size: 0.95rem; font-weight: 600; color: #333;">${via.label}</span>
-                                    </div>
-                                    <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
-                                        <span style="display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 3px;">Frecuencia</span>
-                                        <span style="font-size: 0.95rem; font-weight: 600; color: #333;">${med.dosisUnica ? 'Dosis única' : (med.frecuenciaHoras ? 'Cada ' + med.frecuenciaHoras + 'h' : '--')}</span>
-                                    </div>
-                                    <div style="background: #e8f5e9; border-radius: 8px; padding: 12px; border: 1px solid #c8e6c9;">
-                                        <span style="display: block; font-size: 0.75rem; color: #2e7d32; text-transform: uppercase; margin-bottom: 3px;">Días en tratamiento</span>
-                                        <span style="font-size: 1.1rem; font-weight: 700; color: #1b5e20;">${this.calcularDiasMedicamento(med)} día${this.calcularDiasMedicamento(med) !== 1 ? 's' : ''}</span>
-                                    </div>
-                                    <div style="background: #f8f9fa; border-radius: 8px; padding: 12px;">
-                                        <span style="display: block; font-size: 0.75rem; color: #888; text-transform: uppercase; margin-bottom: 3px;">Horario</span>
-                                        <span style="font-size: 0.9rem; font-weight: 600; color: #333;">${this._formatHorariosCompacto(med)}</span>
-                                    </div>
-                                </div>
-                                ${programacionTexto ? `
-                                <div style="background: #eef2ff; border-left: 3px solid #6366f1; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px;">
-                                    <span style="display: block; font-size: 0.75rem; color: #4338ca; text-transform: uppercase; margin-bottom: 4px;">Programación</span>
-                                    <span style="font-size: 0.9rem; color: #312e81; font-weight: 600;"><i class="fas fa-calendar-alt" style="margin-right: 6px;"></i>${programacionTexto}</span>
-                                </div>
-                                ` : ''}
-                                ${med.observaciones ? `
-                                <div style="background: #f0f9ff; border-left: 3px solid #0ea5e9; border-radius: 6px; padding: 10px 12px; margin-bottom: 14px;">
-                                    <span style="display: block; font-size: 0.75rem; color: #0c4a6e; text-transform: uppercase; margin-bottom: 4px;">Observaciones</span>
-                                    <span style="font-size: 0.9rem; color: #334155;">${med.observaciones}</span>
-                                </div>
-                                ` : ''}
-                                ${this.renderBannerOrigenItem(med)}
-                                ${med.puestoPorConsultaExterna ? `
-                                <div style="margin-bottom: 14px;">
-                                    <button type="button" class="btn btn-success btn-sm" style="width: 100%;"
-                                        onclick="window.internamientoModule.marcarMedicamentoAplicadoDia('${medIdSafe}', '${this._formatDiaKey(new Date())}')"
-                                        title="Registrar que el medicamento fue aplicado hoy">
-                                        <i class="fas fa-check"></i> Aplicado hoy
-                                    </button>
-                                </div>
-                                ` : ''}
-                                ${med.pedidoPermisoEmergencia && med.encargadaContactada ? `
-                                <div style="background: #fef3c7; border-left: 3px solid #d97706; border-radius: 6px; padding: 8px 12px; margin-bottom: 12px;">
-                                    <span style="font-size: 0.8rem; color: #92400e; font-weight: 600;">
-                                        <i class="fas fa-phone-alt" style="margin-right: 6px;"></i>Permiso de emergencia — Contactada: ${esc(med.encargadaContactada)}
-                                    </span>
-                                </div>
-                                ` : ''}
-                                ${this.renderRegistroDiasAdministracion(med)}
-                                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding-top: 14px; border-top: 1px solid #e8e8e8;">
-                                    <div style="display: flex; flex-direction: column; gap: 4px;">
-                                        <span style="font-size: 0.85rem; color: #666;">
-                                            <i class="fas fa-user-md" style="margin-right: 6px; color: #5c6bc0;"></i>
-                                            Prescrito: ${esc(med.prescritoNombre) || 'N/A'}
-                                        </span>
-                                        ${ultimaAdminNombre ? `
-                                        <span style="font-size: 0.85rem; color: #2e7d32; font-weight: 600;">
-                                            <i class="fas fa-user-nurse" style="margin-right: 6px; color: #2e7d32;"></i>
-                                            Última dosis por: ${esc(ultimaAdminNombre)}
-                                        </span>
-                                        ` : ''}
-                                        ${med.editadoNombre ? `
-                                        <span style="font-size: 0.8rem; color: #5c6bc0;">
-                                            <i class="fas fa-edit" style="margin-right: 4px;"></i>
-                                            Última edición: ${esc(med.editadoNombre)}${med.motivoUltimoCambio ? ' — ' + esc(med.motivoUltimoCambio) : ''}
-                                        </span>
-                                        ` : ''}
-                                        <button type="button" class="btn btn-sm" style="margin-top: 8px; font-size: 0.8rem; background: transparent; color: #0ea5e9; border: 1px solid #0ea5e9; padding: 4px 10px;" onclick="window.internamientoModule.mostrarHistorialAdministracionesMedicamento('${med.medicamentoId}')" title="Ver todas las administraciones">
-                                            <i class="fas fa-history" style="margin-right: 4px;"></i>Ver administraciones
-                                        </button>
-                                    </div>
-                                    <span style="font-size: 0.85rem; font-weight: 600; color: ${esAhora ? '#f44336' : '#4caf50'}; background: ${esAhora ? '#ffebee' : '#e8f5e9'}; padding: 5px 12px; border-radius: 15px;">
-                                        <i class="fas fa-clock" style="margin-right: 4px;"></i>
-                                        ${proximaDosis}
-                                    </span>
-                                </div>
-                            </div>
-                        `;
-                    }).join('')}
-                </div>
-            </div>
-            ` : ''}
+            ${activos.length > 0 && this.renderTablaControlMedicacion ? this.renderTablaControlMedicacion(internamiento, activos) : ''}
             
             ${finalizados.length > 0 ? `
                 <div style="margin-top: 36px; padding: 24px; background: #f5f5f5; border: 1px solid #e0e0e0; border-radius: 12px;">
@@ -6123,9 +6008,7 @@ class InternamientoModule {
                     </div>
                 </div>
             ` : ''}
-            </div>
         `;
-        this.actualizarBarraMedicamentosSeleccionados();
     }
 
     toggleSeleccionMedicamento(medicamentoId, checked) {
@@ -6333,8 +6216,8 @@ class InternamientoModule {
         }
 
         const ultima = administraciones
-            .filter(a => a.estado === 'administrado')
-            .sort((a, b) => b.fechaHoraReal - a.fechaHoraReal)[0];
+            .filter(a => a.estado === 'administrado' || a.estado === 'omitido' || a.estado === 'no_administrado')
+            .sort((a, b) => (b.fechaHoraReal || 0) - (a.fechaHoraReal || 0))[0];
 
         if (!ultima) {
             if (medicamento.puestoPorConsultaExterna) {
@@ -8318,48 +8201,52 @@ class InternamientoModule {
         // porque la tabla usa esta misma lógica.
         if (horarios.length > 0) {
             const ahoraDate = new Date(ahora);
-            const hoyKey = this._formatDiaKey(ahoraDate);
-            const ahoraMin = ahoraDate.getHours() * 60 + ahoraDate.getMinutes();
 
-            // Revisar slots de hoy en orden cronológico
-            for (const h of horarios) {
-                const [hh, mm] = h.split(':').map(Number);
-                const slotMin = hh * 60 + mm;
-                if (slotMin < ahoraMin) {
-                    // Slot de hoy que ya pasó: verificar si fue administrado
-                    const admin = typeof this.obtenerAdminCeldaMedicacion === 'function'
-                        ? this.obtenerAdminCeldaMedicacion(medicamento, hoyKey, h)
-                        : null;
-                    const yaAdministrado = admin && admin.estado === 'administrado';
-                    if (!yaAdministrado) {
-                        // Slot pasado no administrado → vencido
-                        const slotTs = new Date(ahoraDate);
-                        slotTs.setHours(hh, mm, 0, 0);
-                        return slotTs.getTime();
+            for (let dayOffset = 0; dayOffset <= 90; dayOffset++) {
+                const base = new Date(ahoraDate);
+                base.setHours(0, 0, 0, 0);
+                base.setDate(base.getDate() + dayOffset);
+                const diaKey = this._formatDiaKey(base);
+
+                if (typeof this.estaDiaDentroProgramacionMedicamento === 'function'
+                    && !this.estaDiaDentroProgramacionMedicamento(medicamento, diaKey)) {
+                    continue;
+                }
+
+                for (const h of horarios) {
+                    if (typeof this.celdaMedicacionFueraProgramacion === 'function'
+                        && this.celdaMedicacionFueraProgramacion(medicamento, diaKey, h)) {
+                        continue;
                     }
-                    // Si ya fue administrado, continuar al siguiente slot
-                } else {
-                    // Primer slot de hoy que aún no llegó (o es exactamente ahora)
-                    const prox = new Date(ahoraDate);
-                    prox.setHours(hh, mm, 0, 0);
-                    return prox.getTime();
+
+                    const [hh, mm] = h.split(':').map(Number);
+                    const slotDate = new Date(base);
+                    slotDate.setHours(hh, mm, 0, 0);
+                    const slotTs = slotDate.getTime();
+
+                    if (slotTs <= ahora) {
+                        const admin = typeof this.obtenerAdminCeldaMedicacion === 'function'
+                            ? this.obtenerAdminCeldaMedicacion(medicamento, diaKey, h)
+                            : null;
+                        const slotResuelto = typeof this.esSlotMedicacionResuelto === 'function'
+                            ? this.esSlotMedicacionResuelto(admin)
+                            : (admin && admin.estado === 'administrado');
+                        if (!slotResuelto) return slotTs;
+                    } else {
+                        return slotTs;
+                    }
                 }
             }
-
-            // Todos los slots de hoy ya pasaron y fueron administrados → mañana primer horario
-            const [hh0, mm0] = horarios[0].split(':').map(Number);
-            const manana = new Date(ahoraDate);
-            manana.setDate(manana.getDate() + 1);
-            manana.setHours(hh0, mm0, 0, 0);
-            return manana.getTime();
+            return null;
         }
 
         // RUTA 2: Solo frecuenciaHoras sin horarios explícitos definidos
         if (medicamento.frecuenciaHoras && medicamento.frecuenciaHoras > 0) {
-            const admins = Object.values(medicamento.administraciones || {})
-                .filter(a => a.estado === 'administrado')
+            const esResuelto = (a) => a.estado === 'administrado' || a.estado === 'omitido' || a.estado === 'no_administrado';
+            const resueltas = Object.values(medicamento.administraciones || {})
+                .filter(esResuelto)
                 .sort((a, b) => (b.fechaHoraReal || 0) - (a.fechaHoraReal || 0));
-            const ultimaTs = admins[0]?.fechaHoraReal || null;
+            const ultimaTs = resueltas[0]?.fechaHoraReal || null;
             if (!ultimaTs) return ahora;
             return ultimaTs + (medicamento.frecuenciaHoras * 3600000);
         }
@@ -8959,11 +8846,12 @@ class InternamientoModule {
         setTimeout(() => this.loadRerView(), 100);
     }
 
-    loadRerView() {
-        const container = document.getElementById('internamiento-rer');
-        if (!container) return;
-        const id = this.currentInternamientoId;
-        const internamiento = this.internamientos.get(id);
+    /**
+     * Calcula la dosis de RER (30 x peso + 70) y sus 4 fases (25/50/75/100%),
+     * tanto en total diario como por toma (asumiendo 5 tomas/día). Se usa tanto
+     * en la vista de RER como en la calculadora de alimentación de cada toma.
+     */
+    calcularRerFasesPorToma(internamiento) {
         const rer = internamiento?.rer && typeof internamiento.rer === 'object' ? internamiento.rer : {};
         const hoy = new Date();
         const fechaHoy = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-${String(hoy.getDate()).padStart(2, '0')}`;
@@ -8978,13 +8866,30 @@ class InternamientoModule {
         const fase2Resultado = (fase1Resultado != null) ? fase1Resultado * 2 : null;
         const fase3Resultado = (fase1Resultado != null) ? fase1Resultado * 3 : null;
         const fase4Resultado = (fase1Resultado != null) ? fase1Resultado * 4 : null;
-        const round1 = (v) => (v != null && !isNaN(v)) ? Math.round(v * 10) / 10 : '--';
-        const ml = (v) => { const r = round1(v); return r === '--' ? '--' : r + ' ml'; };
         const rerPorToma = rerDosisResultado != null ? rerDosisResultado / 5 : null;
         const fase1PorToma = fase1Resultado != null ? fase1Resultado / 5 : null;
         const fase2PorToma = fase2Resultado != null ? fase2Resultado / 5 : null;
         const fase3PorToma = fase3Resultado != null ? fase3Resultado / 5 : null;
         const fase4PorToma = fase4Resultado != null ? fase4Resultado / 5 : null;
+        return {
+            pesoActualNum, rerDosisResultado,
+            fase1Resultado, fase2Resultado, fase3Resultado, fase4Resultado,
+            rerPorToma, fase1PorToma, fase2PorToma, fase3PorToma, fase4PorToma
+        };
+    }
+
+    loadRerView() {
+        const container = document.getElementById('internamiento-rer');
+        if (!container) return;
+        const id = this.currentInternamientoId;
+        const internamiento = this.internamientos.get(id);
+        const rer = internamiento?.rer && typeof internamiento.rer === 'object' ? internamiento.rer : {};
+        const {
+            rerDosisResultado, fase1Resultado, fase2Resultado, fase3Resultado, fase4Resultado,
+            fase1PorToma, fase2PorToma, fase3PorToma, fase4PorToma
+        } = this.calcularRerFasesPorToma(internamiento);
+        const round1 = (v) => (v != null && !isNaN(v)) ? Math.round(v * 10) / 10 : '--';
+        const ml = (v) => { const r = round1(v); return r === '--' ? '--' : r + ' ml'; };
         const dias = rer.dias && typeof rer.dias === 'object' ? rer.dias : {};
         const diasList = Object.entries(dias).sort((a, b) => (a[1].numero || 0) - (b[1].numero || 0));
         const hasDias = diasList.length > 0;
@@ -9053,13 +8958,27 @@ class InternamientoModule {
                                     const horaLabels = { '8am': '8:00 AM', '12md': '12:00 MD', '4pm': '4:00 PM', '8pm': '8:00 PM', '12mn': '12:00 MN' };
                                     const hora = (t.hora ? (horaLabels[t.hora] || t.hora) : '—').replace(/</g, '&lt;');
                                     const esAgendaToma = !!t.esAgenda;
-                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma : '—';
+                                    const cant = t.cantidadPorToma != null && t.cantidadPorToma !== '' ? t.cantidadPorToma + ' g' : '—';
                                     const agua = t.cantidadAgua != null && t.cantidadAgua !== '' ? t.cantidadAgua + ' ml' : '—';
                                     const registradoPor = (t.registradoPorNombre || '').replace(/</g, '&lt;');
                                     const cantApl = t.cantidadAplicada != null && t.cantidadAplicada !== '' ? t.cantidadAplicada : null;
                                     const aguaApl = t.aguaAplicada != null && t.aguaAplicada !== '' ? t.aguaAplicada + ' ml' : null;
                                     const aplicadoPor = (t.aplicadoPorNombre || '').replace(/</g, '&lt;');
                                     const tomaIdEsc = (tomaId || '').replace(/'/g, "\\'");
+                                    const padecimiento = (t.padecimiento || '').replace(/</g, '&lt;');
+                                    const tiempoAnorexia = (t.tiempoAnorexia || '').replace(/</g, '&lt;');
+                                    const tipoAlimento = (t.tipoAlimento || '').replace(/</g, '&lt;');
+                                    const consistencia = (t.consistencia || '').replace(/</g, '&lt;');
+                                    const faseAplicada = (t.faseAplicada || '').replace(/</g, '&lt;');
+                                    const detalleCalculadoraParts = [
+                                        padecimiento ? `Padecimiento: ${padecimiento}` : '',
+                                        tiempoAnorexia ? `Anorexia: ${tiempoAnorexia}` : '',
+                                        faseAplicada ? `Fase: ${faseAplicada}` : '',
+                                        tipoAlimento ? `Alimento: ${tipoAlimento}${consistencia ? ' (' + consistencia + ')' : ''}` : ''
+                                    ].filter(Boolean);
+                                    const detalleCalculadoraHTML = detalleCalculadoraParts.length
+                                        ? `<div style="font-size: 0.8rem; color: #64748b; margin-top: 4px;">${detalleCalculadoraParts.join(' · ')}</div>`
+                                        : '';
                                     const btnAplicacion = cantApl != null
                                         ? `<button type="button" class="btn btn-sm btn-secondary" onclick="window.internamientoModule.registrarAplicacionTomaRer('${diaKey}', '${tomaIdEsc}')" title="Actualizar lo aplicado"><i class="fas fa-syringe"></i> Actualizar aplicado</button>`
                                         : `<button type="button" class="btn btn-sm btn-primary" onclick="window.internamientoModule.registrarAplicacionTomaRer('${diaKey}', '${tomaIdEsc}')" style="background: var(--internamiento-primary); border-color: var(--internamiento-primary);" title="Registrar lo que se le pudo dar al paciente"><i class="fas fa-syringe"></i> Registrar aplicado</button>`;
@@ -9073,6 +8992,7 @@ class InternamientoModule {
                                             <div style="font-size: 0.88rem; color: #475569; padding: 8px 10px; background: #fff; border-radius: 6px; border: 1px solid #e2e8f0; margin-bottom: ${cantApl != null ? '8px' : '0'};">
                                                 <div style="font-weight: 600; color: #64748b; font-size: 0.75rem; text-transform: uppercase; margin-bottom: 4px;">Indicado</div>
                                                 <div>Cantidad por toma: ${cant} · Agua: ${agua}</div>
+                                                ${detalleCalculadoraHTML}
                                                 ${registradoPor ? `<div style="font-size: 0.82rem; color: #94a3b8; margin-top: 4px;"><i class="fas fa-user"></i> Indicado por: ${registradoPor}</div>` : ''}
                                             </div>
                                             ${cantApl != null ? `
@@ -9506,9 +9426,12 @@ class InternamientoModule {
         const diaData = internamiento?.rer?.dias?.[diaKey];
         const tomasDelDia = diaData?.tomas && typeof diaData.tomas === 'object' ? diaData.tomas : {};
         const horasUsadas = Object.values(tomasDelDia).map(t => t.hora).filter(Boolean);
+        this._tomaRerFasesPorToma = this.calcularRerFasesPorToma(internamiento);
+        this._tomaRerConsistenciaManual = false;
         const modalContent = this.getTomaRerFormHTML(horasUsadas);
         const modal = this.createModal('Agregar toma del día', modalContent, 'fa-file-medical-alt');
         document.body.appendChild(modal);
+        this.recalcularTomaRerCalculadora();
         const form = document.getElementById('formTomaRer');
         if (form) form.onsubmit = (e) => { e.preventDefault(); this.handleTomaRerSubmit(diaKey); };
     }
@@ -9684,11 +9607,64 @@ class InternamientoModule {
         const optionsHTML = sinHorasDisponibles
             ? '<option value="">No hay más horarios disponibles en este día</option>'
             : '<option value="">Seleccione la hora</option>' + horasDisponibles.map(h => `<option value="${h.value}">${h.label}</option>`).join('');
+        const selectStyle = 'width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b;';
+        const tipoPacienteOptionsHTML = Object.entries(RER_TIPO_PACIENTE_CONFIG).map(([key, cfg]) => `<option value="${key}">${cfg.label}</option>`).join('');
+        const tiempoAnorexiaOptionsHTML = Object.entries(RER_TIEMPO_ANOREXIA_CONFIG).map(([key, cfg]) => `<option value="${key}">${cfg.label}</option>`).join('');
+        const alimentoOptionsHTML = Object.entries(RER_ALIMENTOS_CONFIG).map(([key, cfg]) => `<option value="${key}">${cfg.label}</option>`).join('');
         return `
         <div style="max-height: 75vh; overflow-y: auto; padding: 10px;">
             <form id="formTomaRer">
+                <div style="background: #f0f4ff; border: 1px solid #c7d2fe; border-radius: 10px; padding: 16px; margin-bottom: 20px;">
+                    <div style="font-weight: 700; color: #3730a3; margin-bottom: 12px;"><i class="fas fa-calculator"></i> Calculadora de alimentación</div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Tipo de paciente / padecimiento gástrico</label>
+                        <select id="tomaRerTipoPaciente" style="${selectStyle}" onchange="window.internamientoModule.recalcularTomaRerCalculadora('paciente')">
+                            ${tipoPacienteOptionsHTML}
+                        </select>
+                        <div id="tomaRerTipoPacienteOtroWrap" style="display: none; margin-top: 8px;">
+                            <input type="text" id="tomaRerTipoPacienteOtro" placeholder="Especifique el padecimiento" style="${selectStyle}">
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Tiempo sin comer (anorexia)</label>
+                        <select id="tomaRerTiempoAnorexia" style="${selectStyle}" onchange="window.internamientoModule.recalcularTomaRerCalculadora('anorexia')">
+                            ${tiempoAnorexiaOptionsHTML}
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Fase de RER sugerida (editable)</label>
+                        <select id="tomaRerFase" style="${selectStyle}" onchange="window.internamientoModule.recalcularTomaRerCalculadora('fase')">
+                            <option value="1">Fase 1 (25%)</option>
+                            <option value="2">Fase 2 (50%)</option>
+                            <option value="3">Fase 3 (75%)</option>
+                            <option value="4">Fase 4 (100%)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Tipo de alimento</label>
+                        <select id="tomaRerTipoAlimento" style="${selectStyle}" onchange="window.internamientoModule.recalcularTomaRerCalculadora('alimento')">
+                            ${alimentoOptionsHTML}
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: 14px;">
+                        <label>Consistencia de la alimentación</label>
+                        <div style="display: flex; gap: 18px; margin-top: 6px;">
+                            <label style="font-weight: 400; display: flex; align-items: center; gap: 6px;"><input type="radio" name="tomaRerConsistencia" value="solido" onchange="window.internamientoModule.recalcularTomaRerCalculadora('consistencia')"> Sólido</label>
+                            <label style="font-weight: 400; display: flex; align-items: center; gap: 6px;"><input type="radio" name="tomaRerConsistencia" value="liquido" onchange="window.internamientoModule.recalcularTomaRerCalculadora('consistencia')"> Líquido</label>
+                        </div>
+                    </div>
+
+                    <div id="tomaRerResultadoCalculo" style="font-size: 0.9rem; color: #334155; background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 10px 12px; line-height: 1.5;"></div>
+                    <small style="color: #64748b; display: block; margin-top: 8px;">El cálculo llena automáticamente los campos de abajo; puede ajustarlos manualmente si lo necesita.</small>
+                </div>
+
                 <div class="form-group" style="margin-bottom: 18px;">
-                    <label>Cantidad por toma indicada *</label>
+                    <label>Cantidad por toma indicada (gramos de alimento) *</label>
                     <input type="number" id="tomaRerCantidadPorToma" min="0" step="0.01" required placeholder="Ej: 50" style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid #cbd5e1; background: #f8fafc; color: #1e293b;">
                     <small style="color: #64748b; display: block; margin-top: 4px;">Lo aplicado al paciente se registra después en cada tarjeta con código.</small>
                 </div>
@@ -9712,6 +9688,67 @@ class InternamientoModule {
         `;
     }
 
+    /**
+     * Recalcula la calculadora de alimentación del formulario de "Agregar toma del día" RER:
+     * sugiere la fase según tipo de paciente + tiempo sin comer, y calcula gramos de
+     * alimento y ml de agua según el alimento y consistencia elegidos, rellenando los
+     * campos de cantidad por toma y cantidad de agua (que siguen editables a mano).
+     */
+    recalcularTomaRerCalculadora(origen) {
+        const tipoPacienteSel = document.getElementById('tomaRerTipoPaciente');
+        const tiempoAnorexiaSel = document.getElementById('tomaRerTiempoAnorexia');
+        const faseSel = document.getElementById('tomaRerFase');
+        const alimentoSel = document.getElementById('tomaRerTipoAlimento');
+        const otroWrap = document.getElementById('tomaRerTipoPacienteOtroWrap');
+        const resultadoEl = document.getElementById('tomaRerResultadoCalculo');
+        if (!tipoPacienteSel || !tiempoAnorexiaSel || !faseSel || !alimentoSel) return;
+
+        if (otroWrap) otroWrap.style.display = tipoPacienteSel.value === 'otro' ? 'block' : 'none';
+
+        if (origen === 'paciente' || origen === 'anorexia' || !origen) {
+            faseSel.value = String(getRerFaseSugerida(tipoPacienteSel.value, tiempoAnorexiaSel.value));
+        }
+
+        const alimentoConfig = RER_ALIMENTOS_CONFIG[alimentoSel.value];
+        const consistenciaInputs = Array.from(document.querySelectorAll('input[name="tomaRerConsistencia"]'));
+        if (origen === 'consistencia') {
+            this._tomaRerConsistenciaManual = true;
+        }
+        if (alimentoConfig && consistenciaInputs.length && (origen !== 'consistencia') && !this._tomaRerConsistenciaManual) {
+            consistenciaInputs.forEach(inp => { inp.checked = inp.value === alimentoConfig.consistenciaDefault; });
+        }
+        if (origen === 'alimento') this._tomaRerConsistenciaManual = false;
+        const consistenciaSeleccionada = consistenciaInputs.find(inp => inp.checked)?.value || 'solido';
+
+        const fases = this._tomaRerFasesPorToma || {};
+        const faseKcalMap = { '1': fases.fase1PorToma, '2': fases.fase2PorToma, '3': fases.fase3PorToma, '4': fases.fase4PorToma };
+        const kcalPorToma = faseKcalMap[faseSel.value];
+
+        const cantidadInput = document.getElementById('tomaRerCantidadPorToma');
+        const aguaInput = document.getElementById('tomaRerCantidadAgua');
+
+        if (kcalPorToma == null || !alimentoConfig) {
+            if (resultadoEl) resultadoEl.innerHTML = '<span style="color:#94a3b8;">No se pudo calcular: falta el peso del paciente para obtener la dosis de RER.</span>';
+            return;
+        }
+
+        const gramoTotal = Math.round(kcalPorToma / alimentoConfig.kcalPorGramo);
+        const aguaMl = consistenciaSeleccionada === 'liquido' ? gramoTotal : 0;
+        const mlTotal = Math.round(gramoTotal + aguaMl);
+
+        if (cantidadInput) cantidadInput.value = gramoTotal;
+        if (aguaInput) aguaInput.value = aguaMl;
+
+        if (resultadoEl) {
+            resultadoEl.innerHTML = `
+                <div>Kcal por toma (Fase ${faseSel.value}): <strong>${Math.round(kcalPorToma * 10) / 10} kcal</strong></div>
+                <div>Alimento a agregar: <strong>${gramoTotal} g</strong> de ${alimentoConfig.label}</div>
+                <div>Agua a agregar: <strong>${aguaMl} ml</strong></div>
+                <div>Total de mezcla: <strong>${mlTotal} ml</strong></div>
+            `;
+        }
+    }
+
     async handleTomaRerSubmit(diaKey) {
         const cantidadPorToma = document.getElementById('tomaRerCantidadPorToma')?.value;
         const hora = document.getElementById('tomaRerHora')?.value;
@@ -9729,12 +9766,25 @@ class InternamientoModule {
         if (!diaData) { this.showAlert('No se encontró el día', 'Error', 'error'); return; }
         const tomas = diaData.tomas && typeof diaData.tomas === 'object' ? { ...diaData.tomas } : {};
         const tomaId = 'toma_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+
+        const tipoPacienteVal = document.getElementById('tomaRerTipoPaciente')?.value || '';
+        const tipoPacienteOtro = document.getElementById('tomaRerTipoPacienteOtro')?.value?.trim() || '';
+        const tiempoAnorexiaVal = document.getElementById('tomaRerTiempoAnorexia')?.value || '';
+        const faseVal = document.getElementById('tomaRerFase')?.value || '';
+        const tipoAlimentoVal = document.getElementById('tomaRerTipoAlimento')?.value || '';
+        const consistenciaVal = document.querySelector('input[name="tomaRerConsistencia"]:checked')?.value || '';
+
         const record = {
             cantidadPorToma: cantidadPorToma,
             hora: hora,
             cantidadAgua: cantidadAgua,
             fechaRegistro: Date.now(),
-            registradoPorNombre: this._tomaRerRegistradoPor || ''
+            registradoPorNombre: this._tomaRerRegistradoPor || '',
+            padecimiento: tipoPacienteVal === 'otro' ? (tipoPacienteOtro || 'Otro') : (RER_TIPO_PACIENTE_CONFIG[tipoPacienteVal]?.label || ''),
+            tiempoAnorexia: RER_TIEMPO_ANOREXIA_CONFIG[tiempoAnorexiaVal]?.label || '',
+            faseAplicada: faseVal || '',
+            tipoAlimento: RER_ALIMENTOS_CONFIG[tipoAlimentoVal]?.label || '',
+            consistencia: consistenciaVal === 'liquido' ? 'Líquido' : (consistenciaVal === 'solido' ? 'Sólido' : '')
         };
         tomas[tomaId] = record;
         const updatedDia = { ...diaData, tomas };
